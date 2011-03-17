@@ -14,8 +14,6 @@ TFSM_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/fsm
 TCOM_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/commons
 # Bristlecone URL.
 BRI_SVN_URL=https://bristlecone.svn.sourceforge.net/svnroot/bristlecone/trunk/bristlecone
-# Tools URL (in community builder for now)
-EXTRA_SVN_URL=https://tungsten.svn.sourceforge.net/svnroot/tungsten/branches/tungsten-2.0/community/extra
 # Enterprise builder (temporary)
 EBLD_SVN_URL=svn+ssh://forge.continuent.org/svnroot/tungsten/branches/tungsten-2.0/enterprise-builder
 
