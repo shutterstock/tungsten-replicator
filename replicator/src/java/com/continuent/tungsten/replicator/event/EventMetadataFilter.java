@@ -1,0 +1,593 @@
+/**
+ * Tungsten Scale-Out Stack
+ * Copyright (C) 2007-2009 Continuent Inc.
+ * Contact: tungsten@continuent.org
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+ *
+ * Initial developer(s): Robert Hodges
+ * Contributor(s): 
+ */
+
+package com.continuent.tungsten.replicator.event;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.log4j.Logger;
+
+import com.continuent.tungsten.commons.config.TungstenProperties;
+import com.continuent.tungsten.replicator.ReplicatorException;
+import com.continuent.tungsten.replicator.conf.ReplicatorConf;
+import com.continuent.tungsten.replicator.database.Database;
+import com.continuent.tungsten.replicator.database.DatabaseFactory;
+import com.continuent.tungsten.replicator.database.MySQLCommentEditor;
+import com.continuent.tungsten.replicator.database.SqlCommentEditor;
+import com.continuent.tungsten.replicator.database.SqlOperation;
+import com.continuent.tungsten.replicator.database.SqlOperationMatcher;
+import com.continuent.tungsten.replicator.dbms.DBMSData;
+import com.continuent.tungsten.replicator.dbms.LoadDataFileFragment;
+import com.continuent.tungsten.replicator.dbms.OneRowChange;
+import com.continuent.tungsten.replicator.dbms.RowChangeData;
+import com.continuent.tungsten.replicator.dbms.RowIdData;
+import com.continuent.tungsten.replicator.dbms.StatementData;
+import com.continuent.tungsten.replicator.filter.Filter;
+import com.continuent.tungsten.replicator.plugin.PluginContext;
+
+/**
+ * This filter events newly extracted from the database log to answer the
+ * following key questions. It must run as an auto-filter whenever we want
+ * sharding and multi-master replication to work.
+ * <ul>
+ * <li>Is this an ordinary transaction or a Tungsten catalog update?</li>
+ * <li>What is the original service of this event?</li>
+ * <li>What is the shard ID of this event?</li>
+ * </ul>
+ * These questions are answered as follows. We begin with the assumption that
+ * any event is from the local service and does not contain Tungsten catalog
+ * metadata updates. We then modify assumptions and assign the shard ID as
+ * follows.
+ * <ul>
+ * <li>Case 0: No database identified. Sadly, this is possible. Warn and assign
+ * to the default shard ID.</li>
+ * <li>Case 1: Single ordinary database. Mark shard with database name.</li>
+ * <li>Case 2: 1 or more dbs including a tungsten_<svc> database. Mark the
+ * service, mark tungsten metadata, and assign the shard name using the
+ * tungsten_<svc> database name.</li>
+ * <li>Case 3: Multiple ordinary databases. Assign the shard to the default ID.</li>
+ * </ul>
+ * Finally, we should note that this filter needs to be fast and to minimize
+ * memory usage. The indexing structure used in the implementation is a local
+ * hash table of database schema names and reference counts, which takes up
+ * virtually no space.
+ * 
+ * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
+ * @version 1.0
+ */
+public class EventMetadataFilter implements Filter
+{
+    // Class for counting accesses to databases. This encapsulates the
+    // counting logic but not the data.
+    class SchemaIndex
+    {
+        // Map relating schema names and references.
+        Map<String, Integer> dbMap = new HashMap<String, Integer>();
+
+        SchemaIndex()
+        {
+        }
+
+        // Add to database count ignoring null names.
+        void incrementSchema(String schemaName)
+        {
+            if (schemaName != null)
+            {
+                Integer count = dbMap.get(schemaName);
+                if (count == null)
+                    dbMap.put(schemaName, 1);
+                else
+                    dbMap.put(schemaName, count.intValue() + 1);
+            }
+        }
+
+        // Return a nice set of counts for diagnostic purposes.
+        public String toString()
+        {
+            StringBuffer sb = new StringBuffer();
+            sb.append("{");
+            for (String schema : dbMap.keySet())
+            {
+                if (sb.length() > 1)
+                    sb.append(";");
+                sb.append(schema).append("=>").append(dbMap.get(schema));
+            }
+            sb.append("}");
+            return sb.toString();
+        }
+    }
+
+    // Settable properties.
+    private boolean             unknownSqlUsesDefaultDb = false;
+    private static String       STRINGENT               = "stringent";
+    private static String       RELAXED                 = "relaxed";
+
+    // Class and instance variables.
+    private static Logger       logger                  = Logger
+                                                                .getLogger(EventMetadataFilter.class);
+    private PluginContext       context;
+    private SqlOperationMatcher opMatcher;
+    private SqlCommentEditor    commentEditor;
+    private Pattern             serviceNamePattern      = Pattern
+                                                                .compile(
+                                                                        "tungsten_([a-zA-Z0-9-_]+)",
+                                                                        Pattern.CASE_INSENSITIVE);
+    private String              serviceCommentRegex     = "___SERVICE___ = \\[([a-zA-Z0-9-_]+)\\]";
+    private Pattern             serviceCommentPattern   = Pattern
+                                                                .compile(
+                                                                        serviceCommentRegex,
+                                                                        Pattern.CASE_INSENSITIVE);
+
+    // State to track service names and shard ID across fragments. If a first
+    // fragment has a service name set, all succeeding fragments must
+    // have the same service name. Similarly, all succeeding fragments
+    private long                curSeqno                = -1;
+    private String              curService              = null;
+    private String              curShardId              = null;
+
+    /** If set to true, use default database for unknown SQL operations. */
+    public void setUnknownSqlUsesDefaultDb(boolean unknownSqlUsesDefaultDb)
+    {
+        this.unknownSqlUsesDefaultDb = unknownSqlUsesDefaultDb;
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.filter.Filter#filter(com.continuent.tungsten.replicator.event.ReplDBMSEvent)
+     */
+    public ReplDBMSEvent filter(ReplDBMSEvent event)
+            throws ReplicatorException, InterruptedException
+    {
+        if (logger.isDebugEnabled())
+            logger.debug("Scanning for basic event metadata: seqno="
+                    + event.getSeqno());
+
+        // Provisionally mark the event as coming from local service. We assume
+        // this is a normal transaction, hence do not mark it as Tungsten
+        // catalog metadata. N.B.: default SERVICE and SHARD_ID must be
+        // non-null or later processing may fail.
+        Map<String, String> metadataTags = new TreeMap<String, String>();
+        metadataTags.put(ReplOptionParams.SERVICE, context.getServiceName());
+        metadataTags.put(ReplOptionParams.SHARD_ID,
+                ReplOptionParams.SHARD_ID_UNKNOWN);
+
+        // Empty events are always considered to be local.
+        if (event.getDBMSEvent() instanceof DBMSEmptyEvent)
+        {
+            return adornEvent(event, metadataTags, false);
+        }
+
+        // Get the DBMS data values. If there are none, this event is local.
+        ArrayList<DBMSData> dbmsDataValues = event.getData();
+        if (dbmsDataValues.size() == 0)
+        {
+            logger.warn("Empty event generated: seqno=" + event.getSeqno()
+                    + " eventId=" + event.getEventId());
+            return adornEvent(event, metadataTags, false);
+        }
+
+        // Ugly MySQL to prevent replication loops on DDL statements: For
+        // transactions with a single statement (as in DDL) check whether
+        // there is a 'service' name added as a comment at the end of the
+        // command. If not, we need to add one. This is the only way we
+        // can identify the service for DDL as we don't see the Tungsten
+        // update on trep_commit_seqno.
+        boolean needsServiceSessionVar = false;
+        String serviceSessionVar = null;
+        if (dbmsDataValues.size() >= 1
+                && dbmsDataValues.get(0) instanceof StatementData)
+        {
+            StatementData sd = (StatementData) dbmsDataValues.get(0);
+            String query = sd.getQuery();
+            SqlOperation op = (SqlOperation) sd.getParsingMetadata();
+            if (op == null)
+            {
+                op = opMatcher.match(query);
+                sd.setParsingMetadata(op);
+            }
+            String serviceComment = commentEditor.fetchComment(query, op);
+            if (serviceComment != null)
+            {
+                Matcher m = serviceCommentPattern.matcher(serviceComment);
+                if (m.find())
+                {
+                    serviceSessionVar = m.group(1);
+                }
+            }
+
+            // If we don't have a value already, we need to set one. This
+            // indicates a DDL statement may be in the transaction.
+            if (serviceSessionVar == null)
+            {
+                needsServiceSessionVar = true;
+            }
+        }
+
+        // Create an index to count database references.
+        SchemaIndex index = new SchemaIndex();
+
+        // Iterate through values inferring the database name.
+        for (DBMSData dbmsData : dbmsDataValues)
+        {
+            if (dbmsData instanceof StatementData)
+            {
+                // Statement data can have the database either from the
+                // schema name on the event or from the database on the
+                // statement
+                // itself.
+                StatementData sd = (StatementData) dbmsData;
+                String query = sd.getQuery();
+
+                // See if there is an explicit schema on the statement.
+                SqlOperation op = (SqlOperation) sd.getParsingMetadata();
+                if (op == null)
+                {
+                    op = opMatcher.match(query);
+                    sd.setParsingMetadata(op);
+                }
+                String opSchema = op.getSchema();
+
+                // Determine the affected schema.
+                String affectedSchema = null;
+                if (opSchema != null)
+                {
+                    // Parsed the schema from the SQL.
+                    affectedSchema = opSchema;
+                }
+                else if (sd.getDefaultSchema() != null)
+                {
+                    // Use default schema unless we don't recognize SQL and
+                    // use does not want default.
+                    if (op.getObjectType() == SqlOperation.UNRECOGNIZED
+                            && !this.unknownSqlUsesDefaultDb)
+                        affectedSchema = ReplOptionParams.SHARD_ID_UNKNOWN;
+                    else
+                        affectedSchema = sd.getDefaultSchema();
+                }
+
+                // If we found a schema, add it to the list. Statements have
+                // have null schema at this point use the schema from a previous
+                // statement in the transaction, so our work is already done.
+                if (affectedSchema != null)
+                    index.incrementSchema(affectedSchema);
+            }
+            else if (dbmsData instanceof RowChangeData)
+            {
+                RowChangeData rd = (RowChangeData) dbmsData;
+                for (OneRowChange orc : rd.getRowChanges())
+                {
+                    index.incrementSchema(orc.getSchemaName());
+                }
+            }
+            else if (dbmsData instanceof LoadDataFileFragment)
+            {
+                // Add whatever we have to the index.
+                String affectedSchema = ((LoadDataFileFragment) dbmsData)
+                        .getDefaultSchema();
+                index.incrementSchema(affectedSchema);
+            }
+            else if (dbmsData instanceof RowIdData)
+            {
+                // This event type does not have a schema as it's just a
+                // session variable.
+            }
+            else
+            {
+                logger.warn("Unsupported DbmsData class: "
+                        + dbmsData.getClass().getName());
+            }
+        }
+
+        // Scan the counts looking for regular and tungsten metadata database
+        // names.
+        int normalDbCount = 0;
+        int tungstenDbCount = 0;
+        String dbName = null;
+        String tungstenDbName = null;
+        String service = null;
+        for (String schemaName : index.dbMap.keySet())
+        {
+            String nextServiceName = schemaToServiceName(schemaName);
+            if (nextServiceName == null)
+            {
+                // This is a normal database.
+                dbName = schemaName;
+                normalDbCount++;
+                if (logger.isDebugEnabled())
+                    logger.debug("Found local database: " + schemaName);
+            }
+            else
+            {
+                tungstenDbCount++;
+                tungstenDbName = schemaName;
+                service = nextServiceName;
+                if (logger.isDebugEnabled())
+                    logger.debug("Found tungsten database: " + schemaName);
+            }
+        }
+
+        // Process schema counts and assign shards plus metadata according to
+        // rules in the header comment. (See above.)
+        if (index.dbMap.size() == 0)
+        {
+            // In this case we can't find the schema name, hence cannot assign
+            // a specific shard. Use the default shard ID.
+            event.getDBMSEvent().addMetadataOption(ReplOptionParams.SHARD_ID,
+                    ReplOptionParams.SHARD_ID_UNKNOWN);
+            if (logger.isDebugEnabled())
+                logger.debug("Unable to infer database: seqno="
+                        + event.getSeqno());
+        }
+        else if (index.dbMap.size() == normalDbCount)
+        {
+            // Need to split this into a couple of cases...
+        	// First case should happen only if normalDbCount = 1
+            if (serviceSessionVar == null)
+            {
+                // This is a normal transaction. Assign the shard using the
+                // inferred schema name.
+                metadataTags.put(ReplOptionParams.SHARD_ID, dbName);
+            }
+            else
+            {
+                // This is likely a DDL statement from another service. Set the
+                // service but also assign the shard using Tungsten shard
+                // service conventions.
+                metadataTags.put(ReplOptionParams.SERVICE, serviceSessionVar);
+                tungstenDbName = "tungsten_" + serviceSessionVar;
+                metadataTags.put(ReplOptionParams.SHARD_ID, tungstenDbName);
+            }
+        }
+        else if (tungstenDbCount == 1)
+        {
+            // This transaction contains Tungsten metadata. The fact that this
+            // is logged means we must be from a remote service. Note these
+            // facts and use the Tungsten catalog schema as the shard name.
+            metadataTags.put(ReplOptionParams.SHARD_ID, tungstenDbName);
+            metadataTags.put(ReplOptionParams.SERVICE, service);
+            metadataTags.put(ReplOptionParams.TUNGSTEN_METADATA, "true");
+        }
+        else if (tungstenDbCount > 1)
+        {
+            // This should not be possible and we should inform the proper
+            // authorities.
+            logger
+                    .warn("Multiple Tungsten catalog databases in one transaction: seqno="
+                            + event.getSeqno() + " index=" + index.toString());
+            metadataTags.put(ReplOptionParams.SHARD_ID,
+                    ReplOptionParams.SHARD_ID_UNKNOWN);
+            metadataTags.put(ReplOptionParams.TUNGSTEN_METADATA, "true");
+        }
+        else
+        {
+            // This is possible but cannot be processed as a shard. Assign to
+            // the default shard.
+            logger.debug("Multiple user databases in one transaction: seqno="
+                    + event.getSeqno() + " index=" + index.toString());
+            metadataTags.put(ReplOptionParams.SHARD_ID,
+                    ReplOptionParams.SHARD_ID_UNKNOWN);
+        }
+
+        // Return the event.
+        return adornEvent(event, metadataTags, needsServiceSessionVar);
+    }
+
+    // Adds current tags to the event.
+    private ReplDBMSEvent adornEvent(ReplDBMSEvent event,
+            Map<String, String> tags, boolean needsServiceSessionVar)
+    {
+        // Service names need to be consistent across all fragments. We store
+        // the service name from the first fragment and use it for all
+        // succeeding fragments.
+        if (event.getFragno() == 0)
+        {
+            // Store state for first fragment.
+            curSeqno = event.getSeqno();
+            if (event.getLastFrag())
+            {
+                curService = null;
+                curShardId = null;
+            }
+            else
+            {
+                curService = tags.get(ReplOptionParams.SERVICE);
+                curShardId = tags.get(ReplOptionParams.SHARD_ID);
+            }
+        }
+        else
+        {
+            // All succeeding fragments get the same service name, so we
+            // override any other value.
+            if (curSeqno == event.getSeqno())
+            {
+                // First ensure we have a consistent service name.
+                String service = tags.get(ReplOptionParams.SERVICE);
+                if (!curService.equals(service))
+                {
+                    tags.put(ReplOptionParams.SERVICE, curService);
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Overriding service name: seqno="
+                                + event.getSeqno() + " fragno="
+                                + event.getFragno() + " old service=" + service
+                                + " new service=" + curService);
+                    }
+                }
+
+                // Next ensure we have a consistent shard. Mixed shards
+                // can cause serious problems with parallel replication.
+                String shardId = tags.get(ReplOptionParams.SHARD_ID);
+                if (!curShardId.equals(shardId))
+                {
+                    tags.put(ReplOptionParams.SHARD_ID, curShardId);
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Overriding shard Id: seqno="
+                                + event.getSeqno() + " fragno="
+                                + event.getFragno() + " old shard=" + shardId
+                                + " new shard=" + curShardId);
+                    }
+                }
+            }
+            else
+            {
+                // This indicates a possible problem with restart--we must
+                // have started in the middle of a fragment.
+                logger.warn("Potential out-of-sequence event detected; "
+                        + "this may indicate an extractor restart problem: "
+                        + "event seqno=" + event.getSeqno() + " event fragno="
+                        + event.getFragno() + " expected seqno=" + curSeqno);
+            }
+        }
+
+        // Beautiful code: set metadata tags.
+        for (String name : tags.keySet())
+        {
+            event.getDBMSEvent().addMetadataOption(name, tags.get(name));
+        }
+
+        // Put service name in a trailing comment if requested for MySQL DDL.
+        // IMPORTANT: We know the type and presence of the StatementData
+        // instance below thanks to previous check whether session variable is
+        // required.
+        if (needsServiceSessionVar)
+        {
+            // However, don't let replication break if we are somehow wrong.
+            try
+            {
+                StatementData sd = (StatementData) event.getData().get(0);
+                String query = sd.getQuery();
+                SqlOperation op = (SqlOperation) sd.getParsingMetadata();
+                if (op == null)
+                {
+                    op = opMatcher.match(query);
+                    sd.setParsingMetadata(op);
+                }
+                String comment = "___SERVICE___ = ["
+                        + tags.get(ReplOptionParams.SERVICE) + "]";
+                String appendableComment = this.commentEditor
+                        .formatAppendableComment(op, comment);
+                if (appendableComment == null)
+                {
+                    // Have to edit the SQL because we don't have a way to make
+                    // an appendable comment.
+                    String queryCommented = this.commentEditor.addComment(
+                            query, op, "___SERVICE___ = ["
+                                    + tags.get(ReplOptionParams.SERVICE) + "]");
+                    sd.setQuery(queryCommented);
+                }
+                else
+                    sd.appendToQuery(appendableComment);
+            }
+            catch (Exception e)
+            {
+                logger.warn("Assumption for service session variable violated",
+                        e);
+            }
+        }
+
+        return event;
+    }
+
+    // Returns the service name if this is a tungsten metadata schema or null if
+    // it is an ordinary schema.
+    private String schemaToServiceName(String schema)
+    {
+        Matcher m = this.serviceNamePattern.matcher(schema);
+        if (m.find())
+            return m.group(1);
+        else
+            return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
+     */
+    public void configure(PluginContext context) throws ReplicatorException
+    {
+        // Record the plugin context.
+        this.context = context;
+
+        // Set the policy for assigning schema from the default.
+        // TODO: Make this less of a hack!
+        TungstenProperties replProps = context.getReplicatorProperties();
+        String defaultSchema = replProps.getString(
+                ReplicatorConf.SHARD_DEFAULT_DB_USAGE, STRINGENT, true);
+        if (STRINGENT.equals(defaultSchema))
+            unknownSqlUsesDefaultDb = false;
+        else if (RELAXED.equals(defaultSchema))
+            unknownSqlUsesDefaultDb = true;
+        else
+            throw new ReplicatorException("Unknown property value for "
+                    + ReplicatorConf.SHARD_DEFAULT_DB_USAGE
+                    + "; values must be stringent or relaxed");
+
+        logger.info("Use default schema for unknown SQL statements: "
+                + unknownSqlUsesDefaultDb);
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
+     */
+    public void prepare(PluginContext context) throws ReplicatorException
+    {
+        // Create a Database instance for the local database so that we can get
+        // a proper pattern matcher for operations.
+        String url = context.getJdbcUrl(context.getReplicatorSchemaName());
+        String user = context.getJdbcUser();
+        String password = context.getJdbcPassword();
+        try
+        {
+            Database db = DatabaseFactory.createDatabase(url, user, password);
+            opMatcher = db.getSqlNameMatcher();
+            // TODO: Encapsulate editor properly.
+            commentEditor = new MySQLCommentEditor();
+            commentEditor.setCommentRegex(serviceCommentRegex);
+        }
+        catch (SQLException e)
+        {
+            throw new ReplicatorException(
+                    "Unable to create database connection: " + url, e);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
+     */
+    public void release(PluginContext context) throws ReplicatorException
+    {
+        // Nothing to do.
+    }
+}

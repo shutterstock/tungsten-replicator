@@ -1,0 +1,31 @@
+#!/bin/sh
+# Tungsten Replicator @VERSION@
+# (c) 2009 Continuent, Inc.  All rights reserved.
+#
+BINDIR=`dirname $0`
+STATUS=$BINDIR/../log/temp_status.log
+ERROR=0
+SLEEP_TIME=1
+rm -f $BINDIR/../log/status.log
+
+while true; do
+        $BINDIR/trepctl $* > $BINDIR/../log/temp_status.log 2>&1
+        if [ $? != 0 ]; then
+                cat $STATUS >> $BINDIR/../log/status.log
+                if [ $SLEEP_TIME != 128 ]; then
+                        SLEEP_TIME=$((SLEEP_TIME*2));
+                else
+                        echo ERROR... Please check log/status.log for details... Now exiting.
+                        exit 1
+                fi
+                echo ERROR... Please check log/status.log for details... Retrying in $SLEEP_TIME s.
+                echo >> $BINDIR/../log/status.log
+                ERROR=1
+        else
+                cat $STATUS
+                ERROR=0
+                SLEEP_TIME=1
+        fi
+        rm -f $STATUS
+        sleep $SLEEP_TIME
+done

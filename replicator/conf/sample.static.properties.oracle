@@ -1,0 +1,270 @@
+#################################
+# REPLICATOR.PROPERTIES.ORACLE  #
+#################################
+#
+# This file contains properties for Oracle replication.
+#
+# NOTE TO ALL USERS:  Blank property values are assigned as empty strings. 
+# To assign the default value, comment out the key=value assignment.
+#
+# NOTE TO WINDOWS USERS:  Single backslash characters are treated as escape 
+# characters.  You must use forward slash (/) or double backslashes in file 
+# names. 
+
+#################################
+# GLOBAL REPLICATOR PARAMETERS  #
+#################################
+
+# Database connection information. 
+replicator.global.db.user=tungsten
+replicator.global.db.password=secret
+
+# Replicator role.  Uncomment one of the choices of master or slave.  
+# There is no default for this value--it must be set or the replicator 
+# will not go online.  
+replicator.role=master
+#replicator.role=slave
+
+# URI to which we connect when this replicator is a slave.   
+replicator.master.connect.uri=thl://masterhost:2112/
+
+# URI for our listener when we are acting as a master.  Slaves 
+# use this as their connect URI.
+replicator.master.listen.uri=thl://thishost:2112/
+
+# Replicator auto-enable.  If true, replicator automatically goes online 
+# at start-up time. 
+replicator.auto_enable=false
+
+# Source ID. This required parameter is used to identify replication
+# event source.  It must be unique for each replicator node.
+replicator.source_id=tungsten
+
+# Cluster name to which the replicator belongs.
+cluster.name=default
+
+# Service to which this replicator belongs.
+service.name=default
+
+# Schema to store Replicator catalog tables.
+replicator.schema=tungsten_${service.name}
+
+# Information regarding the RMI port to use
+# for advertising JMX services
+replicator.rmi_port=10000
+
+# Used by manager to create datasources dynamically
+replicator.resourceJdbcUrl=jdbc:oracle:thin:@hostname@:1521:${DBNAME}
+replicator.resourceJdbcDriver=oracle.jdbc.driver.OracleDriver
+replicator.resourceVendor=oracle
+replicator.resourcePrecedence=99
+
+###########################
+# OPEN REPLICATOR PLUGINS #
+###########################
+
+# Available OpenReplicator providers
+replicator.plugin.tungsten=com.continuent.tungsten.replicator.management.tungsten.TungstenPlugin
+replicator.plugin.script=com.continuent.tungsten.replicator.management.script.ScriptPlugin
+
+# Chosen OpenReplicator provider
+replicator.plugin=tungsten
+
+# Script provider's root dir and configuration file. Fill these
+# if ScriptPlugin is chosen replicator provider
+#
+#replicator.script.root_dir=@SCRIPTROOT@
+#replicator.script.conf_file=@SCRIPTCONF@
+#replicator.script.processor=@SCRIPTFILE@
+
+#################################
+# REPLICATOR PIPELINES          #
+#################################
+
+# Generic pipelines. 
+replicator.pipelines=master,slave
+
+# Master pipeline has a single stage: extract from binlog and place 
+# events in THL. 
+replicator.pipeline.master=binlog-to-thl
+replicator.pipeline.master.stores=thl
+
+replicator.stage.binlog-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
+replicator.stage.binlog-to-thl.extractor=oracle
+replicator.stage.binlog-to-thl.applier=thl-local
+
+# Slave pipeline has two stages:  extract from remote THL to local THL; 
+# extract from local THL and apply to DBMS. 
+replicator.pipeline.slave=remote-to-thl,thl-to-dbms
+replicator.pipeline.slave.stores=thl
+
+replicator.stage.remote-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
+replicator.stage.remote-to-thl.extractor=thl-remote
+replicator.stage.remote-to-thl.applier=thl-local
+
+replicator.stage.thl-to-dbms=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
+replicator.stage.thl-to-dbms.extractor=thl-local
+replicator.stage.thl-to-dbms.applier=oracle
+
+#################################
+# TRANSACTION HISTORY LOG (THL) #
+#################################
+
+# The following parameters set up THL database access.  If you use a
+# a database name other than 'tungsten' you must change property
+# replicator.schema to match. (JIRA TREP-157). 
+replicator.store.thl=com.continuent.tungsten.replicator.thl.THL
+replicator.store.thl.storage=com.continuent.tungsten.replicator.thl.JdbcTHLStorage
+replicator.store.thl.url=jdbc:oracle:thin:@localhost:1521:XE
+replicator.store.thl.user=${replicator.global.db.user}
+replicator.store.thl.password=${replicator.global.db.password}
+
+# THL listener address for remote access.  To listen on all ports, 
+# use a value like thl://0.0.0.0:2112/.  Note that 2112 is default
+# port for Tungsten configurations. 
+replicator.store.thl.storageListenerUri=${replicator.master.listen.uri}
+
+# The following settings can be used in order to get better
+# performance.  THL on the slave side is caching events that are
+# received from the master THL.  This is done in order to prevent
+# from reading events from THL database on the slave side.  The
+# size of this cache can be changed by the following setting. By
+# default, this cache only contains one event at a time.  
+#
+# WARNING: increasing the size of the cache will potentially require 
+# more memory.
+
+replicator.store.thl.cacheSize=0
+
+# The transfer rate between the master and the slave can be improved
+# by setting the following setting to a value greater than 1, which
+# is the default.  In doing so, this will also require more memory
+# on the master side.
+
+replicator.store.thl.resetPeriod=1
+
+##############
+# EXTRACTORS #
+##############
+
+# Oracle extractor properties.
+replicator.extractor.oracle=com.continuent.tungsten.replicator.extractor.oracle.OracleExtractor
+replicator.extractor.oracle.host=localhost
+replicator.extractor.oracle.instance=ORCL
+replicator.extractor.oracle.dsport=51060
+replicator.extractor.oracle.mapping=
+replicator.extractor.oracle.user=${replicator.global.db.user}
+replicator.extractor.oracle.password=${replicator.global.db.password}
+
+# Local THL extractor. 
+replicator.extractor.thl-local=com.continuent.tungsten.replicator.thl.THLStoreAdapter
+replicator.extractor.thl-local.storeName=thl
+
+# Remote THL extractor. 
+replicator.extractor.thl-remote=com.continuent.tungsten.replicator.thl.RemoteTHLExtractor
+replicator.extractor.thl-remote.connectUri=${replicator.master.connect.uri}
+
+############
+# APPLIERS #
+############
+
+# Oracle applier properties.
+replicator.applier.oracle=com.continuent.tungsten.replicator.applier.OracleApplier
+replicator.applier.oracle.host=localhost
+replicator.applier.oracle.port=1521
+replicator.applier.oracle.service=XE
+replicator.applier.oracle.user=${replicator.global.db.user}
+replicator.applier.oracle.password=${replicator.global.db.password}
+
+
+# Local THL applier. 
+replicator.applier.thl-local=com.continuent.tungsten.replicator.thl.THLStoreAdapter
+replicator.applier.thl-local.storeName=thl
+
+###########
+# FILTERS # 
+###########
+
+# Dummy filter.  A filter that does nothing. 
+replicator.filter.dummy=com.continuent.tungsten.replicator.filter.DummyFilter
+
+# Logging filter.  Logs each event to current system log. 
+replicator.filter.logger=com.continuent.tungsten.replicator.filter.LoggingFilter
+
+# Database transform filter.  Transforms database names that match the 
+# from_regex are transformed into the to_regex.  
+replicator.filter.dbtransform=com.continuent.tungsten.replicator.filter.DatabaseTransformFilter
+replicator.filter.dbtransform.from_regex=foo
+replicator.filter.dbtransform.to_regex=bar
+
+# Adds statements required to replicate temporary tables and session variables
+# correctly within a session context
+replicator.filter.mysqlsessions=com.continuent.tungsten.replicator.filter.MySQLSessionSupportFilter
+
+# Transforms database, table and column names into upper or lower case. In case
+# of statement replication generally it transforms everything except quoted
+# string values.
+replicator.filter.casetransform=com.continuent.tungsten.replicator.filter.CaseMappingFilter
+replicator.filter.casetransform.to_upper_case=true
+
+# JavaScript call out filter. Calls script's prepare(), filter(event) and
+# release() functions. Define multiple filters with different names in case you
+# need to call more than one script.
+replicator.filter.javascript=com.continuent.tungsten.replicator.filter.JavaScriptFilter
+replicator.filter.javascript.script=${replicator.home.dir}/samples/extensions/javascript/filter.js
+replicator.filter.javascript.sample_custom_property="Sample value"
+
+# Filter to be used on slaves For every
+# CREATE|DROP|ALTER|RENAME TABLE event adds a "SET foreign_key_checks=0"
+# statement.
+replicator.filter.foreignkeychecks=com.continuent.tungsten.replicator.filter.JavaScriptFilter 
+replicator.filter.foreignkeychecks.script=${replicator.home.dir}/samples/extensions/javascript/foreignkeychecks.js 
+
+# Time delay filter.  Should only be used on slaves, as it delays storage
+# of new events on the master.  The time delay is in seconds. 
+replicator.filter.delay=com.continuent.tungsten.replicator.filter.TimeDelayFilter
+replicator.filter.delay.delay=300
+
+################################
+# BACKUP/RESTORE CONFIGURATION #
+################################
+
+#
+# Oracle does not currently support any backup agents.
+#
+
+######################
+# PERFORMANCE TUNING #
+######################
+
+# The slave applier can commit events by block. By default, commit
+# occurs for each processed  event (1 event = 1 transaction). In order
+# to speed up events applying, the following value  can be changed.
+# If it is set to a number x (greater than 1), the applier will commit
+# every x events, or when the cache is empty.
+
+# replicator.thl.applier_block_commit_size=1
+
+####################################################
+# ERROR-HANDLING AND CONSISTENCY-CHECKING POLICIES #
+####################################################
+
+# How to react on extractor failure. Possible values are 'stop' or 'skip'. 
+replicator.extractor.failure_policy=stop
+
+# How to react on applier failure. Possible values are 'stop' or 'skip'. 
+replicator.applier.failure_policy=stop
+
+# Event checksum algorithm.  Possible values are 'SHA' or 'MD5' or 
+# empty for no checksums
+replicator.event.checksum=md5
+
+# How to react on consistency check failure.  Possible values are 'stop' or 
+# 'warn'. 
+replicator.applier.consistency_policy=stop
+
+# Should consistency check be sensitive to column names and/or types? Settings
+# on a slave must be identical to master's. Values are 'true' or 'false'. 
+replicator.applier.consistency_column_names=true
+replicator.applier.consistency_column_types=true
+

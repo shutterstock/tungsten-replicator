@@ -1,0 +1,25 @@
+                          Custom Backup Sample
+
+1 Overview
+
+This directory contains a sample custom backup script.  You can use this
+script with the ScriptDumpAgent class provided as a backup agent in the 
+default Tungsten Replicator implementation.  
+
+The custom-replicator.sh script illustrates how to construct a custom
+script.  It uses mysqldump and mysql to run backup and restore, respectively.
+
+2 Getting Started
+
+Before running make sure that the script is executable.  Also, you will 
+need to set the correct database login and password. 
+
+3 Usage
+
+Configure the script backup in replicator.properties, then restart the 
+replicator.  Here is typical usage. 
+ 
+  trepsvc restart
+  trepctl backup -backup script
+  trepctl restore
+

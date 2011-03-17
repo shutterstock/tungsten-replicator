@@ -1,0 +1,47 @@
+#!/bin/sh
+# Tungsten Replicator @VERSION@
+# (c) 2009 Continuent, Inc.  All rights reserved. 
+# 
+# Replicator *nix shutdown script
+#
+
+# Find home. 
+cd `dirname $0`
+RPHOME=`cd ..; pwd`
+
+os=`uname -s`
+
+if [ "$os" = "SunOS" ]
+then
+   ps=/usr/ucb/ps
+else
+   ps=ps
+fi
+
+
+# Make sure we have a PID file. 
+if [ ! -f $RPHOME/var/trep.pid ]; then
+  echo "Replicator PID file not found; unable to stop replicator process"
+  exit 1
+fi
+
+# Make sure a process is running. 
+PID=`cat $RPHOME/var/trep.pid`
+$ps $PID > /dev/null
+if [ "$?" != 0 ]; then
+  rm $RPHOME/var/trep.pid
+  echo "Replicator process is not running; removing PID file"
+  exit 1
+fi
+
+# Kill the process. 
+kill $PID
+# Sleep to give kill a chance to work
+sleep 1
+$ps $PID > /dev/null
+if [ "$?" != 0 ]; then
+  rm $RPHOME/var/trep.pid
+  echo "Replicator process stopped [PID=$PID]" 
+else
+  echo "Could not stop the replicator at [PID=$PID] or the process did not exist"
+fi

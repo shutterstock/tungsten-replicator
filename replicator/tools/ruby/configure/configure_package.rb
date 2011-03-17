@@ -1,0 +1,2 @@
+class ConfigurePackage
+end
