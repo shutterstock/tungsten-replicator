@@ -1,0 +1,4 @@
+#!/bin/sh
+
+mysql -e "SET GLOBAL read_only = $1;"
+mysql -e "SHOW VARIABLES LIKE '%read_only%';"

@@ -1,0 +1,4 @@
+Tungsten Connector can split reads and writes automatically between
+master and slave servers.  Please consult Tungsten Connector docs
+before enabling this feature to ensure it is suitable for your
+applications.

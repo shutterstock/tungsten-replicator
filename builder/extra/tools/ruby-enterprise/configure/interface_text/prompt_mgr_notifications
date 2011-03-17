@@ -1,0 +1,8 @@
+The manager sends notifications to all routers for the purposes
+of supporting 'smart scale' and for router liveness checking.
+On heavily loaded systems, these notification can time out
+unnecessarily. If you see 'timed out while delivering router notification'
+in your manager log, try increasing the value for the timeout.
+
+You can also turn notifications off to reduce overhead, but it's not
+recommended.

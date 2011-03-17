@@ -1,0 +1,4 @@
+Tungsten will add a default user login to the Tungsten Connector
+user.map file and will configure Bristlecone test configuration
+files to use this login.  This login does not need to have any
+privileges other than ability to connect to the database server.
