@@ -26,6 +26,15 @@ class RegularConfigureDeployment < ConfigureDeployment
         config_obj.setProperty(DEPLOY_PACKAGE_URI, "file://localhost#{config_obj.getProperty(GLOBAL_TEMP_DIRECTORY)}/#{package_basename}")
       end
       
+      config_obj.getProperty(REPL_SERVICES).split(",").each{
+        |service_name|
+        service_config = config_obj.getProperty(Configurator::SERVICE_CONFIG_PREFIX + service_name)
+        
+        unless service_config
+          raise "Unable to find service configuration for '#{service_name}'"
+        end
+      }
+      
       config_objs.push(config_obj)
     }
     

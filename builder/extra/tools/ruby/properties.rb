@@ -24,10 +24,16 @@ class Properties
     File.open(properties_filename, 'r') do |file|
       file.read.each_line do |line|
         line.strip!
-        if (line =~ /^([\w\.]+)\s*=\s*(\S.*)/)
+        if (line =~ /^([\w\.]+)\[?([\w\.]+)?\]?\s*=\s*(\S.*)/)
           key = $1
-          value = $2
-          new_props[key] = value
+          value = $3
+          
+          if $2
+            new_props[key] = {} unless new_props[key]
+            new_props[key][$2] = value
+          else
+            new_props[key] = value
+          end
         elsif (line =~ /^([\w\.]+)\s*=/)
           key = $1
           value = ""
@@ -69,7 +75,13 @@ class Properties
       file.printf "# Tungsten configuration properties\n"
       file.printf "# Date: %s\n", DateTime.now
       @props.sort.each do | key, value |
-        file.printf "%s=%s\n", key, value
+        if value.instance_of?(Hash)
+          value.each do | vkey, vvalue|
+            file.printf "#{key}[#{vkey}]=#{vvalue}\n"
+          end
+        else
+          file.printf "%s=%s\n", key, value
+        end
       end
     end
     

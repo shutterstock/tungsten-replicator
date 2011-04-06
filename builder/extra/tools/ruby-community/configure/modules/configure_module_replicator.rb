@@ -1,9 +1,10 @@
 class ReplicatorConfigureModule < ConfigureModule
   def register_prompts(prompt_handler)
     prompt_handler.register_prompts([
-      ReplicatorHostsPrompt.new(),
-      ConfigurePrompt.new(REPL_MASTERHOST, "Enter the hostname for the replication master", 
-        PV_HOSTNAME),
+      #ReplicatorHostsPrompt.new(),
+      ConfigurePrompt.new(REPL_SERVICES, "Enter unique names for each replication service",
+        PV_IDENTIFIER, "default"),
+      #ConfigurePrompt.new(REPL_MASTERHOST, "Enter the hostname for the replication master", PV_HOSTNAME),
       ConfigurePrompt.new(REPL_AUTOENABLE, "Auto-enable replicator after start-up", 
         PV_BOOLEAN, "true"),
       DatabaseInitScript.new(),

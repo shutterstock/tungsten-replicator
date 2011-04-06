@@ -89,6 +89,10 @@ class WriteableHomeDirectoryCheck < ConfigureValidationCheck
       debug "#{@config.getProperty(GLOBAL_HOME_DIRECTORY)} is writeable"
     end
   end
+  
+  def enabled?
+    @config.getProperty(GLOBAL_HOME_DIRECTORY) != nil
+  end
 end
 
 class DeploymentPackageCheck < ConfigureValidationCheck
@@ -237,6 +241,10 @@ class SudoCheck < ConfigureValidationCheck
   def add_help
     help("Add \"#{@config.getProperty(GLOBAL_USERID)}        ALL=(ALL)       NOPASSWD: ALL\" to the /etc/sudoers file.")
     help("Comment out or remove the requiretty line in the /etc/sudoers file.")
+  end
+  
+  def enabled?
+    (@config.getProperty(GLOBAL_ROOT_PREFIX) == "true")
   end
 end
 

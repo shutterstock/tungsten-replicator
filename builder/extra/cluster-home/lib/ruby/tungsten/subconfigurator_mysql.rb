@@ -28,6 +28,13 @@ class SubConfiguratorMySQL < SubConfigurator
   def pre_configure()
     # Ensure we have default value(s) for recently added configuration
     # parameters.
+    if @configurator.config.props[REPL_MYSQL_EXTRACT_METHOD] == ""
+      if @configurator.config.props[REPL_EXTRACTOR_USE_RELAY_LOGS] == "true"
+        @configurator.config.props[REPL_MYSQL_EXTRACT_METHOD] = "relay"
+      else
+        @configurator.config.props[REPL_MYSQL_EXTRACT_METHOD] = "direct"
+      end
+    end
     if @configurator.config.props[GLOBAL_USE_MYSQL_CONNECTOR] == ""
       @configurator.config.props[GLOBAL_USE_MYSQL_CONNECTOR] = "false"
     end
@@ -199,83 +206,117 @@ DBMS_INFO
     # Collect information on the database.
     puts
     @configurator.write_divider
-    puts <<DBMS_INFO2
-Tungsten needs to know the location of MySQL binlogs and binlog
-file pattern, as well as the my.cnf file and start script location.
-This allows Tungsten to determine server configuration information
-and to start and stop servers from within the Tungsten Manager. 
+    puts <<DBMS_BINLOG_EXTRACTION
+Tungsten can extract MySQL transactions directly from the on-disk binlogs
+(direct) or by downloading binlog files to a temporary directory (relay).  
+Select relay extraction if the MySQL server is on another host or the 
+local binlog files are NFS-mounted.  Otherwise, select direct extraction. 
+
+DBMS_BINLOG_EXTRACTION
+
+    @configurator.edit_cfg_value PropertyDescriptor.new(
+      "MySQL binlog extraction method", PV_BINLOG_EXTRACTION, 
+       REPL_MYSQL_EXTRACT_METHOD, "direct")
+
+    # Infer binlog location information if we are local.  Otherwise
+    # set the relay log location. 
+    if @configurator.config.props[REPL_MYSQL_EXTRACT_METHOD] == "direct"
+      puts
+      @configurator.write_divider
+      puts <<DBMS_INFO2
+You are configuring Tungsten to extract using local binary logs.  You 
+must provide the location of these logs, which must also be readable. 
+Tungsten also needs the location of the my.cnf file to determine the 
+binary log file pattern.  
 
 DBMS_INFO2
 
-    @configurator.edit_cfg_value PropertyDescriptor.new(
-      "MySQL binlog directory", PV_READABLE_DIR, REPL_MYSQL_BINLOGDIR,
-      "/var/lib/mysql")
+      @configurator.edit_cfg_value PropertyDescriptor.new(
+        "MySQL binlog directory", PV_READABLE_DIR, REPL_MYSQL_BINLOGDIR,
+        "/var/lib/mysql")
 
-    #
-    # Try to set a reasonable default for this
-    #
-    mysql_config = "/etc/my.cnf"
-    if (!File.exist?(mysql_config))
-      if (File.exist?("/etc/mysql/my.cnf"))
-        mysql_config = "/etc/mysql/my.cnf"
+      # Try to set a reasonable default for my.cnf file. 
+      #
+      mysql_config = "/etc/my.cnf"
+      if (!File.exist?(mysql_config))
+        if (File.exist?("/etc/mysql/my.cnf"))
+          mysql_config = "/etc/mysql/my.cnf"
+        end
       end
-    end
-    @configurator.edit_cfg_value PropertyDescriptor.new(
-      "MySQL configuration file", PV_READABLE_FILE, REPL_MYSQL_MYCNF,
-      mysql_config)
-    # Check whether binlogs are enabled.
-    defaultPattern = findMycnfValue(@configurator.config.props[REPL_MYSQL_MYCNF], "log_bin", "");
-    defaultPatternB = findMycnfValue(@configurator.config.props[REPL_MYSQL_MYCNF], "log-bin", "");
-    if defaultPattern == "" and defaultPatternB ==""
-      puts "WARNING: binary logs are not enabled in my.cnf"
-      puts "Binary logs must be enabled for Replicator's extractor to work."
-      puts "Adding the following line to my.cnf will turn logging on:"
-      puts "log-bin=mysql-bin"
-      puts @@pressEnterMsg
-      STDIN.gets
-      defaultPattern = "mysql-bin"
-    elsif defaultPatternB != ""
-      defaultPattern = defaultPatternB
-    end
+      @configurator.edit_cfg_value PropertyDescriptor.new(
+        "MySQL configuration file", PV_READABLE_FILE, REPL_MYSQL_MYCNF,
+        mysql_config)
+      # Check whether binlogs are enabled.
+      defaultPattern = findMycnfValue(@configurator.config.props[REPL_MYSQL_MYCNF], "log_bin", "");
+      defaultPatternB = findMycnfValue(@configurator.config.props[REPL_MYSQL_MYCNF], "log-bin", "");
+      if defaultPattern == "" and defaultPatternB ==""
+        puts "WARNING: binary logs are not enabled in my.cnf"
+        puts "Binary logs must be enabled for Replicator's extractor to work."
+        puts "Adding the following line to my.cnf will turn logging on:"
+        puts "log-bin=mysql-bin"
+        puts @@pressEnterMsg
+        STDIN.gets
+        defaultPattern = "mysql-bin"
+      elsif defaultPatternB != ""
+        defaultPattern = defaultPatternB
+      end
   
-    # MySQL allows binlog patterns to be full directory paths.  Use
-    # the base name only and remove any extension as MySQL seems to
-    # ignore these as well.
-    defaultPattern = File.basename(defaultPattern, ".*")
+      # MySQL allows binlog patterns to be full directory paths.  Use
+      # the base name only and remove any extension as MySQL seems to
+      # ignore these as well.
+      defaultPattern = File.basename(defaultPattern, ".*")
 
-    @configurator.edit_cfg_value PropertyDescriptor.new(
-      "MySQL binlog pattern", PV_ANY, REPL_MYSQL_BINLOGPATTERN,
-      defaultPattern)
-    # Check whether we can read binlogs.
-    binLogGlobPath =
-      @configurator.config.props[REPL_MYSQL_BINLOGDIR] + "/" +
-      @configurator.config.props[REPL_MYSQL_BINLOGPATTERN] + ".*"
-    binLogFiles = Dir.glob(binLogGlobPath)
-    if binLogFiles.length > 0
-      if ! File.readable?(binLogFiles[0])
-        puts "WARNING: binary logs cannot be read by current user:"
-        puts binLogFiles[0]
-        puts "Binary logs must be accessible for Replicator's extractor to work."
+      @configurator.edit_cfg_value PropertyDescriptor.new(
+        "MySQL binlog pattern", PV_ANY, REPL_MYSQL_BINLOGPATTERN,
+        defaultPattern)
+      # Check whether we can read binlogs.
+      binLogGlobPath =
+        @configurator.config.props[REPL_MYSQL_BINLOGDIR] + "/" +
+        @configurator.config.props[REPL_MYSQL_BINLOGPATTERN] + ".*"
+      binLogFiles = Dir.glob(binLogGlobPath)
+      if binLogFiles.length > 0
+        if ! File.readable?(binLogFiles[0])
+          puts "WARNING: binary logs cannot be read by current user:"
+          puts binLogFiles[0]
+          puts "Binary logs must be accessible for Replicator's extractor to work."
+          puts @@pressEnterMsg
+          STDIN.gets
+        end
+      else
+        puts "WARNING: no binary logs found under name of"
+        puts binLogGlobPath
+        puts "Please confirm that binary logs are enabled."
         puts @@pressEnterMsg
         STDIN.gets
       end
+
+      # Set default relay log directory.  
+      @configurator.set_cfg_default(REPL_RELAY_LOG_DIR, 
+        "/opt/continuent/relay-logs")
+
     else
-      puts "WARNING: no binary logs found under name of"
-      puts binLogGlobPath
-      puts "Please confirm that binary logs are enabled."
-      puts @@pressEnterMsg
-      STDIN.gets
+      # Configure relay logs.
+      puts
+      @configurator.write_divider
+      puts <<RELAY_LOG
+You are configuring Tungsten to extract using downloaded binary
+logs, which are also known as Tungsten relay logs.  You must provide a 
+non-NFS-mounted, local directory for downloaded files and also provide 
+the binlog file pattern.
+
+RELAY_LOG
+      @configurator.edit_cfg_value PropertyDescriptor.new(
+        "Enter the local directory for temporary relay log storage",
+        PV_WRITABLE_OUTPUT_DIR, REPL_RELAY_LOG_DIR,
+        "#{base_dir}/relay-logs")
+      @configurator.edit_cfg_value PropertyDescriptor.new(
+        "MySQL binlog pattern", PV_ANY, REPL_MYSQL_BINLOGPATTERN,
+        defaultPattern)
+
+      # Set default local binlog location. 
+      @configurator.set_cfg_default(REPL_MYSQL_BINLOGDIR, 
+        "/var/lib/mysql")
     end
-    #
-    mysqld = "/etc/init.d/mysqld"
-  
-    if (!File.exist?(mysqld))
-      if (File.exist?("/etc/init.d/mysql"))
-        mysqld = "/etc/init.d/mysql"
-      end
-    end
-    @configurator.edit_cfg_value PropertyDescriptor.new(
-      "MySQL start script", PV_EXECUTABLE_FILE, REPL_BOOT_SCRIPT, mysqld)
 
     # Configure the replicator log.
     if @configurator.is_community
@@ -285,7 +326,7 @@ DBMS_INFO2
       puts
       @configurator.write_divider
       puts <<DISK_LOG
-Tungsten stores database transactions for replication in a specialized
+Tungsten stores database transactions for replication in its own
 log.  You may store this log either on disk or in tables in your
 DBMS server.  The disk log is highly recommended as it is faster
 and self-managing.  If you choose the disk log you must provide a
@@ -302,26 +343,6 @@ DISK_LOG
       end
     end
     
-    # Configure relay logs.
-    puts
-    @configurator.write_divider
-    puts <<RELAY_LOG
-Tungsten can read the MySQL binlog directly from disk or using relay
-logs.  Relay logs are copies of MySQL binlog files downloaded from
-the MySQL server using a client connection.  You should enable relay
-logs if your MySQL binlog is located on a remote host or the binlog
-directory is mounted on NFS.  If you enable relay logs you will need
-to provide a non-NFS, local directory in which to store them.
-
-RELAY_LOG
-    @configurator.edit_cfg_value PropertyDescriptor.new(
-      "Enter the local directory for relay log storage",
-      PV_WRITABLE_OUTPUT_DIR, REPL_RELAY_LOG_DIR,
-      "#{base_dir}/relay-logs")
-    @configurator.edit_cfg_value PropertyDescriptor.new(
-      "Configure the extractor to access the binlog via local relay logs?",
-      PV_BOOLEAN, REPL_EXTRACTOR_USE_RELAY_LOGS, "false")
-
     # Configure backups.
     puts
     @configurator.write_divider
@@ -585,11 +606,11 @@ MEMSIZE
         "replicator.vipInterface=" + @configurator.config.props[REPL_MASTER_VIP_DEVICE]
       elsif line =~ /replicator.vipAddress/
         "replicator.vipAddress=" + @configurator.config.props[REPL_MASTER_VIP]
-      elsif line =~ /replicator.extractor.mysql.useRelayLogs/ && @configurator.config.props[REPL_EXTRACTOR_USE_RELAY_LOGS] == "true"
+      elsif line =~ /replicator.extractor.mysql.useRelayLogs/ && @configurator.config.props[REPL_MYSQL_EXTRACT_METHOD] == "relay"
         "replicator.extractor.mysql.useRelayLogs=true"
-      elsif line =~ /replicator.extractor.mysql.relayLogDir/ && @configurator.config.props[REPL_EXTRACTOR_USE_RELAY_LOGS] == "true"
+      elsif line =~ /replicator.extractor.mysql.relayLogDir/ && @configurator.config.props[REPL_MYSQL_EXTRACT_METHOD] == "relay"
         "replicator.extractor.mysql.relayLogDir=" + @configurator.config.props[REPL_RELAY_LOG_DIR]
-      elsif line =~ /replicator.extractor.mysql.relayLogRetention/ && @configurator.config.props[REPL_EXTRACTOR_USE_RELAY_LOGS] == "true"
+      elsif line =~ /replicator.extractor.mysql.relayLogRetention/ && @configurator.config.props[REPL_MYSQL_EXTRACT_METHOD] == "relay"
         "replicator.extractor.mysql.relayLogRetention=3" 
       elsif line =~ /replicator.store.thl.log_file_retention/ && @configurator.config.props[REPL_THL_LOG_RETENTION] != ""
         "replicator.store.thl.log_file_retention=#{@configurator.config.props[REPL_THL_LOG_RETENTION]}"

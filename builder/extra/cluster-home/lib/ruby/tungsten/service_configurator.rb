@@ -39,6 +39,9 @@ class ServiceConfigurator
   REPL_SVC_MASTERPORT = "repl_svc_masterport"
   REPL_SVC_SERVICE_TYPE = "repl_svc_service_type"
   REPL_SVC_THL_PORT = "repl_svc_thl_port"
+  REPL_SVC_SHARD_DEFAULT_DB = "repl_svc_shard_default_db"
+  REPL_SVC_ALLOW_BIDI_UNSAFE = "repl_svc_allow_bidi_unsafe"
+  REPL_SVC_ALLOW_ANY_SERVICE = "repl_svc_allow_any_remote_service"
 
   # Initialize configuration arguments.
   def initialize(arguments, stdin)
@@ -145,8 +148,14 @@ class ServiceConfigurator
       @config_overrides.setProperty(REPL_THL_LOG_FILE_SIZE, val) }
     opts.on("--thl-port String") {|val|
       @config_overrides.setProperty(REPL_SVC_THL_PORT, val) }
-    opts.on("--use-relay-logs String") {|val|
-      @config_overrides.setProperty(REPL_EXTRACTOR_USE_RELAY_LOGS, val)}
+    opts.on("--extract-method String") {|val|
+      @config_overrides.setProperty(REPL_MYSQL_EXTRACT_METHOD, val)}
+    opts.on("--shard-default-db String") {|val|
+      @config_overrides.setProperty(REPL_SVC_SHARD_DEFAULT_DB, val)}
+    opts.on("--allow-bidi-unsafe String") {|val|
+      @config_overrides.setProperty(REPL_SVC_ALLOW_BIDI_UNSAFE, val)}
+    opts.on("--allow-any-remote-service String") {|val|
+      @config_overrides.setProperty(REPL_SVC_ALLOW_ANY_SERVICE, val)}
 
     @options.remainder = opts.parse(@arguments) rescue
     begin
@@ -205,6 +214,10 @@ class ServiceConfigurator
     else
       puts "(Unable to load defaults from config file: #{@options.config})"
     end
+    printf "--allow-bidi-unsafe   Allow unsafe SQL from remote service [%s]\n", 
+      output_param(cfg_loaded, REPL_SVC_ALLOW_BIDI_UNSAFE)
+    printf "--allow-any-remote-service  Replicate from any service [%s]\n", 
+      output_param(cfg_loaded, REPL_SVC_ALLOW_ANY_SERVICE)
     printf "--auto-enable      If true, service goes online at startup [%s]\n", 
       output_param(cfg_loaded, REPL_AUTOENABLE)
     printf "--binlog-mode      Read MySQL binlog or slave relay log (master|slave-relay) [%s]\n", 
@@ -213,6 +226,8 @@ class ServiceConfigurator
       output_param(cfg_loaded, REPL_BUFFER_SIZE)
     printf "--channels         Number of channels for parallel apply [%s]\n", 
       output_param(cfg_loaded, REPL_SVC_CHANNELS)
+    printf "--extract-method   Binlog extraction method (direct|relay) [%s]\n", 
+      output_param(cfg_loaded, REPL_MYSQL_EXTRACT_METHOD)
     printf "--local-service-name  Replicator service that owns master [%s]\n", 
       output_param(cfg_loaded, GLOBAL_DSNAME)
     printf "--master-host      Replicator remote master host name [%s]\n", 
@@ -225,6 +240,8 @@ class ServiceConfigurator
       output_param(cfg_loaded, REPL_ROLE)
     printf "--service-type     Replicator service type (local|remote) [%s]\n", 
       output_param(cfg_loaded, REPL_SVC_SERVICE_TYPE)
+    printf "--shard-default-db Use default db for shard ID (stringent|relaxed) [%s]\n",
+      output_param(cfg_loaded, REPL_SVC_SHARD_DEFAULT_DB)
     printf "--thl-conn-timeout Idle timeout on internal THL connections [%s]\n", 
       output_param(cfg_loaded, REPL_THL_LOG_CONNECTION_TIMEOUT)
     printf "--thl-do-checksum  If true, checksum THL records [%s]\n", 
@@ -235,8 +252,6 @@ class ServiceConfigurator
       output_param(cfg_loaded, REPL_THL_LOG_FILE_SIZE)
     printf "--thl-port         THL server listener port [%s]\n", 
       output_param(cfg_loaded, REPL_SVC_THL_PORT)
-    printf "--use-relay-logs   Whether to use relay logging [%s]\n", 
-      output_param(cfg_loaded, REPL_EXTRACTOR_USE_RELAY_LOGS)
   end
 
   def output_param(cfg_loaded, name)
@@ -266,12 +281,15 @@ class ServiceConfigurator
     @config.setProperty(REPL_SVC_MASTERPORT, "2112")
     @config.setProperty(REPL_SVC_THL_PORT, "2112")
     @config.setProperty(REPL_SVC_BINLOG_MODE, "master")
+    @config.setProperty(REPL_SVC_SHARD_DEFAULT_DB, "stringent")
+    @config.setProperty(REPL_SVC_ALLOW_BIDI_UNSAFE, "false")
+    @config.setProperty(REPL_SVC_ALLOW_ANY_SERVICE, "false")
 
     # Apply override values. 
     @config_overrides.hash().keys.each {|key| 
       @config.setProperty(key, @config_overrides.getProperty(key))
     }
-      
+ 
     # Load is done. 
     true
   end
@@ -312,8 +330,11 @@ class ServiceConfigurator
     # Create required directories. 
     puts "Creating disk log directory: #{log_dir}"
     Dir.mkdir(log_dir)
-    puts "Creating relay log directory: #{relay_log_dir}"
-    Dir.mkdir(relay_log_dir)
+    
+    if @config.props[REPL_MYSQL_EXTRACT_METHOD] == "relay"
+      puts "Creating relay log directory: #{relay_log_dir}"
+      Dir.mkdir(relay_log_dir)
+    end
 
     # Create service definition file. 
     generate_svc_properties(@options.service_name)
@@ -497,8 +518,12 @@ class ServiceConfigurator
         "replicator.store.thl.storageListenerUri=thl://0.0.0.0:" + 
           @config.props[REPL_SVC_THL_PORT] + "/"
       elsif line =~ /replicator.extractor.mysql.useRelayLogs=/
-        "replicator.extractor.mysql.useRelayLogs=" + @config.props[REPL_EXTRACTOR_USE_RELAY_LOGS]
-      elsif line =~ /replicator.extractor.mysql.relayLogDir=/
+        if @config.props[REPL_MYSQL_EXTRACT_METHOD] == "relay"
+          "replicator.extractor.mysql.useRelayLogs=true"
+        else
+          "replicator.extractor.mysql.useRelayLogs=false"
+        end
+      elsif line =~ /replicator.extractor.mysql.relayLogDir=/ && @config.props[REPL_MYSQL_EXTRACT_METHOD] == "relay"
         "replicator.extractor.mysql.relayLogDir=" + relay_log_dir
       elsif line =~ /replicator.global.apply.channels=/
         "replicator.global.apply.channels=" + @config.props[REPL_SVC_CHANNELS]
@@ -512,6 +537,12 @@ class ServiceConfigurator
         "replicator.store.thl.log_dir="+ log_dir
       elsif line =~ /replicator.store.thl.log_file_size=/
         "replicator.store.thl.log_file_size=" + @config.props[REPL_THL_LOG_FILE_SIZE]
+      elsif line =~ /replicator.shard.default.db=/
+        "replicator.shard.default.db=" + @config.props[REPL_SVC_SHARD_DEFAULT_DB]
+      elsif line =~ /replicator.filter.bidiSlave.allowBidiUnsafe=/
+        "replicator.filter.bidiSlave.allowBidiUnsafe=" + @config.props[REPL_SVC_ALLOW_BIDI_UNSAFE]
+      elsif line =~ /replicator.filter.bidiSlave.allowAnyRemoteService=/
+        "replicator.filter.bidiSlave.allowAnyRemoteService=" + @config.props[REPL_SVC_ALLOW_ANY_SERVICE]
       else
         line
       end

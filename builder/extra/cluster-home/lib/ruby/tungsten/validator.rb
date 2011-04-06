@@ -114,6 +114,8 @@ PV_HOSTNAME = PropertyValidator.new('[A-Za-z0-9_.]+',
   "Value must consist only of letters, digits, underscore (_) and periods")
 PV_DBMSTYPE = PropertyValidator.new("mysql|postgresql|none", 
   "Value must be a database:  mysql, postgresql, or none")
+PV_BINLOG_EXTRACTION = PropertyValidator.new("direct|relay", 
+  "Value must be direct or relay")
 PV_LOGTYPE = PropertyValidator.new("dbms|disk", 
   "Value must be a supported replicator log type:  dbms (store in db) or disk")
 PV_DEPLOYMENTTYPE = PropertyValidator.new("small|medium|large", 

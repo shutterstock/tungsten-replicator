@@ -18,7 +18,7 @@ BRI_SVN_URL=https://bristlecone.svn.sourceforge.net/svnroot/bristlecone/trunk/br
 EBLD_SVN_URL=svn+ssh://forge.continuent.org/svnroot/tungsten/branches/tungsten-2.0/enterprise-builder
 
 # Version name of the release to build
-VERSION=2.0-rc-17
+VERSION=2.0.2
 
 # Set to 1 to use existing code (found in $BUILD_DIR)
 SKIP_CHECKOUT=0

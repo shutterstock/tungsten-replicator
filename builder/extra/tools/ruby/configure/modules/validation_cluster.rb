@@ -34,4 +34,9 @@ class ClusterSSHLoginCheck < ConfigureValidationCheck
       end
     }
   end
+  
+  def enabled?
+    # Disabled until the manager is present and needs SSH access between hosts
+    false
+  end
 end

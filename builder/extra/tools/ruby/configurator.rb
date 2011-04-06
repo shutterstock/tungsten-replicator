@@ -70,6 +70,8 @@ class Configurator
   TEMP_DEPLOY_HOST_CONFIG = ".tungsten.cfg"
   TEMP_DEPLOY_CLUSTER_CONFIG = "cluster.cfg"
   
+  SERVICE_CONFIG_PREFIX = "service_"
+  
   # Initialize configuration arguments.
   def initialize()
     # Set instance variables.
@@ -149,12 +151,15 @@ class Configurator
         exit 0
       end
     else
+      # Disabled until the prompt handler is updated to collect information
+      # for multiple services
+      
       # Validate the values in the configuration file against the prompt validation
-      unless prompt_handler.is_valid?()
-        write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
-        prompt_handler.print_errors()
-        exit 1
-      end
+      #unless prompt_handler.is_valid?()
+      #  write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
+      #  prompt_handler.print_errors()
+      #  exit 1
+      #end
     end
     
     deployment_method = get_deployment()
@@ -193,7 +198,7 @@ class Configurator
     
     if has_tty?() && @options.stream_output == false
       info("")
-      write_header "Validation checks for #{@current_config.getProperty(GLOBAL_HOST)}:#{@current_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+      write_header "Validation checks for #{@stored_config.getProperty(GLOBAL_HOST)}:#{@stored_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
     end
     
     deployment_method = get_deployment()
@@ -217,7 +222,7 @@ class Configurator
     
     if has_tty?() && @options.stream_output == false
       info("")
-      write_header "Deploy #{@current_config.getProperty(GLOBAL_HOST)}:#{@current_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+      write_header "Deploy #{@stored_config.getProperty(GLOBAL_HOST)}:#{@stored_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
     end
     
     deployment_method = get_deployment()

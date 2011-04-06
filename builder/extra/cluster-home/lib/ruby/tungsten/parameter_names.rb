@@ -61,6 +61,7 @@ module ParameterNames
   REPL_MASTER_VIP  = "repl_master_vip"
   REPL_MASTER_VIP_DEVICE = "repl_master_vip_device"
   REPL_MASTER_VIP_IFCONFIG = "repl_master_vip_ifconfig"
+  REPL_MYSQL_EXTRACT_METHOD = "repl_mysql_extract_method"
   REPL_EXTRACTOR_USE_RELAY_LOGS = "repl_extractor_use_relay_logs"
   REPL_RELAY_LOG_DIR = "repl_relay_log_dir"
   REPL_THL_DO_CHECKSUM = "repl_thl_do_checksum"

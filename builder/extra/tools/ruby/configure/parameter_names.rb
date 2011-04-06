@@ -38,7 +38,9 @@ GLOBAL_HOSTS = "global_hosts"
 GLOBAL_WITNESSES = "global_witnesses"
 
 # Generic replication parameters.
+REPL_SERVICES = "repl_services"
 REPL_HOSTS = "repl_hosts"
+REPL_REMOTE_HOSTS = "repl_remote_hosts"
 REPL_AUTOENABLE = "repl_auto_enable"
 REPL_MASTERHOST = "repl_master_host"
 REPL_BACKUP_METHOD = "repl_backup_method"

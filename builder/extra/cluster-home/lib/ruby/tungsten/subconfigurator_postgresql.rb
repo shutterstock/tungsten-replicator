@@ -94,8 +94,8 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
         if @configurator.config.props[GLOBAL_RESTART_DBMS] == "true"
           puts ""
           puts "WARNING:  PostgreSQL replicator configuration requires a reboot of the PostgreSQL server"
-          puts "If you defer the reboot of the PostgreSQL server, a manual reboot prior to starting"
-          puts "The Tungsten services"
+          puts "If you defer the reboot of the PostgreSQL server, a manual reboot is required prior to starting"
+          puts "Tungsten services."
           if (!@configurator.confirmed("Answer 'y' to reboot during this configuration, 'n' to defer", "y"))
             @configurator.config.props[GLOBAL_RESTART_DBMS] = "defer"
           end
@@ -151,6 +151,7 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
     @configurator.edit_cfg_value PropertyDescriptor.new(
     "Database password", PV_ANY, REPL_DBPASSWORD, "secret")
 
+    # Try to determine PG directories automatically.
     def_root_dir = "/var/lib/pgsql"
     def_data_dir = psql_atom_query_silent("SHOW data_directory;").chomp
     if def_data_dir == nil || !def_data_dir.include?("/") || def_data_dir.include?("psql")
@@ -162,11 +163,15 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
     if def_config_path == nil || !def_config_path.include?(".conf") || def_data_dir.include?("psql")
       def_config_path = nil
     end
+
     @configurator.edit_cfg_value PropertyDescriptor.new(
     "Root directory for postgresql installation", PV_WRITABLE_DIR, REPL_PG_ROOT, def_root_dir)
 
     config_root=@configurator.config.props[REPL_PG_ROOT]
 
+    if def_data_dir == nil
+      def_data_dir = config_root + "/data"
+    end
     @configurator.edit_cfg_value PropertyDescriptor.new(
     "PostgreSQL data directory", PV_WRITABLE_DIR, REPL_PG_HOME,  def_data_dir)
     if def_config_path == nil
@@ -293,6 +298,12 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
         "replicator.storage.agent.fs.directory=" + @configurator.config.props[REPL_BACKUP_STORAGE_DIR]
       elsif line =~ /replicator.storage.agent.fs.retention/
         "replicator.storage.agent.fs.retention=" + @configurator.config.props[REPL_BACKUP_RETENTION]
+      elsif line =~ /replicator.backup.agent.script.script/ && @configurator.config.props[REPL_BACKUP_METHOD] == "script"
+        "replicator.backup.agent.script.script=" + @configurator.config.props[REPL_BACKUP_SCRIPT]
+      elsif line =~ /replicator.backup.agent.script.commandPrefix/ && @configurator.config.props[REPL_BACKUP_METHOD] == "script"
+        "replicator.backup.agent.script.commandPrefix=" + @configurator.config.props[REPL_BACKUP_COMMAND_PREFIX]
+      elsif line =~ /replicator.backup.agent.script.hotBackupEnabled/ && @configurator.config.props[REPL_BACKUP_METHOD] == "script"
+        "replicator.backup.agent.script.hotBackupEnabled=" + @configurator.config.props[REPL_BACKUP_ONLINE]
       elsif line =~ /replicator.script.root/
         "replicator.script.root_dir=" + File.expand_path("tungsten-replicator")
       elsif line =~ /replicator.script.conf_file/
@@ -307,6 +318,40 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
         else
           "replicator.script.processor=bin/pg-londiste-plugin"
         end
+      else
+        line
+      end
+    }
+    
+    # Generate the services.properties file.
+    transformer = Transformer.new(
+    "tungsten-replicator/conf/sample.services.properties",
+    "tungsten-replicator/conf/services.properties", "#")
+
+    transformer.transform { |line|
+      if line =~ /replicator.services/
+        "replicator.services=" + @configurator.config.props[GLOBAL_DSNAME]
+      elsif line =~ /replicator.global.db.user=/ then
+        "replicator.global.db.user=" + @configurator.config.props[REPL_DBLOGIN]
+      elsif line =~ /replicator.global.db.password=/ then
+        "replicator.global.db.password=" + @configurator.config.props[REPL_DBPASSWORD]
+      elsif line =~ /replicator.resourceJdbcUrl=/ then
+        "replicator.resourceJdbcUrl=jdbc:postgresql://" + @configurator.config.props[GLOBAL_HOST] + ":" +
+        @configurator.config.props[REPL_DBPORT] + "/${DBNAME}"
+      elsif line =~ /replicator.resourceDataServerHost/ then
+        "replicator.resourceDataServerHost=" + @configurator.config.props[GLOBAL_HOST]
+      elsif line =~ /replicator.resourceJdbcDriver/ then
+        "replicator.resourceJdbcDriver=org.postgresql.Driver"
+      elsif line =~ /replicator.resourcePort/ then
+        "replicator.resourcePort=" + @configurator.config.props[REPL_DBPORT]
+      elsif line =~ /replicator.source_id/ then
+        "replicator.source_id=" + @configurator.config.props[GLOBAL_HOST]
+      elsif line =~ /replicator.resourceVendor/ then
+        "replicator.resourceVendor=" + @configurator.config.props[GLOBAL_DBMS_TYPE]
+      elsif line =~ /cluster.name=/ then
+        "cluster.name=" + @configurator.config.props[GLOBAL_CLUSTERNAME]
+      elsif line =~ /replicator.host=/ then
+        "replicator.host=" + @configurator.config.props[GLOBAL_HOST]
       else
         line
       end
@@ -360,6 +405,10 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
           else
             "postgresql.master.host="
           end
+        elsif line =~ /postgresql.master.user/ then
+          "postgresql.master.user=" + @configurator.config.props[REPL_DBLOGIN]
+        elsif line =~ /postgresql.master.password/ then
+          "postgresql.master.password=" + @configurator.config.props[REPL_DBPASSWORD]
         elsif line =~ /postgresql.boot.script/ then
           "postgresql.boot.script=" + @configurator.config.props[REPL_BOOT_SCRIPT]
         elsif line =~ /postgresql.root.prefix/ then
@@ -383,48 +432,37 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
       }
     end
 
-    # Configure wrapper.conf to use the Open Replicator main class.
-    transformer = Transformer.new(
-    "tungsten-replicator/conf/wrapper.conf",
-    "tungsten-replicator/conf/wrapper.conf", nil)
+    if @configurator.config.props[REPL_MONITOR_ACTIVE] =~ /true/
+      # Configure monitoring for PostgreSQL.
+      transformer = Transformer.new(
+      "tungsten-monitor/conf/sample.checker.postgresqlserver.properties",
+      "tungsten-monitor/conf/checker.postgresqlserver.properties", "# ")
 
-    transformer.transform { |line|
-      if line =~ /wrapper.app.parameter.1/ then
-        "wrapper.app.parameter.1=com.continuent.tungsten.replicator.management.OpenReplicatorManager"
-      else
-        line
-      end
-    }
+      user = @configurator.config.props[REPL_DBLOGIN]
+      password = @configurator.config.props[REPL_DBPASSWORD]
 
-    # Configure monitoring for PostgreSQL.
-    transformer = Transformer.new(
-    "tungsten-monitor/conf/sample.checker.postgresqlserver.properties",
-    "tungsten-monitor/conf/checker.postgresqlserver.properties", "# ")
-
-    user = @configurator.config.props[REPL_DBLOGIN]
-    password = @configurator.config.props[REPL_DBPASSWORD]
-
-    transformer.transform { |line|
-      if line =~ /serverName=/
-        "serverName=" + @configurator.config.props[GLOBAL_HOST]
-      elsif line =~ /url=/
-        "url=jdbc:postgresql://" + @configurator.config.props[GLOBAL_HOST] + ':' + @configurator.config.props[REPL_DBPORT] + "/" + user
-      elsif line =~ /frequency=/
-        "frequency=" + @configurator.config.props[REPL_MONITOR_INTERVAL]
-      elsif line =~ /host=/
-        "host=" + @configurator.config.props[GLOBAL_HOST]
-      elsif line =~ /username=/
-        "username=" + user
-      elsif line =~ /password=/
-        if password == "" || password == nil then
-          "password="
+      transformer.transform { |line|
+        if line =~ /serverName=/
+          "serverName=" + @configurator.config.props[GLOBAL_HOST]
+        elsif line =~ /url=/
+          "url=jdbc:postgresql://" + @configurator.config.props[GLOBAL_HOST] + ':' + @configurator.config.props[REPL_DBPORT] + "/" + user
+        elsif line =~ /frequency=/
+          "frequency=" + @configurator.config.props[REPL_MONITOR_INTERVAL]
+        elsif line =~ /host=/
+          "host=" + @configurator.config.props[GLOBAL_HOST]
+        elsif line =~ /username=/
+          "username=" + user
+        elsif line =~ /password=/
+          if password == "" || password == nil then
+            "password="
+          else
+            "password=" + password
+          end
         else
-          "password=" + password
+          line
         end
-      else
-        line
-      end
-    }
+      }
+    end
 
     # Create service script for PostgreSQL.
     script = @configurator.config.props[REPL_BOOT_SCRIPT]
