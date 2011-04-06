@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="lib" path="conf"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/fsm"/>
 	<classpathentry kind="src" path="src/java"/>
 	<classpathentry kind="src" path="test/java"/>
@@ -14,5 +13,6 @@
 	<classpathentry kind="lib" path="lib/hedera-2.0.1.jar" sourcepath="/home/edward/continuent-clean-head/hedera/src/jgroups"/>
 	<classpathentry kind="lib" path="lib/xstream-1.3.1.jar" sourcepath="/home/edward/.m2/repository/com/thoughtworks/xstream/xstream/1.3.1/xstream-1.3.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/xpp3_min-1.1.4c.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
