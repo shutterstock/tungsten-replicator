@@ -73,10 +73,15 @@ public class ReplOptionParams
      * option.
      */
     public static String JAVA_CHARSET_NAME       = "##charset";
-    
+
     /**
      * ServerId. This is a statement option.
      */
     public static String SERVER_ID               = "mysql_server_id";
 
+    /**
+     * Contains value "true" if the transaction is unsafe for bi-directional
+     * replication.
+     */
+    public static String BIDI_UNSAFE             = "bidi_unsafe";
 }

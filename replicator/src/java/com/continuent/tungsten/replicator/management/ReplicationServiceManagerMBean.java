@@ -42,14 +42,18 @@ public interface ReplicationServiceManagerMBean
     public List<Map<String, String>> services() throws Exception;
 
     /**
-     * 
+     * Returns true if the MBean is alive. Used to test liveness of connections.
+     */
+    public boolean isAlive();
+
+    /**
      * Returns status information.
      * 
      * @return
      * @throws Exception
      */
     public TungstenProperties status() throws Exception;
-    
+
     /**
      * Starts a replication service.
      * 
@@ -67,7 +71,7 @@ public interface ReplicationServiceManagerMBean
      * @throws Exception Thrown if service stop fails
      */
     public boolean stopService(String name) throws Exception;
-    
+
     /**
      * Resets a replication service.
      * 

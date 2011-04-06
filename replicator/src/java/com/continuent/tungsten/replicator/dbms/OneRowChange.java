@@ -19,6 +19,7 @@
  * Initial developer(s): Seppo Jaakola
  * Contributor(s):
  */
+
 package com.continuent.tungsten.replicator.dbms;
 
 import java.io.Serializable;
@@ -51,6 +52,18 @@ public class OneRowChange implements Serializable
         private int               length;
         private boolean           notNull;              // Is the column a NOT
                                                          // NULL column
+        private boolean           blob;
+        private String            typeDescription;
+
+        public boolean isBlob()
+        {
+            return blob;
+        }
+
+        public void setBlob(boolean blob)
+        {
+            this.blob = blob;
+        }
 
         public ColumnSpec()
         {
@@ -59,6 +72,7 @@ public class OneRowChange implements Serializable
             this.length = 0;
             this.notNull = false;
             this.signed = true;
+            this.blob = false;
         }
 
         public int getIndex()
@@ -111,15 +125,25 @@ public class OneRowChange implements Serializable
         {
             this.index = index;
         }
-        
+
         public void setSigned(boolean signed)
         {
             this.signed = signed;
         }
-        
+
         public boolean isUnsigned()
         {
             return !signed;
+        }
+
+        public String getTypeDescription()
+        {
+            return typeDescription;
+        }
+
+        public void setTypeDescription(String typeDescription)
+        {
+            this.typeDescription = typeDescription;
         }
     }
     public class ColumnVal implements Serializable
@@ -156,6 +180,7 @@ public class OneRowChange implements Serializable
 
     /* values for data column components */
     private ArrayList<ArrayList<ColumnVal>> columnValues;
+    private long                            tableId;
 
     public ArrayList<ColumnSpec> getColumnSpec()
     {
@@ -233,7 +258,7 @@ public class OneRowChange implements Serializable
             ArrayList<ColumnSpec> columnSpec,
             ArrayList<ArrayList<ColumnVal>> columnValues)
     {
-        super();
+        // TODO : Not referenced ? To be removed ?
         this.schemaName = schemaName;
         this.tableName = tableName;
         this.action = action;
@@ -245,22 +270,28 @@ public class OneRowChange implements Serializable
 
     public OneRowChange(String schemaName, String tableName, ActionType action)
     {
-        super();
+        this();
         this.schemaName = schemaName;
         this.tableName = tableName;
         this.action = action;
-        keySpec = new ArrayList<ColumnSpec>();
-        keyValues = new ArrayList<ArrayList<ColumnVal>>();
-        columnSpec = new ArrayList<ColumnSpec>();
-        columnValues = new ArrayList<ArrayList<ColumnVal>>();
     }
 
     public OneRowChange()
     {
-        super();
         keySpec = new ArrayList<ColumnSpec>();
         keyValues = new ArrayList<ArrayList<ColumnVal>>();
         columnSpec = new ArrayList<ColumnSpec>();
         columnValues = new ArrayList<ArrayList<ColumnVal>>();
+        this.tableId = -1;
+    }
+
+    public void setTableId(long tableId)
+    {
+        this.tableId = tableId;
+    }
+
+    public long getTableId()
+    {
+        return tableId;
     }
 }

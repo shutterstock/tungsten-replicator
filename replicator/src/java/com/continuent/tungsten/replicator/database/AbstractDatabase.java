@@ -106,7 +106,7 @@ public abstract class AbstractDatabase implements Database
         this.dbPassword = dbPassword;
     }
 
-    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue)
+    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue, String typeDesc)
     {
         return " ? ";
     }
@@ -848,7 +848,7 @@ public abstract class AbstractDatabase implements Database
 
                 Column column = new Column(colName, colType, colLength,
                         isNotNull, valueString);
-
+                column.setPosition(rsc.getInt("ORDINAL_POSITION"));
                 table.AddColumn(column);
                 cm.put(column.getName(), column);
             }

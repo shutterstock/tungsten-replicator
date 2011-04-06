@@ -23,6 +23,9 @@
 package com.continuent.tungsten.replicator.dbms;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+
+import com.continuent.tungsten.replicator.event.ReplOption;
 
 /**
  * This class defines a set of one or more row changes. 
@@ -38,6 +41,7 @@ public class RowChangeData extends DBMSData
 
 	private static final long serialVersionUID = 1L;
 	private ArrayList<OneRowChange> rowChanges;
+	private LinkedList<ReplOption> options = new LinkedList<ReplOption>();
 	
     /**
      * 
@@ -61,5 +65,16 @@ public class RowChangeData extends DBMSData
 	public void appendOneRowChange(OneRowChange rowChange) {
 		this.rowChanges.add(rowChange);
 	}
+
+    public void addOptions(LinkedList<ReplOption> savedOptions)
+    {
+        this.options.addAll(savedOptions);
+    }
+
+    public LinkedList<ReplOption> getOptions()
+    {
+        return options;
+    }
+    
 
 }

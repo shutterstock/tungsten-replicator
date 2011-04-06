@@ -965,6 +965,12 @@ public class JdbcTHLDatabase
         }
     }
 
+    public void connect(String url, String user, String password,
+            String metadataSchema) throws THLException
+    {
+        connect(url, user, password, metadataSchema, null);
+    }
+    
     /**
      * Connect to database.
      * 
@@ -974,7 +980,7 @@ public class JdbcTHLDatabase
      * @throws THLException
      */
     public void connect(String url, String user, String password,
-            String metadataSchema) throws THLException
+            String metadataSchema, String vendor) throws THLException
     {
         this.metadataSchema = metadataSchema;
         // Prepare table descriptions
@@ -983,7 +989,7 @@ public class JdbcTHLDatabase
         try
         {
             // Log updates for a remote data service.
-            conn = DatabaseFactory.createDatabase(url, user, password);
+            conn = DatabaseFactory.createDatabase(url, user, password, vendor);
             conn.connect(runtime.isRemoteService());
 
             statement = conn.createStatement();

@@ -33,8 +33,14 @@ import java.sql.SQLException;
  */
 public class DatabaseFactory
 {
-    static public Database createDatabase(String url, String user, String password) 
-        throws SQLException
+    static public Database createDatabase(String url, String user,
+            String password) throws SQLException
+    {
+        return createDatabase(url, user, password, null);
+    }
+    
+    static public Database createDatabase(String url, String user,
+            String password, String vendor) throws SQLException
     {
         Database database;
         if (url.startsWith("jdbc:drizzle"))
@@ -47,8 +53,12 @@ public class DatabaseFactory
             database = new OracleDatabase();
         else if (url.startsWith("jdbc:derby"))
             database = new DerbyDatabase();
-        else if (url.startsWith("jdbc:postgresql"))
+        else if (url.startsWith("jdbc:postgresql")
+                && (vendor == null || vendor.equals("postgresql")))
             database = new PostgreSQLDatabase();
+        else if (url.startsWith("jdbc:postgresql")
+                && (vendor != null && vendor.equals("greenplum")))
+            database = new GreenplumDatabase();
         else
             throw new RuntimeException("Unsupported URL type: " + url);
 

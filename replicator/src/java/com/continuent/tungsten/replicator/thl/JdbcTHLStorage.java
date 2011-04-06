@@ -45,6 +45,7 @@ public class JdbcTHLStorage implements THLStorage
                                                           .getLogger(JdbcTHLStorage.class);
     private ReplicatorRuntime   runtime           = null;
     protected String            driver            = null;
+    protected String            vendor            = null;
     protected String            url               = null;
     protected String            user              = null;
     protected String            password          = null;
@@ -200,6 +201,8 @@ public class JdbcTHLStorage implements THLStorage
 
         this.runtime = (ReplicatorRuntime) context;
 
+        if (vendor == null)
+            vendor = conf.getString(ReplicatorConf.RESOURCE_VENDOR);
         if (url == null)
             url = conf.getString(ReplicatorConf.THL_DB_URL);
         if (user == null)
@@ -217,7 +220,7 @@ public class JdbcTHLStorage implements THLStorage
             logger.info("Disabled local data storing");
 
         database = new JdbcTHLDatabase(runtime, driver);
-        database.connect(url, user, password, metadataSchema);
+        database.connect(url, user, password, metadataSchema, vendor);
         database.prepareSchema();
     }
 

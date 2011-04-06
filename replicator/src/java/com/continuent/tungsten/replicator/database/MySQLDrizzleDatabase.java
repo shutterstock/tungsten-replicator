@@ -25,6 +25,10 @@ package com.continuent.tungsten.replicator.database;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
+
+import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
+import com.continuent.tungsten.replicator.extractor.mysql.SerialBlob;
 
 /**
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
@@ -40,27 +44,31 @@ public class MySQLDrizzleDatabase extends MySQLDatabase
 
     /**
      * {@inheritDoc}
-     * @see com.continuent.tungsten.replicator.database.MySQLDatabase#getColumnsResultSet(java.sql.DatabaseMetaData, java.lang.String, java.lang.String)
+     * 
+     * @see com.continuent.tungsten.replicator.database.MySQLDatabase#getColumnsResultSet(java.sql.DatabaseMetaData,
+     *      java.lang.String, java.lang.String)
      */
     public ResultSet getColumnsResultSet(DatabaseMetaData md,
             String schemaName, String tableName) throws SQLException
     {
-        // Drizzle driver uses schema argument for MySQL database name vs. 
-        // catalog name for Connector/J.  Unclear who is right...
+        // Drizzle driver uses schema argument for MySQL database name vs.
+        // catalog name for Connector/J. Unclear who is right...
         return md.getColumns(null, schemaName, tableName, null);
     }
 
     /**
      * {@inheritDoc}
-     * @see com.continuent.tungsten.replicator.database.MySQLDatabase#getTablesResultSet(java.sql.DatabaseMetaData, java.lang.String, boolean)
+     * 
+     * @see com.continuent.tungsten.replicator.database.MySQLDatabase#getTablesResultSet(java.sql.DatabaseMetaData,
+     *      java.lang.String, boolean)
      */
     protected ResultSet getTablesResultSet(DatabaseMetaData md,
             String schemaName, boolean baseTablesOnly) throws SQLException
     {
         String types[] = null;
         if (baseTablesOnly)
-            types = new String[] { "TABLE" };
-        
+            types = new String[]{"TABLE"};
+
         return md.getTables(null, schemaName, null, types);
     }
 
@@ -68,8 +76,18 @@ public class MySQLDrizzleDatabase extends MySQLDatabase
     protected ResultSet getPrimaryKeyResultSet(DatabaseMetaData md,
             String schemaName, String tableName) throws SQLException
     {
-            return md.getPrimaryKeys(null, schemaName, tableName);
+        return md.getPrimaryKeys(null, schemaName, tableName);
     }
-    
-    
+
+    @Override
+    public String getPlaceHolder(ColumnSpec col, Object colValue, String typeDesc)
+    {
+        if (col.getType() == Types.BLOB && colValue instanceof SerialBlob
+                && typeDesc != null && typeDesc.contains("TEXT"))
+            return " UNHEX ( ? ) ";
+        else if (col.getType() == Types.VARCHAR && colValue instanceof byte[])
+            return " UNHEX ( ? ) ";
+        return super.getPlaceHolder(col, colValue, typeDesc);
+    }
+
 }

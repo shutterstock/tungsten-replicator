@@ -60,6 +60,7 @@ public class WriteRowsLogEvent extends RowsLogEvent
         OneRowChange oneRowChange = new OneRowChange();
         oneRowChange.setSchemaName(map.getDatabaseName());
         oneRowChange.setTableName(map.getTableName());
+        oneRowChange.setTableId(map.getTableId());
         oneRowChange.setAction(RowChangeData.ActionType.INSERT);
 
         int rowIndex = 0; /* index of the row in value arrays */

@@ -1,1 +1,0 @@
-Tungsten requires a command prefix for running commands with elevated permissions.  This allows us to fully handle the replication and data management process.

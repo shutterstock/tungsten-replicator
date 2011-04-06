@@ -38,6 +38,11 @@ import com.continuent.tungsten.commons.jmx.DynamicMBeanHelper;
 public interface OpenReplicatorManagerMBean
 {
     /**
+     * Returns true so that clients can confirm connection liveness. 
+     */
+    public boolean isAlive();
+
+    /**
      * Gets the site name for this replication service
      * 
      * @return

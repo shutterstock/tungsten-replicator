@@ -80,6 +80,16 @@ public class JdbcURL
                 }
                 sb.append("/");
                 break;
+            case GREENPLUM:
+                sb.append("jdbc:postgresql://"); 
+                sb.append(host);
+                if (port > 0)
+                {
+                    sb.append(":");
+                    sb.append(port);
+                }
+                sb.append("/");
+                break;
         }
         return sb.toString();
     }

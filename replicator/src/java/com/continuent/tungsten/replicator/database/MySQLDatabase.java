@@ -360,7 +360,7 @@ public class MySQLDatabase extends AbstractDatabase
         return "now()";
     }
 
-    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue)
+    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue, String typeDesc)
     {
         return " ? ";
     }

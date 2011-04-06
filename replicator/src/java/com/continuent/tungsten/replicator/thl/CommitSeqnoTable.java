@@ -26,6 +26,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.sql.Types;
 
 import org.apache.log4j.Logger;
@@ -71,6 +72,7 @@ public class CommitSeqnoTable
     private Column             commitSeqnoTableEpochNumber;
     private Column             commitSeqnoTableEventId;
     private Column             commitSeqnoTableAppliedLatency;
+    private Column             commitSeqnoTableUpdateTimestamp;
 
     private PreparedStatement  commitSeqnoUpdate;
     private PreparedStatement  lastSeqnoQuery;
@@ -104,7 +106,9 @@ public class CommitSeqnoTable
         commitSeqnoTableEventId = new Column("eventid", Types.VARCHAR, 128);
         commitSeqnoTableAppliedLatency = new Column("applied_latency",
                 Types.INTEGER);
-
+        commitSeqnoTableUpdateTimestamp = new Column("update_timestamp",
+                Types.TIMESTAMP);
+        
         commitSeqnoTable.AddColumn(commitSeqnoTableTaskId);
         commitSeqnoTable.AddColumn(commitSeqnoTableSeqno);
         commitSeqnoTable.AddColumn(commitSeqnoTableFragno);
@@ -113,6 +117,7 @@ public class CommitSeqnoTable
         commitSeqnoTable.AddColumn(commitSeqnoTableEpochNumber);
         commitSeqnoTable.AddColumn(commitSeqnoTableEventId);
         commitSeqnoTable.AddColumn(commitSeqnoTableAppliedLatency);
+        commitSeqnoTable.AddColumn(commitSeqnoTableUpdateTimestamp);
 
         Key pkey = new Key(Key.Primary);
         pkey.AddColumn(commitSeqnoTableTaskId);
@@ -132,7 +137,8 @@ public class CommitSeqnoTable
                 + commitSeqnoTableSourceId.getName() + "=?, "
                 + commitSeqnoTableEpochNumber.getName() + "=?, "
                 + commitSeqnoTableEventId.getName() + "=?, "
-                + commitSeqnoTableAppliedLatency.getName() + "=? " + "WHERE "
+                + commitSeqnoTableAppliedLatency.getName() + "=?, "
+                + commitSeqnoTableUpdateTimestamp.getName() + "=? " + "WHERE "
                 + commitSeqnoTableTaskId.getName() + "=?");
 
         // Create the table if it does not exist.
@@ -147,7 +153,10 @@ public class CommitSeqnoTable
             // Always initialize to default value.
             commitSeqnoTableTaskId.setValue(taskId);
             commitSeqnoTableSeqno.setValue(-1L);
-            commitSeqnoTableEventId.setValue(null);
+            commitSeqnoTableEventId.setValue(null);            
+            commitSeqnoTableUpdateTimestamp.setValue(new Timestamp(System
+                    .currentTimeMillis()));
+            
             database.insert(commitSeqnoTable);
 
             // If there is a task 0 commit seqno, we propagate task 0 position
@@ -301,7 +310,9 @@ public class CommitSeqnoTable
         commitSeqnoUpdate.setString(6, header.getEventId());
         // Latency can go negative due to clock differences. Round up to 0.
         commitSeqnoUpdate.setLong(7, Math.abs(appliedLatency));
-        commitSeqnoUpdate.setInt(8, taskId);
+        commitSeqnoUpdate.setTimestamp(8,
+                new Timestamp(System.currentTimeMillis()));
+        commitSeqnoUpdate.setInt(9, taskId);
 
         commitSeqnoUpdate.executeUpdate();
     }

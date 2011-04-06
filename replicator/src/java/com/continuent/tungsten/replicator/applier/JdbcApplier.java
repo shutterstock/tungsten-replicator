@@ -31,6 +31,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -81,8 +82,7 @@ import com.continuent.tungsten.replicator.thl.THLManagerCtrl;
  */
 public class JdbcApplier implements RawApplier
 {
-    static Logger                     logger               = Logger
-                                                                   .getLogger(JdbcApplier.class);
+    static Logger                     logger               = Logger.getLogger(JdbcApplier.class);
 
     protected int                     taskId               = 0;
     protected ReplicatorRuntime       runtime              = null;
@@ -360,19 +360,19 @@ public class JdbcApplier implements RawApplier
                         stmt.append(conn.getDatabaseObjectName(col.getName())
                                 + " = "
                                 + conn.getPlaceHolder(col, keyValues.get(i)
-                                        .getValue()));
+                                        .getValue(), col.getTypeDescription()));
                     }
                 }
                 else
                     stmt.append(conn.getDatabaseObjectName(col.getName())
                             + " = "
                             + conn.getPlaceHolder(col, colValues.get(i)
-                                    .getValue()));
+                                    .getValue(), col.getTypeDescription()));
             }
             else if (mode == PrintMode.PLACE_HOLDER)
             {
                 stmt.append(conn.getPlaceHolder(col, colValues.get(i)
-                        .getValue()));
+                        .getValue(), col.getTypeDescription()));
             }
             else if (mode == PrintMode.NAMES_ONLY)
             {
@@ -404,8 +404,8 @@ public class JdbcApplier implements RawApplier
 
             try
             {
-                rs = conn.getColumnsResultSet(meta, data.getSchemaName(), data
-                        .getTableName());
+                rs = conn.getColumnsResultSet(meta, data.getSchemaName(),
+                        data.getTableName());
                 while (rs.next())
                 {
                     String columnName = rs.getString("COLUMN_NAME");
@@ -438,6 +438,12 @@ public class JdbcApplier implements RawApplier
                 {
                     cv.setName(column.getName());
                     cv.setSigned(column.isSigned());
+                    cv.setTypeDescription(column.getTypeDescription());
+                    
+                    // Check whether column is real blob on the applier side
+                    if (cv.getType() == Types.BLOB)
+                        cv.setBlob(column.isBlob());
+
                     break;
                 }
             }
@@ -450,6 +456,11 @@ public class JdbcApplier implements RawApplier
                 {
                     cv.setName(column.getName());
                     cv.setSigned(column.isSigned());
+
+                    // Check whether column is real blob on the applier side
+                    if (cv.getType() == Types.BLOB)
+                        cv.setBlob(column.isBlob());
+
                     break;
                 }
             }
@@ -534,7 +545,7 @@ public class JdbcApplier implements RawApplier
 
             applySetTimestamp(timestamp);
 
-            applyOptionsToStatement(options);
+            applySessionVariables(options);
 
             if (data.getQuery() != null)
                 statement.addBatch(data.getQuery());
@@ -650,11 +661,14 @@ public class JdbcApplier implements RawApplier
      * such a feature)
      * 
      * @param options
+     * @return true if any option changed
      * @throws SQLException
      */
-    protected void applyOptionsToStatement(List<ReplOption> options)
+    protected boolean applySessionVariables(List<ReplOption> options)
             throws SQLException
     {
+        boolean sessionVarChange = false;
+
         if (options != null && conn.supportsSessionVariables())
         {
             if (currentOptions == null)
@@ -705,9 +719,11 @@ public class JdbcApplier implements RawApplier
                         statement.addBatch(optionSetStatement);
                     }
                     currentOptions.put(optionName, optionValue);
+                    sessionVarChange = true;
                 }
             }
         }
+        return sessionVarChange;
     }
 
     /**
@@ -857,8 +873,8 @@ public class JdbcApplier implements RawApplier
                 && didNullKeysChange(keyValues.get(row), keyValues.get(row - 1)))
             return true;
         if (colValues.size() > row
-                && didNullColsChange(colSpecs, colValues.get(row), colValues
-                        .get(row - 1)))
+                && didNullColsChange(colSpecs, colValues.get(row),
+                        colValues.get(row - 1)))
             return true;
         return false;
     }
@@ -873,6 +889,7 @@ public class JdbcApplier implements RawApplier
             int colCount = fillColumnNames(oneRowChange);
             if (colCount <= 0)
                 logger.warn("No column information found for table: "
+                        + oneRowChange.getSchemaName() + "."
                         + oneRowChange.getTableName());
         }
         catch (SQLException e1)
@@ -913,8 +930,8 @@ public class JdbcApplier implements RawApplier
                         colValuesOfThisRow = columnValues.get(row);
 
                     stmt = constructStatement(oneRowChange.getAction(),
-                            oneRowChange.getSchemaName(), oneRowChange
-                                    .getTableName(), columns, key,
+                            oneRowChange.getSchemaName(),
+                            oneRowChange.getTableName(), columns, key,
                             keyValuesOfThisRow, colValuesOfThisRow);
 
                     runtime.getMonitor().incrementEvents(columnValues.size());
@@ -926,14 +943,14 @@ public class JdbcApplier implements RawApplier
                 /* bind column values */
                 if (columnValues.size() > 0)
                 {
-                    bindLoc = bindColumnValues(prepStatement, columnValues
-                            .get(row), bindLoc, columns, false);
+                    bindLoc = bindColumnValues(prepStatement,
+                            columnValues.get(row), bindLoc, columns, false);
                 }
                 /* bind key values */
                 if (keyValues.size() > 0)
                 {
-                    bindLoc = bindColumnValues(prepStatement, keyValues
-                            .get(row), bindLoc, key, true);
+                    bindLoc = bindColumnValues(prepStatement,
+                            keyValues.get(row), bindLoc, key, true);
                 }
 
                 try
@@ -1043,10 +1060,27 @@ public class JdbcApplier implements RawApplier
         }
     }
 
-    protected void applyRowChangeData(RowChangeData data)
-            throws ApplierException
+    protected void applyRowChangeData(RowChangeData data,
+            List<ReplOption> options) throws ApplierException
     {
-        // StringBuffer stmts = new StringBuffer();
+        if (options != null)
+        {
+            try
+            {
+                if (applySessionVariables(options))
+                {
+                    // Apply session variables to the connection only if
+                    // something changed
+                    statement.executeBatch();
+                    statement.clearBatch();
+                }
+            }
+            catch (SQLException e)
+            {
+                throw new ApplierException("Failed to apply session variables",
+                        e);
+            }
+        }
 
         for (OneRowChange row : data.getRowChanges())
         {
@@ -1138,7 +1172,8 @@ public class JdbcApplier implements RawApplier
                 {
                     if (dataElem instanceof RowChangeData)
                     {
-                        applyRowChangeData((RowChangeData) dataElem);
+                        applyRowChangeData((RowChangeData) dataElem,
+                                event.getOptions());
                     }
                     else if (dataElem instanceof LoadDataFileFragment)
                     {
@@ -1554,8 +1589,9 @@ public class JdbcApplier implements RawApplier
             metadataCache = new Hashtable<String, Table>();
 
             // Set up heartbeat table.
-            heartbeatTable = new HeartbeatTable(context
-                    .getReplicatorSchemaName(), runtime.getTungstenTableType());
+            heartbeatTable = new HeartbeatTable(
+                    context.getReplicatorSchemaName(),
+                    runtime.getTungstenTableType());
             heartbeatTable.initializeHeartbeatTable(conn);
 
             // Create consistency table
@@ -1564,8 +1600,9 @@ public class JdbcApplier implements RawApplier
             conn.createTable(consistency, false);
 
             // Set up commit seqno table and fetch the last processed event.
-            commitSeqnoTable = new CommitSeqnoTable(conn, context
-                    .getReplicatorSchemaName(), runtime.getTungstenTableType());
+            commitSeqnoTable = new CommitSeqnoTable(conn,
+                    context.getReplicatorSchemaName(),
+                    runtime.getTungstenTableType());
             commitSeqnoTable.prepare(taskId);
             lastProcessedEvent = commitSeqnoTable.lastCommitSeqno(taskId);
 

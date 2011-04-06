@@ -41,6 +41,7 @@ public class SqlOperation
     public static int FUNCTION     = 5;
     public static int TRANSACTION  = 6;
     public static int BLOCK        = 7;
+    public static int VIEW         = 8;
 
     // Operation types.
     public static int CREATE       = 1;
@@ -56,12 +57,14 @@ public class SqlOperation
     public static int COMMIT       = 11;
     public static int BEGIN_END    = 12;
     public static int SELECT       = 13;
+    public static int ALTER        = 14;
 
     int               objectType;
     int               operation;
     String            schema;
     String            name;
     boolean           autoCommit;
+    boolean           bidiUnsafe;
 
     /** Instantiate a SQL operation with default values. */
     public SqlOperation()
@@ -111,6 +114,11 @@ public class SqlOperation
         return autoCommit;
     }
 
+    public boolean isBidiUnsafe()
+    {
+        return bidiUnsafe;
+    }
+
     public void setObjectType(int object)
     {
         this.objectType = object;
@@ -134,6 +142,11 @@ public class SqlOperation
     public void setAutoCommit(boolean autoCommit)
     {
         this.autoCommit = autoCommit;
+    }
+
+    public void setBidiUnsafe(boolean bidiUnsafe)
+    {
+        this.bidiUnsafe = bidiUnsafe;
     }
 
     /** Set name when optional qualifier is present. */

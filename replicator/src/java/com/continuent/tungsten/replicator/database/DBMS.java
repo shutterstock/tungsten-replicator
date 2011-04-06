@@ -30,5 +30,5 @@ package com.continuent.tungsten.replicator.database;
  */
 public enum DBMS
 {
-    MYSQL, ORACLE, DERBY, DRIZZLE, POSTGRESQL
+    MYSQL, ORACLE, DERBY, DRIZZLE, POSTGRESQL, GREENPLUM
 }

@@ -1481,6 +1481,12 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     /*
      * MBEAN ATTRIBUTE API STARTS HERE
      */
+    @MethodDesc(description = "Confirm service liveness", usage = "isAlive")
+    public boolean isAlive()
+    {
+        return true;
+    }
+    
     @MethodDesc(description = "Gets replicator version", usage = "getVersion")
     public String getVersion()
     {

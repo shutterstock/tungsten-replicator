@@ -33,6 +33,10 @@ replicator.source_id=tungsten
 # Cluster name to which the replicator belongs.
 cluster.name=default
 
+# Replication service type.  Values are 'remote' or 'local'.  Local services 
+# do not log updates to Tungsten catalogs.  Remote services do log them. 
+replicator.service.type=local
+
 # Service to which this replicator belongs.
 service.name=default
 

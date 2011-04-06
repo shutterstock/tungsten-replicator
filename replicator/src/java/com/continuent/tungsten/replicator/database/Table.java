@@ -1,6 +1,6 @@
 /**
  * Tungsten: An Application Server for uni/cluster.
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Scott Martin
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.database;
@@ -35,24 +35,29 @@ import java.sql.PreparedStatement;
 public class Table
 {
 
-    String            schema          = null;
-    String            name            = null;
-    ArrayList<Column> allColumns      = null;
-    ArrayList<Column> nonKeyColumns   = null;
-    ArrayList<Key>    keys            = null;
-    Key               primaryKey      = null;
-    PreparedStatement statements[]; // Cache of prepared statements
-    boolean           cacheStatements = false;
+    String                  schema          = null;
+    String                  name            = null;
+    ArrayList<Column>       allColumns      = null;
+    ArrayList<Column>       nonKeyColumns   = null;
+    ArrayList<Key>          keys            = null;
+    Key                     primaryKey      = null;
+    PreparedStatement       statements[];
+    // Cache of prepared statements
+    boolean                 cacheStatements = false;
 
-    static public final int INSERT    = 0;
-    static public final int UPDATE1   = 1;
-    static public final int UPDATE2   = 2;
-    static public final int DELETE    = 3;
-    static public final int NPREPPED  = 4;
+    static public final int INSERT          = 0;
+    static public final int UPDATE1         = 1;
+    static public final int UPDATE2         = 2;
+    static public final int DELETE          = 3;
+    static public final int NPREPPED        = 4;
 
     // scn is eventually used for caching purpose. This table object will be
     // cached and reused if possible.
-    private String    scn;
+    private String          scn;
+
+    // tableId as found in MySQL binlog can be used to detect schema changes.
+    // Here, it has the same purpose as previous scn field
+    private long            tableId;
 
     /**
      * Creates a new <code>Table</code> object
@@ -67,10 +72,12 @@ public class Table
         this.nonKeyColumns = new ArrayList<Column>();
         this.keys = new ArrayList<Key>();
         this.scn = null;
+        this.tableId = -1;
         this.statements = new PreparedStatement[Table.NPREPPED];
         this.cacheStatements = false;
-        // Following probably not needed 
-        for (i = 0; i < Table.NPREPPED; i++) this.statements[i] = null;
+        // Following probably not needed
+        for (i = 0; i < Table.NPREPPED; i++)
+            this.statements[i] = null;
     }
 
     public Table(String schema, String name, boolean cacheStatements)
@@ -107,7 +114,7 @@ public class Table
         // This will leak prepared statements if a statement already
         // exists in the slot but I currently do not want to
         // have a "Table" know about a "Database" which is what we would need
-        // to close these statements. 
+        // to close these statements.
         this.statements[statementNumber] = statement;
     }
 
@@ -205,6 +212,26 @@ public class Table
     public void setSCN(String scn)
     {
         this.scn = scn;
+    }
+
+    /**
+     * Sets the tableId value.
+     * 
+     * @param tableId The tableId to set.
+     */
+    public void setTableId(long tableId)
+    {
+        this.tableId = tableId;
+    }
+
+    /**
+     * Returns the tableId value.
+     * 
+     * @return Returns the tableId.
+     */
+    public long getTableId()
+    {
+        return tableId;
     }
 
     @Override

@@ -1,6 +1,0 @@
-Tungsten uses witness hosts to ensure that individual nodes are
-still on the network.  If Tungsten cannot see other members of the
-cluster or the witness hosts, it will automatically shut down the
-node.  Enter a list of one or more hosts like routers or DNS servers
-that you expect will be visible at all times to all hosts in the
-cluster.

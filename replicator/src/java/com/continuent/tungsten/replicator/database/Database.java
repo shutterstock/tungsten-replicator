@@ -313,7 +313,7 @@ public interface Database
      * Return a place holder in a prepared statement for a column of type
      * ColumnSpec. Typically "?" as is INSERT INTO FOO VALUES(?)
      */
-    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue);
+    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue, String typeDesc);
 
     /**
      * Return TRUE IFF NULL values are bound differently in SQL statement from

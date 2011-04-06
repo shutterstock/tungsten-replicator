@@ -1,3 +1,0 @@
-The configure script can start Tungsten services automatically after
-configuration completes and optionally install them to start at
-boot time.

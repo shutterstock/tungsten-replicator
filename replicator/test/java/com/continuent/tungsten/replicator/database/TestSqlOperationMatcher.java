@@ -69,6 +69,7 @@ public class TestSqlOperationMatcher
     {
         String[] cmds = {"create database foo",
                 "CREATE DATABASE IF NOT EXISTS foo",
+                "CREATE DATABASE /*!32312 IF NOT EXISTS*/ `foo` /*!40100 DEFAULT CHARACTER SET latin1 */",
                 "   create   DATABASe  \"foo\"",
                 "create database `foo` /* hello*/"};
         SqlOperationMatcher m = new MySQLOperationMatcher();
@@ -276,7 +277,7 @@ public class TestSqlOperationMatcher
     @Test
     public void testUpdate() throws Exception
     {
-        String[] cmds1 = {"update foo set id=1",
+        String[] cmds1 = {"update /* comment */ foo set id=1",
                 "UPDATE foo set id=1,msg='data' where \"msg\" = 'value'",
                 "UpDaTe LOW_PRIORITY \"foo\" set id=1 WHere msg= 'data'",
                 "update  `foo` /* hello*/ set id=1"};
@@ -317,7 +318,7 @@ public class TestSqlOperationMatcher
     @Test
     public void testDelete() throws Exception
     {
-        String[] cmds1 = {"delete from foo where id=1",
+        String[] cmds1 = {"/* comment */ delete /* comment */ from foo where id=1",
                 "DELETE foo WHERE \"msg\" = 'value'",
                 "DELETE \"foo\" WHere msg= 'data'",
                 "delete    `foo` /* hello*/ where id=1",
@@ -556,6 +557,39 @@ public class TestSqlOperationMatcher
                 " /* another command */ creAtE TEMPORary TabLE \"foo\"",
                 "/** a difficult comment */ create   table   `foo` /* hello*/",
                 " /* comment*/create table foo"};
+        SqlOperationMatcher m = new MySQLOperationMatcher();
+        for (String cmd : cmds1)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd, SqlOperation.TABLE,
+                    sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.CREATE,
+                    sqlName.getOperation());
+            Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
+            Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+        }
+    }
+
+    /**
+     * Test suppression of very large and/or double comments.
+     */
+    @Test
+    public void testCommentHandling2() throws Exception
+    {
+        String cmd1 = "/* " + 
+        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
+        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
+        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
+        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
+        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
+        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
+        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
+        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
+        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
+        " */ create table foo";
+        String cmd2 = "/* comment */ create table foo /* comment */";
+        String[] cmds1 = {cmd1, cmd2};
         SqlOperationMatcher m = new MySQLOperationMatcher();
         for (String cmd : cmds1)
         {

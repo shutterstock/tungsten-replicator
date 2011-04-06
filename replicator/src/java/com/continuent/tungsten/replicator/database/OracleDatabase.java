@@ -105,7 +105,7 @@ public class OracleDatabase extends AbstractDatabase
         }
     }
 
-    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue)
+    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue, String typeDesc)
     {
         if (col.getType() == AdditionalTypes.XML)
         {

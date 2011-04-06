@@ -136,8 +136,7 @@ replicator.pipelines=master,slave,direct,dummy
 replicator.pipeline.master=binlog-to-q,q-to-thl
 replicator.pipeline.master.stores=thl,queue
 
-replicator.stage.binlog-to-q=com.continuent.tungsten.replicator.pipeline.Single
-ThreadStageTask
+replicator.stage.binlog-to-q=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.binlog-to-q.extractor=mysql
 replicator.stage.binlog-to-q.applier=queue
 
@@ -454,12 +453,18 @@ replicator.filter.foreignkeychecks.script=${replicator.home.dir}/samples/extensi
 replicator.filter.delay=com.continuent.tungsten.replicator.filter.TimeDelayFilter
 replicator.filter.delay.delay=300
 
-# Remote slave filter.  This filter sanitizes events on remote slaves by 
-# dropping events produced on the same service ID.  To use this you *must* 
-# set the localServiceName parameter, which must be the same as the 
-# service.name parameter of the local service that reads the binlog. 
+# Remote slave filter.  This filter sanitizes events on remote slaves by
+# dropping events produced on the same service ID.  To use this you *must*
+# set the localServiceName parameter, which must be the same as the
+# service.name parameter of the local service that reads the binlog.
 replicator.filter.bidiSlave=com.continuent.tungsten.enterprise.replicator.filter.BidiRemoteSlaveFilter
 replicator.filter.bidiSlave.localServiceName=${local.service.name}
+
+# If true allow statements that may be unsafe for bi-directional replication. 
+replicator.filter.bidiSlave.allowBidiUnsafe=false
+
+# If true allow updates from all other remote services, not just this one. 
+replicator.filter.bidiSlave.allowAnyRemoteService=false
 
 # Server ID filter.  This filter drops SQL statements from one or more MySQL
 # server IDs, which are given as a comma-separated list.

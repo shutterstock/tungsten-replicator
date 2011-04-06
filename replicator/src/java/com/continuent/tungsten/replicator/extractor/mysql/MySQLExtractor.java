@@ -31,6 +31,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 import org.apache.log4j.Logger;
 
@@ -53,6 +54,7 @@ import com.continuent.tungsten.replicator.dbms.StatementData;
 import com.continuent.tungsten.replicator.event.DBMSEmptyEvent;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplOptionParams;
+import com.continuent.tungsten.replicator.event.ReplOption;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
 import com.continuent.tungsten.replicator.extractor.RawExtractor;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndianConversion;
@@ -431,7 +433,7 @@ public class MySQLExtractor implements RawExtractor
     }
 
     private LogEvent processFile(BinlogPosition position)
-            throws MySQLExtractException, InterruptedException
+            throws ExtractorException, InterruptedException
     {
         try
         {
@@ -468,6 +470,11 @@ public class MySQLExtractor implements RawExtractor
                                             + nextBinlog.getName());
                             return new RotateLogEvent(nextBinlog.getName());
                         }
+                        
+                        // Ensure relay logs are running. 
+                        assertRelayLogsEnabled();
+                        
+                        // Update index check time. 
                         indexCheckStart = System.currentTimeMillis();
                     }
 
@@ -642,7 +649,10 @@ public class MySQLExtractor implements RawExtractor
 
         long sessionId = 0;
         ArrayList<DBMSData> dataArray = new ArrayList<DBMSData>();
-
+        
+        boolean foundRowsLogEvent = false;
+        LinkedList<ReplOption> savedOptions = new LinkedList<ReplOption>();
+        
         try
         {
             String defaultDb = null;
@@ -730,7 +740,35 @@ public class MySQLExtractor implements RawExtractor
                     {
                         inTransaction = true;
                         doCommit = false;
-                        // This a a BEGIN statement : skip it
+                        // This a a BEGIN statement : buffer session variables
+                        // for following row events if any and skip it                        
+                        
+                        /* Adding statement options */
+                        savedOptions.add(new ReplOption("autocommit", event
+                                .getAutocommitFlag()));
+                        savedOptions.add(new ReplOption("sql_auto_is_null", event
+                                .getAutoIsNullFlag()));
+                        savedOptions.add(new ReplOption("foreign_key_checks", event
+                                .getForeignKeyChecksFlag()));
+                        savedOptions.add(new ReplOption("unique_checks", event
+                                .getUniqueChecksFlag()));
+                        savedOptions.add(new ReplOption("sql_mode", event.getSqlMode()));
+                        savedOptions.add(new ReplOption("character_set_client", String
+                                .valueOf(event.getClientCharsetId())));
+                        savedOptions.add(new ReplOption("collation_connection", String
+                                .valueOf(event.getClientCollationId())));
+                        savedOptions.add(new ReplOption("collation_server", String
+                                .valueOf(event.getServerCollationId())));
+                        
+                        if (event.getAutoIncrementIncrement() >= 0)
+                            savedOptions.add(new ReplOption("auto_increment_increment",
+                                    String.valueOf(event
+                                            .getAutoIncrementIncrement())));
+
+                        if (event.getAutoIncrementOffset() >= 0)
+                            savedOptions.add(new ReplOption("auto_increment_offset", String
+                                    .valueOf(event.getAutoIncrementOffset())));
+                        
                         continue;
                     }
 
@@ -942,6 +980,7 @@ public class MySQLExtractor implements RawExtractor
                             .getTableId());
                     rowsEvent.processExtractedEvent(rowChangeData, tableEvent);
                     dataArray.add(rowChangeData);
+                    foundRowsLogEvent = true;
                 }
                 else if (logEvent instanceof BeginLoadQueryLogEvent)
                 {
@@ -1034,9 +1073,13 @@ public class MySQLExtractor implements RawExtractor
                     String eventId = getDBMSEventId(position, sessionId);
 
                     dbmsEvent = new DBMSEvent(eventId, dataArray, startTime);
+                    if(foundRowsLogEvent)
+                        dbmsEvent.setOptions(savedOptions);
+
                     // Reset tableEvents hashtable when commit occurs
                     logger.debug("Clearing Table Map events");
                     tableEvents.clear();
+                    savedOptions.clear();
                 }
                 else if (transactionFragSize > 0
                         && fragSize > transactionFragSize)
@@ -1052,6 +1095,9 @@ public class MySQLExtractor implements RawExtractor
                     String eventId = getDBMSEventId(position, sessionId);
                     dbmsEvent = new DBMSEvent(eventId, dataArray, false,
                             startTime);
+                    if(foundRowsLogEvent)
+                        dbmsEvent.setOptions(savedOptions);
+
                     this.fragmentedTransaction = true;
                 }
                 else if (doFileFragment)
@@ -1061,6 +1107,9 @@ public class MySQLExtractor implements RawExtractor
                     String eventId = getDBMSEventId(position, sessionId);
                     dbmsEvent = new DBMSEvent(eventId, dataArray, false,
                             startTime);
+                    if(foundRowsLogEvent)
+                        dbmsEvent.setOptions(savedOptions);
+
                 }
                 if (dbmsEvent != null)
                 {

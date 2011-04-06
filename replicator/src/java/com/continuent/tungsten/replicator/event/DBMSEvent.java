@@ -26,6 +26,7 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 import com.continuent.tungsten.replicator.dbms.DBMSData;
 
@@ -45,6 +46,7 @@ public class DBMSEvent implements Serializable
     private ArrayList<DBMSData>    data;
     private boolean                lastFrag;
     private Timestamp              sourceTstamp;
+    private LinkedList<ReplOption> options;
 
     /**
      * Creates a new instance of raw replicated data.
@@ -77,6 +79,7 @@ public class DBMSEvent implements Serializable
             this.sourceTstamp = new Timestamp(System.currentTimeMillis());
         else
             this.sourceTstamp = sourceTstamp;
+        options = new LinkedList<ReplOption>();
     }
 
     public DBMSEvent(String id, ArrayList<DBMSData> data, Timestamp sourceTstamp)
@@ -211,4 +214,20 @@ public class DBMSEvent implements Serializable
     {
         return sourceTstamp;
     }
+
+    public void setOptions(LinkedList<ReplOption> savedOptions)
+    {
+        this.options.addAll(savedOptions);
+    }
+
+    public List<ReplOption> getOptions()
+    {
+        return options;
+    }
+
+    public void addOption(String name, String value)
+    {
+        options.add(new ReplOption(name, value));
+    }
+
 }

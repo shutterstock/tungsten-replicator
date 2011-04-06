@@ -23,14 +23,18 @@
 package com.continuent.tungsten.replicator.applier;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.database.DBMS;
 import com.continuent.tungsten.replicator.database.JdbcURL;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnVal;
+import com.continuent.tungsten.replicator.extractor.mysql.SerialBlob;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 public class PostgreSQLApplier extends JdbcApplier
@@ -81,7 +85,26 @@ public class PostgreSQLApplier extends JdbcApplier
     protected void setObject(PreparedStatement prepStatement, int bindLoc,
             ColumnVal value, ColumnSpec columnSpec) throws SQLException
     {
-        // TODO: add type conversions, if needed.
-        prepStatement.setObject(bindLoc, value.getValue());
+        if (columnSpec.getType() == Types.BLOB && columnSpec.isBlob())
+        {
+            // Handle data as blob only if a blob is expected
+            SerialBlob blob = (SerialBlob) value.getValue();
+            prepStatement.setBytes(bindLoc,
+                    blob.getBytes(1, (int) blob.length()));
+        }
+        else
+            prepStatement.setObject(bindLoc, value.getValue());
     }
+
+    @Override
+    protected Column addColumn(ResultSet rs, String columnName)
+            throws SQLException
+    {
+        Column column = super.addColumn(rs, columnName);
+        int type = column.getType();
+        column.setBlob(type == Types.BLOB || type == Types.BINARY
+                || type == Types.VARBINARY || type == Types.LONGVARBINARY);
+        return column;
+    }
+
 }

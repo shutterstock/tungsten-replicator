@@ -27,8 +27,6 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.sql.Types;
 
-
-
 /**
  * This class defines a Column
  * 
@@ -38,22 +36,27 @@ import java.sql.Types;
 public class Column implements Serializable
 {
     private static final long serialVersionUID = 1L;
-    String      name;
-    int         type;      // Type assignment from java.sql.Types
-    boolean     signed; 
-    long         length;
-    boolean     notNull;   // Is the column a NOT NULL column 
-    Serializable value; 
-    int         valueInputStreamLength;
-    private int position;
+    String                    name;
+    int                       type;                  // Type assignment from
+                                                      // java.sql.Types
+    boolean                   signed;
+    long                      length;
+    boolean                   notNull;               // Is the column a NOT
+                                                      // NULL column
+    Serializable              value;
+    int                       valueInputStreamLength;
+    private int               position;
+    private boolean           blob;
+    private String            typeDescription;
 
     /**
      * Creates a new <code>Database</code> object
      */
-
+    @Deprecated
     public Column()
     {
-       this(null, Types.NULL);
+        // Never used
+        this(null, Types.NULL);
     }
 
     public Column(String name, int type)
@@ -82,50 +85,52 @@ public class Column implements Serializable
         this(name, type, length, isNotNull, null);
     }
 
-    public Column(String name, int type, long colLength, boolean isNotNull, Serializable value)
+    public Column(String name, int type, long colLength, boolean isNotNull,
+            Serializable value)
     {
-       this.name    = name;
-       this.type    = type;
-       this.length  = colLength;
-       this.notNull = isNotNull;
-       this.value   = value;
-       this.signed  = true;
+        this.name = name;
+        this.type = type;
+        this.length = colLength;
+        this.notNull = isNotNull;
+        this.value = value;
+        this.signed = true;
+        this.blob = false;
     }
 
     public String getName()
     {
-       return this.name;
+        return this.name;
     }
 
     public int getType()
     {
-       return this.type;
+        return this.type;
     }
 
     public long getLength()
     {
-       return this.length;
+        return this.length;
     }
 
-    /** 
-     * Is the column a NOT NULL column 
+    /**
+     * Is the column a NOT NULL column
      */
     public boolean isNotNull()
     {
-       return this.notNull;
+        return this.notNull;
     }
 
-    /** 
-     * Is the current value of the column NULL 
+    /**
+     * Is the current value of the column NULL
      */
     public boolean isNull()
     {
-       return (this.value == null);
+        return (this.value == null);
     }
-    
+
     public void Dump()
     {
-       System.out.format("%s\n", name);
+        System.out.format("%s\n", name);
     }
 
     public void setValue(Serializable value)
@@ -137,17 +142,17 @@ public class Column implements Serializable
     {
         this.type = type;
     }
+
     public void setName(String name)
     {
         this.name = name;
     }
 
-
     public void setValue(short valueShort)
     {
         this.value = new Short(valueShort);
     }
-    
+
     public void setValue(int valueInt)
     {
         this.value = new Integer(valueInt);
@@ -163,18 +168,20 @@ public class Column implements Serializable
         value = valueString;
     }
 
-    public void setValue(InputStream valueInputStream, int valueInputStreamLength)
+    public void setValue(InputStream valueInputStream,
+            int valueInputStreamLength)
     {
         byte[] byteArray = new byte[valueInputStreamLength];
         try
         {
             valueInputStream.read(byteArray, 0, valueInputStreamLength);
-            this.value = byteArray; 
+            this.value = byteArray;
         }
         catch (IOException e)
         {
-            throw new RuntimeException("Unable to read input stream into column value: stream length=" 
-                    + valueInputStreamLength, e);
+            throw new RuntimeException(
+                    "Unable to read input stream into column value: stream length="
+                            + valueInputStreamLength, e);
         }
     }
 
@@ -217,4 +224,25 @@ public class Column implements Serializable
     {
         return signed;
     }
+
+    public boolean isBlob()
+    {
+        return blob;
+    }
+
+    public void setBlob(boolean blob)
+    {
+        this.blob = blob;
+    }
+
+    public String getTypeDescription()
+    {
+        return typeDescription;
+    }
+
+    public void setTypeDescription(String typeDescription)
+    {
+        this.typeDescription = typeDescription;
+    }
+
 }

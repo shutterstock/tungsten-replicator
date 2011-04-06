@@ -39,27 +39,15 @@ import com.continuent.tungsten.replicator.dbms.OneRowChange;
  * 
  * @author <a href="mailto:scott.martin@continuent.com">Scott Martin</a>
  */
-public class PostgreSQLDatabase extends AbstractDatabase
+public class GreenplumDatabase extends AbstractDatabase
 {
-    private static Logger logger = Logger.getLogger(PostgreSQLDatabase.class);
+    private static Logger logger = Logger.getLogger(GreenplumDatabase.class);
 
-    public PostgreSQLDatabase() throws SQLException
+    public GreenplumDatabase() throws SQLException
     {
-        dbms = DBMS.POSTGRESQL;
+        dbms = DBMS.GREENPLUM;
         // Hard code the driver so it gets loaded correctly.
         dbDriver = "org.postgresql.Driver";
-    }
-
-    /**
-     * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.database.AbstractDatabase#getSqlNameMatcher()
-     */
-    @Override
-    public SqlOperationMatcher getSqlNameMatcher() throws DatabaseException
-    {
-        // TODO: Develop matcher for Drizzle dialect.
-        return new MySQLOperationMatcher();
     }
 
     protected String columnToTypeString(Column c)
@@ -84,7 +72,7 @@ public class PostgreSQLDatabase extends AbstractDatabase
                     // TODO: remove this dirty hack, written to support storing
                     // boolean values into "character(1)" type "last_frag" field
                     // of "trep_commit_seqno" and "history" tables.
-                    return "CHAR(5)";
+                    return "BOOLEAN";
                 else
                     return "CHAR(" + c.getLength() + ")";
             }
@@ -409,7 +397,7 @@ public class PostgreSQLDatabase extends AbstractDatabase
         return "NOW()";
     }
 
-    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue, String typeDesc)
+    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue)
     {
         return " ? ";
     }
@@ -447,4 +435,17 @@ public class PostgreSQLDatabase extends AbstractDatabase
     {
         return "\"" + name + "\"";
     }
+    
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.AbstractDatabase#getSqlNameMatcher()
+     */
+    @Override
+    public SqlOperationMatcher getSqlNameMatcher() throws DatabaseException
+    {
+        // TODO: Develop matcher for Drizzle dialect.
+        return new MySQLOperationMatcher();
+    }
+
 }

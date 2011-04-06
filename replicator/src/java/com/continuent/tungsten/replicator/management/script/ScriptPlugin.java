@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2009 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Seppo Jaakola
- * Contributor(s): Robert Hodges
+ * Contributor(s): Robert Hodges, Linas Virbalas
  */
 
 package com.continuent.tungsten.replicator.management.script;
@@ -43,6 +43,7 @@ import com.continuent.tungsten.replicator.backup.RestoreCompletionNotification;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.management.OpenReplicatorContext;
 import com.continuent.tungsten.replicator.management.OpenReplicatorPlugin;
+import com.continuent.tungsten.replicator.management.events.GoOfflineEvent;
 import com.continuent.tungsten.replicator.management.events.OfflineNotification;
 
 /**
@@ -56,33 +57,33 @@ public class ScriptPlugin extends NotificationBroadcasterSupport
         implements
             OpenReplicatorPlugin
 {
-    private static final String   CMD_OPERATION    = "--operation";
+    private static final String   CMD_OPERATION        = "--operation";
 
-    private static final String   CMD_ONLINE       = "online";
-    private static final String   CMD_OFFLINE      = "offline";
-    private static final String   CMD_PROVISION    = "provision";
-    private static final String   CMD_STATUS       = "status";
-    private static final String   CMD_FLUSH        = "flush";
-    private static final String   CMD_WAITEVENT    = "waitevent";
-    private static final String   CMD_SETROLE      = "setrole";
-    private static final String   CMD_CAPABILITIES = "capabilities";
+    private static final String   CMD_ONLINE           = "online";
+    private static final String   CMD_OFFLINE          = "offline";
+    private static final String   CMD_OFFLINE_DEFERRED = "offline-deferred";
+    private static final String   CMD_PROVISION        = "provision";
+    private static final String   CMD_STATUS           = "status";
+    private static final String   CMD_FLUSH            = "flush";
+    private static final String   CMD_WAITEVENT        = "waitevent";
+    private static final String   CMD_SETROLE          = "setrole";
+    private static final String   CMD_CAPABILITIES     = "capabilities";
 
-    private static final String   ARG_CONF_FILE    = "--config";
-    private static final String   IN_PARAMS        = "--in-params";
-    private static final String   OUT_PARAM_FILE   = "--out-params";
+    private static final String   ARG_CONF_FILE        = "--config";
+    private static final String   IN_PARAMS            = "--in-params";
+    private static final String   OUT_PARAM_FILE       = "--out-params";
 
-    private static final String   ARG_EVENT        = "event";
-    private static final String   ARG_TIMEOUT      = "timeout";
-    private static final String   ARG_ROLE         = "role";
-    public static final String    ARG_URI          = "uri";
+    private static final String   ARG_EVENT            = "event";
+    private static final String   ARG_TIMEOUT          = "timeout";
+    private static final String   ARG_ROLE             = "role";
+    public static final String    ARG_URI              = "uri";
 
-    private static Logger         logger           = Logger
-                                                           .getLogger(ScriptPlugin.class);
+    private static Logger         logger               = Logger.getLogger(ScriptPlugin.class);
 
-    private TungstenProperties    properties       = null;
+    private TungstenProperties    properties           = null;
 
-    private ProcessExecutor       shell            = null;
-    private OpenReplicatorContext context          = null;
+    private ProcessExecutor       shell                = null;
+    private OpenReplicatorContext context              = null;
 
     public ScriptPlugin()
     {
@@ -335,9 +336,13 @@ public class ScriptPlugin extends NotificationBroadcasterSupport
      */
     public void offlineDeferred(TungstenProperties params) throws Exception
     {
-        // Not supported yet.
-        throw new Exception(
-                "Deferred offline command is not supported by plugins");
+        // Params are not currently supported - mapping to simple OFFLINE call
+        // underneath.
+        runScript(CMD_OFFLINE_DEFERRED);
+        /*
+         * assuming the backend is offline, send notification
+         */
+        context.getEventDispatcher().handleEvent(new GoOfflineEvent());
     }
 
     /**

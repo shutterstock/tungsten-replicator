@@ -233,7 +233,16 @@ public class ReplicationServiceManager
     }
 
     // START OF MBEAN API
-
+    
+    /**
+     * Returns true so that clients can confirm connection liveness. 
+     */
+    @MethodDesc(description = "Confirm service liveness", usage = "isAlive")
+    public boolean isAlive()
+    {
+        return true;
+    }
+    
     /**
      * Returns a list of replicators, started or not. {@inheritDoc}
      * 

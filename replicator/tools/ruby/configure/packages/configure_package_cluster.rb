@@ -1,2 +1,0 @@
-class ConfigurePackageCluster < ConfigurePackage
-end

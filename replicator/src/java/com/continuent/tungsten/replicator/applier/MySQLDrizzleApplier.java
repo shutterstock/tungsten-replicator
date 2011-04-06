@@ -42,6 +42,7 @@ import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnVal;
 import com.continuent.tungsten.replicator.dbms.StatementData;
 import com.continuent.tungsten.replicator.event.ReplOption;
+import com.continuent.tungsten.replicator.extractor.mysql.SerialBlob;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
@@ -112,7 +113,7 @@ public class MySQLDrizzleApplier extends MySQLApplier
 
             applySetTimestamp(timestamp);
 
-            applyOptionsToStatement(options);
+            applySessionVariables(options);
 
             // Using drizzle driver specific method to send bytes directly to
             // mysql
@@ -197,7 +198,7 @@ public class MySQLDrizzleApplier extends MySQLApplier
 
             applySetTimestamp(timestamp);
 
-            applyOptionsToStatement(options);
+            applySessionVariables(options);
 
             try
             {
@@ -264,6 +265,31 @@ public class MySQLDrizzleApplier extends MySQLApplier
         {
             Time t = (Time) value.getValue();
             prepStatement.setString(bindLoc, t.toString());
+        }
+        else if (columnSpec.getType() == Types.DOUBLE)
+        {
+            BigDecimal dec = new BigDecimal((Double) value.getValue());
+            prepStatement.setBigDecimal(bindLoc, dec);
+        }
+        else if (columnSpec.getType() == Types.FLOAT)
+        {
+            BigDecimal dec = new BigDecimal((Float) value.getValue());
+            prepStatement.setBigDecimal(bindLoc, dec);
+        }
+        else if (columnSpec.getType() == Types.VARCHAR
+                && value.getValue() instanceof byte[])
+        {
+            prepStatement
+                    .setString(bindLoc, hexdump((byte[]) value.getValue()));
+        }
+        else if (columnSpec.getType() == Types.BLOB
+                && value.getValue() instanceof SerialBlob
+                && columnSpec.getTypeDescription() != null
+                && columnSpec.getTypeDescription().contains("TEXT"))
+        {
+            SerialBlob val = (SerialBlob) value.getValue();
+            byte[] bytes = val.getBytes(1, (int) val.length());
+            prepStatement.setString(bindLoc, hexdump(bytes));
         }
         else
             super.setObject(prepStatement, bindLoc, value, columnSpec);

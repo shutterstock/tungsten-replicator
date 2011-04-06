@@ -38,9 +38,9 @@ import org.apache.log4j.Logger;
 import com.continuent.tungsten.commons.jmx.JmxManager;
 import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.dbms.LoadDataFileQuery;
-import com.continuent.tungsten.replicator.dbms.RowIdData;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnVal;
+import com.continuent.tungsten.replicator.dbms.RowIdData;
 import com.continuent.tungsten.replicator.event.ReplOption;
 import com.continuent.tungsten.replicator.extractor.mysql.SerialBlob;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
@@ -162,15 +162,17 @@ public class MySQLApplier extends JdbcApplier
     protected Column addColumn(ResultSet rs, String columnName)
             throws SQLException
     {
-        boolean isSigned = !rs.getString("TYPE_NAME").toUpperCase()
-                .contains("UNSIGNED");
+        String typeDesc = rs.getString("TYPE_NAME").toUpperCase();
+        boolean isSigned = !typeDesc.contains("UNSIGNED");
         int dataType = rs.getInt("DATA_TYPE");
 
         if (logger.isDebugEnabled())
             logger.debug("Adding column " + columnName + " (TYPE " + dataType
                     + " - " + (isSigned ? "SIGNED" : "UNSIGNED") + ")");
 
-        return new Column(columnName, dataType, false, isSigned);
+        Column column = new Column(columnName, dataType, false, isSigned);
+        column.setTypeDescription(typeDesc);
+        return column;
     }
 
     /**
@@ -271,7 +273,7 @@ public class MySQLApplier extends JdbcApplier
 
             applySetTimestamp(timestamp);
 
-            applyOptionsToStatement(options);
+            applySessionVariables(options);
 
             try
             {
@@ -321,4 +323,16 @@ public class MySQLApplier extends JdbcApplier
                     .setLocalInfileInputStream(null);
         }
     }
+
+    protected String hexdump(byte[] buffer)
+    {
+        StringBuffer dump = new StringBuffer();
+        for (int i = 0; i < buffer.length; i++)
+        {
+            dump.append(String.format("%02x", buffer[i]));
+        }
+
+        return dump.toString();
+    }
+
 }

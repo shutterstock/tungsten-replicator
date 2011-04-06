@@ -276,6 +276,10 @@ public class EventMetadataFilter implements Filter
                 // statement in the transaction, so our work is already done.
                 if (affectedSchema != null)
                     index.incrementSchema(affectedSchema);
+
+                // Check for unsafe statements for bi-directional replication.
+                if (op.isBidiUnsafe())
+                    metadataTags.put(ReplOptionParams.BIDI_UNSAFE, "true");
             }
             else if (dbmsData instanceof RowChangeData)
             {
@@ -347,7 +351,7 @@ public class EventMetadataFilter implements Filter
         else if (index.dbMap.size() == normalDbCount)
         {
             // Need to split this into a couple of cases...
-        	// First case should happen only if normalDbCount = 1
+            // First case should happen only if normalDbCount = 1
             if (serviceSessionVar == null)
             {
                 // This is a normal transaction. Assign the shard using the

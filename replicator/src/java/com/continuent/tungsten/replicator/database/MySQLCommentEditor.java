@@ -42,13 +42,14 @@ public class MySQLCommentEditor implements SqlCommentEditor
     public String addComment(String statement, SqlOperation sqlOp,
             String comment)
     {
-        // Look for a stored procedure.
+        // Look for a stored procedure or function creation.
         if (sqlOp.getOperation() == SqlOperation.CREATE)
         {
             int objectType = sqlOp.getObjectType();
-            if (objectType == SqlOperation.PROCEDURE)
+            if (objectType == SqlOperation.PROCEDURE
+                    || objectType == SqlOperation.FUNCTION)
             {
-                // Processing for CREATE PROCEDURE -- add a COMMENT.
+                // Processing for CREATE PROCEDURE/FUNCTION -- add a COMMENT.
                 // Following regex splits on line boundaries.
                 String[] lines = statement.split("(?m)$");
                 StringBuffer sb = new StringBuffer();

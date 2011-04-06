@@ -83,6 +83,7 @@ public class OpenReplicatorManagerCtrl
     private String                         rmiHost;
     private int                            rmiPort;
     private String                         service;
+    private int                            connectDelay         = 10;
 
     OpenReplicatorManagerCtrl(String[] argv)
     {
@@ -100,6 +101,7 @@ public class OpenReplicatorManagerCtrl
         println("  -port number     - Port number of replicator [default: 10000]");
         println("  -service name    - Name of replicator service [default: none]");
         println("  -verbose         - Print verbose messages");
+        println("  -retry N         - Retry connections up to N times [default: 10]");
         println("Replicator-Wide Commands:");
         println("  services          - List replication services");
         println("  shutdown          - Shut down replication services cleanly and exit");
@@ -165,6 +167,27 @@ public class OpenReplicatorManagerCtrl
                     verbose = true;
                 else if ("-service".equals(curArg))
                     service = argvIterator.next();
+                else if ("-retry".equals(curArg))
+                {
+                    String nextVal = argvIterator.peek();
+                    if (nextVal == null || (nextVal.length() == 0)
+                            || !Character.isDigit(nextVal.charAt(0)))
+                    {
+                        // Take default. 
+                    }
+                    else
+                    {
+                        try
+                        {
+                            connectDelay = Integer.parseInt(nextVal);
+                            argvIterator.next();
+                        }
+                        catch (NumberFormatException e)
+                        {
+                            // Take default. 
+                        }
+                    }
+                }
                 else if (curArg.startsWith("-"))
                 {
                     fatal("Unrecognized global option: " + curArg, null);
@@ -197,12 +220,7 @@ public class OpenReplicatorManagerCtrl
             // Connect with appropriate protection against a lost connection.
             try
             {
-                // Connect.
-                conn = JmxManager.getRMIConnector(rmiHost, rmiPort,
-                        ReplicatorConf.RMI_DEFAULT_SERVICE_NAME);
-                serviceManagerMBean = (ReplicationServiceManagerMBean) JmxManager
-                        .getMBeanProxy(conn, ReplicationServiceManager.class,
-                                false);
+                connect();
             }
             catch (ServerRuntimeException e)
             {
@@ -295,7 +313,74 @@ public class OpenReplicatorManagerCtrl
         }
     }
 
-    // Fetch the replicator service MBean, if possible.
+    // Perform initial JMX connection.
+    private void connect() throws Exception
+    {
+        // Get JMX connection.
+        int delay = 0;
+        for (;;)
+        {
+            Exception failure = null;
+            try
+            {
+                conn = JmxManager.getRMIConnector(rmiHost, rmiPort,
+                        ReplicatorConf.RMI_DEFAULT_SERVICE_NAME);
+            }
+            catch (Exception e)
+            {
+                failure = e;
+            }
+            if (failure == null)
+            {
+                if (verbose)
+                    println("Connected to replicator process");
+                break;
+            }
+            else if (connectDelay > delay)
+            {
+                sleep(1);
+                print(".");
+                delay++;
+            }
+            else
+                throw failure;
+        }
+        // Get MBean connection.
+        for (;;)
+        {
+            Exception failure = null;
+            try
+            {
+                serviceManagerMBean = (ReplicationServiceManagerMBean) JmxManager
+                        .getMBeanProxy(conn, ReplicationServiceManager.class,
+                                false);
+                serviceManagerMBean.isAlive();
+            }
+            catch (Exception e)
+            {
+                failure = e;
+            }
+            if (failure == null)
+            {
+                if (verbose)
+                    println("Connected to ReplicationServiceManagerMBean");
+                break;
+            }
+            else if (connectDelay > delay)
+            {
+                sleep(1);
+                print(".");
+                delay++;
+            }
+            else
+                throw failure;
+        }
+        // If we delayed, need to have a carriage return.
+        if (delay > 0)
+            println("");
+    }
+
+    // Fetch the current replicator service MBean, if possible.
     private OpenReplicatorManagerMBean getOpenReplicator() throws Exception
     {
         if (this.openReplicatorMBean == null)
@@ -323,13 +408,65 @@ public class OpenReplicatorManagerCtrl
                             "You must specify a service name with the -service flag");
                 }
             }
-            // Fetch MBean with service name.
-            openReplicatorMBean = (OpenReplicatorManagerMBean) JmxManager
-                    .getMBeanProxy(conn, OpenReplicatorManager.class,
-                            OpenReplicatorManagerMBean.class, service, false,
-                            false);
+            // Get MBean connection.
+            openReplicatorMBean = getOpenReplicatorSafely(service);
         }
         return openReplicatorMBean;
+    }
+
+    // Fetch a specific replicator manager MBean by name, with optional delay. 
+    private OpenReplicatorManagerMBean getOpenReplicatorSafely(String name)
+            throws Exception
+    {
+        // Get MBean connection.
+        int delay = 0;
+        for (;;)
+        {
+            Exception failure = null;
+            try
+            {
+                // Fetch MBean with service name.
+                openReplicatorMBean = (OpenReplicatorManagerMBean) JmxManager
+                        .getMBeanProxy(conn, OpenReplicatorManager.class,
+                                OpenReplicatorManagerMBean.class, name, false,
+                                false);
+                openReplicatorMBean.isAlive();
+            }
+            catch (Exception e)
+            {
+                failure = e;
+            }
+            if (failure == null)
+            {
+                if (verbose)
+                    println("Connected to OpenReplicatorManagerMBean: " + name);
+                break;
+            }
+            else if (connectDelay > delay)
+            {
+                sleep(1);
+                print(".");
+                delay++;
+            }
+            else
+                throw failure;
+        }
+        // If we delayed, need to have a carriage return.
+        if (delay > 0)
+            println("");
+        return openReplicatorMBean;
+    }
+
+    // Sleep for N seconds.
+    private void sleep(int n)
+    {
+        try
+        {
+            Thread.sleep(1000 * n);
+        }
+        catch (InterruptedException e)
+        {
+        }
     }
 
     // REPLICATION SERVICES COMMANDS //
@@ -355,10 +492,7 @@ public class OpenReplicatorManagerCtrl
             // Look up the state of the replication service if it is started.
             if (new Boolean(started).booleanValue())
             {
-                OpenReplicatorManagerMBean mbean = (OpenReplicatorManagerMBean) JmxManager
-                        .getMBeanProxy(conn, OpenReplicatorManager.class,
-                                OpenReplicatorManagerMBean.class, name, false,
-                                false);
+                OpenReplicatorManagerMBean mbean = getOpenReplicatorSafely(name);
                 TungstenProperties liveProps = mbean.status();
                 props.setString(Replicator.ROLE, liveProps
                         .getString(Replicator.ROLE));
@@ -396,7 +530,7 @@ public class OpenReplicatorManagerCtrl
         if (ok)
             println("Service started successfully: name=" + service);
         else
-            println("Unable to start service: name=" + service);
+            println("Service appears to be started already: name=" + service);
     }
 
     // Stop a service.
