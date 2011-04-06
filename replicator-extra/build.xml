@@ -1,0 +1,196 @@
+<!--
+    Tungsten Scale-Out Stack.
+    Copyright (C) 2007-2011 Continuent Inc.
+    Contact: tungsten@continuent.org
+   
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of version 2 of the GNU General Public License as
+    published by the Free Software Foundation.
+   
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+   
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+       
+    Initial developer(s): Marc Herbert, Jeff Mesnil
+    Contributor(s): Csaba Simon, Robert Hodges
+-->
+
+<project name="tungsten_replicator_extra" default="all">
+    <description>
+        Tungsten Replicator Extra Package
+    </description>
+
+    <property file="local.build.properties"/>
+    <property file="version.properties"/>
+    <property file="build.properties"/>
+
+    <property name="build.dir" value="build"/>
+    <property name="bin.dir" value="bin"/>    
+    <property name="conf.dir" value="conf"/>
+    <property name="java.src.dir" value="src/java"/>
+    <property name="test.src.dir" value="test/java"/>
+    <property name="lib-ext.dir" value="lib-ext"/>
+    <property name="samples.dir" value="samples"/>
+    <property name="classes.dir" value="${build.dir}/java/classes"/>
+    <property name="test.classes.dir" value="${build.dir}/test/classes"/>
+    <property name="test.reports" value="${build.dir}/reports"/>
+    <property name="test.work" value="${build.dir}/work"/>
+    <property name="jars.dir" value="${build.dir}/jars"/>
+    <property name="dist.dir" value="${build.dir}/${build.name}"/>
+    <property name="build.jar" value="${jars.dir}/${build.name}.jar"/>
+    <property name="commons.build.dir" value="${project.commons}/build"/>
+    <property name="commons.classes.dir" value="${commons.build.dir}/java/classes"/>
+    <property name="replicator.build.dir" value="${project.replicator}/build"/>
+    <property name="replicator.classes.dir" value="${replicator.build.dir}/java/classes"/>
+    <property name="replicator.test.classes.dir" value="${replicator.build.dir}/test/classes"/>
+    <property name="replicator.dist.dir" value="${replicator.build.dir}/tungsten-replicator"/>
+
+    <path id="compile.classpath">
+    	<path location="${commons.classes.dir}"/>
+    	<path location="${replicator.classes.dir}"/>
+        <fileset dir="${project.commons}/lib/">
+            <include name="*.jar"/>
+        	<exclude name="protobuf-java-2.2.0.jar"/>
+        </fileset>
+        <fileset dir="${project.replicator}/lib/">
+            <include name="*.jar"/>
+        </fileset>
+	<fileset dir="lib/">
+		<include name="*.jar"/>
+	</fileset>
+    </path>
+
+    <path id="test.classpath">
+        <path refid="compile.classpath"/>    	
+        <path location="${classes.dir}"/>
+    	<path location="${replicator.test.classes.dir}"/>
+        <fileset dir="${project.commons}/lib-test/">
+                <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <target name="all" depends="clean, test, dist" 
+            description="--> test tungsten and create releases"/>
+
+    <target name="clean" description="--> clean up files">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${java.src.dir}"
+               destdir="${classes.dir}"
+               classpathref="compile.classpath"
+               source="${javac.source}"
+               target="${javac.target}"
+               encoding="${javac.encoding}"
+               debug="${javac.debug}"
+               deprecation="${javac.deprecation}"
+               verbose="${javac.verbose}"
+               nowarn="${javac.nowarn}">
+            <compilerarg value="-Xlint:all"/>
+        </javac>
+    </target>
+
+    <target name="compile-test" depends="compile">
+        <mkdir dir="${test.classes.dir}"/>
+        <javac srcdir="${test.src.dir}" destdir="${test.classes.dir}" classpathref="test.classpath" debug="${javac.debug}"/>
+    </target>
+
+    <target name="jar" description="--> build jar file" depends="compile">
+        <mkdir dir="${jars.dir}"/>
+        <jar destfile="${build.jar}">
+            <manifest>
+                <attribute name="Specification-Title"
+                           value="${specification.title}"/>
+                <attribute name="Specification-Vendor"
+                           value="${specification.vendor}"/>
+                <attribute name="Specification-Version"
+                           value="${version}"/>
+                <attribute name="Implementation-Title"
+                           value="${specification.title}"/>
+                <attribute name="Implementation-Vendor"
+                           value="${specification.vendor}"/>
+                <attribute name="Implementation-Version"
+                           value="${version}"/>
+            </manifest>
+            <fileset dir="${classes.dir}">
+                <include name="**/*.properties"/>
+            </fileset>
+            <fileset dir="${classes.dir}">
+                <include name="**/*.class"/>
+            </fileset>
+        </jar>
+    </target>
+
+    <target name="test" depends="compile-test" description="--> run unit tests">
+        <delete dir="${test.reports}"/>
+        <mkdir dir="${test.reports}"/>
+        <delete dir="${test.work}"/>
+        <mkdir dir="${test.work}"/>
+        <junit printsummary="yes" haltonfailure="no" fork="yes"
+          dir="${test.work}" failureproperty="tests.failed">
+            <jvmarg value="-Dreplicator.log.dir=." />            
+            <classpath>
+                <pathelement location="${classes.dir}"/>
+                <pathelement location="${test.classes.dir}"/>
+                <pathelement location="${conf.dir}"/>
+                <path refid="compile.classpath"/>
+                <path refid="test.classpath"/>
+            </classpath>
+            <formatter type="xml"/>
+            <batchtest fork="yes" todir="${test.reports}">
+                <fileset dir="${test.src.dir}">
+                    <include name="**/*Test*.java"/>
+                </fileset>
+            
+            </batchtest>
+        </junit>
+        <junitreport tofile="${test.reports}/TESTS-TestSuites.xml">
+            <fileset dir="${test.reports}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="frames" todir="${test.reports}/html"/>
+        </junitreport>
+        <fail if="tests.failed" message="Not all unit tests were completed. Process aborted!"/>
+    </target>
+
+    <target name="test-report" description="--> generate junit reports">
+        <junitreport tofile="${test.reports}/TESTS-TestSuites.xml">
+            <fileset dir="${test.reports}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="frames" todir="${test.reports}/html"/>
+        </junitreport>
+    </target>
+
+    <target name="javadoc">
+        <javadoc packagenames="com.continuent.*"
+            sourcepath="${java.src.dir}"
+            classpathref="compile.classpath"
+            defaultexcludes="yes"
+            destdir="${dist.dir}/doc/javadoc"
+            author="true"
+            version="true"
+            use="true"
+            windowtitle="Tungsten API">
+        </javadoc>
+    </target>
+
+    <target name="dist" depends="jar" description="--> copy files to replicator dist dir">
+        <copy todir="${replicator.dist.dir}/bin">
+            <fileset dir="${bin.dir}"/>
+        </copy>
+        <chmod dir="${replicator.dist.dir}/bin" perm="ug+rx" includes="shardctl,pg-*"/>
+        <copy todir="${replicator.dist.dir}/lib">
+            <fileset dir="${jars.dir}"/>
+        </copy>
+        
+    </target>
+    
+</project>
