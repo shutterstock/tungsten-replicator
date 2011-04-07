@@ -7,13 +7,13 @@ BUILD_DIR=build
 
 # SVN URLs of the required modules
 # Replicator URL
-TREP_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/replicator
+TREP_SVN_URL=https://tungsten-replicator.googlecode.com/svn/trunk/replicator
 # Replicator Extras URL.
-TREP_EXT_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/replicator-extra
+TREP_EXT_SVN_URL=https://tungsten-replicator.googlecode.com/svn/trunk/replicator-extra
 # FSM URL.
-TFSM_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/fsm
+TFSM_SVN_URL=https://tungsten-replicator.googlecode.com/svn/trunk/fsm
 # Commons URL.
-TCOM_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/commons
+TCOM_SVN_URL=https://tungsten-replicator.googlecode.com/svn/trunk/commons
 # Bristlecone URL.
 BRI_SVN_URL=https://bristlecone.svn.sourceforge.net/svnroot/bristlecone/trunk/bristlecone
 
