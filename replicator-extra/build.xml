@@ -2,20 +2,20 @@
     Tungsten Scale-Out Stack.
     Copyright (C) 2007-2011 Continuent Inc.
     Contact: tungsten@continuent.org
-   
+
     This program is free software; you can redistribute it and/or modify
     it under the terms of version 2 of the GNU General Public License as
     published by the Free Software Foundation.
-   
+
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-   
+
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
-       
+
     Initial developer(s): Marc Herbert, Jeff Mesnil
     Contributor(s): Csaba Simon, Robert Hodges
 -->
@@ -30,7 +30,7 @@
     <property file="build.properties"/>
 
     <property name="build.dir" value="build"/>
-    <property name="bin.dir" value="bin"/>    
+    <property name="bin.dir" value="bin"/>
     <property name="conf.dir" value="conf"/>
     <property name="java.src.dir" value="src/java"/>
     <property name="test.src.dir" value="test/java"/>
@@ -66,7 +66,7 @@
     </path>
 
     <path id="test.classpath">
-        <path refid="compile.classpath"/>    	
+        <path refid="compile.classpath"/>
         <path location="${classes.dir}"/>
     	<path location="${replicator.test.classes.dir}"/>
         <fileset dir="${project.commons}/lib-test/">
@@ -74,7 +74,7 @@
         </fileset>
     </path>
 
-    <target name="all" depends="clean, test, dist" 
+    <target name="all" depends="clean, test, dist"
             description="--> test tungsten and create releases"/>
 
     <target name="clean" description="--> clean up files">
@@ -92,14 +92,15 @@
                debug="${javac.debug}"
                deprecation="${javac.deprecation}"
                verbose="${javac.verbose}"
-               nowarn="${javac.nowarn}">
+               nowarn="${javac.nowarn}"
+        	   includeantruntime="false">
             <compilerarg value="-Xlint:all"/>
         </javac>
     </target>
 
     <target name="compile-test" depends="compile">
         <mkdir dir="${test.classes.dir}"/>
-        <javac srcdir="${test.src.dir}" destdir="${test.classes.dir}" classpathref="test.classpath" debug="${javac.debug}"/>
+        <javac srcdir="${test.src.dir}" destdir="${test.classes.dir}" classpathref="test.classpath" debug="${javac.debug}" includeantruntime="false"/>
     </target>
 
     <target name="jar" description="--> build jar file" depends="compile">
@@ -135,7 +136,7 @@
         <mkdir dir="${test.work}"/>
         <junit printsummary="yes" haltonfailure="no" fork="yes"
           dir="${test.work}" failureproperty="tests.failed">
-            <jvmarg value="-Dreplicator.log.dir=." />            
+            <jvmarg value="-Dreplicator.log.dir=." />
             <classpath>
                 <pathelement location="${classes.dir}"/>
                 <pathelement location="${test.classes.dir}"/>
@@ -148,7 +149,7 @@
                 <fileset dir="${test.src.dir}">
                     <include name="**/*Test*.java"/>
                 </fileset>
-            
+
             </batchtest>
         </junit>
         <junitreport tofile="${test.reports}/TESTS-TestSuites.xml">
@@ -190,7 +191,7 @@
         <copy todir="${replicator.dist.dir}/lib">
             <fileset dir="${jars.dir}"/>
         </copy>
-        
+
     </target>
-    
+
 </project>
