@@ -220,6 +220,12 @@ module ConfigureDeploymentStepReplicationDataservice
           service_config.getProperty(REPL_SVC_THL_PORT) + "/"
       elsif line =~ /replicator.global.apply.channels=/
         "replicator.global.apply.channels=" + service_config.getProperty(REPL_SVC_CHANNELS)
+      elsif line =~ /replicator.shard.default.db=/
+        "replicator.shard.default.db=" + service_config.getProperty(REPL_SVC_SHARD_DEFAULT_DB)
+      elsif line =~ /replicator.filter.bidiSlave.allowBidiUnsafe=/
+        "replicator.filter.bidiSlave.allowBidiUnsafe=" + service_config.getProperty(REPL_SVC_ALLOW_BIDI_UNSAFE)
+      elsif line =~ /replicator.filter.bidiSlave.allowAnyRemoteService=/
+        "replicator.filter.bidiSlave.allowAnyRemoteService=" + service_config.getProperty(REPL_SVC_ALLOW_ANY_SERVICE)
 			else
 			  line
 			end

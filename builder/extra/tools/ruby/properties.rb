@@ -85,7 +85,7 @@ class Properties
   
   # Write properties to a file.  We use signal protection to avoid getting
   # interrupted half-way through. 
-  def store(properties_filename)
+  def store(properties_filename, use_json = true)
     # Protect I/O with trap for Ctrl-C. 
     interrupted = false
     old_trap = trap("INT") {
@@ -96,7 +96,14 @@ class Properties
     File.open(properties_filename, 'w') do |file|
       file.printf "# Tungsten configuration properties\n"
       file.printf "# Date: %s\n", DateTime.now
-      file.printf JSON.pretty_generate(@props)
+      
+      if use_json == false
+        @props.sort.each do | key, value |
+          file.printf "%s=%s\n", key, value
+        end
+      else
+        file.printf JSON.pretty_generate(@props)
+      end
     end
     
     # Check for interrupt and restore handler. 

@@ -66,7 +66,7 @@ class ConfigurePromptHandler
             i += 1
           else
             # Save the default value into the config
-            @prompts[i].save_default_value()
+            @prompts[i].save_current_value()
             begin
               # Trigger the prompt to be run because the user requested it
               if force_default_prompt

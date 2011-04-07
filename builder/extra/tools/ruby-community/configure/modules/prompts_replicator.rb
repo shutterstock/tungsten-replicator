@@ -47,6 +47,95 @@ class ReplicationServiceChannels < MultipleValueConfigurePrompt
   end
 end
 
+class ReplicationShardIDMode < AdvancedPrompt
+  def initialize
+    super(REPL_SVC_SHARD_DEFAULT_DB, 
+      "Mode for setting the shard ID from the default db (stringent|relaxed)", 
+      PropertyValidator.new("stringent|relaxed", 
+      "Value must be stringent or relaxed"))
+  end
+  
+  def get_default_value
+    "stringent"
+  end
+end
+
+class ReplicationServiceShardIDMode < MultipleValueConfigurePrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_SHARD_DEFAULT_DB, 
+      "Mode for setting the shard ID from the default db for service @value (stringent|relaxed)", 
+      PropertyValidator.new("stringent|relaxed", 
+      "Value must be stringent or relaxed"))
+  end
+  
+  def get_default_value
+    @config.getProperty(REPL_SVC_SHARD_DEFAULT_DB)
+  end
+  
+  def required?
+    false
+  end
+end
+
+class ReplicationAllowUnsafeSQL < AdvancedPrompt
+  def initialize
+    super(REPL_SVC_ALLOW_BIDI_UNSAFE, 
+      "Allow unsafe SQL from remote service (true|false)", PV_BOOLEAN)
+  end
+  
+  def get_default_value
+    "false"
+  end
+end
+
+class ReplicationServiceAllowUnsafeSQL < MultipleValueConfigurePrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_ALLOW_BIDI_UNSAFE, 
+      "Allow unsafe SQL from remote service for service @value (true|false)", PV_BOOLEAN)
+  end
+  
+  def get_default_value
+    @config.getProperty(REPL_SVC_ALLOW_BIDI_UNSAFE)
+  end
+  
+  def required?
+    false
+  end
+end
+
+class ReplicationAllowAllSQL < AdvancedPrompt
+  def initialize
+    super(REPL_SVC_ALLOW_ANY_SERVICE, 
+      "Replicate from any service (true|false)", 
+      PV_BOOLEAN)
+  end
+  
+  def get_default_value
+    "false"
+  end
+end
+
+class ReplicationServiceAllowAllSQL < MultipleValueConfigurePrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_ALLOW_ANY_SERVICE, 
+      "Replicate from any service for service @value (true|false)", PV_BOOLEAN)
+  end
+  
+  def get_default_value
+    @config.getProperty(REPL_SVC_ALLOW_ANY_SERVICE)
+  end
+  
+  def required?
+    false
+  end
+end
+
 class ReplicatorHostsPrompt < AdvancedPrompt
   def initialize
     super(REPL_HOSTS, "Enter a comma-delimited list of replicator hosts", 

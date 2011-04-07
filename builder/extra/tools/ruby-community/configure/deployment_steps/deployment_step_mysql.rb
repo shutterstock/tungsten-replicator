@@ -94,7 +94,7 @@ module ConfigureDeploymentStepMySQL
 		end
 		dynamic_properties.setProperty("replicator.auto_provision", @config.getProperty(REPL_BACKUP_AUTO_PROVISION))
 		dynamic_properties.setProperty("replicator.auto_backup", @config.getProperty(REPL_BACKUP_AUTO_BACKUP))
-		dynamic_properties.store(get_dynamic_properties_file())
+		dynamic_properties.store(get_dynamic_properties_file(), false)
 	end
 	
 	def write_wrapper_conf

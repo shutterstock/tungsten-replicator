@@ -16,6 +16,13 @@ class ReplicatorConfigureModule < ConfigureModule
       THLStorageType.new(),
       THLStorageDirectory.new(),
       
+      ReplicationShardIDMode.new(),
+      ReplicationServiceShardIDMode.new(),
+      ReplicationAllowUnsafeSQL.new(),
+      ReplicationServiceAllowUnsafeSQL.new(),
+      ReplicationAllowAllSQL.new(),
+      ReplicationServiceAllowAllSQL.new(),
+      
       MySQLBinlogDirectory.new(),
       MySQLBinlogPattern.new(),
       #MySQLConfigurePrompt.new(REPL_MYSQL_RO_SLAVE, "Make MySQL server read-only when acting as slave",
