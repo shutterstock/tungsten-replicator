@@ -22,22 +22,11 @@
 
 package com.continuent.tungsten.replicator.pipeline;
 
-import java.util.List;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
 import junit.framework.TestCase;
 
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
-
-import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
-import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
-import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
-import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
 
 /**
  * This class implements simple performance tests of Java operations.
