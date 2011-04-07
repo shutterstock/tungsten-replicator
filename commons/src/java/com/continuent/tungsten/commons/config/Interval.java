@@ -115,7 +115,6 @@ public class Interval
      * 
      * @param startMillis Start time in milliseconds
      * @param endMillis End time in milliseconds
-     * @return
      */
     public boolean overInterval(long startMillis, long endMillis)
     {

@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Edward Archibald
- * Contributor(s): 
+ * Contributor(s):
  */
 
 package com.continuent.tungsten.commons.utils;
@@ -49,7 +49,7 @@ import com.continuent.tungsten.commons.config.TungstenProperties;
 public class CLUtils implements Serializable
 {
     /**
-     * 
+     *
      */
     private static final long   serialVersionUID = 1L;
     private static final String COMMAND_COMMIT   = "commit";
@@ -95,7 +95,7 @@ public class CLUtils implements Serializable
 
     /**
      * Does a generic format of a TungstenProperties instance.
-     * 
+     *
      * @param name - a name to be associated with the properties
      * @param props - the TungstenProperties instance
      * @param header - an optional header that can be pre-pended to each
@@ -109,15 +109,13 @@ public class CLUtils implements Serializable
         StringBuilder builder = new StringBuilder();
         builder.append(header);
 
-        builder
-                .append(String
-                        .format("%s%s\n", name, modifiedSign(wasModified)));
+        builder.append(String.format("%s%s\n", name, modifiedSign(wasModified)));
         builder.append("{\n");
         Map<String, String> propMap = props.hashMap();
         for (String key : propMap.keySet())
         {
-            builder.append(String.format("%s%s = %s\n", indent, key, propMap
-                    .get(key)));
+            builder.append(String.format("%s%s = %s\n", indent, key,
+                    propMap.get(key)));
         }
         builder.append(String.format("}"));
 
@@ -133,7 +131,7 @@ public class CLUtils implements Serializable
 
     /**
      * Does a generic format of a TungstenProperties instance.
-     * 
+     *
      * @param name - a name to be associated with the properties
      * @param props - the TungstenProperties instance
      * @param header - an optional header that can be pre-pended to each
@@ -147,15 +145,13 @@ public class CLUtils implements Serializable
         StringBuilder builder = new StringBuilder();
         builder.append(header);
 
-        builder
-                .append(String
-                        .format("%s%s\n", name, modifiedSign(wasModified)));
+        builder.append(String.format("%s%s\n", name, modifiedSign(wasModified)));
         builder.append("{\n");
 
         for (String key : props.keySet())
         {
-            builder.append(String.format("%s%s = %s\n", indent, key, props
-                    .get(key)));
+            builder.append(String.format("%s%s = %s\n", indent, key,
+                    props.get(key)));
         }
         builder.append(String.format("}"));
         return builder.toString();
@@ -177,8 +173,8 @@ public class CLUtils implements Serializable
         for (String key : sorted.keySet())
         {
             Object value = props.get(key);
-            builder.append(String.format("%s%s:%s\n", indent, key, value
-                    .toString()));
+            builder.append(String.format("%s%s:%s\n", indent, key,
+                    value.toString()));
         }
 
         Vector<String[]> results = new Vector<String[]>();
@@ -236,7 +232,7 @@ public class CLUtils implements Serializable
      * @param wasModified - indicates whether or not the datasource has been
      *            modified
      * @param printDetails - print details
-     * @param includeStatisticsformatStatus - include statistics
+     * @param includeStatistics - include statistics
      * @return a formatted string representing a datasource/replicator status
      */
     public static String formatStatus(TungstenProperties dsProps,
@@ -252,14 +248,14 @@ public class CLUtils implements Serializable
 
         if (replProps != null)
         {
-            progressInformation = String.format("progress=%s", replProps
-                    .getString(Replicator.APPLIED_LAST_SEQNO));
+            progressInformation = String.format("progress=%s",
+                    replProps.getString(Replicator.APPLIED_LAST_SEQNO));
 
             if (dsProps.getString(Replicator.ROLE).equals("slave"))
             {
                 additionalInfo = String.format(", %s, latency=%s",
-                        progressInformation, replProps
-                                .getString(DataSource.APPLIED_LATENCY));
+                        progressInformation,
+                        replProps.getString(DataSource.APPLIED_LATENCY));
 
             }
             else
@@ -272,8 +268,8 @@ public class CLUtils implements Serializable
         String failureInfo = "";
         if (state.equals(ResourceState.FAILED.toString()))
         {
-            failureInfo = String.format("(%s)", dsProps
-                    .getString(DataSource.LASTERROR));
+            failureInfo = String.format("(%s)",
+                    dsProps.getString(DataSource.LASTERROR));
         }
         else if (state.equals(ResourceState.SHUNNED.toString()))
         {
@@ -296,9 +292,10 @@ public class CLUtils implements Serializable
             }
         }
 
-        String dsHeader = String.format("%s%s(%s:%s) %s", dsProps
-                .getString(DataSource.NAME), modifiedSign(wasModified), dsProps
-                .getString("role"), dsProps.getString("state"), failureInfo);
+        String dsHeader = String.format("%s%s(%s:%s) %s",
+                dsProps.getString(DataSource.NAME), modifiedSign(wasModified),
+                dsProps.getString("role"), dsProps.getString("state"),
+                failureInfo);
 
         // String dsHeader = String.format("%s", dsProps
         // .getString(DataSource.NAME));
@@ -343,8 +340,8 @@ public class CLUtils implements Serializable
         if (replProps != null)
         {
             String replHeader = String.format(
-                    "%s:REPLICATOR(role=%s, state=%s)", replProps
-                            .getString("host"), replProps.getString("role"),
+                    "%s:REPLICATOR(role=%s, state=%s)",
+                    replProps.getString("host"), replProps.getString("role"),
                     replProps.getString("state"));
 
             builder.append(formatMap(replHeader, replProps.map(), "", "  ",
@@ -354,8 +351,8 @@ public class CLUtils implements Serializable
 
         if (dbProps != null)
         {
-            String dbHeader = String.format("%s:DATASERVER(state=%s)", dsProps
-                    .getString("name"), dbProps.getString("state"));
+            String dbHeader = String.format("%s:DATASERVER(state=%s)",
+                    dsProps.getString("name"), dbProps.getString("state"));
 
             builder.append(formatMap(dbHeader, dbProps.map(), "", "  ", false));
 
@@ -378,10 +375,8 @@ public class CLUtils implements Serializable
         StringBuilder builder = new StringBuilder();
 
         builder.append(String.format("REPLICATOR(host=%s, state=%s)", replProps
-                .getString(Replicator.HOST),
-                ReplicationServiceNotification
-                        .replicatorStateToResourceState(replProps
-                                .getString("state"))));
+                .getString(Replicator.HOST), ReplicationServiceNotification
+                .replicatorStateToResourceState(replProps.getString("state"))));
 
         Map<String, TungstenProperties> serviceProps = (Map<String, TungstenProperties>) replProps
                 .getObject("serviceProperties");
@@ -390,23 +385,15 @@ public class CLUtils implements Serializable
             for (String serviceName : serviceProps.keySet())
             {
                 TungstenProperties props = serviceProps.get(serviceName);
-                builder
-                        .append(NEWLINE)
+                builder.append(NEWLINE)
                         .append("      ")
-                        .append(
-                                String
-                                        .format(
-                                                "%s(%s:%s:%s) progress=%d",
-                                                props
-                                                        .getString(Replicator.SIMPLE_SERVICE_NAME),
-                                                props
-                                                        .getString(Replicator.ROLE),
-                                                props
-                                                        .getString(Replicator.SERVICE_TYPE),
-                                                props
-                                                        .getString(Replicator.STATE),
-                                                props
-                                                        .getInt(Replicator.APPLIED_LAST_SEQNO)));
+                        .append(String.format(
+                                "%s(%s:%s:%s) progress=%d",
+                                props.getString(Replicator.SIMPLE_SERVICE_NAME),
+                                props.getString(Replicator.ROLE),
+                                props.getString(Replicator.SERVICE_TYPE),
+                                props.getString(Replicator.STATE),
+                                props.getInt(Replicator.APPLIED_LAST_SEQNO)));
             }
         }
 
@@ -422,24 +409,24 @@ public class CLUtils implements Serializable
         builder.append("{").append("\n");
         builder.append(header);
         builder.append(
-                String.format("%shost = %s", indent, replProps
-                        .getString("host"))).append("\n");
+                String.format("%shost = %s", indent,
+                        replProps.getString("host"))).append("\n");
         builder.append(header);
         builder.append(
-                String.format("%sminSeqNo = %s", indent, replProps
-                        .getString("minSeqNo"))).append("\n");
+                String.format("%sminSeqNo = %s", indent,
+                        replProps.getString("minSeqNo"))).append("\n");
         builder.append(header);
         builder.append(
-                String.format("%smaxSeqNo = %s", indent, replProps
-                        .getString("maxSeqNo"))).append("\n");
+                String.format("%smaxSeqNo = %s", indent,
+                        replProps.getString("maxSeqNo"))).append("\n");
         builder.append(header);
         builder.append(
-                String.format("%smasterUri = %s", indent, replProps
-                        .getString("masterUri"))).append("\n");
+                String.format("%smasterUri = %s", indent,
+                        replProps.getString("masterUri"))).append("\n");
         builder.append(header);
         builder.append(
-                String.format("%suptimeSeconds = %s", indent, replProps
-                        .getString("uptimeSeconds"))).append("\n");
+                String.format("%suptimeSeconds = %s", indent,
+                        replProps.getString("uptimeSeconds"))).append("\n");
         builder.append(header);
         builder.append(
                 String.format("%spendingExceptionMessage = %s", indent,
@@ -447,12 +434,12 @@ public class CLUtils implements Serializable
                 .append("\n");
         builder.append(header);
         builder.append(
-                String.format("%spendingErrorCode = %s", indent, replProps
-                        .getString("pendingErrorCode"))).append("\n");
+                String.format("%spendingErrorCode = %s", indent,
+                        replProps.getString("pendingErrorCode"))).append("\n");
         builder.append(header);
         builder.append(
-                String.format("%spendingError = %s", indent, replProps
-                        .getString("pendingError"))).append("\n");
+                String.format("%spendingError = %s", indent,
+                        replProps.getString("pendingError"))).append("\n");
 
         builder.append(header);
         builder.append(String.format("}"));
@@ -468,19 +455,19 @@ public class CLUtils implements Serializable
             StringBuilder builder, String header, String indent)
     {
         builder.append(
-                String.format("%sactiveConnectionCount = %s", indent, dsProps
-                        .getObject("activeConnectionCount"))).append("\n");
+                String.format("%sactiveConnectionCount = %s", indent,
+                        dsProps.getObject("activeConnectionCount"))).append(
+                "\n");
         builder.append(header);
         builder.append(
                 String.format("%sconnectionsCreatedCount = %s", indent,
                         dsProps.getObject("connectionsCreatedCount"))
                         .toString()).append("\n");
         builder.append(header);
-        builder
-                .append(
-                        String.format("%sstatementsCreatedCount = %s", indent,
-                                dsProps.getObject("statementsCreatedCount"))
-                                .toString()).append("\n");
+        builder.append(
+                String.format("%sstatementsCreatedCount = %s", indent,
+                        dsProps.getObject("statementsCreatedCount")).toString())
+                .append("\n");
         builder.append(header);
         builder.append(
                 String.format("%spreparedStatementsCreatedCount = %s", indent,
@@ -621,16 +608,16 @@ public class CLUtils implements Serializable
 
         String[] args = null;
 
-        while ((args = getInputTokens(newDSReader, String.format("edit %s> ",
-                props.getString("name"), CLUtils.modifiedSign(wasModified
-                        || isNew)), in)) != null)
+        while ((args = getInputTokens(
+                newDSReader,
+                String.format("edit %s> ", props.getString("name"),
+                        CLUtils.modifiedSign(wasModified || isNew)), in)) != null)
         {
             if (COMMAND_QUIT.equals(args[0]))
             {
                 if (wasModified)
                 {
-                    CLUtils
-                            .println("Please either commit or rollback changes before quitting");
+                    CLUtils.println("Please either commit or rollback changes before quitting");
                     continue;
                 }
                 break;
@@ -654,18 +641,16 @@ public class CLUtils implements Serializable
             // not enough args or key not present in the predefined settings
             else if (args.length != 2 || props.getString(args[0]) == null)
             {
-                CLUtils
-                        .println("Usage: <attribute> <new value> (example: \"role master\")");
-                CLUtils
-                        .println("       or use 'rollback' or 'commit' to complete your work");
+                CLUtils.println("Usage: <attribute> <new value> (example: \"role master\")");
+                CLUtils.println("       or use 'rollback' or 'commit' to complete your work");
             }
             // set a property
             else
             {
                 props.setString(args[0], args[1]);
                 wasModified = true;
-                CLUtils.println(CLUtils.formatProperties(props
-                        .getString("name"), props, "", wasModified));
+                CLUtils.println(CLUtils.formatProperties(
+                        props.getString("name"), props, "", wasModified));
             }
         }
 

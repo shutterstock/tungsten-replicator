@@ -60,14 +60,13 @@ import org.apache.log4j.Logger;
  * Encapsulates JMX server start/stop and provides static utility methods to
  * register MBeans on the server side as well as get proxies for them on the
  * client side.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class JmxManager implements NotificationListener
 {
-    private static final Logger  logger                = Logger
-                                                               .getLogger(JmxManager.class);
+    private static final Logger  logger                = Logger.getLogger(JmxManager.class);
 
     // RMI registry and connector server we are managing.
     protected Registry           rmiRegistry;
@@ -88,7 +87,7 @@ public class JmxManager implements NotificationListener
 
     /**
      * Creates an instance to manage a JMX service
-     * 
+     *
      * @param host The host name or IP to use
      * @param registryPort The JMX server RMI registryPort
      * @param serviceName The JMX service name
@@ -146,10 +145,9 @@ public class JmxManager implements NotificationListener
         catch (Exception r)
         {
             throw new ServerRuntimeException(
-                    String
-                            .format(
-                                    "Unable to locate the default registry on registryPort 1099, reason='%s'",
-                                    r.getMessage()));
+                    String.format(
+                            "Unable to locate the default registry on registryPort 1099, reason='%s'",
+                            r.getMessage()));
         }
 
         return registry;
@@ -274,29 +272,23 @@ public class JmxManager implements NotificationListener
                         }
                         catch (AccessException a)
                         {
-                            logger
-                                    .info(String
-                                            .format(
-                                                    "Access:Exception while looking up service %s: %s",
-                                                    serviceName, a));
+                            logger.info(String
+                                    .format("Access:Exception while looking up service %s: %s",
+                                            serviceName, a));
 
                         }
                         catch (RemoteException r)
                         {
                             // Get's here when manager is not up
-                            logger
-                                    .info(String
-                                            .format(
-                                                    "Remote:Exception while looking up service %s: %s",
-                                                    serviceName, r));
+                            logger.info(String
+                                    .format("Remote:Exception while looking up service %s: %s",
+                                            serviceName, r));
                         }
                         catch (NotBoundException n)
                         {
-                            logger
-                                    .info(String
-                                            .format(
-                                                    "NotBound:Exception while looking up service %s: %s",
-                                                    serviceName, n));
+                            logger.info(String
+                                    .format("NotBound:Exception while looking up service %s: %s",
+                                            serviceName, n));
 
                         }
                     }
@@ -367,7 +359,7 @@ public class JmxManager implements NotificationListener
      * combination of their MBean interface and the custom mbeanName argument.
      * The mbeanName permits multiple mBeans to be registered under the same
      * name.
-     * 
+     *
      * @param mbean The MBean instance that should be registered
      * @param mbeanInterface The MBean interface this instance implements
      * @param mbeanName A custom name for this MBean
@@ -403,7 +395,7 @@ public class JmxManager implements NotificationListener
      * combination of their MBean interface and the custom mbeanName argument.
      * The mbeanName permits multiple mBeans to be registered under the same
      * name.
-     * 
+     *
      * @param mbean The MBean instance that should be registered
      * @param mbeanClass The base class for the mbean
      * @throws ServerRuntimeException
@@ -436,8 +428,7 @@ public class JmxManager implements NotificationListener
      * combination of their MBean interface and the custom mbeanName argument.
      * The mbeanName permits multiple mBeans to be registered under the same
      * name.
-     * 
-     * @param mbean The MBean instance that should be registered
+     *
      * @param mbeanInterface The MBean interface this instance implements
      * @param mbeanName A custom name for this MBean
      * @throws ServerRuntimeException
@@ -474,10 +465,8 @@ public class JmxManager implements NotificationListener
      * combination of their MBean interface and the custom mbeanName argument.
      * The mbeanName permits multiple mBeans to be registered under the same
      * name.
-     * 
-     * @param mbean The MBean instance that should be registered
+     *
      * @param mbeanInterface The MBean interface this instance implements
-     * @param mbeanName A custom name for this MBean
      * @throws ServerRuntimeException
      */
     public static void unregisterMBean(Class<?> mbeanInterface)
@@ -509,7 +498,7 @@ public class JmxManager implements NotificationListener
     /**
      * Client helper method to return an RMI connection. The arguments match
      * those used when instantiating the JmxManager class itself.
-     * 
+     *
      * @param host the hostname to bind to in the jmx url
      * @param registryPort the registryPort number to bind to in the jmx url
      * @param serviceName the JMX service name
@@ -533,22 +522,18 @@ public class JmxManager implements NotificationListener
             {
                 if (logger.isDebugEnabled())
                 {
-                    logger
-                            .debug(
-                                    String
-                                            .format(
-                                                    "A component of type '%s' at address %s:%d is not available.\n"
-                                                            + "Checkto be sure that the service is running.\n",
-                                                    serviceName, host,
-                                                    registryPort, e), e);
+                    logger.debug(
+                            String.format(
+                                    "A component of type '%s' at address %s:%d is not available.\n"
+                                            + "Checkto be sure that the service is running.\n",
+                                    serviceName, host, registryPort, e), e);
                 }
 
                 throw new ServerRuntimeException(
-                        String
-                                .format(
-                                        "A component of type '%s' at address %s:%d is not available.\n"
-                                                + "Checkto be sure that the service is running.\n",
-                                        serviceName, host, registryPort, e), e);
+                        String.format(
+                                "A component of type '%s' at address %s:%d is not available.\n"
+                                        + "Checkto be sure that the service is running.\n",
+                                serviceName, host, registryPort, e), e);
             }
             else
             {
@@ -562,7 +547,7 @@ public class JmxManager implements NotificationListener
 
     /**
      * Create a connection to the JMX server.
-     * 
+     *
      * @return a connector to the JMXServer for the specified service
      */
     public JMXConnector connect(String host, int port, String serviceName)
@@ -572,7 +557,7 @@ public class JmxManager implements NotificationListener
 
     /**
      * Create a connection to the JMX server.
-     * 
+     *
      * @return a connector to the JMXServer for the specified service
      */
     public static JMXConnector connect2(String host, int port,
@@ -622,7 +607,7 @@ public class JmxManager implements NotificationListener
      * Client helper method to obtain a proxy that implements the given
      * interface by forwarding its methods through the given MBean server to the
      * named MBean.
-     * 
+     *
      * @param clientConnection the MBean server to forward to
      * @param mbeanClass The MBean interface this instance implements
      * @param mbeanName A custom name for this MBean
@@ -637,8 +622,8 @@ public class JmxManager implements NotificationListener
         try
         {
 
-            ObjectName objectName = generateMBeanObjectName(mbeanClass
-                    .getName(), mbeanName);
+            ObjectName objectName = generateMBeanObjectName(
+                    mbeanClass.getName(), mbeanName);
 
             return MBeanServerInvocationHandler.newProxyInstance(
                     clientConnection.getMBeanServerConnection(), objectName,
@@ -655,7 +640,7 @@ public class JmxManager implements NotificationListener
      * Client helper method to obtain a proxy that implements the given
      * interface by forwarding its methods through the given MBean server to the
      * named MBean.
-     * 
+     *
      * @param clientConnection the MBean server to forward to
      * @param mbeanClass The class for which an MBean exists
      * @param notificationBroadcaster If true make the returned proxy implement
@@ -675,11 +660,9 @@ public class JmxManager implements NotificationListener
         catch (ClassNotFoundException c)
         {
             throw new ServerRuntimeException(
-                    String
-                            .format(
-                                    "Cannot get an RMI proxy for class %s because the interface class %s was not found",
-                                    mbeanClass.getName(),
-                                    mbeanInterfaceClassName));
+                    String.format(
+                            "Cannot get an RMI proxy for class %s because the interface class %s was not found",
+                            mbeanClass.getName(), mbeanInterfaceClassName));
         }
 
         try
@@ -693,17 +676,16 @@ public class JmxManager implements NotificationListener
         catch (Exception e)
         {
             throw new ServerRuntimeException(
-                    String
-                            .format(
-                                    "Cannot get an RMI proxy for class %s because of this exception: %s",
-                                    mbeanClass.getName(), e), e);
+                    String.format(
+                            "Cannot get an RMI proxy for class %s because of this exception: %s",
+                            mbeanClass.getName(), e), e);
         }
     }
 
     /**
      * Attach NotificationListener that can be used to listen notifications
      * emitted by MBean server.
-     * 
+     *
      * @param jmxConnector The MBean server connector.
      * @param mbeanInterface The MBean interface this instance implements.
      * @param mbeanName A custom name for the MBean.
@@ -717,8 +699,8 @@ public class JmxManager implements NotificationListener
             throws InstanceNotFoundException, Exception
     {
         MBeanServerConnection mbsc = jmxConnector.getMBeanServerConnection();
-        ObjectName objectName = generateMBeanObjectName(mbeanInterface
-                .getName(), mbeanName);
+        ObjectName objectName = generateMBeanObjectName(
+                mbeanInterface.getName(), mbeanName);
         mbsc.addNotificationListener(objectName, notificationListener, null,
                 null);
     }
@@ -732,7 +714,7 @@ public class JmxManager implements NotificationListener
     /**
      * Attach NotificationListener that can be used to listen notifications
      * emitted by MBean server.
-     * 
+     *
      * @param jmxConnector The MBean server connector.
      * @param mbeanClass The class for which an MBean exists.
      * @param notificationListener User provided NotificationListener instance.
@@ -751,7 +733,7 @@ public class JmxManager implements NotificationListener
 
     /**
      * Remove NotificationListener from this MBean.
-     * 
+     *
      * @param jmxConnector The MBean server connector.
      * @param mbeanInterface The MBean interface this instance implements.
      * @param mbeanName A custom name for the MBean.
@@ -765,14 +747,14 @@ public class JmxManager implements NotificationListener
             throws Exception
     {
         MBeanServerConnection mbsc = jmxConnector.getMBeanServerConnection();
-        ObjectName objectName = generateMBeanObjectName(mbeanInterface
-                .getName(), mbeanName);
+        ObjectName objectName = generateMBeanObjectName(
+                mbeanInterface.getName(), mbeanName);
         mbsc.removeNotificationListener(objectName, notificationListener);
     }
 
     /**
      * Remove NotificationListener from this MBean.
-     * 
+     *
      * @param jmxConnector The MBean server connector.
      * @param mbeanClass The class for which an MBean exists.
      * @param notificationListener Previously added NotificationListener
@@ -890,7 +872,7 @@ public class JmxManager implements NotificationListener
     /**
      * Get the hostname from the local host. Returns the IP address, in textual
      * form, if no hostname can be found.
-     * 
+     *
      * @return the hostname for the local host
      */
     public static String getHostName()

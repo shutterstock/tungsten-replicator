@@ -12,10 +12,7 @@ public final class TungstenVersion
     public final static String NEWLINE         = "\n";
 
     /**
-     * 
      * Return formatted banner
-     * 
-     * @return
      */
     public static String banner()
     {
@@ -29,8 +26,8 @@ public final class TungstenVersion
     }
 
     /**
-     * 
      * {@inheritDoc}
+     * 
      * @see java.lang.Object#toString()
      */
     public String toString()

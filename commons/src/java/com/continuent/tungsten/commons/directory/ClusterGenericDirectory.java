@@ -72,10 +72,9 @@ public class ClusterGenericDirectory extends ResourceTree
             Directory
 {
     /**
-     * 
+     *
      */
-    private static Logger                                       logger               = Logger
-                                                                                             .getLogger(Directory.class);
+    private static Logger                                       logger               = Logger.getLogger(Directory.class);
 
     private static final long                                   serialVersionUID     = 1L;
 
@@ -251,8 +250,8 @@ public class ClusterGenericDirectory extends ResourceTree
             String path = (params != null ? params[0] : null);
             ResourceNode startNode = getStartNode(sessionID, path);
             List<ResourceNode> entries = ls(sessionID, path, cmd.isRecursive());
-            result = formatEntries(entries, startNode, cmd.isLong(), cmd
-                    .isAbsolute());
+            result = formatEntries(entries, startNode, cmd.isLong(),
+                    cmd.isAbsolute());
         }
         else if (command.equals(CREATE))
         {
@@ -421,7 +420,8 @@ public class ClusterGenericDirectory extends ResourceTree
             else
             {
                 throw new DirectoryException(String.format(
-                        "No parent element found for '%s'", formatPath(
+                        "No parent element found for '%s'",
+                        formatPath(
                                 getAbsolutePath(nodeToSearch, nodeToSearch,
                                         true), true)));
             }
@@ -518,10 +518,9 @@ public class ClusterGenericDirectory extends ResourceTree
                     else
                     {
                         throw new DirectoryNotFoundException(
-                                String
-                                        .format(
-                                                "the element '%s' of path '%s' resolves to more than one element",
-                                                element, path));
+                                String.format(
+                                        "the element '%s' of path '%s' resolves to more than one element",
+                                        element, path));
                     }
                 }
                 else
@@ -533,9 +532,11 @@ public class ClusterGenericDirectory extends ResourceTree
                 if (foundNode == null)
                 {
                     throw new DirectoryNotFoundException(String.format(
-                            "element '%s' not found in path '%s'", element,
-                            formatPath(getAbsolutePath(getRootNode(),
-                                    nodeToSearch, true), true)));
+                            "element '%s' not found in path '%s'",
+                            element,
+                            formatPath(
+                                    getAbsolutePath(getRootNode(),
+                                            nodeToSearch, true), true)));
                 }
 
                 nodeToSearch = foundNode;
@@ -547,7 +548,6 @@ public class ClusterGenericDirectory extends ResourceTree
 
     /**
      * @param map
-     * @return
      * @throws DirectoryNotFoundException
      */
     private ResourceNode getFirst(Map<String, ResourceNode> map)
@@ -561,7 +561,6 @@ public class ClusterGenericDirectory extends ResourceTree
 
     /**
      * @param path
-     * @return
      * @throws DirectoryNotFoundException
      */
     private ResourceNode getStartNode(String sessionID, String path)
@@ -770,8 +769,8 @@ public class ClusterGenericDirectory extends ResourceTree
         if (name == null)
         {
 
-            throw new DirectoryException(String
-                    .format("mkdir: missing name to create"));
+            throw new DirectoryException(
+                    String.format("mkdir: missing name to create"));
         }
 
         try
@@ -891,8 +890,8 @@ public class ClusterGenericDirectory extends ResourceTree
     public String formatPath(Directory directory, String sessionID,
             ResourceNode node) throws DirectoryNotFoundException
     {
-        return directory.formatPath(directory.getAbsolutePath(directory,
-                sessionID, node), true);
+        return directory.formatPath(
+                directory.getAbsolutePath(directory, sessionID, node), true);
     }
 
     /**
@@ -974,15 +973,15 @@ public class ClusterGenericDirectory extends ResourceTree
             {
                 boolean includeStartNode = (startNode == rootNode
                         ? true
-                        : false)
-                        || absolute;
+                        : false) || absolute;
 
                 if (absolute)
                 {
                     startNode = rootNode;
                 }
-                String formattedEntry = formatPath(getAbsolutePath(startNode,
-                        entry, includeStartNode), true);
+                String formattedEntry = formatPath(
+                        getAbsolutePath(startNode, entry, includeStartNode),
+                        true);
                 sortedEntries.put(formattedEntry, formattedEntry);
             }
 
@@ -1140,7 +1139,6 @@ public class ClusterGenericDirectory extends ResourceTree
      * paramStart
      * 
      * @param args
-     * @return
      */
     protected String[] getParams(String[] args, boolean parseFlags)
             throws DirectoryException
@@ -1221,7 +1219,7 @@ public class ClusterGenericDirectory extends ResourceTree
                 Serializable
     {
         /**
-         * 
+         *
          */
         private static final long serialVersionUID = 1L;
 
@@ -1366,12 +1364,10 @@ public class ClusterGenericDirectory extends ResourceTree
         }
         catch (ResourceNotificationException r)
         {
-            logger
-                    .error(
-                            String
-                                    .format(
-                                            "Could not send directory synchronization request, reason=%s",
-                                            r.getLocalizedMessage()), r);
+            logger.error(
+                    String.format(
+                            "Could not send directory synchronization request, reason=%s",
+                            r.getLocalizedMessage()), r);
 
         }
     }
@@ -1405,7 +1401,7 @@ public class ClusterGenericDirectory extends ResourceTree
     {
         return clusterName;
     }
-    
+
     /**
      * {@inheritDoc}
      * 
@@ -1495,7 +1491,6 @@ public class ClusterGenericDirectory extends ResourceTree
      * @param sessionID
      * @param siteName
      * @param clusterName
-     * @return
      * @throws Exception
      */
     public ResourceNode getClusterConfNode(String sessionID, String siteName,
@@ -1511,7 +1506,6 @@ public class ClusterGenericDirectory extends ResourceTree
      * @param sessionID
      * @param siteName
      * @param clusterName
-     * @return
      * @throws Exception
      */
     public ResourceNode getClusterNode(String sessionID, String siteName,
@@ -1524,11 +1518,12 @@ public class ClusterGenericDirectory extends ResourceTree
     }
 
     /**
+     * TODO: getClusterResourceConfNode definition.
+     * 
      * @param sessionID
      * @param siteName
      * @param clusterName
-     * @param memberName
-     * @return
+     * @param resourceType
      * @throws Exception
      */
     public ResourceNode getClusterResourceConfNode(String sessionID,
@@ -1543,11 +1538,12 @@ public class ClusterGenericDirectory extends ResourceTree
     }
 
     /**
+     * TODO: getDataServiceConfNode definition.
+     * 
      * @param sessionID
      * @param siteName
      * @param clusterName
-     * @param memberName
-     * @return
+     * @param dataServiceName
      * @throws Exception
      */
     public ResourceNode getDataServiceConfNode(String sessionID,
@@ -1590,8 +1586,8 @@ public class ClusterGenericDirectory extends ResourceTree
     public void addDataService(String sessionID, DataService dataService)
             throws Exception
     {
-        logger.info(String.format("Adding DATASERVICE '%s'", dataService
-                .getFqn()));
+        logger.info(String.format("Adding DATASERVICE '%s'",
+                dataService.getFqn()));
 
         ResourceNode dataServiceConfNode = getDataServiceConfNode(sessionID,
                 siteName, clusterName, dataService.getName());
@@ -1695,7 +1691,7 @@ public class ClusterGenericDirectory extends ResourceTree
     {
         this.managerID = managerID;
     }
-    
+
     public DirectoryType getDirectoryType()
     {
         return type;

@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s): 
+ * Contributor(s):
  */
 
 package com.continuent.tungsten.commons.commands;
@@ -123,7 +123,6 @@ public class FileCommands
      * 
      * @param files List of files to evaluate
      * @param retention Retention period
-     * @return
      */
     public static File[] filesOverModDate(File[] files, Interval retention)
     {

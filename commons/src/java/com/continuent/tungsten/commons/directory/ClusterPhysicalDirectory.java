@@ -2,15 +2,12 @@
 package com.continuent.tungsten.commons.directory;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.cluster.resource.ClusterManagerID;
 import com.continuent.tungsten.commons.cluster.resource.ResourceType;
 import com.continuent.tungsten.commons.cluster.resource.physical.Member;
-import com.continuent.tungsten.commons.cluster.resource.physical.DataSource;
 import com.continuent.tungsten.commons.cluster.resource.physical.PhysicalResourceFactory;
 import com.continuent.tungsten.commons.cluster.resource.physical.Process;
 import com.continuent.tungsten.commons.cluster.resource.shared.ResourceConfiguration;
@@ -23,21 +20,19 @@ import com.continuent.tungsten.commons.exception.ResourceException;
 import com.continuent.tungsten.commons.exec.ProcessExecutor;
 import com.continuent.tungsten.commons.utils.CLUtils;
 import com.continuent.tungsten.commons.utils.Command;
-import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 public class ClusterPhysicalDirectory extends ClusterGenericDirectory
         implements
             DirectoryChangeNotifier
 {
     /**
-     * 
+     *
      */
-    private static Logger                   logger           = Logger
-                                                                     .getLogger(ClusterPhysicalDirectory.class);
+    private static Logger                   logger           = Logger.getLogger(ClusterPhysicalDirectory.class);
     private static ClusterPhysicalDirectory _instance        = null;
 
     /**
-     * 
+     *
      */
     private static final long               serialVersionUID = 1L;
 
@@ -64,8 +59,8 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
                 ResourceType.MEMBER, memberName,
                 getClusterNode(systemSessionID, siteName, clusterName));
 
-        ((Member) member.getResource()).setProperty(Member.PORT, managerID
-                .getPort());
+        ((Member) member.getResource()).setProperty(Member.PORT,
+                managerID.getPort());
 
         confFolder = getResourceFactory().addInstance(ResourceType.FOLDER,
                 "conf", member);
@@ -123,8 +118,9 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
 
             if (type == null || extensionName == null || theCommand == null)
             {
-                throw new DirectoryException(String
-                        .format("Incorrectly formed command for execute:'%s'.",
+                throw new DirectoryException(
+                        String.format(
+                                "Incorrectly formed command for execute:'%s'.",
                                 command));
             }
             ResourceType extensionType = ResourceType.valueOf(type
@@ -164,7 +160,6 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
      * @param siteName
      * @param clusterName
      * @param memberName
-     * @return
      * @throws Exception
      */
     public ResourceNode getMemberNode(String sessionID, String siteName,
@@ -182,7 +177,6 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
      * @param siteName
      * @param clusterName
      * @param memberName
-     * @return
      * @throws Exception
      */
     public ResourceNode getClusterMemberConfNode(String sessionID,
@@ -221,7 +215,6 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
      * @param port
      * @param component
      * @param managerName
-     * @return
      * @throws Exception
      */
     public ResourceNode getManagerNode(String sessionID, String siteName,
@@ -243,14 +236,14 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
         catch (DirectoryNotFoundException d)
         {
             try
-            {  
+            {
                 managerNode = create(sessionID, path, true);
             }
             catch (DirectoryException di)
             {
                 throw new Exception(String.format(
-                        "Unable to create directory entry, reason=%s", di
-                                .getMessage()));
+                        "Unable to create directory entry, reason=%s",
+                        di.getMessage()));
             }
         }
 
@@ -258,9 +251,10 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
 
     }
 
-    public synchronized ResourceNode createProcessNode(String sessionID, String siteName,
-            String clusterName, String memberName, String componentName,
-            String resourceManagerName, int port) throws DirectoryException
+    public synchronized ResourceNode createProcessNode(String sessionID,
+            String siteName, String clusterName, String memberName,
+            String componentName, String resourceManagerName, int port)
+            throws DirectoryException
     {
         String path = String.format("/%s/%s/%s/%s", siteName, clusterName,
                 memberName, resourceManagerName);
@@ -268,8 +262,7 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
         if (memberName == null || port == 0)
         {
             String message = String
-                    .format(
-                            "Attempting to create an invalid process entry for component '%s'",
+                    .format("Attempting to create an invalid process entry for component '%s'",
                             resourceManagerName);
             throw new DirectoryException(message);
         }
@@ -285,22 +278,18 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
         catch (Exception di)
         {
             throw new DirectoryException(String.format(
-                    "Unable to create directory entry, reason=%s", di
-                            .getMessage()), di);
+                    "Unable to create directory entry, reason=%s",
+                    di.getMessage()), di);
         }
     }
 
     /**
      * Processes are found at: /<site>/<cluster>/<member>/<component>/<process>
-     * 
+     *
      * @param sessionID
      * @param siteName
      * @param clusterName
      * @param memberName
-     * @param beanServiceName
-     * @param port
-     * @param component
-     * @return
      */
     public ResourceNode getProcessNode(String sessionID, String siteName,
             String clusterName, String memberName, String processName)
@@ -324,8 +313,6 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
     }
 
     /**
-     * @param url
-     * @return
      * @throws Exception
      */
     public ResourceNode getOperationNode(String sessionID, String path,
@@ -351,11 +338,10 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
     /**
      * Extensions config are located in:
      * /<site>/<cluster>/<member>/<conf>/<extensionType>/<extensionName>
-     * 
+     *
      * @param sessionID
      * @param extensionType
      * @param extensionName
-     * @return
      * @throws Exception
      */
     ResourceNode getExtensionNode(String sessionID, String extensionType,
@@ -368,11 +354,9 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
 
         if (extensionNode == null)
         {
-            logger
-                    .error(String
-                            .format(
-                                    "Could not find an extension of type %s named %s on member %s",
-                                    extensionType, extensionName, memberName));
+            logger.error(String
+                    .format("Could not find an extension of type %s named %s on member %s",
+                            extensionType, extensionName, memberName));
         }
 
         return extensionNode;
@@ -383,7 +367,7 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
      * Executes a command on a service. The command must be defined in the
      * service configuration like this for eg.:<br/>
      * command.start=../../tungsten-replicator/bin/replicator start
-     * 
+     *
      * @param serviceSpec Name of the service.
      * @param serviceCmd Command name to execute on a service.
      * @return Stdout of the process have been executed.
@@ -403,9 +387,7 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
      * Executes a command on a service. The command must be defined in the
      * service configuration like this for eg.:<br/>
      * command.start=../../tungsten-replicator/bin/replicator start
-     * 
-     * @param serviceSpec Name of the service.
-     * @param serviceCmd Command name to execute on a service.
+     *
      * @return Stdout of the process have been executed.
      * @throws Exception If service node not found, or service does not support
      *             the requested command.
@@ -424,7 +406,7 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
      * execute concurrently across a set of nodes. The arguments passed in
      * determine where we will look for the 'extension' and what we will
      * execute.
-     * 
+     *
      * @param extensionType - the type of the extension. This determines the
      *            directory that is searched for the extension.
      * @param extensionName - the name of the .properties file to look for in
@@ -459,8 +441,7 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
         if (extensionNode == null)
         {
             return String
-                    .format(
-                            "Could not find an extension of type %s named %s on member %s",
+                    .format("Could not find an extension of type %s named %s on member %s",
                             extensionType, extensionName, memberName);
         }
 
@@ -472,10 +453,9 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
         if (command == null)
         {
             return String
-                    .format(
-                            "%s extension for %s takes one of the following commands:\n%s",
-                            extensionType, extensionName, tp.subset(cmdPrefix,
-                                    true).keyNames());
+                    .format("%s extension for %s takes one of the following commands:\n%s",
+                            extensionType, extensionName,
+                            tp.subset(cmdPrefix, true).keyNames());
         }
 
         String execPath = tp.getString(cmdProp);
@@ -485,8 +465,8 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
             return String.format(
                     "The %s extension for component %s does not support the command %s\n"
                             + "It takes one of the following commands\n:%s",
-                    extensionType, extensionName, command, tp.subset(cmdPrefix,
-                            true).keyNames());
+                    extensionType, extensionName, command,
+                    tp.subset(cmdPrefix, true).keyNames());
         }
         else
         {
@@ -550,25 +530,23 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
     }
 
     /**
-     * {@inheritDoc}
-     * 
      * @see com.continuent.tungsten.commons.directory.Directory#ls(java.lang.String,
      *      java.lang.String, boolean)
      */
-    public static TungstenConfiguration toConfiguration(ClusterPhysicalDirectory dir)
-            throws DirectoryNotFoundException
+    public static TungstenConfiguration toConfiguration(
+            ClusterPhysicalDirectory dir) throws DirectoryNotFoundException
     {
         TungstenConfigurationManager configMgr = new TungstenConfigurationManager(
                 dir.getRootNode().getResource());
 
         getConfig(dir.getRootNode(), configMgr, configMgr.getRoot());
-        
+
         return configMgr.getRoot();
     }
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.commons.directory.Directory#getEntries(com.continuent.tungsten.commons.directory.ResourceNode,
      *      java.util.List, boolean)
      */
@@ -586,7 +564,7 @@ public class ClusterPhysicalDirectory extends ClusterGenericDirectory
 
             TungstenConfiguration childConfig = configMgr.addChild(config,
                     entry.getResource());
-            
+
             getConfig(entry, configMgr, childConfig);
         }
     }

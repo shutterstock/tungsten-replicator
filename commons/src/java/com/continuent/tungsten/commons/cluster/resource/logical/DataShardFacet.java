@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s): 
+ * Contributor(s):
  */
 
 package com.continuent.tungsten.commons.cluster.resource.logical;
@@ -41,7 +41,7 @@ import com.continuent.tungsten.commons.patterns.order.Sequence;
 public class DataShardFacet extends Resource
 {
     /**
-     * 
+     *
      */
     private static final long  serialVersionUID = 1L;
 
@@ -65,7 +65,7 @@ public class DataShardFacet extends Resource
 
     /**
      * Returns the parent value.
-     * 
+     *
      * @return Returns the parent.
      */
     public DataShard getParent()
@@ -75,7 +75,7 @@ public class DataShardFacet extends Resource
 
     /**
      * Sets the parent value.
-     * 
+     *
      * @param parent The parent to set.
      */
     public void setParent(DataShard parent)
@@ -85,7 +85,7 @@ public class DataShardFacet extends Resource
 
     /**
      * Sets the role value.
-     * 
+     *
      * @param role The role to set.
      */
     public void setRole(DataShardFacetRole role)
@@ -100,7 +100,7 @@ public class DataShardFacet extends Resource
 
     /**
      * Returns the dataSource value.
-     * 
+     *
      * @return Returns the dataSource.
      */
     public DataSource getDataSource()
@@ -110,7 +110,7 @@ public class DataShardFacet extends Resource
 
     /**
      * Sets the dataSource value.
-     * 
+     *
      * @param dataSource The dataSource to set.
      */
     public void setDataSource(DataSource dataSource)
@@ -120,7 +120,6 @@ public class DataShardFacet extends Resource
 
     /**
      * @param destination
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#copyTo(com.continuent.tungsten.commons.cluster.resource.Resource)
      */
     public Resource copyTo(Resource destination)
@@ -138,7 +137,6 @@ public class DataShardFacet extends Resource
 
     /**
      * @param detailed
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#describe(boolean)
      */
     public String describe(boolean detailed)
@@ -157,7 +155,6 @@ public class DataShardFacet extends Resource
 
     /**
      * @param obj
-     * @return
      * @see java.lang.Object#equals(java.lang.Object)
      */
     public boolean equals(Object obj)
@@ -166,7 +163,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getActiveConnections()
      */
     public long getActiveConnections()
@@ -175,7 +171,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getAppliedLatency()
      */
     public double getAppliedLatency()
@@ -184,7 +179,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getCallableStatementsCreated()
      */
     public long getCallableStatementsCreated()
@@ -193,7 +187,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#getChildType()
      */
     public ResourceType getChildType()
@@ -203,8 +196,6 @@ public class DataShardFacet extends Resource
 
     /**
      * TODO: getClusterName definition.
-     * 
-     * @return
      */
     public String getClusterName()
     {
@@ -213,8 +204,6 @@ public class DataShardFacet extends Resource
 
     /**
      * TODO: getSiteName definition.
-     * 
-     * @return
      */
     public String getSiteName()
     {
@@ -222,7 +211,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getConnectionsCreated()
      */
     public long getConnectionsCreated()
@@ -231,7 +219,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getDataSourceRole()
      */
     public DataShardFacetRole getDataSourceRole()
@@ -240,7 +227,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#getDirectoryType()
      */
     public DirectoryType getDirectoryType()
@@ -249,7 +235,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getDriver()
      */
     public String getDriver()
@@ -258,7 +243,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getEnabled()
      */
     public AtomicInteger getEnabled()
@@ -267,7 +251,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getHighWater()
      */
     public HighWaterResource getHighWater()
@@ -276,7 +259,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getHost()
      */
     public String getHost()
@@ -285,7 +267,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getIsAvailable()
      */
     public boolean getIsAvailable()
@@ -294,7 +275,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#getKey()
      */
     public String getKey()
@@ -303,7 +283,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getLastError()
      */
     public String getLastError()
@@ -312,7 +291,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getLastShunReason()
      */
     public String getLastShunReason()
@@ -321,7 +299,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getLastUpdate()
      */
     public Date getLastUpdate()
@@ -330,7 +307,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getPassword()
      */
     public String getPassword()
@@ -339,7 +315,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getPrecedence()
      */
     public int getPrecedence()
@@ -348,7 +323,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getPreparedStatementsCreated()
      */
     public long getPreparedStatementsCreated()
@@ -357,7 +331,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getRole()
      */
     public String getRole()
@@ -366,7 +339,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getSequence()
      */
     public Sequence getSequence()
@@ -375,7 +347,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getState()
      */
     public ResourceState getState()
@@ -384,7 +355,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getStatementsCreated()
      */
     public long getStatementsCreated()
@@ -393,7 +363,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#getType()
      */
     public ResourceType getType()
@@ -402,7 +371,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getUrl()
      */
     public String getUrl()
@@ -411,7 +379,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getUser()
      */
     public String getUser()
@@ -420,7 +387,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getVendor()
      */
     public String getVendor()
@@ -429,7 +395,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see java.lang.Object#hashCode()
      */
     public int hashCode()
@@ -478,7 +443,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#isAvailable()
      */
     public boolean isAvailable()
@@ -487,7 +451,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#isContainer()
      */
     public boolean isContainer()
@@ -496,7 +459,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#isExecutable()
      */
     public boolean isExecutable()
@@ -505,7 +467,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#isMaster()
      */
     public boolean isMaster()
@@ -514,7 +475,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#isSlave()
      */
     public boolean isSlave()
@@ -694,8 +654,6 @@ public class DataShardFacet extends Resource
 
     /**
      * Returns the replicator host for this facet.
-     * 
-     * @return
      */
     public String getReplicatorHost()
     {
@@ -704,8 +662,6 @@ public class DataShardFacet extends Resource
 
     /**
      * Returns whether or not this facet has a remote replicator.
-     * 
-     * @return
      */
     public boolean isRemoteReplicator()
     {
@@ -812,7 +768,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#toMap()
      */
     public Map<String, String> toMap()
@@ -821,7 +776,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#toProperties()
      */
     public TungstenProperties toProperties()
@@ -844,7 +798,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getLogDir()
      */
     public String getLogDir()
@@ -853,7 +806,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getLogPattern()
      */
     public String getLogPattern()
@@ -880,7 +832,6 @@ public class DataShardFacet extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.physical.DataSource#getPort()
      */
     public int getPort()
@@ -916,7 +867,7 @@ public class DataShardFacet extends Resource
 
     /**
      * Sets the facetType value.
-     * 
+     *
      * @param facetType The facetType to set.
      */
     public void setFacetType(DataShardFacetType facetType)

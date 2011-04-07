@@ -25,7 +25,6 @@ public class TungstenConfiguration
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#getName()
      */
     public String getName()
@@ -34,7 +33,6 @@ public class TungstenConfiguration
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#getType()
      */
     public ResourceType getType()
@@ -43,7 +41,6 @@ public class TungstenConfiguration
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.Resource#toProperties()
      */
     public TungstenProperties toProperties()
@@ -100,7 +97,7 @@ public class TungstenConfiguration
     {
         this.parent = parent;
     }
-    
+
     public String getPath()
     {
         return getPath(this);
@@ -113,7 +110,8 @@ public class TungstenConfiguration
 
         while ((parent = config.getParent()) != null)
         {
-            path = parent.getName() + (parent.getName().equals("/") ? path : "/" + path);
+            path = parent.getName()
+                    + (parent.getName().equals("/") ? path : "/" + path);
             config = parent;
         }
 

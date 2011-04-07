@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Ed Archibald
- * Contributor(s): 
+ * Contributor(s):
  */
 
 package com.continuent.tungsten.commons.directory;
@@ -39,14 +39,14 @@ import com.continuent.tungsten.commons.cluster.resource.ResourceType;
 public class ResourceNode implements Serializable
 {
     /**
-     * 
+     *
      */
     private static final long        serialVersionUID = 1L;
 
     private Resource                 resource;
     private boolean                  link             = false;
 
-    public Map<String, ResourceNode> children = new HashMap<String, ResourceNode>();
+    public Map<String, ResourceNode> children         = new HashMap<String, ResourceNode>();
     public Vector<ResourceNode>      links            = new Vector<ResourceNode>();
     public ResourceNode              parent;
 
@@ -108,7 +108,7 @@ public class ResourceNode implements Serializable
 
     /**
      * Return a map of the current children of this node or an empty map.
-     * 
+     *
      * @return the children of Node<String,RouterResource>
      */
     public synchronized Map<String, ResourceNode> getChildren()
@@ -131,7 +131,7 @@ public class ResourceNode implements Serializable
     /**
      * Returns the number of immediate children of this
      * Node<String,RouterResource>.
-     * 
+     *
      * @return the number of immediate children.
      */
     public synchronized int getNumberOfChildren()
@@ -145,7 +145,7 @@ public class ResourceNode implements Serializable
 
     /**
      * Adds a child node to this node
-     * 
+     *
      * @param childNode
      */
     public synchronized void addChild(ResourceNode childNode)
@@ -156,8 +156,8 @@ public class ResourceNode implements Serializable
 
     /**
      * Adds a child node to this node
-     * 
-     * @param childNode
+     *
+     * @param nodeToLink
      */
     public synchronized void link(ResourceNode nodeToLink)
     {
@@ -167,9 +167,7 @@ public class ResourceNode implements Serializable
     }
 
     /**
-     * Adds a child node to this node
-     * 
-     * @param childNode
+     * Removes a child node from this node
      */
     public synchronized void unlink()
     {
@@ -181,8 +179,8 @@ public class ResourceNode implements Serializable
 
     /**
      * Points a links back at a node that references it as a link.
-     * 
-     * @param linkedNode
+     *
+     * @param referencingNode
      */
     public synchronized void addReference(ResourceNode referencingNode)
     {
@@ -192,7 +190,7 @@ public class ResourceNode implements Serializable
     /**
      * Utility method that creates a new resource node from the resource passed
      * in and then adds it as a child.
-     * 
+     *
      * @param child
      * @return the new node created/added as a result of this method
      */
@@ -208,7 +206,7 @@ public class ResourceNode implements Serializable
 
     /**
      * Remove a child by key
-     * 
+     *
      * @param key
      */
     public synchronized void removeChild(String key)
@@ -261,7 +259,7 @@ public class ResourceNode implements Serializable
 
     /**
      * Returns the links value.
-     * 
+     *
      * @return Returns the links.
      */
     public Vector<ResourceNode> getLinks()
@@ -271,7 +269,7 @@ public class ResourceNode implements Serializable
 
     /**
      * Returns the link value.
-     * 
+     *
      * @return Returns the link.
      */
     public boolean isLink()
@@ -281,7 +279,7 @@ public class ResourceNode implements Serializable
 
     /**
      * Sets the link value.
-     * 
+     *
      * @param link The link to set.
      */
     public void setLink(boolean link)

@@ -69,7 +69,7 @@ public class DataService extends Resource
 
     /**
      * Creates a new <code>DataService</code> object
-     * 
+     *
      * @param siteName
      * @param clusterName
      * @param dataServiceName
@@ -95,7 +95,7 @@ public class DataService extends Resource
 
     /**
      * Creates a new <code>DataService</code> object
-     * 
+     *
      * @param serviceProperties
      * @param dataSourceMap
      * @throws ResourceException
@@ -128,7 +128,7 @@ public class DataService extends Resource
 
     /**
      * Creates a new <code>DataService</code> object
-     * 
+     *
      * @param site
      * @param cluster
      * @param dataServiceName
@@ -156,7 +156,7 @@ public class DataService extends Resource
 
     /**
      * Returns the login value.
-     * 
+     *
      * @return Returns the login.
      */
     public String getUser()
@@ -166,7 +166,7 @@ public class DataService extends Resource
 
     /**
      * Sets the login value.
-     * 
+     *
      * @param login The login to set.
      */
     public void setUser(String login)
@@ -176,7 +176,7 @@ public class DataService extends Resource
 
     /**
      * Returns the password value.
-     * 
+     *
      * @return Returns the password.
      */
     public String getPassword()
@@ -186,7 +186,7 @@ public class DataService extends Resource
 
     /**
      * Sets the password value.
-     * 
+     *
      * @param password The password to set.
      */
     public void setPassword(String password)
@@ -196,7 +196,7 @@ public class DataService extends Resource
 
     /**
      * Returns the fqn value.
-     * 
+     *
      * @return Returns the fqn.
      */
     public String getFqn()
@@ -208,8 +208,6 @@ public class DataService extends Resource
      * Returns a representation of the fully qualified name that does not
      * contain slashes or colons but, instead, replaces those with a simple
      * underscore.
-     * 
-     * @return
      */
     public String getCanonicalFQN()
     {
@@ -219,7 +217,7 @@ public class DataService extends Resource
 
     /**
      * Sets the fqn value.
-     * 
+     *
      * @param fqn The fqn to set.
      */
     public void setFqn(String fqn)
@@ -229,7 +227,7 @@ public class DataService extends Resource
 
     /**
      * Returns the defaultShard value.
-     * 
+     *
      * @return Returns the defaultShard.
      */
     public DataShard getDefaultShard()
@@ -239,8 +237,6 @@ public class DataService extends Resource
 
     /**
      * Get all shards.
-     * 
-     * @return
      */
     public Map<String, DataShard> getShards()
     {
@@ -248,7 +244,6 @@ public class DataService extends Resource
     }
 
     /**
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.logical.DataShard#getAllFacets()
      */
     public Map<String, DataShardFacet> getAllFacets()
@@ -257,7 +252,6 @@ public class DataService extends Resource
     }
 
     /**
-     * @return
      * @throws ResourceException
      * @see com.continuent.tungsten.commons.cluster.resource.logical.DataShard#getCurrentMaster()
      */
@@ -267,7 +261,6 @@ public class DataService extends Resource
     }
 
     /**
-     * @return
      * @throws ResourceException
      * @see com.continuent.tungsten.commons.cluster.resource.logical.DataShard#getCurrentMaster()
      */
@@ -278,7 +271,6 @@ public class DataService extends Resource
 
     /**
      * @param dsName
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.logical.DataShard#isActiveMaster(java.lang.String)
      */
     public boolean isActiveMaster(String dsName)
@@ -288,7 +280,6 @@ public class DataService extends Resource
 
     /**
      * @param dsName
-     * @return
      * @see com.continuent.tungsten.commons.cluster.resource.logical.DataShard#isActiveSlave(java.lang.String)
      */
     public boolean isActiveSlave(String dsName)
@@ -322,7 +313,7 @@ public class DataService extends Resource
 
     /**
      * Returns the siteName value.
-     * 
+     *
      * @return Returns the siteName.
      */
     public String getSiteName()
@@ -332,7 +323,7 @@ public class DataService extends Resource
 
     /**
      * Sets the siteName value.
-     * 
+     *
      * @param siteName The siteName to set.
      */
     public void setSiteName(String siteName)
@@ -342,7 +333,7 @@ public class DataService extends Resource
 
     /**
      * Returns the clusterName value.
-     * 
+     *
      * @return Returns the clusterName.
      */
     public String getClusterName()
@@ -352,7 +343,7 @@ public class DataService extends Resource
 
     /**
      * Sets the clusterName value.
-     * 
+     *
      * @param clusterName The clusterName to set.
      */
     public void setClusterName(String clusterName)
@@ -362,7 +353,7 @@ public class DataService extends Resource
 
     /**
      * Returns the port value.
-     * 
+     *
      * @return Returns the port.
      */
     public int getPort()
@@ -372,7 +363,7 @@ public class DataService extends Resource
 
     /**
      * Sets the port value.
-     * 
+     *
      * @param port The port to set.
      */
     public void setPort(int port)
@@ -390,7 +381,7 @@ public class DataService extends Resource
 
     /**
      * Returns the detached value.
-     * 
+     *
      * @return Returns the detached.
      */
     public boolean isDetached()
@@ -400,7 +391,7 @@ public class DataService extends Resource
 
     /**
      * Sets the detached value.
-     * 
+     *
      * @param detached The detached to set.
      */
     public void setDetached(boolean detached)
@@ -410,7 +401,7 @@ public class DataService extends Resource
 
     /**
      * Returns the channels value.
-     * 
+     *
      * @return Returns the queues.
      */
     public int getChannels()
@@ -420,8 +411,8 @@ public class DataService extends Resource
 
     /**
      * Sets the queues value.
-     * 
-     * @param queues The queues to set.
+     *
+     * @param channels The channels to set.
      */
     public void setChannels(int channels)
     {
@@ -430,7 +421,7 @@ public class DataService extends Resource
 
     /**
      * Returns the auto-online value.
-     * 
+     *
      * @return Returns whether data service should auto-online.
      */
     public boolean isAuto()
@@ -440,8 +431,8 @@ public class DataService extends Resource
 
     /**
      * Sets the auto-online value.
-     * 
-     * @param autoOnline The value to set.
+     *
+     * @param auto The value to set.
      */
     public void setAuto(boolean auto)
     {

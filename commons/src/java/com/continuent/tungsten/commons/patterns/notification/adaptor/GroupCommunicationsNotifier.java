@@ -49,10 +49,9 @@ import com.continuent.tungsten.commons.patterns.notification.ResourceNotificatio
 import com.continuent.tungsten.commons.patterns.notification.ResourceNotificationListener;
 import com.continuent.tungsten.commons.patterns.notification.ResourceNotifier;
 
-
 /**
  * This class defines a GroupCommunicationsNotifier
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -63,8 +62,7 @@ public class GroupCommunicationsNotifier
             GroupMembershipListener
 {
 
-    private static final Logger            logger      = Logger
-                                                               .getLogger(GroupCommunicationsNotifier.class);
+    private static final Logger            logger      = Logger.getLogger(GroupCommunicationsNotifier.class);
 
     /** Name of the hedera.properties file, which must be on the class path. */
     private String                         properties  = "/hedera.properties";
@@ -73,7 +71,6 @@ public class GroupCommunicationsNotifier
     private String                         channelName = "monitoring";
 
     private int                            joinDelay   = 20;
-
 
     // Group communications information.
     private GroupIdentifier                gid         = null;
@@ -98,9 +95,8 @@ public class GroupCommunicationsNotifier
 
     /**
      * Connects the notifier to group communications using generic Hedera
-     * interfaces.
-     * 
-     * {@inheritDoc}
+     * interfaces. {@inheritDoc}
+     *
      * @see com.continuent.tungsten.commons.patterns.notification.ResourceNotifier#prepare()
      */
     public void prepare() throws Exception
@@ -130,8 +126,8 @@ public class GroupCommunicationsNotifier
             {
                 logger.debug("Unable to load hedera.properties", e);
             }
-            throw new NotificationAdaptorException("Unable to load hedera.properties: "
-                    + properties);
+            throw new NotificationAdaptorException(
+                    "Unable to load hedera.properties: " + properties);
         }
         logger.debug("Able to load properties");
 
@@ -192,9 +188,11 @@ public class GroupCommunicationsNotifier
 
     /**
      * {@inheritDoc}
+     *
      * @see com.continuent.tungsten.commons.patterns.notification.ResourceNotifier#notifyListeners(com.continuent.tungsten.commons.cluster.resource.notification.ClusterResourceNotification)
      */
-    public synchronized void notifyListeners(ClusterResourceNotification notification)
+    public synchronized void notifyListeners(
+            ClusterResourceNotification notification)
             throws ResourceNotificationException
     {
         // Pop it into group communications.
@@ -215,9 +213,7 @@ public class GroupCommunicationsNotifier
     }
 
     /**
-     * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.monitor.notifiers.Notifier#release()
+     * TODO: release definition.
      */
     public void release()
     {
@@ -235,7 +231,7 @@ public class GroupCommunicationsNotifier
     /**
      * Receives a message from group communications. We only print such messages
      * if we are in debug mode. {@inheritDoc}
-     * 
+     *
      * @see org.continuent.hedera.adapters.MessageListener#receive(java.io.Serializable)
      */
     public void receive(Serializable message)
@@ -256,50 +252,50 @@ public class GroupCommunicationsNotifier
 
     public void failedMember(Member arg0, GroupIdentifier arg1, Member arg2)
     {
-        logger.info(String.format("NOTIFIER: FAILED(%s)", arg0)); 
+        logger.info(String.format("NOTIFIER: FAILED(%s)", arg0));
     }
 
     public void groupComposition(Group arg0, IpAddress arg1, int arg2)
     {
         // TODO Auto-generated method stub
-        
+
     }
 
     public void joinMember(Member arg0, GroupIdentifier arg1)
     {
-        logger.info(String.format("NOTIFIER: JOINED(%s)", arg0)); 
+        logger.info(String.format("NOTIFIER: JOINED(%s)", arg0));
     }
 
     public void mergedMembers(GroupIdentifier arg0, Member arg1,
             List<Member> arg2, List<Member> arg3, List<Member> arg4)
     {
         // TODO Auto-generated method stub
-        
+
     }
 
     @SuppressWarnings("unchecked")
     public void networkPartition(GroupIdentifier arg0, List arg1)
     {
         // TODO Auto-generated method stub
-        
+
     }
 
     public void quitMember(Member arg0, GroupIdentifier arg1)
     {
-        logger.info(String.format("NOTIFIER: QUIT(%s)", arg0)); 
-        
+        logger.info(String.format("NOTIFIER: QUIT(%s)", arg0));
+
     }
 
     public void suspectMember(Member arg0, GroupIdentifier arg1, Member arg2)
     {
         // TODO Auto-generated method stub
-        
+
     }
 
     public void addListener(ResourceNotificationListener listener)
     {
         // TODO Auto-generated method stub
-        
+
     }
 
     public Map<String, NotificationGroupMember> getNotificationGroupMembers()
@@ -311,6 +307,6 @@ public class GroupCommunicationsNotifier
     public void run()
     {
         // TODO Auto-generated method stub
-        
+
     }
 }

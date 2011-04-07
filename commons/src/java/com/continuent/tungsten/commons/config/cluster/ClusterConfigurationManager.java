@@ -45,8 +45,7 @@ public class ClusterConfigurationManager
     /**
      * Logger
      */
-    private static Logger      logger                                = Logger
-                                                                             .getLogger(ClusterConfigurationManager.class);
+    private static Logger      logger                                = Logger.getLogger(ClusterConfigurationManager.class);
 
     public static String       clusterHomeName                       = null;
 
@@ -128,7 +127,6 @@ public class ClusterConfigurationManager
      * hierarchy looks like this:
      * {clusterHome}/cluster/{clusterName}/{resourceType}
      * 
-     * @param resourceType
      * @throws ConfigurationException
      */
     public static synchronized Map<String, TungstenProperties> loadCompositeDataServiceConfiguration()
@@ -166,10 +164,9 @@ public class ClusterConfigurationManager
         }
         catch (Exception e)
         {
-            logger
-                    .warn(
-                            "Failed to load composite data service configurations, reason=%s",
-                            e);
+            logger.warn(
+                    "Failed to load composite data service configurations, reason=%s",
+                    e);
         }
 
         return compositeConfigurations;
@@ -276,8 +273,8 @@ public class ClusterConfigurationManager
                     || !resourceProps.getString("type").equals("composite"))
             {
                 throw new ConfigurationException(String.format(
-                        "The file %s appears to be corrupt or empty", confFile
-                                .getAbsolutePath()));
+                        "The file %s appears to be corrupt or empty",
+                        confFile.getAbsolutePath()));
             }
             return resourceProps;
 
@@ -365,8 +362,7 @@ public class ClusterConfigurationManager
     /**
      * Return the full pathname of a resource directory for a given cluster.
      * 
-     * @param clusterName
-     * @param resourceType
+     * @param clusterHome
      */
     public static String getReplicationServiceConfigDirName(String clusterHome)
     {
@@ -441,8 +437,7 @@ public class ClusterConfigurationManager
         }
         else
         {
-            logger
-                    .debug("Seeking policymgr.properties using policymgr.properties");
+            logger.debug("Seeking policymgr.properties using policymgr.properties");
             return policyMgrProperties;
         }
     }
@@ -504,8 +499,7 @@ public class ClusterConfigurationManager
         catch (Exception e)
         {
             String message = String
-                    .format(
-                            "Unable to write properties for dataservice '%s', reason=%s",
+                    .format("Unable to write properties for dataservice '%s', reason=%s",
                             dataServiceName, e);
             logger.error(message, e);
             throw new ConfigurationException(message);
@@ -517,7 +511,6 @@ public class ClusterConfigurationManager
      * service configuration to the correct location in the cluster
      * configuration directories.
      * 
-     * @param clusterName
      * @param dataServiceName
      * @param serviceProperties
      * @throws ConfigurationException
@@ -554,8 +547,7 @@ public class ClusterConfigurationManager
         catch (Exception e)
         {
             String message = String
-                    .format(
-                            "Unable to write properties for dataservice '%s', reason=%s",
+                    .format("Unable to write properties for dataservice '%s', reason=%s",
                             dataServiceName, e);
             logger.error(message, e);
             throw new ConfigurationException(message);
@@ -569,8 +561,9 @@ public class ClusterConfigurationManager
      * 
      * @param clusterName
      * @param dataServiceName
-     * @param replace TODO
-     * @param serviceProperties
+     * @param facetName
+     * @param replicatorConfig
+     * @param replace
      * @throws ConfigurationException
      */
     public void writeReplicationServiceConfiguration(String clusterName,
@@ -607,8 +600,7 @@ public class ClusterConfigurationManager
         catch (Exception e)
         {
             String message = String
-                    .format(
-                            "Unable to write properties for replication service '%s', reason=%s",
+                    .format("Unable to write properties for replication service '%s', reason=%s",
                             dataServiceName, e);
             logger.error(message, e);
             throw new ConfigurationException(message);
@@ -620,9 +612,7 @@ public class ClusterConfigurationManager
      * service configuration to the correct location in the cluster
      * configuration directories.
      * 
-     * @param clusterName
-     * @param dataServiceName
-     * @param serviceProperties
+     * @param configuration
      * @throws ConfigurationException
      */
     public static void writeClusterConfiguration(String configuration)
@@ -717,8 +707,7 @@ public class ClusterConfigurationManager
         catch (Exception e)
         {
             String message = String
-                    .format(
-                            "Unable to delete properties for replication service '%s', reason=%s",
+                    .format("Unable to delete properties for replication service '%s', reason=%s",
                             dataServiceName, e);
             logger.error(message, e);
             throw new ConfigurationException(message);
@@ -731,8 +720,7 @@ public class ClusterConfigurationManager
         catch (Exception e)
         {
             String message = String
-                    .format(
-                            "Unable to delete dynamic properties for replication service '%s', reason=%s",
+                    .format("Unable to delete dynamic properties for replication service '%s', reason=%s",
                             dataServiceName, e);
             logger.warn(message, e);
         }
@@ -780,8 +768,7 @@ public class ClusterConfigurationManager
         catch (Exception e)
         {
             String message = String
-                    .format(
-                            "Unable to delete properties for dataservice '%s', reason=%s",
+                    .format("Unable to delete properties for dataservice '%s', reason=%s",
                             dataServiceName, e);
             logger.error(message, e);
             throw new ConfigurationException(message);
@@ -792,7 +779,6 @@ public class ClusterConfigurationManager
      * deleteDataServiceConfiguration - deletes an existing data service
      * configuration.
      * 
-     * @param clusterName
      * @param dataServiceName
      * @throws ConfigurationException
      */
@@ -825,8 +811,7 @@ public class ClusterConfigurationManager
         catch (Exception e)
         {
             String message = String
-                    .format(
-                            "Unable to delete properties for dataservice '%s', reason=%s",
+                    .format("Unable to delete properties for dataservice '%s', reason=%s",
                             dataServiceName, e);
             logger.error(message, e);
             throw new ConfigurationException(message);
@@ -838,7 +823,6 @@ public class ClusterConfigurationManager
      * a given clusterName.
      * 
      * @param clusterName
-     * @param resourceType
      * @throws ConfigurationException
      */
     public static synchronized Map<String, TungstenProperties> loadDataServices(
@@ -917,7 +901,6 @@ public class ClusterConfigurationManager
      * 
      * @param clusterName
      * @param dataServiceName
-     * @param serviceProperties
      * @throws ConfigurationException
      */
     public TungstenProperties loadDataServiceConfiguration(String clusterName,
@@ -948,10 +931,9 @@ public class ClusterConfigurationManager
         if (!propsFile.exists() || !propsFile.canRead())
         {
             throw new ConfigurationException(
-                    String
-                            .format(
-                                    "Dataservice properties '%s' does not exist or is not readable.",
-                                    propFileName));
+                    String.format(
+                            "Dataservice properties '%s' does not exist or is not readable.",
+                            propFileName));
         }
 
         try
@@ -964,10 +946,9 @@ public class ClusterConfigurationManager
         catch (Exception e)
         {
             throw new ConfigurationException(
-                    String
-                            .format(
-                                    "Unable to load the configuration for dataservice '%s.%s', reason=%s",
-                                    clusterName, dataServiceName, e));
+                    String.format(
+                            "Unable to load the configuration for dataservice '%s.%s', reason=%s",
+                            clusterName, dataServiceName, e));
         }
 
     }
@@ -980,8 +961,9 @@ public class ClusterConfigurationManager
     public void createClusterConfigRootDirs() throws ConfigurationException
     {
 
-        clusterConfigDir = new File(ClusterConfigurationManager
-                .getClusterConfigRootDirName(clusterHomeName));
+        clusterConfigDir = new File(
+                ClusterConfigurationManager
+                        .getClusterConfigRootDirName(clusterHomeName));
         clusterConfigRootDir = new File(
                 getClusterConfigRootDirName(clusterHomeName));
 
@@ -1182,8 +1164,8 @@ public class ClusterConfigurationManager
         if (!dir.isDirectory())
         {
             throw new ConfigurationException(String.format(
-                    "The path indicated by %s must be a directory.", dir
-                            .getAbsolutePath()));
+                    "The path indicated by %s must be a directory.",
+                    dir.getAbsolutePath()));
         }
 
         return dir;
@@ -1209,11 +1191,9 @@ public class ClusterConfigurationManager
             {
                 if (!overWriteExisting)
                 {
-                    logger
-                            .info(String
-                                    .format(
-                                            "Configuration file %s already exists - leaving existing configuration.",
-                                            checkFile.getAbsolutePath()));
+                    logger.info(String
+                            .format("Configuration file %s already exists - leaving existing configuration.",
+                                    checkFile.getAbsolutePath()));
                     return;
                 }
                 else
