@@ -1,4 +1,0 @@
-system_require "configure/deployment_steps/deployment_step_enterprise_replicator"
-module ConfigureDeploymentStepEnterprisePostgresql
-  include ConfigureDeploymentStepEnterpriseReplicator
-end

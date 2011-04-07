@@ -1,3 +1,0 @@
-Tungsten Connector has a port on which it listens for client
-connections.  You can match this to your standard DBMS port or use
-another port of your own choosing.

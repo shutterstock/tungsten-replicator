@@ -1,4 +1,0 @@
-The user.map file contains a list of DBMS logins and passwords for
-the connector.  You may specify that Tungsten should not overwrite
-this file when regenerating configuration so that you do not lose
-your user definitions.

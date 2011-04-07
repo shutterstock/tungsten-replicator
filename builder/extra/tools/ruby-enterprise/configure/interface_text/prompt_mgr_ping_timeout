@@ -1,5 +1,0 @@
-The Tungsten enterprise policy manager checks the liveness of the
-database server and of a remote host when attempting to determine
-if the resource is still alive.  The default timeout values for
-these tests may not be optimal for a given application. You
-can set values for these here.
