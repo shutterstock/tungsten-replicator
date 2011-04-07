@@ -2,20 +2,20 @@
     Tungsten Scale-Out Stack.
     Copyright (C) 2007-2008 Continuent Inc.
     Contact: tungsten@continuent.org
-   
+
     This program is free software; you can redistribute it and/or modify
     it under the terms of version 2 of the GNU General Public License as
     published by the Free Software Foundation.
-   
+
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-   
+
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
-       
+
     Initial developer(s): Marc Herbert, Jeff Mesnil
     Contributor(s): Csaba Simon, Robert Hodges
 -->
@@ -32,7 +32,7 @@
     <property file="build.properties"/>
 
     <property name="build.dir" value="build"/>
-    <property name="bin.dir" value="bin"/>    
+    <property name="bin.dir" value="bin"/>
     <property name="conf.dir" value="conf"/>
     <property name="java.src.dir" value="src/java"/>
     <property name="test.src.dir" value="test/java"/>
@@ -65,16 +65,16 @@
     </path>
 
     <path id="test.classpath">
-        <path refid="compile.classpath"/>    	
+        <path refid="compile.classpath"/>
         <path location="${classes.dir}"/>
 	<fileset dir="${project.commons}/lib-test/">
 		<include name="*.jar"/>
-	</fileset>    	
+	</fileset>
     </path>
 
-    <target name="all" depends="clean, build-dependencies,test, releases" 
+    <target name="all" depends="clean, build-dependencies,test, releases"
             description="--> test tungsten and create releases"/>
-	<target name="allExceptJunit" depends="clean, build-dependencies, releases" 
+	<target name="allExceptJunit" depends="clean, build-dependencies, releases"
 	            description="--> creates the release without running JUnit tests"/>
     <target name="clean">
         <delete dir="${build.dir}"/>
@@ -96,14 +96,15 @@
                debug="${javac.debug}"
                deprecation="${javac.deprecation}"
                verbose="${javac.verbose}"
-               nowarn="${javac.nowarn}">
+               nowarn="${javac.nowarn}"
+        	   includeantruntime="false">
             <compilerarg value="-Xlint:all"/>
         </javac>
     </target>
 
     <target name="compile-test" depends="compile">
         <mkdir dir="${test.classes.dir}"/>
-        <javac srcdir="${test.src.dir}" destdir="${test.classes.dir}" classpathref="test.classpath" debug="${javac.debug}"/>
+        <javac srcdir="${test.src.dir}" destdir="${test.classes.dir}" classpathref="test.classpath" debug="${javac.debug}" includeantruntime="false"/>
     </target>
 
     <target name="jar" depends="compile">
@@ -155,7 +156,7 @@
 	       <include name="*bin*"/>
 	    </fileset>
         </copy>
-        <!-- Copy in drizzle test data. --> 
+        <!-- Copy in drizzle test data. -->
         <copy todir="${test.work}">
        	    <fileset dir="test/data/drizzle/">
 	        <include name="*txn*"/>
@@ -167,17 +168,17 @@
               toFile="${test.work}/replicator.properties"/>
         <junit printsummary="yes" haltonfailure="no" fork="yes"
           dir="${test.work}" failureproperty="tests.failed">
-            <jvmarg value="-Dreplicator.log.dir=." />        	
+            <jvmarg value="-Dreplicator.log.dir=." />
             <classpath>
                 <pathelement location="${classes.dir}"/>
                 <pathelement location="${test.classes.dir}"/>
                 <pathelement location="${conf.dir}"/>
                 <path refid="compile.classpath"/>
             	<path refid="test.classpath"/>
-	        <fileset dir="${lib-ext.dir}"> 
+	        <fileset dir="${lib-ext.dir}">
 		    <include name="*.jar"/>
 	        </fileset>
-                <fileset dir="${samples.dir}"> 
+                <fileset dir="${samples.dir}">
                     <include name="*.jar"/>
                     <include name="*.js"/>
                 </fileset>
@@ -190,7 +191,7 @@
                 	<exclude name="**/*TestReplicatorManager.java"/>
                 	<exclude name="**/*TestOpenReplicatorManager.java"/>
                 </fileset>
-            
+
             </batchtest>
         </junit>
         <junitreport tofile="${test.reports}/TESTS-TestSuites.xml">
@@ -237,7 +238,7 @@
             <filterset>
                 <filter token="VERSION" value="${version}"/>
             </filterset>
-        </copy>    	
+        </copy>
         <copy todir="${dist.dir}/conf" file="${project.commons}/conf/sample.jmx.properties" />
         <mkdir dir="${dist.dir}/doc/licenses"/>
         <copy todir="${dist.dir}/doc/licenses">
@@ -249,7 +250,7 @@
         <copy todir="${dist.dir}/lib">
             <fileset dir="${project.commons}/lib">
             	<include name="*.jar"/>
-            </fileset>	
+            </fileset>
         </copy>
         <copy todir="${dist.dir}/lib">
             <fileset dir="${commons.build.dir}/jars"/>
@@ -284,11 +285,11 @@
     </target>
 
     <target name="refresh-services" description="--> refresh JWS scripts and libraries">
-        <property name="services.build.xml" 
+        <property name="services.build.xml"
             value="${project.commons.services}/build.xml"/>
-        <available file="${services.build.xml}" type="file" 
+        <available file="${services.build.xml}" type="file"
             property="services.build.xml.exists"/>
-        <fail message="commons-services/build.xml not found" 
+        <fail message="commons-services/build.xml not found"
             unless="services.build.xml.exists"/>
 		<ant antfile="${project.commons.services}/build.xml" inheritall="false" target="deploy">
             <property name="build.dir" value="${basedir}"/>
@@ -313,12 +314,12 @@
 			<zip destfile="${build.dir}/tungsten-replicator_javadoc.zip">
 				<fileset dir="${dist.dir}/doc/javadoc"/>
 			</zip>
-			<tar compression="gzip" destfile="${build.dir}/tungsten-replicator_javadoc.tar.gz">
+			<tar compression="gzip" longfile="gnu" destfile="${build.dir}/tungsten-replicator_javadoc.tar.gz">
 				<fileset dir="${dist.dir}/doc/javadoc"/>
 			</tar>
 		</target>
-	
-    <target name="releases" depends="dist, javadoc" 
+
+    <target name="releases" depends="dist, javadoc"
         description="--> create drops of tungsten (.zip &amp; .tgz files)">
         <tar destfile="${dist.dir}-${version}.tgz" compression="gzip" basedir="${dist.dir}" includes="tungsten/**" longfile="gnu">
             <tarfileset dir="${dist.dir}" mode="755" prefix="${build.name}-${version}">
