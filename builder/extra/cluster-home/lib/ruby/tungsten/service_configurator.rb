@@ -27,9 +27,6 @@ class ServiceConfigurator
   # Global parameter names
   include ParameterNames
 
-  TUNGSTEN_COMMUNITY = "Community"
-  TUNGSTEN_ENTERPRISE = "Enterprise"
-
   CREATE = "create"
   DELETE = "delete"
   UPDATE = "update"
@@ -49,12 +46,6 @@ class ServiceConfigurator
     @arguments = arguments
     @config = nil
 
-    if File.exist?("tungsten-replicator/lib/tungsten-enterprise-replicator.jar")
-      @tungsten_version = TUNGSTEN_ENTERPRISE
-    else
-      @tungsten_version = TUNGSTEN_COMMUNITY
-    end
-
     # Set command line argument defaults.
     @options = OpenStruct.new
     @options.help = false
@@ -68,7 +59,7 @@ class ServiceConfigurator
 
   # Parse options, check arguments, then process the command
   def run
-    write_header "Tungsten #{@tungsten_version} Replication Service Configuration"
+    write_header "Tungsten Replication Service Configuration"
     # Parse options.
     if ! parsed_options? 
       output_usage

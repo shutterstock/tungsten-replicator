@@ -65,14 +65,6 @@ class Configurator
     @can_install_services_on_os = false
     @do_dataservice_configuration = false
 
-    # FIXME: tungsten version (enterprise or community) is based on a
-    # (too?) simple directory existance test
-    if File.exist?("tungsten-replicator/lib/tungsten-enterprise-replicator.jar")
-      @tungsten_version = TUNGSTEN_ENTERPRISE
-    else
-      @tungsten_version = TUNGSTEN_COMMUNITY
-    end
-
     # Set command line argument defaults.
     @options = OpenStruct.new
     @options.verbose = false
@@ -104,7 +96,7 @@ class Configurator
 
   # Parse options, check arguments, then process the command
   def run
-    write_header "Tungsten #{@tungsten_version} Configuration Procedure"
+    write_header "Tungsten Configuration Procedure"
     puts "NOTE:  To terminate configuration press ^C followed by ENTER"
 
     if parsed_options? && arguments_valid?
@@ -1271,11 +1263,6 @@ GENERIC_ADVICE
         line
       end
     }
-  end
-
-  # Returns true if this is the community edition of Tungsten.
-  def is_community
-    @tungsten_version == TUNGSTEN_COMMUNITY
   end
 
   # Add an OS service that needs to be started and/or deployed.

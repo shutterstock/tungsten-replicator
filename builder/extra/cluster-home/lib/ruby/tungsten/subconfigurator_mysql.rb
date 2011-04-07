@@ -319,13 +319,9 @@ RELAY_LOG
     end
 
     # Configure the replicator log.
-    if @configurator.is_community
-      @configurator.set_cfg_default(REPL_LOG_TYPE, "jdbc")
-      @configurator.set_cfg_default(REPL_LOG_DIR, "/dev/null")
-    else
-      puts
-      @configurator.write_divider
-      puts <<DISK_LOG
+    puts
+    @configurator.write_divider
+    puts <<DISK_LOG
 Tungsten stores database transactions for replication in its own
 log.  You may store this log either on disk or in tables in your
 DBMS server.  The disk log is highly recommended as it is faster
@@ -333,14 +329,13 @@ and self-managing.  If you choose the disk log you must provide a
 non-NFS, local directory in which to store log files.
 
 DISK_LOG
-        @configurator.edit_cfg_value PropertyDescriptor.new(
-        "Replicator event log storage (dbms|disk)",
-        PV_LOGTYPE, REPL_LOG_TYPE, "disk")
-        if @configurator.config.props[REPL_LOG_TYPE] == "disk"
-          @configurator.edit_cfg_value PropertyDescriptor.new(
-          "Replicator log directory",
-        PV_WRITABLE_OUTPUT_DIR, REPL_LOG_DIR, "#{base_dir}/logs")
-      end
+    @configurator.edit_cfg_value PropertyDescriptor.new(
+      "Replicator event log storage (dbms|disk)",
+      PV_LOGTYPE, REPL_LOG_TYPE, "disk")
+    if @configurator.config.props[REPL_LOG_TYPE] == "disk"
+      @configurator.edit_cfg_value PropertyDescriptor.new(
+     "Replicator log directory",
+      PV_WRITABLE_OUTPUT_DIR, REPL_LOG_DIR, "#{base_dir}/logs")
     end
     
     # Configure backups.
@@ -662,23 +657,6 @@ MEMSIZE
         "cluster.name=" + @configurator.config.props[GLOBAL_CLUSTERNAME]
       elsif line =~ /replicator.host=/ then
         "replicator.host=" + @configurator.config.props[GLOBAL_HOST]
-      else
-        line
-      end
-    }
-
-    # Fix up the THL utility class name.
-    transformer = Transformer.new(
-      "tungsten-replicator/bin/thl",
-      "tungsten-replicator/bin/thl", nil)
-
-    transformer.transform { |line|
-      if line =~ /THL_CTRL=/
-        if @configurator.is_community
-          "THL_CTRL=com.continuent.tungsten.replicator.thl.THLManagerCtrl"
-        else
-          "THL_CTRL=com.continuent.tungsten.enterprise.replicator.thl.EnterpriseTHLManagerCtrl"
-        end
       else
         line
       end
