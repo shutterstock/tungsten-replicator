@@ -6,8 +6,7 @@ class DeploymentConfigureModule < ConfigureModule
   
   def register_prompts(prompt_handler)
     prompt_handler.register_prompts([
-      #ConfigurePrompt.new(GLOBAL_DBMS_TYPE, "Database type (mysql, or postgresql)", PV_DBMSTYPE),
-      ConstantValuePrompt.new(GLOBAL_DBMS_TYPE, "Database type (mysql)", PV_DBMSTYPE, "mysql"),
+      ConfigurePrompt.new(GLOBAL_DBMS_TYPE, "Database type (mysql, or postgresql)", PV_DBMSTYPE),
       DeploymentTypePrompt.new(),
       DeployCurrentPackagePrompt.new(),
       DeployPackageURIPrompt.new(),

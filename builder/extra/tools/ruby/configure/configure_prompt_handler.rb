@@ -24,13 +24,13 @@ class ConfigurePromptHandler
   
   # Validate the prompt object and add it to the queue
   def register_prompt(prompt_obj)    
-    unless prompt_obj.is_a?(ConfigurePrompt)
-      raise "Attempt to register invalid prompt #{class_name} failed " +
-        "because it does not extend ConfigurePrompt"
+    unless prompt_obj.is_a?(ConfigurePromptInterface)
+      raise "Attempt to register invalid prompt #{prompt_obj.class} failed " +
+        "because it does not extend ConfigurePromptInterface"
     end
     
     prompt_obj.set_config(@config)
-    unless prompt_obj.is_initialized()
+    unless prompt_obj.is_initialized?()
       raise "#{class_name} cannot be used because it has not been properly initialized"
     end
     
@@ -62,11 +62,11 @@ class ConfigurePromptHandler
         while i < @prompts.length do
           unless @prompts[i].enabled?
             # Clear the config value because the prompt is disabled
-            @prompts[i].save_value(@prompts[i].get_disabled_value())
+            @prompts[i].save_disabled_value()
             i += 1
           else
             # Save the default value into the config
-            @prompts[i].save_value(@prompts[i].get_value())
+            @prompts[i].save_default_value()
             begin
               # Trigger the prompt to be run because the user requested it
               if force_default_prompt
@@ -123,23 +123,40 @@ class ConfigurePromptHandler
     @prompts.each{
       |prompt|
       begin
-        prompt_keys.push(prompt.get_name())
+        prompt_keys = prompt_keys + prompt.get_keys()
         prompt.is_valid?()
+      rescue ConfigurePromptErrorSet => s
+        @errors = @errors + s.errors
       rescue PropertyValidatorException => e
         @errors.push(ConfigurePromptError.new(prompt, e.to_s(), @config.getProperty(prompt.get_name())))
       end
     }
     
     # Ensure that there are not any extra values in the config object
-    extra_config_keys = @config.hash.keys - prompt_keys
-    extra_config_keys.each{
-      |extra_key|
-      @errors.push(ConfigurePromptError.new(
-        ConfigurePrompt.new(extra_key, "Unknown configuration key"),
-        "This is an unknown configuration key",
-        @config.getProperty(extra_key)
-      ))
-    }
+    find_extra_keys = lambda do |hash, current_path|
+      hash.each{
+        |key,value|
+        
+        if current_path
+          path = "#{current_path}.#{key}"
+        else
+          path = key
+        end
+        
+        if value.is_a?(Hash)
+          find_extra_keys.call(value, path)
+        else
+          unless prompt_keys.include?(path)
+            @errors.push(ConfigurePromptError.new(
+              ConfigurePrompt.new(path, "Unknown configuration key"),
+              "This is an unknown configuration key",
+              @config.getProperty(path.split("."))
+            ))
+          end
+        end
+      }
+    end
+    find_extra_keys.call(@config.props, false)
     
     if @errors.length == 0
       true
@@ -173,5 +190,13 @@ class ConfigurePromptError
     @prompt = prompt
     @message = message
     @current_value = current_value
+  end
+end
+
+class ConfigurePromptErrorSet < StandardError
+  attr_reader :errors
+  
+  def initialize(errors = [])
+    @errors = errors
   end
 end

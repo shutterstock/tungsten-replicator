@@ -114,14 +114,45 @@ class Properties
     @props.size
   end
   
+  # Fetch a nested hash value
+  def getNestedProperty(*attrs)
+    attr_count = attrs.size
+    current_val = @props
+    for i in 0..(attr_count-1)
+      attr_name = attrs[i]
+      return current_val[attr_name] if i == (attr_count-1)
+      return nil if current_val[attr_name].nil?
+      current_val = current_val[attr_name]
+    end
+    
+    return nil
+  end
+  
+  def setNestedProperty(new_val, *attrs)
+    attr_count = attrs.size
+    current_val = @props
+    for i in 0..(attr_count-1)
+      attr_name = attrs[i]
+      if i == (attr_count-1)
+        if new_val == nil
+          return (current_val.delete(attr_name))
+        else
+          return (current_val[attr_name] = new_val)
+        end
+      end
+      current_val[attr_name] = {} if current_val[attr_name].nil?
+      current_val = current_val[attr_name]
+    end
+  end
+  
   # Get a property value. 
   def getProperty(key) 
-    @props[key]
+    getNestedProperty(*key)
   end
   
   # Get the property value or return the default if nil
   def getPropertyOr(key, default)
-    value = getProperty(key)
+    value = getNestedProperty(*key)
     if value == nil
       default
     else
@@ -130,18 +161,14 @@ class Properties
   end
   
   # Set a property value. 
-  def setProperty(key, value) 
-    if value == nil
-      @props.delete(key)
-    else
-      @props[key] = value
-    end
+  def setProperty(key, value)
+    setNestedProperty(value, *key)
   end 
   
   # Set the property to a value only if it is currently unset. 
   def setDefault(key, value)
-    if ! @props[key]
-      setProperty(key, value)
+    unless getNestedProperty(*key)
+      setNestedProperty(value, *key)
     end
   end
   

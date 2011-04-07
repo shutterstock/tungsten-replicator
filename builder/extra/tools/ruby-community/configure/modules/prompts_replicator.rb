@@ -1,3 +1,52 @@
+class ReplicationServices < ConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, "Enter unique names for each replication service",
+      PV_IDENTIFIER, "default")
+  end
+end
+
+class ReplicationServiceMasters < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_MASTERHOST, 
+      "Enter the master host for service @value", PV_IDENTIFIER)
+  end
+end
+
+class ReplicationServiceHosts < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_HOSTS, 
+      "Enter the replication hosts (including the master) for service @value", PV_IDENTIFIER)
+  end
+end
+
+class ReplicationServiceRemoteHosts < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_REMOTE_HOSTS, 
+      "Which of the @value replication hosts will be used as a master for another service?", PV_IDENTIFIER)
+  end
+  
+  def required?
+    false
+  end
+end
+
+class ReplicationServiceChannels < MultipleValueConfigurePrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_CHANNELS, 
+      "How many replication channels should be used for service @value", PV_INTEGER)
+  end
+  
+  def get_default_value
+    @config.getProperty(REPL_SVC_CHANNELS)
+  end
+  
+  def required?
+    false
+  end
+end
+
 class ReplicatorHostsPrompt < AdvancedPrompt
   def initialize
     super(REPL_HOSTS, "Enter a comma-delimited list of replicator hosts", 

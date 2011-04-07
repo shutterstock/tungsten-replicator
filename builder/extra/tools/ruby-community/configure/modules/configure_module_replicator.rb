@@ -1,10 +1,10 @@
 class ReplicatorConfigureModule < ConfigureModule
   def register_prompts(prompt_handler)
     prompt_handler.register_prompts([
-      #ReplicatorHostsPrompt.new(),
-      ConfigurePrompt.new(REPL_SERVICES, "Enter unique names for each replication service",
-        PV_IDENTIFIER, "default"),
-      #ConfigurePrompt.new(REPL_MASTERHOST, "Enter the hostname for the replication master", PV_HOSTNAME),
+      ReplicationServices.new(),
+      ReplicationServiceMasters.new(),
+      ReplicationServiceHosts.new(),
+      ReplicationServiceRemoteHosts.new(),
       ConfigurePrompt.new(REPL_AUTOENABLE, "Auto-enable replicator after start-up", 
         PV_BOOLEAN, "true"),
       DatabaseInitScript.new(),
@@ -34,6 +34,7 @@ class ReplicatorConfigureModule < ConfigureModule
       MySQLAdvancedPrompt.new(REPL_THL_LOG_FILE_SIZE, "File size in bytes for THL disk logs", PV_INTEGER, 1000000000),
       MySQLAdvancedPrompt.new(REPL_SVC_CHANNELS, "Number of channels to use for replication",
         PV_INTEGER, 1),
+      ReplicationServiceChannels.new(),
       MySQLAdvancedPrompt.new(REPL_SVC_THL_PORT, "Port to use for THL operations", 
         PV_INTEGER, 2112),
       MySQLAdvancedPrompt.new(REPL_SVC_BINLOG_MODE, "Method to use for reading the binary log",
@@ -111,27 +112,29 @@ class VIPInterfaceAvailableCheck < ConfigureValidationCheck
   def validate
     iface = @config.getProperty(REPL_MASTER_VIP_DEVICE)
     
-    unless iface == nil
-      begin
-        sock = UDPSocket.new()
-     		buf = [iface,""].pack('a16h16')
-    		sock.ioctl(0x8915, buf);
-    		sock.close
-    		iface_addr = buf[20..24].unpack("CCCC").join(".")
-    		
-    		if iface_addr == @config.getProperty(REPL_MASTER_VIP)
-    		  info("#{iface} is already assigned as the VIP address on this host")
-    		  
-    		  if @config.getProperty(GLOBAL_HOST) != @config.getProperty(REPL_MASTERHOST)
-    		    error("The VIP address is assigned to this host that is not the master")
-    		  end
-    		else
-    		  error("#{iface} is in use with a different IP address on this host")
-    		end
-    	rescue
-    	  info("#{iface} is usable on this host")
-    	end
+    begin
+      sock = UDPSocket.new()
+   		buf = [iface,""].pack('a16h16')
+  		sock.ioctl(0x8915, buf);
+  		sock.close
+  		iface_addr = buf[20..24].unpack("CCCC").join(".")
+  		
+  		if iface_addr == @config.getProperty(REPL_MASTER_VIP)
+  		  info("#{iface} is already assigned as the VIP address on this host")
+  		  
+  		  if @config.getProperty(GLOBAL_HOST) != @config.getProperty(REPL_MASTERHOST)
+  		    error("The VIP address is assigned to this host that is not the master")
+  		  end
+  		else
+  		  error("#{iface} is in use with a different IP address on this host")
+  		end
+  	rescue
+  	  info("#{iface} is usable on this host")
   	end
+  end
+  
+  def enabled?
+    (@config.getProperty(REPL_MASTER_VIP_DEVICE) != nil)
   end
 end
 

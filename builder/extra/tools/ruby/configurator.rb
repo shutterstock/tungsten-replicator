@@ -35,7 +35,9 @@ system_require 'configure/configure_messages'
 system_require 'configure/configure_module'
 system_require 'configure/configure_package'
 system_require 'configure/configure_prompt_handler'
+system_require 'configure/configure_prompt_interface'
 system_require 'configure/configure_prompt'
+system_require 'configure/multiple_value_configure_prompt'
 system_require 'configure/configure_validation_handler'
 system_require 'configure/configure_validation_check'
 system_require 'configure/configure_deployment_handler'
@@ -155,11 +157,11 @@ class Configurator
       # for multiple services
       
       # Validate the values in the configuration file against the prompt validation
-      #unless prompt_handler.is_valid?()
-      #  write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
-      #  prompt_handler.print_errors()
-      #  exit 1
-      #end
+      unless prompt_handler.is_valid?()
+        write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
+        prompt_handler.print_errors()
+        exit 1
+      end
     end
     
     deployment_method = get_deployment()
