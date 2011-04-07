@@ -21,11 +21,11 @@ system_require 'resolv'
 
 # These aren't required, but it makes the output update more often with SSH results
 begin
-  require 'rubygems'
   require 'net/ssh'
 rescue LoadError
 end
 
+system_require 'json'
 system_require 'transformer'
 system_require 'validator'
 system_require 'properties'

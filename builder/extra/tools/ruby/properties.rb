@@ -20,28 +20,50 @@ class Properties
   
   # Read properties from a file. 
   def load(properties_filename)
-    new_props = {}
+    file_contents = ""
+    
     File.open(properties_filename, 'r') do |file|
       file.read.each_line do |line|
         line.strip!
-        if (line =~ /^([\w\.]+)\[?([\w\.]+)?\]?\s*=\s*(\S.*)/)
-          key = $1
-          value = $3
+        unless (line =~ /^#.*/)
+          file_contents = file_contents + line
+        end
+      end
+      
+      begin
+        parsed_contents = JSON.parse(file_contents)
+      rescue Exception => e
+      end
+      
+      if parsed_contents && parsed_contents.instance_of?(Hash)
+        @props = parsed_contents
+      else
+        new_props = {}
+        
+        file.rewind()
+        file.read.each_line do |line|
+          line.strip!
           
-          if $2
-            new_props[key] = {} unless new_props[key]
-            new_props[key][$2] = value
-          else
+          if (line =~ /^([\w\.]+)\[?([\w\.]+)?\]?\s*=\s*(\S.*)/)
+            key = $1
+            value = $3
+        
+            if $2
+              new_props[key] = {} unless new_props[key]
+              new_props[key][$2] = value
+            else
+              new_props[key] = value
+            end
+          elsif (line =~ /^([\w\.]+)\s*=/)
+            key = $1
+            value = ""
             new_props[key] = value
           end
-        elsif (line =~ /^([\w\.]+)\s*=/)
-          key = $1
-          value = ""
-          new_props[key] = value
         end
-      end 
+        
+        @props = new_props
+      end
     end
-    @props = new_props
   end
   
   # Read properties from a file. 
@@ -74,15 +96,7 @@ class Properties
     File.open(properties_filename, 'w') do |file|
       file.printf "# Tungsten configuration properties\n"
       file.printf "# Date: %s\n", DateTime.now
-      @props.sort.each do | key, value |
-        if value.instance_of?(Hash)
-          value.each do | vkey, vvalue|
-            file.printf "#{key}[#{vkey}]=#{vvalue}\n"
-          end
-        else
-          file.printf "%s=%s\n", key, value
-        end
-      end
+      file.printf JSON.pretty_generate(@props)
     end
     
     # Check for interrupt and restore handler. 

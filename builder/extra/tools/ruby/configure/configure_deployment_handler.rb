@@ -28,7 +28,7 @@ class ConfigureDeploymentHandler
         Configurator.instance.write ""
         Configurator.instance.write_header "Local deploy #{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
         
-        command = "cd #{Configurator.instance.get_base_path()}; ruby -I#{Configurator.instance.get_ruby_prefix()} #{Configurator.instance.get_ruby_prefix()}/deploy.rb -c #{config_tempfile.path()} #{extra_options} --stream"
+        command = "cd #{Configurator.instance.get_base_path()}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -c #{config_tempfile.path()} #{extra_options} --stream"
         result_dump = ""
 
         val_proc = IO.popen(command)
@@ -45,7 +45,7 @@ class ConfigureDeploymentHandler
         Configurator.instance.write_header "Remote deploy #{@config.getProperty(GLOBAL_HOST)}:#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
         
         deployment_temp_directory = "#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}"
-        command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} #{Configurator.instance.get_ruby_prefix()}/deploy.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options}"
+        command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options}"
         
         if Configurator.instance.use_streaming_ssh()
           Configurator.instance.debug("Execute `#{command}` on #{@config.getProperty(GLOBAL_HOST)}")

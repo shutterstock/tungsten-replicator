@@ -18,4 +18,4 @@ THOME=`dirname $0`
 cd $THOME
 
 # Run the installation with appropriate include for Ruby install files. 
-$RUBY -Iruby ruby/configure.rb $*
+$RUBY -Iruby -Iruby/lib ruby/configure.rb $*
