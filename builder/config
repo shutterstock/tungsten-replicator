@@ -2,20 +2,20 @@
 
 # Base directory where we'll checkout the source code
 SRC_DIR=../sources
-# Where build file will stand
+# Where build projects will end up. 
 BUILD_DIR=build
 
 # SVN URLs of the required modules
 # Replicator URL
 TREP_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/replicator
+# Replicator Extras URL.
+TREP_EXT_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/replicator-extra
 # FSM URL.
 TFSM_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/fsm
 # Commons URL.
 TCOM_SVN_URL=http://tungsten-replicator.googlecode.com/svn/trunk/commons
 # Bristlecone URL.
 BRI_SVN_URL=https://bristlecone.svn.sourceforge.net/svnroot/bristlecone/trunk/bristlecone
-# Enterprise builder (temporary)
-EBLD_SVN_URL=svn+ssh://forge.continuent.org/svnroot/tungsten/branches/tungsten-2.0/enterprise-builder
 
 # Version name of the release to build
 VERSION=2.0.2
@@ -28,5 +28,3 @@ SKIP_BUILD=0
 
 # Set to 1 to skip source generation.
 SKIP_SOURCE=1
-
-ENTERPRISE_BUILD=1

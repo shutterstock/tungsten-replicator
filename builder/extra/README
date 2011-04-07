@@ -1,0 +1,72 @@
+                       TUNGSTEN REPLICATOR README
+                   Copyright (C) 2011 Continuent, Inc. 
+                             6 April 2011
+
+1 INTRODUCTION
+
+This release contains software for Tungsten Replicator, which
+provides advanced data replication for open source databases.  This
+software is released under the GPL V2 license, a copy of which is
+located in the LICENSE file.  We also make use of other open source
+products, which are listed with attribution and licenses in file
+README.LICENSE.
+
+2 DOCUMENTATION
+
+Documentation for Tungsten Replicator is located on the Continuent website 
+at the following URL: 
+
+  http://www.continuent.com/downloads/documentation
+
+Make sure you get the manuals for the Tungsten Replicator 2.0.  
+
+You can also find more information through the wiki, issues list, and mailing
+lists accessible at the Tungsten Replicator project website, which is located
+at the following URL: 
+
+  http://code.google.com/p/tungsten-replicator
+
+3 INSTALLATION
+
+To install the replicator fully, follow the directions, in the 
+steps.
+
+  1.) Ensure that you have reviewed and fulfilled all prerequisites
+  as described in the Continuent Tungsten Community Installation
+  Guide.
+
+  2.) Run the 'configure' script in the release root directory
+  to configure and start Tungsten services.
+
+  3.) Complete any required post-installation configuration. 
+
+4 LIMITATIONS
+
+Tungsten Replicator is certified for Linux platforms.  We also
+develop and test on Mac OS X though we do not certify operation on
+that platform.  Please check for other platforms.
+
+For other limitations, check the release notes in the wiki. 
+
+5 PROBLEMS
+
+This is open source software.  Check the wiki, issues list, and
+mailing lists to get help.
+
+6 COMMERCIAL SUPPORT
+
+Continuent offers a variety of options for support of Tungsten
+Replicator.  To get further information please see our website at
+please contact:
+
+  sales@continuent.com
+
+We offer both support as well as sponsored development of features.
+Sponsored features go into open source, so that everyone can use
+them.
+
+7 CONCLUSION
+
+Enjoy the software.  If you like it please let us and your friends
+know.  If you don't like something, please file bugs so we can make
+it better.

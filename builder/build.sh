@@ -5,16 +5,11 @@
 #
 # SUMMARY:  Build script for Tungsten Replicator
 #
-# WARNING:
-#Ê  At the moment, only users with read access to Continuent's private
-#   server are able to build a full replicator release. This closed-source
-#   code will be released soon
-#
 # OVERVIEW:
 #   This script performs a full build of the replicator and all its
 #   dependencies, plus bristlecone tool.
 #   It checks out and builds all components: replicator, commons, fsm and
-#   enterprise-builder (that contains closed source code)
+#   replicator-extra. 
 #
 #   Before building you should review properties in the 'config' file. If
 #   you need to override them, do so in config.local (which is svn:ignored)
@@ -156,7 +151,7 @@ source_commons=${SRC_DIR}/commons
 source_fsm=${SRC_DIR}/fsm
 source_bristlecone=${SRC_DIR}/bristlecone
 source_replicator=${SRC_DIR}/replicator
-source_enterprise_builder=${SRC_DIR}/enterprise-builder
+source_replicator_extra=${SRC_DIR}/replicator-extra
 source_community_extra=extra
 
 extra_replicator=${source_community_extra}/replicator
@@ -193,9 +188,9 @@ echo "### ... Success!"
 ##########################################################################
 
 # SVN user
-if [ $ENTERPRISE_BUILD -eq 1 ] && [ -z $SVN_USER ]; then
+if [ -z $SVN_USER ]; then
   export SVN_USER=`whoami`
-  echo "OK to set forge.continuent.org SVN_USER to $SVN_USER?"
+  echo "OK to set code.google.com SVN_USER to $SVN_USER?"
   echo "Press enter to continue.  Otherwise quit and set SVN_USER in your environment"
   read ignored_answer
 else
@@ -222,6 +217,7 @@ echo "### List of source locations"
 echo "# Commons:    $source_commons"
 echo "# FSM:        $source_fsm"
 echo "# Replicator: $source_replicator"
+echo "# Replicator Extras: $source_replicator_extra"
 echo "# Bristlecone: $source_bristlecone"
 
 if [ ${SKIP_CHECKOUT} -eq 1 ]; then
@@ -230,12 +226,8 @@ else
   doSvnCheckout fsm ${TFSM_SVN_URL} $source_fsm
   doSvnCheckout commons ${TCOM_SVN_URL} $source_commons
   doSvnCheckout replicator ${TREP_SVN_URL} $source_replicator
+  doSvnCheckout replicator-extra ${TREP_EXT_SVN_URL} $source_replicator_extra
   doSvnCheckout bristlecone ${BRI_SVN_URL} $source_bristlecone
-
-  # Pull in Enterprise code
-  if [ $ENTERPRISE_BUILD -eq 1 ]; then
-    doSvnCheckout enterprise-builder ${EBLD_SVN_URL} $source_enterprise_builder
-  fi
 fi
 
 ##########################################################################
@@ -251,11 +243,8 @@ else
   doAnt commons $source_commons/build.xml clean releases
   doAnt fsm $source_fsm/build.xml clean releases
   doAnt replicator $source_replicator/build.xml clean releases
+  doAnt replicator-extra $source_replicator_extra/build.xml clean dist
   doAnt bristlecone $source_bristlecone/build.xml clean releases
-  if [ $ENTERPRISE_BUILD -eq 1 ]; then
-    doAnt enterprise_replicator $source_enterprise_builder/extra/replicator/build.xml clean dist
-  fi
-
 fi
 
 ##########################################################################
@@ -275,6 +264,9 @@ mkdir -p $reldir
 # Copy everything!
 doCopy tungsten-replicator $source_replicator/build/tungsten-replicator $reldir
 doCopy bristlecone $source_bristlecone/build/dist/bristlecone $reldir
+cp LICENSE $reldir
+cp extra/README $reldir
+cp extra/README.LICENSES $reldir
 
 ##########################################################################
 # Fix up replicator files.
@@ -285,15 +277,17 @@ replicator_bin=$reldir_replicator/bin/replicator
 replicator_wrapper_conf=$reldir_replicator/conf/wrapper.conf
 
 echo "### Replicator: pointing to centralized Java Service Wrapper binaries"
+cp $extra_replicator/conf/wrapper.conf $reldir_replicator/conf
 
-${SED_DASH_I} 's/^wrapper.java.classpath.1.*/wrapper.java.classpath.1=..\/..\/tungsten-replicator\/lib\/*.jar/' ${replicator_wrapper_conf}
-${SED_DASH_I} 's/^wrapper.java.classpath.2.*/wrapper.java.classpath.2=..\/..\/tungsten-replicator\/conf/' ${replicator_wrapper_conf}
-${SED_DASH_I} 's/^wrapper.java.classpath.3.*/wrapper.java.classpath.3=..\/lib\/wrapper*.jar\
-wrapper.java.classpath.4=..\/..\/cluster-home\/lib\/*.jar/' ${replicator_wrapper_conf}
-${SED_DASH_I} 's/^wrapper.java.library.path.1=..\/lib\/wrapper/wrapper.java.library.path.1=..\/lib/' ${replicator_wrapper_conf}
-${SED_DASH_I} 's/^wrapper.java.additional.1=-Dreplicator*/wrapper.java.additional.1=-Dreplicator.home.dir=..\/..\/tungsten-replicator/' ${replicator_wrapper_conf}
-${SED_DASH_I} 's/^wrapper.java.additional.2=-Dreplicator*/wrapper.java.additional.2=-Dreplicator.log.dir=..\/..\/tungsten-replicator\/log/' ${replicator_wrapper_conf}
-${SED_DASH_I} 's/^wrapper.logfile=..*/wrapper.logfile=..\/..\/tungsten-replicator\/log\/trepsvc.log/' ${replicator_wrapper_conf}
+# Following corrupts the wrapper.conf file.  
+#${SED_DASH_I} 's/^wrapper.java.classpath.1.*/wrapper.java.classpath.1=..\/..\/tungsten-replicator\/lib\/*.jar/' ${replicator_wrapper_conf}
+#${SED_DASH_I} 's/^wrapper.java.classpath.2.*/wrapper.java.classpath.2=..\/..\/tungsten-replicator\/conf/' ${replicator_wrapper_conf}
+#${SED_DASH_I} 's/^wrapper.java.classpath.3.*/wrapper.java.classpath.3=..\/lib\/wrapper*.jar\
+#wrapper.java.classpath.4=..\/..\/cluster-home\/lib\/*.jar/' ${replicator_wrapper_conf}
+#${SED_DASH_I} 's/^wrapper.java.library.path.1=..\/lib\/wrapper/wrapper.java.library.path.1=..\/lib/' ${replicator_wrapper_conf}
+##${SED_DASH_I} 's/^wrapper.java.additional.1=-Dreplicator*/wrapper.java.additional.1=-Dreplicator.home.dir=..\/..\/tungsten-replicator/' ${replicator_wrapper_conf}
+##${SED_DASH_I} 's/^wrapper.java.additional.2=-Dreplicator*/wrapper.java.additional.2=-Dreplicator.log.dir=..\/..\/tungsten-replicator\/log/' ${replicator_wrapper_conf}
+#${SED_DASH_I} 's/^wrapper.logfile=..*/wrapper.logfile=..\/..\/tungsten-replicator\/log\/trepsvc.log/' ${replicator_wrapper_conf}
 
 fixWrapperBin $replicator_bin
 
@@ -358,6 +352,7 @@ echo "SVN URLs:" >> $manifest
 echo "  ${TCOM_SVN_URL}" >> $manifest
 echo "  ${TFSM_SVN_URL}" >> $manifest
 echo "  ${TREP_SVN_URL}" >> $manifest
+echo "  ${TREP_EXT_SVN_URL}" >> $manifest
 echo "  ${BRI_SVN_URL}" >> $manifest
 
 echo "SVN Revisions:" >> $manifest
@@ -367,37 +362,31 @@ echo -n "  fsm: " >> $manifest
 svn info $source_fsm | grep Revision: >> $manifest
 echo -n "  replicator: " >> $manifest
 svn info $source_replicator | grep Revision: >> $manifest
+echo -n "  replicator-extra: " >> $manifest
+svn info $source_replicator_extra | grep Revision: >> $manifest
 echo -n "  bristlecone: " >> $manifest
 svn info $source_bristlecone | grep Revision: >> $manifest
 
-if [ $ENTERPRISE_BUILD -eq 1 ]; then
-  extra_ent_replicator=$source_enterprise_builder/extra/replicator
-  reldir_replicator=$reldir/tungsten-replicator
+extra_ent_replicator=$source_replicator_extra
+reldir_replicator=$reldir/tungsten-replicator
 
-  echo "### Adding extra bin scripts for replicator plugins"
-  cp $extra_ent_replicator/bin/pg-* $reldir_replicator/bin
+echo "### Adding extra bin scripts for replicator plugins"
+cp $extra_ent_replicator/bin/pg-* $reldir_replicator/bin
 
-  echo "### Adding extra conf files for PostgreSQL"
-  cp $extra_ent_replicator/conf/sample.* $reldir_replicator/conf
+echo "### Adding extra conf files for PostgreSQL"
+cp $extra_ent_replicator/conf/sample.* $reldir_replicator/conf
 
-  echo "### Copying in Ruby replication plugin libraries"
-  cp -r $extra_ent_replicator/lib/ruby $reldir_replicator/lib
+echo "### Copying in Ruby replication plugin libraries"
+cp -r $extra_ent_replicator/lib/ruby $reldir_replicator/lib
 
-  echo "### Copying in Python replication plugin libraries"
-  cp -r $extra_ent_replicator/lib/python $reldir_replicator/lib
+echo "### Copying in Python replication plugin libraries"
+cp -r $extra_ent_replicator/lib/python $reldir_replicator/lib
 
-  echo "### Copying in extra sample scripts"
-  cp -r $extra_ent_replicator/samples $reldir_replicator
+echo "### Copying in extra sample scripts"
+cp -r $extra_ent_replicator/samples $reldir_replicator
 
-  echo "### Removing old protobuf libraries"
-  mv $reldir_replicator/lib/protobuf-java-2.2.0.jar $reldir_replicator/lib/protobuf-java-2.2.0.jar.old
-
-  echo "Adding enterprise information to manifest file"
-  echo "Enterprise SVN URL:" >> $manifest
-  echo "  ${EBLD_SVN_URL}" >> $manifest
-  echo -n "Enterprise SVN " >> $manifest
-  svn info $source_enterprise_builder | grep Revision: >> $manifest
-fi
+echo "### Removing old protobuf libraries"
+mv $reldir_replicator/lib/protobuf-java-2.2.0.jar $reldir_replicator/lib/protobuf-java-2.2.0.jar.old
 
 cat $manifest
 
@@ -413,7 +402,7 @@ echo "### Creating tar file: ${rel_tgz}"
 (cd ${reldir}/..; tar -czf ${rel_tgz} ${relname})
 
 ##########################################################################
-# Create source build for community release only
+# Create source build if desired. 
 ##########################################################################
 
 if [ "$SKIP_SOURCE" = 0 ]; then
