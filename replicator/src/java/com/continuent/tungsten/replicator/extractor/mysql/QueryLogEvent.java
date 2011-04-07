@@ -41,8 +41,7 @@ import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndia
  */
 public class QueryLogEvent extends LogEvent
 {
-    static Logger                                            logger                 = Logger
-                                                                                            .getLogger(MySQLExtractor.class);
+    static Logger                                            logger                 = Logger.getLogger(MySQLExtractor.class);
 
     /**
      * Fixed data part:
@@ -279,8 +278,8 @@ public class QueryLogEvent extends LogEvent
                         charset, 2);
                 serverCollationId = LittleEndianConversion.convert2BytesToInt(
                         charset, 4);
-                
-                // Mark the query with the Java character set name. 
+
+                // Mark the query with the Java character set name.
                 charsetName = MysqlBinlog.getJavaCharset(clientCharsetId);
             }
             catch (IOException e)
@@ -467,7 +466,7 @@ public class QueryLogEvent extends LogEvent
                         Enumeration<Long> keys = MysqlBinlog.sql_modes.keys();
                         while (keys.hasMoreElements())
                         {
-                            Long mode = (Long) keys.nextElement();
+                            Long mode = keys.nextElement();
                             if ((sql_mode & mode) == mode)
                             {
                                 if (sqlMode.length() > 0)
@@ -585,18 +584,16 @@ public class QueryLogEvent extends LogEvent
                         pos += 2;
                         break;
                     default :
-                        logger
-                                .debug("QueryLogEvent has unknown status variable +"
-                                        + "(first has code: "
-                                        + (pos + 1)
-                                        + " ), skipping the rest of them");
+                        logger.debug("QueryLogEvent has unknown status variable +"
+                                + "(first has code: "
+                                + (pos + 1)
+                                + " ), skipping the rest of them");
                         pos = end;
                 }
             }
             catch (IOException e)
             {
-                logger
-                        .error("IO exception while reading query event parameters");
+                logger.error("IO exception while reading query event parameters");
                 throw new MySQLExtractException("query event reading failed");
             }
         }
@@ -618,7 +615,7 @@ public class QueryLogEvent extends LogEvent
 
     /**
      * Returns the sqlModeAsString value.
-     * 
+     *
      * @return Returns the sqlModeAsString.
      */
     public String getSqlMode()
@@ -628,7 +625,7 @@ public class QueryLogEvent extends LogEvent
 
     /**
      * Returns the flagAutoIsNull value.
-     * 
+     *
      * @return Returns the flagAutoIsNull.
      */
     public String getAutoIsNullFlag()
@@ -638,7 +635,7 @@ public class QueryLogEvent extends LogEvent
 
     /**
      * Returns the flagForeignKeyChecks value.
-     * 
+     *
      * @return Returns the flagForeignKeyChecks.
      */
     public String getForeignKeyChecksFlag()
@@ -648,7 +645,7 @@ public class QueryLogEvent extends LogEvent
 
     /**
      * Returns the flagAutocommit value.
-     * 
+     *
      * @return Returns the flagAutocommit.
      */
     public String getAutocommitFlag()
@@ -658,7 +655,7 @@ public class QueryLogEvent extends LogEvent
 
     /**
      * Returns the flagUniqueChecks value.
-     * 
+     *
      * @return Returns the flagUniqueChecks.
      */
     public String getUniqueChecksFlag()
@@ -668,7 +665,7 @@ public class QueryLogEvent extends LogEvent
 
     /**
      * Returns the charsetID value.
-     * 
+     *
      * @return Returns the charsetID.
      */
     public int getClientCharsetId()
@@ -678,7 +675,7 @@ public class QueryLogEvent extends LogEvent
 
     /**
      * Returns the clientCollationId value.
-     * 
+     *
      * @return Returns the clientCollationId.
      */
     public int getClientCollationId()
@@ -688,7 +685,7 @@ public class QueryLogEvent extends LogEvent
 
     /**
      * Returns the serverCollationId value.
-     * 
+     *
      * @return Returns the serverCollationId.
      */
     public int getServerCollationId()

@@ -85,7 +85,8 @@ public class MySQLCommentEditor implements SqlCommentEditor
     /**
      * {@inheritDoc}
      * 
-     * @see com.continuent.tungsten.replicator.database.SqlCommentEditor#formatAppendableComment(java.lang.String)
+     * @see com.continuent.tungsten.replicator.database.SqlCommentEditor#formatAppendableComment(SqlOperation,
+     *      String)
      */
     @Override
     public String formatAppendableComment(SqlOperation sqlOp, String comment)
@@ -109,8 +110,8 @@ public class MySQLCommentEditor implements SqlCommentEditor
     /**
      * {@inheritDoc}
      * 
-     * @see com.continuent.tungsten.replicator.database.SqlCommentEditor#fetchComment(java.lang.String,
-     *      java.lang.String)
+     * @see com.continuent.tungsten.replicator.database.SqlCommentEditor#fetchComment(String,
+     *      SqlOperation)
      */
     @Override
     public String fetchComment(String statement, SqlOperation sqlOp)

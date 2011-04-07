@@ -35,14 +35,13 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 /**
  * Implements an in-memory event store. This queue has no memory beyond its
  * current contents.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class InMemoryQueueStore implements Store
 {
-    private static Logger                      logger           = Logger
-                                                                        .getLogger(InMemoryQueueStore.class);
+    private static Logger                      logger           = Logger.getLogger(InMemoryQueueStore.class);
     private String                             name;
     private LinkedBlockingQueue<ReplDBMSEvent> queue;
     private int                                maxSize          = 1;
@@ -83,8 +82,8 @@ public class InMemoryQueueStore implements Store
 
     /**
      * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.storage.Store#getMaxStoredSeqno()
+     *
+     * @see com.continuent.tungsten.replicator.storage.Store#getMaxStoredSeqno(boolean)
      */
     public long getMaxStoredSeqno(boolean adminCommand)
     {
@@ -93,8 +92,8 @@ public class InMemoryQueueStore implements Store
 
     /**
      * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.storage.Store#getMinStoredSeqno()
+     *
+     * @see com.continuent.tungsten.replicator.storage.Store#getMinStoredSeqno(boolean)
      */
     public long getMinStoredSeqno(boolean adminCommand)
     {
@@ -102,10 +101,10 @@ public class InMemoryQueueStore implements Store
     }
 
     /**
-     * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.storage.Store#fetchEvent(long,
-     *      short, boolean)
+     * As in-memory queue don't keep events, this function is no-op and just
+     * returns null
+     *
+     * @return null
      */
     public ReplDBMSEvent fetchEvent(long seqno, short fragno,
             boolean ignoreSkippedEvent)
@@ -124,8 +123,8 @@ public class InMemoryQueueStore implements Store
         if (logger.isDebugEnabled())
         {
             if (transactionCount % 10000 == 0)
-                logger.debug("Queue store: xacts=" + transactionCount + " size="
-                        + queue.size());
+                logger.debug("Queue store: xacts=" + transactionCount
+                        + " size=" + queue.size());
         }
     }
 
@@ -156,7 +155,7 @@ public class InMemoryQueueStore implements Store
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException
@@ -166,7 +165,7 @@ public class InMemoryQueueStore implements Store
 
     /**
      * Allocate an in-memory queue. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void prepare(PluginContext context) throws ReplicatorException
@@ -176,7 +175,7 @@ public class InMemoryQueueStore implements Store
 
     /**
      * Release queue. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void release(PluginContext context) throws ReplicatorException

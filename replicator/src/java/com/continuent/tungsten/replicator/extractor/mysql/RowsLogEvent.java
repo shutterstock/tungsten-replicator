@@ -163,9 +163,7 @@ public abstract class RowsLogEvent extends LogEvent
             int index = variableStartIndex;
 
             if (logger.isDebugEnabled())
-                logger
-                        .debug("Reading number of columns from position "
-                                + index);
+                logger.debug("Reading number of columns from position " + index);
 
             long ret[] = MysqlBinlog.decodePackedInteger(buffer, index);
             columnsNumber = ret[0];
@@ -198,9 +196,8 @@ public abstract class RowsLogEvent extends LogEvent
             {
                 usedColumnsForUpdate = new BitSet(usedColumnsLength);
                 if (logger.isDebugEnabled())
-                    logger
-                            .debug("Reading used columns bit-field for update from position "
-                                    + index);
+                    logger.debug("Reading used columns bit-field for update from position "
+                            + index);
                 MysqlBinlog.setBitField(usedColumnsForUpdate, buffer, index,
                         (int) columnsNumber);
                 index += usedColumnsLength;
@@ -219,9 +216,7 @@ public abstract class RowsLogEvent extends LogEvent
 
             packedRowsBuffer = new byte[dataSize];
             bufferSize = dataSize;
-            System
-                    .arraycopy(buffer, dataIndex, packedRowsBuffer, 0,
-                            bufferSize);
+            System.arraycopy(buffer, dataIndex, packedRowsBuffer, 0, bufferSize);
 
             // for (int i = 0; i < bufferSize; i++)
             // packedRowsBuffer[i] = buf[ptr_rows_data + i];
@@ -261,7 +256,7 @@ public abstract class RowsLogEvent extends LogEvent
         // 0x00000005 0x1b38b060 0x00
         // 5 456700000 0
         // 54567000000 / 10^{10} = 5.4567
-        // 
+        //
         // int_size below shows how long is integer part
         //
         // offset = offset + 2; // offset of the number part
@@ -357,7 +352,7 @@ public abstract class RowsLogEvent extends LogEvent
     /**
      * Returns the number of bytes that is used to store a decimal whose
      * precision and scale are given
-     * 
+     *
      * @param precision of the decimal
      * @param scale of the decimal
      * @return number of bytes used to store the decimal(precision, scale)
@@ -409,8 +404,7 @@ public abstract class RowsLogEvent extends LogEvent
 
                         default :
                         {
-                            logger
-                                    .error("Don't know how to handle column type");
+                            logger.error("Don't know how to handle column type");
                             return 0;
                         }
                     }
@@ -722,7 +716,8 @@ public abstract class RowsLogEvent extends LogEvent
                 switch (meta)
                 {
                     case 1 :
-                        length = GeneralConversion.unsignedByteToInt(row[rowPos]);
+                        length = GeneralConversion
+                                .unsignedByteToInt(row[rowPos]);
                         blob_size = 1;
                         break;
                     case 2 :
@@ -771,9 +766,7 @@ public abstract class RowsLogEvent extends LogEvent
                             rowPos);
                     rowPos++;
                     if (useBytesForString)
-                        value
-                                .setValue(processStringAsBytes(row, rowPos,
-                                        length));
+                        value.setValue(processStringAsBytes(row, rowPos, length));
                     else
                         value.setValue(processString(row, rowPos, length));
                     length += 1;
@@ -784,9 +777,7 @@ public abstract class RowsLogEvent extends LogEvent
                             rowPos);
                     rowPos += 2;
                     if (useBytesForString)
-                        value
-                                .setValue(processStringAsBytes(row, rowPos,
-                                        length));
+                        value.setValue(processStringAsBytes(row, rowPos, length));
                     else
                         value.setValue(processString(row, rowPos, length));
                     length += 2;
@@ -803,9 +794,7 @@ public abstract class RowsLogEvent extends LogEvent
                             rowPos);
                     rowPos++;
                     if (useBytesForString)
-                        value
-                                .setValue(processStringAsBytes(row, rowPos,
-                                        length));
+                        value.setValue(processStringAsBytes(row, rowPos, length));
                     else
                         value.setValue(processString(row, rowPos, length));
                     length += 1;
@@ -816,9 +805,7 @@ public abstract class RowsLogEvent extends LogEvent
                             rowPos);
                     rowPos += 2;
                     if (useBytesForString)
-                        value
-                                .setValue(processStringAsBytes(row, rowPos,
-                                        length));
+                        value.setValue(processStringAsBytes(row, rowPos, length));
                     else
                         value.setValue(processString(row, rowPos, length));
                     length += 2;
@@ -847,9 +834,9 @@ public abstract class RowsLogEvent extends LogEvent
         System.arraycopy(buffer, pos, output, 0, length);
         return output;
     }
-    
-    protected String processString(byte[] buffer, int pos,
-            int length) throws ExtractorException
+
+    protected String processString(byte[] buffer, int pos, int length)
+            throws ExtractorException
     {
         return new String(buffer, pos, length);
     }
@@ -888,7 +875,7 @@ public abstract class RowsLogEvent extends LogEvent
                     + oneRowChange.toString());
             throw new ExtractorException("Row data corrupted");
         }
-        rowPos += ((int) usedColumnsCount + 7) / 8;
+        rowPos += (usedColumnsCount + 7) / 8;
 
         OneRowChange.ColumnSpec spec = null;
         int nullIndex = 0;
@@ -931,9 +918,13 @@ public abstract class RowsLogEvent extends LogEvent
                 int size = 0;
                 try
                 {
-                    size = extractValue(spec, value, row, rowPos,
-                            LittleEndianConversion.convert1ByteToInt(map
-                                    .getColumnsTypes(), i),
+                    size = extractValue(
+                            spec,
+                            value,
+                            row,
+                            rowPos,
+                            LittleEndianConversion.convert1ByteToInt(
+                                    map.getColumnsTypes(), i),
                             map.getMetadata()[i]);
                 }
                 catch (IOException e)

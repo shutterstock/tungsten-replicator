@@ -48,7 +48,7 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 /**
  * Stub applier class that automatically constructs url from Oracle-specific
  * properties like host, port, and service.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -94,7 +94,7 @@ public class MySQLApplier extends JdbcApplier
     /**
      * Generate URL suitable for MySQL and then delegate remaining configuration
      * to superclass.
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(PluginContext
      *      context)
      */
@@ -154,7 +154,7 @@ public class MySQLApplier extends JdbcApplier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.JdbcApplier#addColumn(java.sql.ResultSet,
      *      java.lang.String)
      */
@@ -177,7 +177,7 @@ public class MySQLApplier extends JdbcApplier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.JdbcApplier#setObject(java.sql.PreparedStatement,
      *      int, com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnVal,
      *      com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec)
@@ -254,9 +254,8 @@ public class MySQLApplier extends JdbcApplier
 
     /**
      * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.applier.JdbcApplier#applyStatementData(com.continuent.tungsten.replicator.dbms.LoadDataFileQuery,
-     *      java.io.File)
+     *
+     * @see com.continuent.tungsten.replicator.applier.JdbcApplier#applyStatementData(com.continuent.tungsten.replicator.dbms.StatementData)
      */
     @Override
     protected void applyLoadDataLocal(LoadDataFileQuery data, File temporaryFile)

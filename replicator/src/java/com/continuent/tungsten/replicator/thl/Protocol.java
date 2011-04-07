@@ -41,14 +41,13 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
  * This class defines a Protocol
- * 
+ *
  * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
  * @version 1.0
  */
 public class Protocol
 {
-    private static Logger        logger                   = Logger
-                                                                  .getLogger(Protocol.class);
+    private static Logger        logger                   = Logger.getLogger(Protocol.class);
 
     protected PluginContext      pluginContext            = null;
     protected SocketChannel      channel                  = null;
@@ -84,7 +83,7 @@ public class Protocol
 
     /**
      * Creates a new <code>Protocol</code> object
-     * 
+     *
      * @param channel
      * @throws IOException
      */
@@ -140,8 +139,7 @@ public class Protocol
 
     /**
      * TODO: readMessage definition.
-     * 
-     * @return
+     *
      * @throws IOException
      * @throws THLException
      */
@@ -176,7 +174,7 @@ public class Protocol
 
     /**
      * TODO: writeMessage definition.
-     * 
+     *
      * @param msg
      * @throws IOException
      * @throws RemoteProtocolException
@@ -196,7 +194,7 @@ public class Protocol
 
     /**
      * TODO: serverHandshake definition.
-     * 
+     *
      * @param minSeqNo
      * @param maxSeqNo
      * @throws THLException
@@ -236,7 +234,7 @@ public class Protocol
 
     /**
      * TODO: clientHandshake definition.
-     * 
+     *
      * @return seqno range
      * @throws THLException
      * @throws IOException
@@ -269,7 +267,7 @@ public class Protocol
 
     /**
      * TODO: requestReplicationDBMSEvent definition.
-     * 
+     *
      * @param seqNo
      * @return sql event
      * @throws THLException
@@ -349,7 +347,7 @@ public class Protocol
 
     /**
      * TODO: waitReplicationDBMSEventRequest definition.
-     * 
+     *
      * @return protocol event request
      * @throws THLException
      * @throws IOException
@@ -365,7 +363,7 @@ public class Protocol
 
     /**
      * TODO: sendReplicationDBMSEvent definition.
-     * 
+     *
      * @param event
      * @param forceSend TODO
      * @throws IOException

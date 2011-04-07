@@ -61,7 +61,7 @@ public interface SqlCommentEditor
     /**
      * Fetches the first comment string that matches the regex.
      * 
-     * @param statement Statement to search
+     * @param baseStatement Statement to search
      * @return Matching comment string or null if not found.
      */
     public String fetchComment(String baseStatement, SqlOperation sqlOperation);

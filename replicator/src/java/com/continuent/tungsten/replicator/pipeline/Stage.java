@@ -43,14 +43,13 @@ import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
 /**
  * Stores the implementation of a single replicator processing stage, which
  * consists of extract, filtering, and apply operations.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class Stage implements ReplicatorPlugin
 {
-    private static Logger             logger              = Logger
-                                                                  .getLogger(Stage.class);
+    private static Logger             logger              = Logger.getLogger(Stage.class);
     // Stage elements.
     private String                    name;
     private PluginSpecification       extractorSpec;
@@ -76,7 +75,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Creates a new stage instance.
-     * 
+     *
      * @param pipeline Pipeline to which this stage belongs.
      */
     public Stage(Pipeline pipeline)
@@ -195,22 +194,22 @@ public class Stage implements ReplicatorPlugin
     }
 
     /**
-     * Returns task progress instances ordered by task ID. 
+     * Returns task progress instances ordered by task ID.
      */
     public synchronized List<TaskProgress> getTaskProgress()
     {
         return progressTracker.cloneTaskProgress();
     }
-    
+
     /**
-     * Returns shard progress instances ordered by shard ID. 
+     * Returns shard progress instances ordered by shard ID.
      */
     public synchronized List<ShardProgress> getShardProgress()
     {
         return progressTracker.getShardProgress();
     }
-    
-    // Convenience methods for unit testing. 
+
+    // Convenience methods for unit testing.
     public Applier getApplier0()
     {
         return taskGroup.getTask(0).getApplier();
@@ -228,7 +227,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public synchronized void configure(PluginContext context)
@@ -247,7 +246,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public synchronized void prepare(PluginContext context)
@@ -258,7 +257,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @throws ReplicatorException
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
@@ -311,7 +310,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular sequence number to be processed.
-     * 
+     *
      * @param seqno Sequence number to watch for
      * @param terminate If true, terminate task when watch is successful
      * @return Returns a watch on matching event
@@ -328,7 +327,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular event ID to be extracted.
-     * 
+     *
      * @param eventId Native event ID to watch for
      * @return Returns a watch on matching event
      * @param terminate If true, terminate task when watch is successful
@@ -345,7 +344,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Sets a watch for a heartbeat event to be extracted.
-     * 
+     *
      * @return Returns a watch on matching event
      * @param terminate If true, terminate task when watch is successful
      * @throws InterruptedException
@@ -361,10 +360,10 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Sets a watch for a source timestamp to be extracted.
-     * 
-     * @param eventId Timestamp to watch for
-     * @return Returns a watch on matching event
+     *
+     * @param timestamp Timestamp to watch for
      * @param terminate If true, terminate task when watch is successful
+     * @return Returns a watch on matching event
      * @throws InterruptedException
      */
     public Future<ReplDBMSEvent> watchForProcessedTimestamp(
@@ -404,7 +403,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Returns the pipeline value.
-     * 
+     *
      * @return Returns the pipeline.
      */
     public Pipeline getPipeline()

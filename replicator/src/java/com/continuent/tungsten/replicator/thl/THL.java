@@ -40,14 +40,13 @@ import com.continuent.tungsten.replicator.util.AtomicCounter;
 
 /**
  * Implements a standard Store interface on the THL (transaction history log).
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class THL implements Store
 {
-    protected static Logger               logger              = Logger
-                                                                      .getLogger(THL.class);
+    protected static Logger               logger              = Logger.getLogger(THL.class);
 
     // Version information and constants.
     public static final int               MAJOR               = 1;
@@ -215,8 +214,8 @@ public class THL implements Store
 
     /**
      * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.storage.Store#getMaxStoredSeqno()
+     *
+     * @see com.continuent.tungsten.replicator.storage.Store#getMaxStoredSeqno(boolean)
      */
     public long getMaxStoredSeqno(boolean adminCommand)
     {
@@ -260,8 +259,8 @@ public class THL implements Store
 
     /**
      * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.storage.Store#getMinStoredSeqno()
+     *
+     * @see com.continuent.tungsten.replicator.storage.Store#getMinStoredSeqno(boolean)
      */
     public long getMinStoredSeqno(boolean adminCommand)
     {
@@ -305,7 +304,7 @@ public class THL implements Store
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException,
@@ -322,7 +321,7 @@ public class THL implements Store
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public synchronized void prepare(PluginContext context)
@@ -359,7 +358,7 @@ public class THL implements Store
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public synchronized void release(PluginContext context)
@@ -374,10 +373,8 @@ public class THL implements Store
             }
             catch (InterruptedException e)
             {
-                logger
-                        .warn(
-                                "Server stop operation was unexpectedly interrupted",
-                                e);
+                logger.warn(
+                        "Server stop operation was unexpectedly interrupted", e);
             }
             finally
             {
@@ -408,7 +405,7 @@ public class THL implements Store
 
     /**
      * Store event in THL.
-     * 
+     *
      * @param replEvent Event to store
      * @param doCommit If true, commit this and previous uncommitted events
      * @throws ReplicatorException Thrown if there is a storage error
@@ -448,7 +445,7 @@ public class THL implements Store
 
     /**
      * Fetches an event from the THL
-     * 
+     *
      * @param seqno Sequence number of the event
      * @param fragno Fragment number
      * @return Requested event or null if it should be skipped.
@@ -550,7 +547,7 @@ public class THL implements Store
 
     /**
      * Create new THLStorage handler.
-     * 
+     *
      * @return THLStorage handler
      * @throws ReplicatorException
      */
@@ -577,7 +574,7 @@ public class THL implements Store
 
     /**
      * Release storage handler.
-     * 
+     *
      * @param storageHandler Handler to be released
      */
     private void releaseThlStorageHandler(THLStorage storageHandler)
@@ -602,7 +599,7 @@ public class THL implements Store
     /**
      * Get sequence number of the last event which has been processed. Event is
      * taken to be processed if it has reached state COMPLETED or SKIPPED.
-     * 
+     *
      * @return Sequence number of the last event which has been processed
      * @throws THLException
      */
@@ -681,7 +678,7 @@ public class THL implements Store
 
     /**
      * Return the last applied event as stored in the CommitSeqnoTable.
-     * 
+     *
      * @return the last applied event or null if nothing was found
      * @throws ReplicatorException
      */
@@ -703,7 +700,7 @@ public class THL implements Store
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.storage.Store#status()
      */
     @Override

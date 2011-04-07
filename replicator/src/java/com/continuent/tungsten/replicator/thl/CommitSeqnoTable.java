@@ -48,14 +48,13 @@ import com.continuent.tungsten.replicator.event.ReplDBMSHeaderData;
  * is stored.</li>
  * <li>Slave - Slave must update trep_commit_seqno whenever an event is applied</li>
  * </ul>
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class CommitSeqnoTable
 {
-    private static Logger      logger     = Logger
-                                                  .getLogger(CommitSeqnoTable.class);
+    private static Logger      logger     = Logger.getLogger(CommitSeqnoTable.class);
 
     public static final String TABLE_NAME = "trep_commit_seqno";
 
@@ -108,7 +107,7 @@ public class CommitSeqnoTable
                 Types.INTEGER);
         commitSeqnoTableUpdateTimestamp = new Column("update_timestamp",
                 Types.TIMESTAMP);
-        
+
         commitSeqnoTable.AddColumn(commitSeqnoTableTaskId);
         commitSeqnoTable.AddColumn(commitSeqnoTableSeqno);
         commitSeqnoTable.AddColumn(commitSeqnoTableFragno);
@@ -153,10 +152,10 @@ public class CommitSeqnoTable
             // Always initialize to default value.
             commitSeqnoTableTaskId.setValue(taskId);
             commitSeqnoTableSeqno.setValue(-1L);
-            commitSeqnoTableEventId.setValue(null);            
+            commitSeqnoTableEventId.setValue(null);
             commitSeqnoTableUpdateTimestamp.setValue(new Timestamp(System
                     .currentTimeMillis()));
-            
+
             database.insert(commitSeqnoTable);
 
             // If there is a task 0 commit seqno, we propagate task 0 position
@@ -164,15 +163,13 @@ public class CommitSeqnoTable
             ReplDBMSHeader task0CommitSeqno = lastCommitSeqno(0);
             if (task0CommitSeqno == null)
             {
-                logger
-                        .info("Initializing trep_commit_seqno defaults for task: "
-                                + taskId);
+                logger.info("Initializing trep_commit_seqno defaults for task: "
+                        + taskId);
             }
             else
             {
-                logger
-                        .info("Propagating trep_commit_seqno data from task 0 to task: "
-                                + taskId);
+                logger.info("Propagating trep_commit_seqno data from task 0 to task: "
+                        + taskId);
                 updateLastCommitSeqno(taskId, task0CommitSeqno, 0);
             }
         }
@@ -229,8 +226,6 @@ public class CommitSeqnoTable
     /**
      * Returns a list containing all current sequence numbers in
      * trep_commit_seqno.
-     * 
-     * @return List of headers from each row.
      */
     public void reduceTasks() throws SQLException
     {
@@ -271,9 +266,8 @@ public class CommitSeqnoTable
             }
             else if (!hasCommonSeqno)
             {
-                logger
-                        .warn("Sequence numbers do not match; cannot reduce task entries: "
-                                + schema + "." + TABLE_NAME);
+                logger.warn("Sequence numbers do not match; cannot reduce task entries: "
+                        + schema + "." + TABLE_NAME);
             }
             else
             {

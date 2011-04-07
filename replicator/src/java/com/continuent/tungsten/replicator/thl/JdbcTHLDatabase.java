@@ -52,14 +52,13 @@ import com.continuent.tungsten.replicator.heartbeat.HeartbeatTable;
 
 /**
  * This class defines a JdbcTHLDatabase
- * 
+ *
  * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
  * @version 1.0
  */
 public class JdbcTHLDatabase
 {
-    static Logger             logger                    = Logger
-                                                                .getLogger(JdbcTHLDatabase.class);
+    static Logger             logger                    = Logger.getLogger(JdbcTHLDatabase.class);
 
     private int               taskId                    = 0;
     private ReplicatorRuntime runtime                   = null;
@@ -89,7 +88,7 @@ public class JdbcTHLDatabase
 
     /**
      * Creates a new <code>JdbcTHLDatabase</code> object
-     * 
+     *
      * @param driver JDBC driver specification
      * @throws THLException
      */
@@ -111,7 +110,7 @@ public class JdbcTHLDatabase
 
     /**
      * Creates a new <code>JdbcTHLDatabase</code> object
-     * 
+     *
      * @param runtime runtime
      * @param driver JDBC driver specification
      * @throws THLException
@@ -174,8 +173,8 @@ public class JdbcTHLDatabase
         conn.createTable(history, false, runtime.getTungstenTableType());
 
         // Create commit seqno table.
-        commitSeqnoTable = new CommitSeqnoTable(conn, metadataSchema, runtime
-                .getTungstenTableType());
+        commitSeqnoTable = new CommitSeqnoTable(conn, metadataSchema,
+                runtime.getTungstenTableType());
         commitSeqnoTable.prepare(taskId);
 
         // Create consistency table
@@ -232,7 +231,7 @@ public class JdbcTHLDatabase
 
     /**
      * Find THLEvent from storage.
-     * 
+     *
      * @param seqno Sequence number of the event
      * @return THLEvent or null if event was not found
      * @throws THLException
@@ -270,7 +269,7 @@ public class JdbcTHLDatabase
 
     /**
      * Generates SQL WHERE clause specifying the given number range.
-     * 
+     *
      * @param field Field name to query for.
      * @param low The beginning of the interval (inclusive).
      * @param high The end of the interval (inclusive).
@@ -297,7 +296,7 @@ public class JdbcTHLDatabase
     /**
      * Query for multiple THLEvent objects from the storage by a given sequence
      * number range.
-     * 
+     *
      * @param low Sequence number specifying the beginning of the range. Leave
      *            null to start from the very beginning of the table.
      * @param high Sequence number specifying the end of the range. Leave null
@@ -347,11 +346,12 @@ public class JdbcTHLDatabase
      * represented by the interval. Current units are seconds ("s"), minutes
      * ("m"), hours ("h"), and days ("d"). Examples are "3s" -> 3 seconds "1m"
      * -> 60 seconds "1m 3s" -> 63 seconds
-     * 
+     *
      * @param s : String to be parsed
      * @return : number of seconds represented by interval
      * @throws THLException
      */
+    @SuppressWarnings("fallthrough")
     private int parseInterval(String s) throws THLException
     {
         int retval = 0;
@@ -426,7 +426,7 @@ public class JdbcTHLDatabase
     /**
      * Delete THL events from the history table by a given sequence number
      * range. Warning: deletion cannot be undone.
-     * 
+     *
      * @param low Sequence number specifying the beginning of the range. Leave
      *            null to start from the very beginning of the table.
      * @param high Sequence number specifying the end of the range. Leave null
@@ -588,7 +588,7 @@ public class JdbcTHLDatabase
 
     /**
      * Find THLEvent fragment from storage.
-     * 
+     *
      * @param seqno Sequence number of the event
      * @param fragno Fragmen number of the event
      * @return THLEvent or null if event was not found
@@ -628,7 +628,7 @@ public class JdbcTHLDatabase
 
     /**
      * Find event identifier corresponding to sequence number.
-     * 
+     *
      * @param seqno Sequence number of the event
      * @return Event identifier or null if not found
      * @throws THLException
@@ -647,7 +647,7 @@ public class JdbcTHLDatabase
     /**
      * Gets the max event identifier (actually, the identifier of the event
      * which has the max sequence number and an event identifier not null)
-     * 
+     *
      * @param sourceId The source id if we want to ensure it matches the source
      *            id on the last event id
      * @return the max event identifier
@@ -660,7 +660,7 @@ public class JdbcTHLDatabase
 
     /**
      * Get greatest sequence number in history.
-     * 
+     *
      * @return Greatest sequence number or -1 if history was empty
      * @throws THLException
      */
@@ -673,7 +673,7 @@ public class JdbcTHLDatabase
     /**
      * Get greatest sequence number in history with a non-null event ID. This is
      * used to determine the restart point in the database log.
-     * 
+     *
      * @return Greatest sequence number or -1 if history was empty or did not
      *         contain events with valid event identifier.
      * @throws THLException
@@ -698,7 +698,7 @@ public class JdbcTHLDatabase
     /**
      * Get sequence number of the last event which has been processed. This is
      * marked by the sequence number in trep_commit_seqno.
-     * 
+     *
      * @return Sequence number of the last event which has been processed
      * @throws THLException
      */
@@ -722,7 +722,7 @@ public class JdbcTHLDatabase
 
     /**
      * Get smallest sequence number in history.
-     * 
+     *
      * @return Smallest sequence number of -1 if history was empty.
      * @throws THLException
      */
@@ -774,7 +774,7 @@ public class JdbcTHLDatabase
 
     /**
      * Get count of events in the history.
-     * 
+     *
      * @return Count of events.
      * @throws THLException
      */
@@ -785,7 +785,7 @@ public class JdbcTHLDatabase
 
     /**
      * Get count of events in the history belonging to a specified seqno range.
-     * 
+     *
      * @param low Sequence number specifying the beginning of the range. Leave
      *            null to start from the very beginning of the table.
      * @param high Sequence number specifying the end of the range. Leave null
@@ -831,7 +831,7 @@ public class JdbcTHLDatabase
     /**
      * Store given THLEvent. For masters, we support synchronizing the commit
      * sequence number, which is required to ensure failover works.
-     * 
+     *
      * @param event Event to be stored.
      * @param syncCommitSeqno If true, synchronize the commit sequence number
      * @throws THLException
@@ -912,7 +912,7 @@ public class JdbcTHLDatabase
 
     /**
      * TODO: updateCommitSeqnoTable definition.
-     * 
+     *
      * @param event
      * @throws SQLException
      */
@@ -929,7 +929,7 @@ public class JdbcTHLDatabase
 
     /**
      * Change status for given THLEvent.
-     * 
+     *
      * @param seqno Sequence number of the event
      * @param fragno Fragment number of the event
      * @param status New status for the event
@@ -970,10 +970,10 @@ public class JdbcTHLDatabase
     {
         connect(url, user, password, metadataSchema, null);
     }
-    
+
     /**
      * Connect to database.
-     * 
+     *
      * @param url Database url
      * @param user Database user name
      * @param password Database user password
@@ -1002,7 +1002,7 @@ public class JdbcTHLDatabase
 
     /**
      * Prepare THLDatabase schema.
-     * 
+     *
      * @throws THLException
      */
     public void prepareSchema() throws THLException
@@ -1049,7 +1049,7 @@ public class JdbcTHLDatabase
      */
     public void close()
     {
-        // Reduce tasks in task table if possible. 
+        // Reduce tasks in task table if possible.
         try
         {
             commitSeqnoTable.reduceTasks();
@@ -1059,7 +1059,7 @@ public class JdbcTHLDatabase
             logger.warn("Unable to reduce tasks information", e);
         }
 
-        // Clean up JDBC connection. 
+        // Clean up JDBC connection.
         statement = null;
         conn.close();
         conn = null;
@@ -1095,9 +1095,11 @@ public class JdbcTHLDatabase
                 for (THLEventStatus event : skippedEvents)
                 {
                     pstmt.setShort(1, THLEvent.SKIPPED);
-                    pstmt.setString(2, truncate(event.getException() != null
-                            ? event.getException().getMessage()
-                            : "Unknown event failure", commentLength));
+                    pstmt.setString(
+                            2,
+                            truncate(event.getException() != null
+                                    ? event.getException().getMessage()
+                                    : "Unknown event failure", commentLength));
                     pstmt.setTimestamp(3, now);
                     pstmt.setLong(4, event.getSeqno());
                     pstmt.addBatch();
@@ -1178,14 +1180,12 @@ public class JdbcTHLDatabase
 
                 stmt = conn.createStatement();
 
-                stmt
-                        .executeUpdate("UPDATE history SET status = "
-                                + THLEvent.FAILED
-                                + ", comments = 'Event was rollbacked due to failure while processing event#"
-                                + failedEvent.getSeqno() + "'"
-                                + ", processed_tstamp = "
-                                + conn.getNowFunction() + " WHERE seqno in "
-                                + seqnoList);
+                stmt.executeUpdate("UPDATE history SET status = "
+                        + THLEvent.FAILED
+                        + ", comments = 'Event was rollbacked due to failure while processing event#"
+                        + failedEvent.getSeqno() + "'"
+                        + ", processed_tstamp = " + conn.getNowFunction()
+                        + " WHERE seqno in " + seqnoList);
 
             }
             // 2. Mark the failed event
@@ -1193,9 +1193,11 @@ public class JdbcTHLDatabase
                     + ", comments = ?" + ", processed_tstamp = ?"
                     + " WHERE seqno = ?");
             pstmt.setShort(1, THLEvent.FAILED);
-            pstmt.setString(2, truncate(failedEvent.getException() != null
-                    ? failedEvent.getException().getMessage()
-                    : "Unknown failure", commentLength));
+            pstmt.setString(
+                    2,
+                    truncate(failedEvent.getException() != null ? failedEvent
+                            .getException().getMessage() : "Unknown failure",
+                            commentLength));
             pstmt.setTimestamp(3, now);
             pstmt.setLong(4, failedEvent.getSeqno());
             pstmt.executeUpdate();
@@ -1286,7 +1288,7 @@ public class JdbcTHLDatabase
 
     /**
      * Utility routine to execute a SQL query that returns a single long value.
-     * 
+     *
      * @param query SQL query to execute
      * @return long value or -1 if null
      * @throws THLException thrown if there is a SQL exception
@@ -1326,7 +1328,7 @@ public class JdbcTHLDatabase
     /**
      * Utility routine to execute a SQL query that returns a single String
      * value.
-     * 
+     *
      * @param query SQL query to execute
      * @return Sting value or -null
      * @throws THLException thrown if there is a SQL exception
@@ -1363,7 +1365,7 @@ public class JdbcTHLDatabase
 
     /**
      * Utility routine to execute a SQL query that returns a single Date value.
-     * 
+     *
      * @param query SQL query to execute
      * @return Sting value or -null
      * @throws THLException thrown if there is a SQL exception
@@ -1435,7 +1437,7 @@ public class JdbcTHLDatabase
 
     /**
      * Return the last applied event as stored in the CommitSeqnoTable.
-     * 
+     *
      * @return the last applied event, or null if nothing was found
      * @throws THLException
      */

@@ -59,13 +59,12 @@ import com.continuent.tungsten.replicator.thl.THLException;
  * conditions for monitoring and status calls, which may call pipelines at
  * various stages of preparation and also following release. To release pipeline
  * resources, clients must drop references to the pipeline itself.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  */
 public class Pipeline implements ReplicatorPlugin
 {
-    private static Logger              logger               = Logger
-                                                                    .getLogger(Pipeline.class);
+    private static Logger              logger               = Logger.getLogger(Pipeline.class);
     private PluginContext              context;
     private String                     name;
     private LinkedList<Stage>          stages               = new LinkedList<Stage>();
@@ -167,7 +166,7 @@ public class Pipeline implements ReplicatorPlugin
     /**
      * Configures pipeline data structures including stages and stores. All
      * pipeline information is accessible after this call.
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException,
@@ -195,7 +194,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void prepare(PluginContext context) throws ReplicatorException,
@@ -217,7 +216,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void release(PluginContext context)
@@ -275,7 +274,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Shuts down after a particular sequence number is applied.
-     * 
+     *
      * @param seqno Sequence number to watch for
      * @return Returns future to wait for pipeline shutdown
      */
@@ -296,7 +295,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Shuts down after a particular event ID is applied.
-     * 
+     *
      * @param eventId Event ID to watch for
      * @return Returns future to wait for pipeline shutdown
      */
@@ -317,7 +316,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Shuts down after a heartbeat event is seen.
-     * 
+     *
      * @return Returns future to wait for pipeline shutdown
      */
     public Future<Pipeline> shutdownAfterHeartbeat(String name)
@@ -338,7 +337,7 @@ public class Pipeline implements ReplicatorPlugin
     /**
      * Shuts down after the replication event timestamp meets or exceeds the
      * argument.
-     * 
+     *
      * @param timestamp Timestamp value to wait for
      * @return Returns future to wait for pipeline shutdown
      */
@@ -407,7 +406,7 @@ public class Pipeline implements ReplicatorPlugin
     {
         long applyLatencyMillis = stages.getLast().getProgressTracker()
                 .getApplyLatencyMillis();
-        return (double) (applyLatencyMillis / 1000.0);
+        return applyLatencyMillis / 1000.0;
     }
 
     /**
@@ -460,12 +459,12 @@ public class Pipeline implements ReplicatorPlugin
     }
 
     /**
-     * Returns task progress instances ordered by task ID. 
+     * Returns task progress instances ordered by task ID.
      */
     public synchronized List<TaskProgress> getTaskProgress()
     {
         List<TaskProgress> progressList = new ArrayList<TaskProgress>();
-        for (Stage stage: stages)
+        for (Stage stage : stages)
         {
             progressList.addAll(stage.getTaskProgress());
         }
@@ -473,9 +472,9 @@ public class Pipeline implements ReplicatorPlugin
     }
 
     /**
-     * Returns shard progress instances ordered by shard ID.  Shard 
-     * progress is measured from the end of the pipeline, so we fetch
-     * it from the final task only. 
+     * Returns shard progress instances ordered by shard ID. Shard progress is
+     * measured from the end of the pipeline, so we fetch it from the final task
+     * only.
      */
     public synchronized List<ShardProgress> getShardProgress()
     {
@@ -486,7 +485,7 @@ public class Pipeline implements ReplicatorPlugin
      * Sets the native event ID from which to start extracting. This overrides
      * the default value obtained from the applier at the end of the pipeline.
      * Must be called before start() to have an effect.
-     * 
+     *
      * @param eventId Event ID from which to start replication
      */
     public void setInitialEventId(String eventId)
@@ -505,7 +504,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular sequence number to be extracted.
-     * 
+     *
      * @param seqno Sequence number to watch for
      * @return Returns a watch on a corresponding event
      * @throws InterruptedException if cancelled
@@ -518,7 +517,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular event ID to be extracted.
-     * 
+     *
      * @param eventId Native event ID to watch for
      * @return Returns a watch on a corresponding event
      * @throws InterruptedException if cancelled
@@ -531,7 +530,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular sequence number to be applied.
-     * 
+     *
      * @param seqno Sequence number to watch for
      * @return Returns a future on the event that meets criterion
      * @throws InterruptedException if cancelled
@@ -544,7 +543,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular event ID to be applied.
-     * 
+     *
      * @param eventId Native event ID to watch for
      * @return Returns a watch on a corresponding event
      * @throws InterruptedException if canceled
@@ -558,7 +557,7 @@ public class Pipeline implements ReplicatorPlugin
     /**
      * Find the current native event ID in the DBMS and wait until it reaches
      * the log.
-     * 
+     *
      * @return A Future on the ReplDBMSEvent that has this eventId or a greater
      *         one.
      * @throws InterruptedException
@@ -591,8 +590,7 @@ public class Pipeline implements ReplicatorPlugin
 // Interruptible task to wait for stage tasks to read a watch point.
 class DeferredShutdownTask implements Callable<Pipeline>
 {
-    private static final Logger               logger = Logger
-                                                             .getLogger(DeferredShutdownTask.class);
+    private static final Logger               logger = Logger.getLogger(DeferredShutdownTask.class);
     private final Pipeline                    pipeline;
     private final List<Future<ReplDBMSEvent>> taskWaits;
 
@@ -604,9 +602,8 @@ class DeferredShutdownTask implements Callable<Pipeline>
     }
 
     /**
-     * Returns when the pipeline is safely shut down. 
-     * 
-     * {@inheritDoc}
+     * Returns when the pipeline is safely shut down. {@inheritDoc}
+     *
      * @see java.util.concurrent.Callable#call()
      */
     public Pipeline call() throws Exception
@@ -615,7 +612,7 @@ class DeferredShutdownTask implements Callable<Pipeline>
 
         try
         {
-            // Wait for tasks to hit the event on which we are waiting.  
+            // Wait for tasks to hit the event on which we are waiting.
             for (Future<ReplDBMSEvent> taskWait : taskWaits)
             {
                 ReplDBMSEvent event = taskWait.get();
@@ -624,17 +621,17 @@ class DeferredShutdownTask implements Callable<Pipeline>
                     logger.debug("Reached event: " + event.getSeqno());
                 }
             }
-            
-            // Ensure that all tasks have terminated.  Tasks can take 
-            // a little extra time to finish after hitting the last event. 
+
+            // Ensure that all tasks have terminated. Tasks can take
+            // a little extra time to finish after hitting the last event.
             int waitCount = 0;
-            while (! pipeline.isShutdown())
+            while (!pipeline.isShutdown())
             {
                 waitCount++;
                 if (waitCount % 1000 == 0)
                 {
-                    // It's nice to tell people what's going on if we hang for 
-                    // some reason. 
+                    // It's nice to tell people what's going on if we hang for
+                    // some reason.
                     logger.info("Waiting for pipeline to shut down fully...");
                 }
                 Thread.sleep(10);
@@ -649,8 +646,8 @@ class DeferredShutdownTask implements Callable<Pipeline>
                 + pipeline.getName());
         // TODO: This probably should not be here--pipelines should not know
         // about the state machine.
-        pipeline.getContext().getEventDispatcher().handleEvent(
-                new GoOfflineEvent());
+        pipeline.getContext().getEventDispatcher()
+                .handleEvent(new GoOfflineEvent());
         return pipeline;
     }
 }

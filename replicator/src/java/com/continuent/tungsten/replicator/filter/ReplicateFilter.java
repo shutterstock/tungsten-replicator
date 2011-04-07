@@ -82,27 +82,27 @@ public class ReplicateFilter implements Filter
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.filter.Filter#filter(com.continuent.tungsten.replicator.event.ReplDBMSEvent)
      */
     public ReplDBMSEvent filter(ReplDBMSEvent event)
             throws ReplicatorException, InterruptedException
     {
         ArrayList<DBMSData> data = event.getData();
-        
+
         if (data == null)
             return event;
 
         for (Iterator<DBMSData> iterator = data.iterator(); iterator.hasNext();)
         {
-            DBMSData dataElem = (DBMSData) iterator.next();
+            DBMSData dataElem = iterator.next();
             if (dataElem instanceof RowChangeData)
             {
                 RowChangeData rdata = (RowChangeData) dataElem;
                 for (Iterator<OneRowChange> iterator2 = rdata.getRowChanges()
                         .iterator(); iterator2.hasNext();)
                 {
-                    OneRowChange orc = (OneRowChange) iterator2.next();
+                    OneRowChange orc = iterator2.next();
 
                     if (filterEvent(orc.getSchemaName(), orc.getTableName()))
                     {
@@ -132,8 +132,8 @@ public class ReplicateFilter implements Filter
         // if schema not provided, cannot filter
         if (schema.length() == 0)
             return false;
-        
-        if(schema.equals(tungstenSchema))
+
+        if (schema.equals(tungstenSchema))
             return false;
 
         if (doDbPattern != null)
@@ -216,7 +216,7 @@ public class ReplicateFilter implements Filter
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException,
@@ -228,7 +228,7 @@ public class ReplicateFilter implements Filter
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void prepare(PluginContext context) throws ReplicatorException,
@@ -296,7 +296,7 @@ public class ReplicateFilter implements Filter
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void release(PluginContext context) throws ReplicatorException,

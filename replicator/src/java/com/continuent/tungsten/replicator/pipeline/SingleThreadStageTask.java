@@ -46,13 +46,12 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 /**
  * Implements thread logic for single-threaded, i.e., non-parallel stage
  * execution.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  */
 public class SingleThreadStageTask implements Runnable
 {
-    private static Logger   logger          = Logger
-                                                    .getLogger(SingleThreadStageTask.class);
+    private static Logger   logger          = Logger.getLogger(SingleThreadStageTask.class);
     private Stage           stage;
     private int             taskId;
     private Extractor       extractor;
@@ -86,8 +85,8 @@ public class SingleThreadStageTask implements Runnable
     }
 
     /**
-     * {@inheritDoc}
-     * 
+     * Sets the event dispatcher
+     *
      * @see com.continuent.tungsten.replicator.pipeline.StageTask#setEventDispatcher(com.continuent.tungsten.replicator.EventDispatcher)
      */
     public void setEventDispatcher(EventDispatcher eventDispatcher)
@@ -100,7 +99,7 @@ public class SingleThreadStageTask implements Runnable
     {
         this.schedule = schedule;
     }
-    
+
     public void setExtractor(Extractor extractor)
     {
         this.extractor = extractor;
@@ -163,7 +162,7 @@ public class SingleThreadStageTask implements Runnable
 
     /**
      * Perform single-threaded stage processing.
-     * 
+     *
      * @throws ReplicatorException
      */
     public void runTask()
@@ -279,10 +278,8 @@ public class SingleThreadStageTask implements Runnable
                 event = (ReplDBMSEvent) genericEvent;
                 if (logger.isDebugEnabled())
                 {
-                    logger
-                            .debug(loggingPrefix + "Extracted event: seqno="
-                                    + event.getSeqno() + " fragno="
-                                    + event.getFragno());
+                    logger.debug(loggingPrefix + "Extracted event: seqno="
+                            + event.getSeqno() + " fragno=" + event.getFragno());
                 }
                 currentEvent = event;
 
@@ -424,15 +421,14 @@ public class SingleThreadStageTask implements Runnable
                 logger.warn(loggingPrefix
                         + "Received unexpected interrupt in stage task: "
                         + stage.getName());
-            // Roll back to release locks and clear partial work. 
+            // Roll back to release locks and clear partial work.
             try
             {
                 applier.rollback();
             }
             catch (InterruptedException e1)
             {
-                logWarn(
-                        "Task cancelled while trying to rollback following cancellation",
+                logWarn("Task cancelled while trying to rollback following cancellation",
                         null);
             }
         }
@@ -474,8 +470,7 @@ public class SingleThreadStageTask implements Runnable
         if (header == null)
         {
             if (logger.isDebugEnabled())
-                logger
-                        .debug("Unable to update position due to null event value");
+                logger.debug("Unable to update position due to null event value");
             return;
         }
 

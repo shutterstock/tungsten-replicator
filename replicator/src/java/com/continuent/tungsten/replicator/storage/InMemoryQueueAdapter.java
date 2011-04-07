@@ -36,15 +36,14 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
  * Implements Extractor and Applier interfaces for an in-memory queue.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 
 public class InMemoryQueueAdapter implements Extractor, Applier
 {
-    private static Logger      logger = Logger
-                                              .getLogger(InMemoryQueueAdapter.class);
+    private static Logger      logger = Logger.getLogger(InMemoryQueueAdapter.class);
     private String             storeName;
     private InMemoryQueueStore queueStore;
 
@@ -67,7 +66,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#extract()
      */
     public ReplDBMSEvent extract() throws ExtractorException,
@@ -78,7 +77,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#getCurrentResourceEventId()
      */
     public String getCurrentResourceEventId() throws ExtractorException,
@@ -93,7 +92,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
 
     /**
      * Returns true if the queue has more events. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#hasMoreEvents()
      */
     public boolean hasMoreEvents()
@@ -104,7 +103,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
     /**
      * Store the header so that it can be propagated back through the pipeline
      * for restart. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEvent(com.continuent.tungsten.replicator.event.ReplDBMSHeader)
      */
     public void setLastEvent(ReplDBMSHeader header) throws ExtractorException
@@ -114,19 +113,17 @@ public class InMemoryQueueAdapter implements Extractor, Applier
 
     /**
      * Ignored for now as in-memory queues do not extract. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEventId(java.lang.String)
      */
     public void setLastEventId(String eventId) throws ExtractorException
     {
-        logger
-                .warn("Attempt to set last event ID on queue storage: "
-                        + eventId);
+        logger.warn("Attempt to set last event ID on queue storage: " + eventId);
     }
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException
@@ -135,7 +132,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
 
     /**
      * Connect to underlying queue. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void prepare(PluginContext context) throws ReplicatorException
@@ -158,7 +155,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void release(PluginContext context) throws ReplicatorException
@@ -168,9 +165,9 @@ public class InMemoryQueueAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.applier.Applier#apply(com.continuent.tungsten.replicator.event.ReplDBMSEvent,
-     *      boolean)
+     *
+     * @see com.continuent.tungsten.replicator.applier.Applier#apply(ReplDBMSEvent,
+     *      boolean, boolean)
      */
     public void apply(ReplDBMSEvent event, boolean doCommit, boolean syncTHL)
             throws ApplierException, ConsistencyException, InterruptedException
@@ -180,7 +177,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.Applier#updatePosition(com.continuent.tungsten.replicator.event.ReplDBMSHeader,
      *      boolean, boolean)
      */
@@ -193,7 +190,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
     /**
      * This method is meaningless for an in-memory queue, which is
      * non-transactional. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.Applier#commit()
      */
     public void commit() throws ApplierException, InterruptedException
@@ -203,7 +200,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
     /**
      * This method is meaningless for an in-memory queue, which is
      * non-transactional. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.Applier#rollback()
      */
     public void rollback() throws InterruptedException
@@ -213,7 +210,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
     /**
      * Return the header, which should have been place here by an extractor
      * during restart. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.Applier#getLastEvent()
      */
     public ReplDBMSHeader getLastEvent() throws ApplierException,

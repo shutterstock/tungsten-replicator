@@ -54,14 +54,13 @@ import com.continuent.tungsten.replicator.event.ReplOption;
  * This class defines a THLManagerCtrl that implements a utility to access
  * THLManager methods. See the printHelp() command for a description of current
  * commands.
- * 
+ *
  * @author <a href="mailto:linas.virbalas@continuent.com">Linas Virbalas</a>
  * @version 1.0
  */
 public class THLManagerCtrl
 {
-    private static Logger         logger             = Logger
-                                                             .getLogger(THLManagerCtrl.class);
+    private static Logger         logger             = Logger.getLogger(THLManagerCtrl.class);
     /**
      * Default path to replicator.properties if user not specified other.
      */
@@ -90,7 +89,7 @@ public class THLManagerCtrl
 
     /**
      * Creates a new <code>THLManagerCtrl</code> object.
-     * 
+     *
      * @param configFile Path to the Tungsten properties file.
      * @throws Exception
      */
@@ -139,7 +138,7 @@ public class THLManagerCtrl
 
     /**
      * Connect to the underlying database containing THL.
-     * 
+     *
      * @throws THLException
      */
     public void connect() throws THLException
@@ -159,7 +158,7 @@ public class THLManagerCtrl
 
     /**
      * Queries THL for summary information.
-     * 
+     *
      * @return Info holder
      * @throws THLException
      */
@@ -182,7 +181,7 @@ public class THLManagerCtrl
 
     /**
      * Formats column and column value for printing.
-     * 
+     *
      * @param charset character set name to be used to decode byte arrays in row
      *            replication
      */
@@ -232,7 +231,7 @@ public class THLManagerCtrl
     /**
      * Format and print schema name if it differs from the last printed schema
      * name.
-     * 
+     *
      * @param schema Schema name to print.
      * @param lastSchema Last printed schema name.
      * @param pureSQL If true, use pure SQL output. Formatted form otherwise.
@@ -255,7 +254,7 @@ public class THLManagerCtrl
 
     /**
      * List THL events within the given range.
-     * 
+     *
      * @param low Sequence number specifying the beginning of the range. Leave
      *            null to start from the very beginning of the table.
      * @param high Sequence number specifying the end of the range. Leave null
@@ -297,7 +296,7 @@ public class THLManagerCtrl
 
     /**
      * Prints a formatted header into StringBuilder for the given THLEvent.
-     * 
+     *
      * @param stringBuilder StringBuilder object to append formatted contents
      *            to.
      * @param thlEvent THLEvent to print out.
@@ -312,8 +311,8 @@ public class THLManagerCtrl
         println(stringBuilder, "- TIME = " + thlEvent.getSourceTstamp());
         println(stringBuilder, "- EVENTID = " + thlEvent.getEventId());
         println(stringBuilder, "- SOURCEID = " + thlEvent.getSourceId());
-        println(stringBuilder, "- STATUS = "
-                + THLEvent.statusToString(thlEvent.getStatus()));
+        println(stringBuilder,
+                "- STATUS = " + THLEvent.statusToString(thlEvent.getStatus()));
         if (thlEvent.getComment() != null && thlEvent.getComment().length() > 0)
             println(stringBuilder, "- COMMENTS = " + thlEvent.getComment());
     }
@@ -323,7 +322,7 @@ public class THLManagerCtrl
      * Note that ReplDBMSEvent doesn't contain eventId, thus it is not printed.
      * If you need to print eventId, use
      * {@link #printHeader(StringBuilder, THLEvent)}
-     * 
+     *
      * @param stringBuilder StringBuilder object to append formatted contents
      *            to.
      * @param event ReplDBMSEvent to print out.
@@ -340,7 +339,7 @@ public class THLManagerCtrl
 
     /**
      * Formats and prints ReplDBMSEvent into a given stringBuilder.
-     * 
+     *
      * @param stringBuilder StringBuilder object to append formatted contents
      *            to.
      * @param event ReplDBMSEvent to print out.
@@ -359,8 +358,8 @@ public class THLManagerCtrl
         {
             if (sb.length() > 1)
                 sb.append(";");
-            sb.append(option.getOptionName()).append("=").append(
-                    option.getOptionValue());
+            sb.append(option.getOptionName()).append("=")
+                    .append(option.getOptionValue());
         }
         sb.append("]");
         println(stringBuilder, "- METADATA = " + sb.toString());
@@ -385,10 +384,11 @@ public class THLManagerCtrl
             println(stringBuilder, "## Filtered events ##");
             println(stringBuilder, "From Seqno# " + event.getSeqno()
                     + " / Fragno# " + event.getFragno());
-            println(stringBuilder, "To Seqno# "
-                    + ((ReplDBMSFilteredEvent) event).getSeqnoEnd()
-                    + " / Fragno# "
-                    + ((ReplDBMSFilteredEvent) event).getFragnoEnd());
+            println(stringBuilder,
+                    "To Seqno# "
+                            + ((ReplDBMSFilteredEvent) event).getSeqnoEnd()
+                            + " / Fragno# "
+                            + ((ReplDBMSFilteredEvent) event).getFragnoEnd());
             return;
         }
 
@@ -415,7 +415,7 @@ public class THLManagerCtrl
                 lastSchema = printRowIdData(stringBuilder, rowid, lastSchema,
                         pureSQL, i);
             }
-            else if(dataElem instanceof LoadDataFileFragment)
+            else if (dataElem instanceof LoadDataFileFragment)
             {
                 LoadDataFileFragment loadDataFileFragment = (LoadDataFileFragment) dataElem;
                 String schema = loadDataFileFragment.getDefaultSchema();
@@ -432,7 +432,7 @@ public class THLManagerCtrl
 
     /**
      * Prints RowIdData event.
-     * 
+     *
      * @param rowid RowidIdData object to format and print.
      * @param lastSchema Last printed schema name.
      * @param pureSQL If true, use pure SQL output. Formatted form otherwise.
@@ -457,7 +457,7 @@ public class THLManagerCtrl
 
     /**
      * Prints StatementData event.
-     * 
+     *
      * @param statement StatementData object to format and print.
      * @param lastSchema Last printed schema name.
      * @param pureSQL If true, use pure SQL output. Formatted form otherwise.
@@ -473,9 +473,9 @@ public class THLManagerCtrl
         printSchema(schema, lastSchema, pureSQL);
         printOptions(stringBuilder, statement);
         String query = statement.getQuery();
-        
-        if (query == null) 
-            query=new String(statement.getQueryAsBytes());
+
+        if (query == null)
+            query = new String(statement.getQueryAsBytes());
 
         // Output actual DML/DDL statement.
         if (pureSQL)
@@ -484,8 +484,7 @@ public class THLManagerCtrl
         }
         else
         {
-            println(stringBuilder, "- SQL(" + sqlIndex + ") = "
-                    + query);
+            println(stringBuilder, "- SQL(" + sqlIndex + ") = " + query);
         }
         return schema;
     }
@@ -499,7 +498,7 @@ public class THLManagerCtrl
 
     /**
      * Prints RowChangeData event.
-     * 
+     *
      * @param rowChange RowChangeData object to format and print.
      * @param lastSchema Last printed schema name.
      * @param pureSQL If true, use pure SQL output. Formatted form otherwise.
@@ -528,8 +527,8 @@ public class THLManagerCtrl
             {
                 println(stringBuilder, " - ACTION = "
                         + oneRowChange.getAction().toString());
-                println(stringBuilder, " - TABLE = "
-                        + oneRowChange.getTableName());
+                println(stringBuilder,
+                        " - TABLE = " + oneRowChange.getTableName());
                 ArrayList<OneRowChange.ColumnSpec> keys = oneRowChange
                         .getKeySpec();
                 ArrayList<OneRowChange.ColumnSpec> columns = oneRowChange
@@ -551,8 +550,8 @@ public class THLManagerCtrl
                             ArrayList<OneRowChange.ColumnVal> values = columnValues
                                     .get(row);
                             OneRowChange.ColumnVal value = values.get(c);
-                            println(stringBuilder, formatColumn(colSpec, value,
-                                    "COL", charset));
+                            println(stringBuilder,
+                                    formatColumn(colSpec, value, "COL", charset));
                         }
                     }
                     // Print key values.
@@ -564,8 +563,8 @@ public class THLManagerCtrl
                             ArrayList<OneRowChange.ColumnVal> values = keyValues
                                     .get(row);
                             OneRowChange.ColumnVal value = values.get(k);
-                            println(stringBuilder, formatColumn(colSpec, value,
-                                    "KEY", charset));
+                            println(stringBuilder,
+                                    formatColumn(colSpec, value, "KEY", charset));
                         }
                     }
                 }
@@ -576,7 +575,7 @@ public class THLManagerCtrl
 
     /**
      * Formats the given SQL statement into an ANSI compatible form.
-     * 
+     *
      * @param sql
      * @return Formatted SQL statement.
      */
@@ -590,7 +589,7 @@ public class THLManagerCtrl
 
     /**
      * Purge THL events in the given seqno interval.
-     * 
+     *
      * @param low Sequence number specifying the beginning of the range. Leave
      *            null to start from the very beginning of the table.
      * @param high Sequence number specifying the end of the range. Leave null
@@ -613,7 +612,7 @@ public class THLManagerCtrl
 
     /**
      * Mark THL events in the given seqno interval as skipped.
-     * 
+     *
      * @param low Sequence number specifying the beginning of the range. Leave
      *            null to start from the very beginning of the table.
      * @param high Sequence number specifying the end of the range. Leave null
@@ -670,7 +669,7 @@ public class THLManagerCtrl
 
     /**
      * Main method to run utility.
-     * 
+     *
      * @param argv optional command string
      */
     public static void main(String argv[])
@@ -899,7 +898,7 @@ public class THLManagerCtrl
     /**
      * Appends a message to a given stringBuilder, adds a newline character at
      * the end.
-     * 
+     *
      * @param msg String to print.
      * @param stringBuilder StringBuilder object to add a message to.
      */
@@ -911,7 +910,7 @@ public class THLManagerCtrl
 
     /**
      * Print a message to stdout with trailing new line character.
-     * 
+     *
      * @param msg
      */
     protected static void println(String msg)
@@ -921,7 +920,7 @@ public class THLManagerCtrl
 
     /**
      * Print a message to stdout without trailing new line character.
-     * 
+     *
      * @param msg
      */
     protected static void print(String msg)
@@ -931,7 +930,7 @@ public class THLManagerCtrl
 
     /**
      * Abort following a fatal error.
-     * 
+     *
      * @param msg
      * @param t
      */
@@ -942,9 +941,9 @@ public class THLManagerCtrl
             t.printStackTrace();
         fail();
     }
-    
+
     /**
-     * Exit with a process failure code.  
+     * Exit with a process failure code.
      */
     protected static void fail()
     {
@@ -952,7 +951,7 @@ public class THLManagerCtrl
     }
 
     /**
-     * Exit with a process success code.  
+     * Exit with a process success code.
      */
     protected static void succeed()
     {
@@ -961,7 +960,7 @@ public class THLManagerCtrl
 
     /**
      * Reads a character from stdin, blocks until it is not received.
-     * 
+     *
      * @return true if use pressed `y`, false otherwise.
      */
     protected static boolean readYes() throws IOException
@@ -971,9 +970,10 @@ public class THLManagerCtrl
 
     /**
      * Returns a value of a given Boolean object or false if the object is null.
-     * 
+     *
      * @param bool Boolean object to check and return.
-     * @return
+     * @return the value of a given Boolean object or false if the object is
+     *         null.
      */
     protected static boolean getBoolOrFalse(Boolean bool)
     {
@@ -985,8 +985,8 @@ public class THLManagerCtrl
 
     /**
      * This class holds elements returned by the info query.
-     * 
-     * @see {@link com.continuent.tungsten.replicator.thl.THLManagerCtrl#getInfo()}
+     *
+     * @see com.continuent.tungsten.replicator.thl.THLManagerCtrl#getInfo()
      */
     public static class InfoHolder
     {

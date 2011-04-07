@@ -49,14 +49,13 @@ import com.continuent.tungsten.replicator.storage.Store;
  * active plugins. The runtime is created at configuration time and is discarded
  * when the replicator goes off-line. The run-time handles basic life cycle
  * management for plug-ins, which are managed through this class.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class ReplicatorRuntime implements PluginContext
 {
-    private static Logger                     logger     = Logger
-                                                                 .getLogger(ReplicatorRuntime.class);
+    private static Logger                     logger          = Logger.getLogger(ReplicatorRuntime.class);
 
     /** Replicator properties. */
     private TungstenProperties                properties;
@@ -68,7 +67,7 @@ public class ReplicatorRuntime implements PluginContext
     private Pipeline                          pipeline;
 
     // Extension classes.
-    private HashMap<String, ReplicatorPlugin> extensions = new HashMap<String, ReplicatorPlugin>();
+    private HashMap<String, ReplicatorPlugin> extensions      = new HashMap<String, ReplicatorPlugin>();
 
     // Context with replicator resources like event dispatcher and JMX server.
     private OpenReplicatorContext             context;
@@ -117,11 +116,11 @@ public class ReplicatorRuntime implements PluginContext
     private boolean                           remoteService;
 
     /** Determines whether to log replicator updates. */
-    private boolean            logSlaveUpdates = false;
+    private boolean                           logSlaveUpdates = false;
 
     /**
      * Creates a new Runtime instance.
-     * 
+     *
      * @param properties Current system properties, which are copied rather than
      *            used directly
      */
@@ -137,7 +136,7 @@ public class ReplicatorRuntime implements PluginContext
     /**
      * Process configuration properties and instantiate/configure all plug-ins.
      * This method must be called before the configuration is usable.
-     * 
+     *
      * @throws ReplicatorException Thrown if configuration fails
      */
     public void configure() throws ReplicatorException
@@ -340,11 +339,12 @@ public class ReplicatorRuntime implements PluginContext
         }
         else
         {
-            throw new ReplicatorException("Valid values for "
-                    + ReplicatorConf.APPLIER_FAILURE_POLICY
-                    + " are either 'stop' or 'skip'. Found: "
-                    + properties
-                            .getString(ReplicatorConf.APPLIER_FAILURE_POLICY));
+            throw new ReplicatorException(
+                    "Valid values for "
+                            + ReplicatorConf.APPLIER_FAILURE_POLICY
+                            + " are either 'stop' or 'skip'. Found: "
+                            + properties
+                                    .getString(ReplicatorConf.APPLIER_FAILURE_POLICY));
 
         }
 
@@ -364,7 +364,7 @@ public class ReplicatorRuntime implements PluginContext
                 .getStringList(ReplicatorConf.EXTENSIONS);
         for (String extensionName : extensionNames)
         {
-            ReplicatorPlugin extension = (ReplicatorPlugin) loadAndConfigurePlugin(
+            ReplicatorPlugin extension = loadAndConfigurePlugin(
                     ReplicatorConf.EXTENSION_ROOT, extensionName);
             configurePlugin(extension, this);
             extensions.put(extensionName, extension);
@@ -496,9 +496,10 @@ public class ReplicatorRuntime implements PluginContext
         }
         catch (InterruptedException e)
         {
-            // We are not really ready to handle an interruption in a 
-            // civilized way so we just die. 
-            throw new ReplicatorException("Pipeline configuration was interrupted");
+            // We are not really ready to handle an interruption in a
+            // civilized way so we just die.
+            throw new ReplicatorException(
+                    "Pipeline configuration was interrupted");
         }
         pipeline = newPipeline;
     }
@@ -510,9 +511,7 @@ public class ReplicatorRuntime implements PluginContext
     {
         for (String extensionName : extensions.keySet())
         {
-            logger
-                    .info("Preparing extension service for use: "
-                            + extensionName);
+            logger.info("Preparing extension service for use: " + extensionName);
             extensions.get(extensionName).prepare(this);
         }
         logger.info("Preparing pipeline for use: " + pipeline.getName());
@@ -666,7 +665,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#isConsistencyFailureStop()
      */
     public boolean isConsistencyFailureStop()
@@ -676,7 +675,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#isConsistencyCheckColumnNames()
      */
     public boolean isConsistencyCheckColumnNames()
@@ -686,7 +685,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#isConsistencyCheckColumnTypes()
      */
     public boolean isConsistencyCheckColumnTypes()
@@ -696,7 +695,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#isDoChecksum()
      */
     public boolean isDoChecksum()
@@ -706,15 +705,15 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getJdbcUrl(java.lang.String)
      */
     public String getJdbcUrl(String database)
     {
         // Get the JDBC URL for this data source and subst
         Properties jProps = new Properties();
-        jProps.setProperty("URL", properties
-                .getString(ReplicatorConf.RESOURCE_JDBC_URL));
+        jProps.setProperty("URL",
+                properties.getString(ReplicatorConf.RESOURCE_JDBC_URL));
         if (database == null)
             jProps.setProperty("DBNAME", this.getReplicatorSchemaName());
         else
@@ -725,7 +724,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getJdbcUser()
      */
     public String getJdbcUser()
@@ -735,7 +734,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getJdbcPassword()
      */
     public String getJdbcPassword()
@@ -745,7 +744,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getReplicatorSchemaName()
      */
     public String getReplicatorSchemaName()
@@ -755,7 +754,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getRoleName()
      */
     public String getRoleName()
@@ -765,7 +764,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getSourceId()
      */
     public String getSourceId()
@@ -775,7 +774,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getClusterName()
      */
     public String getClusterName()
@@ -785,7 +784,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getServiceName()
      */
     public String getServiceName()
@@ -795,7 +794,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#isSlave()
      */
     public boolean isSlave()
@@ -805,7 +804,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#isMaster()
      */
     public boolean isMaster()
@@ -815,7 +814,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#isAutoEnable()
      */
     public boolean isAutoEnable()
@@ -825,7 +824,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getStore(java.lang.String)
      */
     public Store getStore(String name)
@@ -835,7 +834,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getStores()
      */
     public List<Store> getStores()
@@ -848,7 +847,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getEventDispatcher()
      */
     public EventDispatcher getEventDispatcher()
@@ -858,7 +857,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#isRemoteService()
      */
     public boolean isRemoteService()
@@ -874,7 +873,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getApplierFailurePolicy()
      */
     public FailurePolicy getApplierFailurePolicy()
@@ -884,7 +883,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getExtractorFailurePolicy()
      */
     public FailurePolicy getExtractorFailurePolicy()
@@ -916,7 +915,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getExtension(java.lang.String)
      */
     public ReplicatorPlugin getExtension(String name)
@@ -926,7 +925,7 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getExtensionNames()
      */
     public List<String> getExtensionNames()
@@ -936,9 +935,9 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.plugin.PluginContext#registerMBean(java.lang.Object,
-     *      java.lang.String)
+     *
+     * @see com.continuent.tungsten.replicator.plugin.PluginContext#registerMBean(Object,
+     *      Class, String) java.lang.String)
      */
     public void registerMBean(Object mbean, Class<?> mbeanClass, String name)
     {
@@ -1024,11 +1023,11 @@ public class ReplicatorRuntime implements PluginContext
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#logReplicatorUpdates()
      */
     public boolean logReplicatorUpdates()
     {
-        return (logSlaveUpdates && ! isMaster());
+        return (logSlaveUpdates && !isMaster());
     }
 }

@@ -24,7 +24,7 @@ package com.continuent.tungsten.replicator.pipeline;
 
 /**
  * Tracks statistics for an individual shard, which is identified by a shard ID.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -39,7 +39,7 @@ public class ShardProgress
 
     /**
      * Defines a new task progress tracker for the given shard
-     * 
+     *
      * @param shardId ID of the shard
      * @param stageName Name of stage that processes this shard
      * @param taskId Task ID number
@@ -109,7 +109,7 @@ public class ShardProgress
     public double getApplyLatencySeconds()
     {
         long applyLatencyMillis = getApplyLatencyMillis();
-        return (double) (applyLatencyMillis / 1000.0);
+        return applyLatencyMillis / 1000.0;
     }
 
     public void setApplyLatencyMillis(long applyLatencyMillis)

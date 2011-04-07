@@ -38,7 +38,7 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 /**
  * Implements Extractor and Applier interface for a transaction history log
  * (THL).
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -71,7 +71,7 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException
@@ -81,7 +81,7 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * Connect to underlying queue. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void prepare(PluginContext context) throws ReplicatorException
@@ -105,7 +105,7 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void release(PluginContext context) throws ReplicatorException
@@ -115,7 +115,7 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#extract()
      */
     public ReplDBMSEvent extract() throws ExtractorException,
@@ -167,7 +167,7 @@ public class THLStoreAdapter implements Extractor, Applier
     /**
      * Return the event ID for a flush; does not make sense for a store.
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#getCurrentResourceEventId()
      */
     public String getCurrentResourceEventId() throws ExtractorException,
@@ -178,7 +178,7 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * Returns true if the queue has more events. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#hasMoreEvents()
      */
     public boolean hasMoreEvents()
@@ -189,7 +189,7 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * Stores the last event we have processed. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEvent(com.continuent.tungsten.replicator.event.ReplDBMSHeader)
      */
     public void setLastEvent(ReplDBMSHeader event) throws ExtractorException
@@ -220,7 +220,7 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * Ignored for now as stores do not extract. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEventId(java.lang.String)
      */
     public void setLastEventId(String eventId) throws ExtractorException
@@ -230,9 +230,9 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.applier.Applier#apply(com.continuent.tungsten.replicator.event.ReplDBMSEvent,
-     *      boolean)
+     *
+     * @see com.continuent.tungsten.replicator.applier.Applier#apply(ReplDBMSEvent,
+     *      boolean, boolean)
      */
     public void apply(ReplDBMSEvent event, boolean doCommit, boolean syncTHL)
             throws ApplierException, InterruptedException
@@ -249,19 +249,19 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.Applier#updatePosition(com.continuent.tungsten.replicator.event.ReplDBMSHeader,
      *      boolean, boolean)
      */
     public void updatePosition(ReplDBMSHeader header, boolean doCommit,
             boolean syncTHL) throws ReplicatorException, InterruptedException
     {
-        // This call does not mean anything for a store adapter. 
+        // This call does not mean anything for a store adapter.
     }
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.Applier#commit()
      */
     public void commit() throws ApplierException, InterruptedException
@@ -271,7 +271,7 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.Applier#rollback()
      */
     public void rollback() throws InterruptedException
@@ -281,7 +281,7 @@ public class THLStoreAdapter implements Extractor, Applier
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.applier.Applier#getLastEvent()
      */
     public ReplDBMSHeader getLastEvent() throws ApplierException,
@@ -313,9 +313,9 @@ public class THLStoreAdapter implements Extractor, Applier
             try
             {
                 ReplDBMSEvent event = thl.fetchEvent(seqno, fragno, false);
-                return new ReplDBMSHeaderData(seqno, fragno, true, event
-                        .getSourceId(), event.getEpochNumber(), event
-                        .getEventId());
+                return new ReplDBMSHeaderData(seqno, fragno, true,
+                        event.getSourceId(), event.getEpochNumber(),
+                        event.getEventId());
             }
             catch (ReplicatorException e)
             {

@@ -37,14 +37,13 @@ import com.continuent.tungsten.replicator.dbms.OneRowChange;
 
 /**
  * Defines an interface to the Oracle database
- * 
+ *
  * @author <a href="mailto:scott.martin@continuent.com">Scott Martin</a>
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
  */
 public class OracleDatabase extends AbstractDatabase
 {
-    private static Logger             logger = Logger
-                                                     .getLogger(OracleDatabase.class);
+    private static Logger             logger = Logger.getLogger(OracleDatabase.class);
     private Hashtable<Integer, Table> tablesCache;
 
     public OracleDatabase()
@@ -59,7 +58,7 @@ public class OracleDatabase extends AbstractDatabase
      * In Oracle, to support timestamp with local time zone replication we need
      * to set the session level time zone to be the same as the database time
      * zone. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#getSqlNameMatcher()
      */
     @Override
@@ -74,7 +73,7 @@ public class OracleDatabase extends AbstractDatabase
      * In Oracle, to support timestamp with local time zone replication we need
      * to set the session level time zone to be the same as the database time
      * zone. {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#connect(boolean)
      */
     @Override
@@ -105,7 +104,8 @@ public class OracleDatabase extends AbstractDatabase
         }
     }
 
-    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue, String typeDesc)
+    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue,
+            String typeDesc)
     {
         if (col.getType() == AdditionalTypes.XML)
         {
@@ -402,7 +402,7 @@ public class OracleDatabase extends AbstractDatabase
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#findTable(int,
      *      java.lang.String)
      */
@@ -413,7 +413,7 @@ public class OracleDatabase extends AbstractDatabase
         StringBuffer sb = new StringBuffer();
 
         // Check if the table already exists in the table cache
-        t = (Table) tablesCache.get(Integer.valueOf(tableID));
+        t = tablesCache.get(Integer.valueOf(tableID));
         if (t != null && t.getSCN() != null && t.getSCN().equals(scn))
         {
             // Cache hit
@@ -436,13 +436,12 @@ public class OracleDatabase extends AbstractDatabase
                 }
                 else
                 {
-                    logger
-                            .debug("Table "
-                                    + tableID
-                                    + "@"
-                                    + scn
-                                    + " not found in cache, replacing old table definition ("
-                                    + tableID + "@" + t.getSCN() + ")");
+                    logger.debug("Table "
+                            + tableID
+                            + "@"
+                            + scn
+                            + " not found in cache, replacing old table definition ("
+                            + tableID + "@" + t.getSCN() + ")");
                 }
             }
             t = null;
@@ -487,8 +486,8 @@ public class OracleDatabase extends AbstractDatabase
                             + res.getString(4) + " : "
                             + nativeTypeToJavaSQLType(res.getInt(5)));
                 }
-                c = new Column(res.getString(4), nativeTypeToJavaSQLType(res
-                        .getInt(5)));
+                c = new Column(res.getString(4),
+                        nativeTypeToJavaSQLType(res.getInt(5)));
 
                 t.AddColumn(c);
             }

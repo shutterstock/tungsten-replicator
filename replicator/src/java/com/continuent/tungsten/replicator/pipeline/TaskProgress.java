@@ -26,7 +26,7 @@ import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 
 /**
  * Tracks statistics for an individual task, which is identified by a task ID.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -48,7 +48,7 @@ public class TaskProgress
 
     /**
      * Defines a new task progress tracker for the given task ID.
-     * 
+     *
      * @param stageName Name of stage to which task belongs
      * @param taskId Task ID number
      */
@@ -149,7 +149,7 @@ public class TaskProgress
     public double getApplyLatencySeconds()
     {
         long applyLatencyMillis = getApplyLatencyMillis();
-        return (double) (applyLatencyMillis / 1000.0);
+        return applyLatencyMillis / 1000.0;
     }
 
     public void setApplyLatencyMillis(long applyLatencyMillis)
@@ -172,7 +172,7 @@ public class TaskProgress
     /** Return extract time in seconds. */
     public double getTotalExtractSeconds()
     {
-        return (double) (getTotalExtractMillis() / 1000.0);
+        return getTotalExtractMillis() / 1000.0;
     }
 
     /** Add time for an extract operation interval. */
@@ -190,7 +190,7 @@ public class TaskProgress
     /** Return filter time in seconds. */
     public double getTotalFilterSeconds()
     {
-        return (double) (getTotalFilterMillis() / 1000.0);
+        return getTotalFilterMillis() / 1000.0;
     }
 
     /** Add time for a filter operation interval. */
@@ -208,7 +208,7 @@ public class TaskProgress
     /** Return apply time in seconds. */
     public double getTotalApplySeconds()
     {
-        return (double) (getTotalApplyMillis() / 1000.0);
+        return getTotalApplyMillis() / 1000.0;
     }
 
     /** Add time for an apply operation interval. */
@@ -228,7 +228,7 @@ public class TaskProgress
     /** Return other time in seconds. */
     public double getTotalOtherSeconds()
     {
-        return (double) (getTotalOtherMillis() / 1000.0);
+        return getTotalOtherMillis() / 1000.0;
     }
 
     /**

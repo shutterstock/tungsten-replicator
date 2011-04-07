@@ -30,7 +30,7 @@ import com.continuent.tungsten.replicator.thl.SkippedEvent;
 /**
  * Defines a basic schedule implementation that tracks watches on events and
  * task termination logic.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -41,7 +41,7 @@ public class SimpleSchedule implements Schedule
 
     /**
      * Creates a new schedule instance.
-     * 
+     *
      * @param stage Stage to which this applies.
      */
     public SimpleSchedule(Stage stage, SingleThreadStageTask task)
@@ -52,8 +52,8 @@ public class SimpleSchedule implements Schedule
 
     /**
      * {@inheritDoc}
-     * @throws InterruptedException 
-     * 
+     *
+     * @throws InterruptedException
      * @see com.continuent.tungsten.replicator.pipeline.Schedule#advise(com.continuent.tungsten.replicator.event.ReplEvent)
      */
     public int advise(ReplEvent replEvent) throws InterruptedException
@@ -77,7 +77,8 @@ public class SimpleSchedule implements Schedule
             else if (controlEvent.getEventType() == ReplControlEvent.SYNC)
             {
                 ReplDBMSEvent syncEvent = controlEvent.getEvent();
-                stage.getProgressTracker().setLastProcessedEvent(task.getTaskId(), syncEvent);
+                stage.getProgressTracker().setLastProcessedEvent(
+                        task.getTaskId(), syncEvent);
                 return CONTINUE_NEXT;
             }
             else
@@ -91,7 +92,7 @@ public class SimpleSchedule implements Schedule
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.pipeline.Schedule#isCancelled()
      */
     public synchronized boolean isCancelled()
@@ -101,7 +102,7 @@ public class SimpleSchedule implements Schedule
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.pipeline.Schedule#setLastProcessedEvent(com.continuent.tungsten.replicator.event.ReplDBMSEvent)
      */
     public synchronized void setLastProcessedEvent(ReplDBMSEvent event)
@@ -113,7 +114,7 @@ public class SimpleSchedule implements Schedule
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @see com.continuent.tungsten.replicator.pipeline.Schedule#taskEnd()
      */
     public synchronized void taskEnd()
@@ -122,9 +123,9 @@ public class SimpleSchedule implements Schedule
     }
 
     /**
-     * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.pipeline.Schedule#skip(com.continuent.tungsten.replicator.event.ReplDBMSEvent)
+     * Skips the given event
+     *
+     * @see StageProgressTracker#skip(ReplDBMSEvent)
      */
     public synchronized boolean skip(ReplDBMSEvent event)
             throws InterruptedException

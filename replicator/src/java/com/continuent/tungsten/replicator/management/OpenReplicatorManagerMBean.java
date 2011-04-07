@@ -31,57 +31,65 @@ import com.continuent.tungsten.commons.jmx.DynamicMBeanHelper;
 /**
  * Replicator Manager MBean interface definition. This contains all replicator
  * management functions.
- * 
+ *
  * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
  * @version 1.0
  */
 public interface OpenReplicatorManagerMBean
 {
     /**
-     * Returns true so that clients can confirm connection liveness. 
+     * Returns true so that clients can confirm connection liveness.
+     *
+     * @return true if the service is up and running, false otherwise
      */
     public boolean isAlive();
 
     /**
      * Gets the site name for this replication service
-     * 
-     * @return
+     *
+     * @return the site name as a string
      */
     public String getSiteName();
 
     /**
      * Gets the cluster name for this replication service
-     * 
-     * @return
+     *
+     * @return the cluster name as a string
      */
     public String getClusterName();
 
     /**
      * Gets the service name for this replication service
-     * 
-     * @return
+     *
+     * @return the service name as a string
      */
     public String getServiceName();
 
     /**
      * Gets the simple name for this replication service
-     * 
-     * @return
+     *
+     * @return the simple name of this service as a string
      */
     public String getSimpleServiceName();
 
     /**
      * Returns the replicator product version.
+     *
+     * @return the version number as a string
      */
     public String getVersion();
 
     /**
      * Returns current instance unique source identifier.
+     *
+     * @return the source identifier as a string
      */
     public String getSourceId();
 
     /**
      * Returns the current replicator role.
+     *
+     * @return the role as a string
      */
     public String getRole();
 
@@ -120,7 +128,7 @@ public interface OpenReplicatorManagerMBean
     /**
      * Returns the highest applied sequence number in the local transaction
      * history log or -1 if log is not operating.
-     * 
+     *
      * @throws Exception
      */
     public String getMaxSeqNo() throws Exception;
@@ -128,7 +136,7 @@ public interface OpenReplicatorManagerMBean
     /**
      * Returns the lowest sequence number in the local transaction history log
      * or -1 if log is not operating.
-     * 
+     *
      * @throws Exception
      */
     public String getMinSeqNo() throws Exception;
@@ -136,7 +144,7 @@ public interface OpenReplicatorManagerMBean
     /**
      * Returns the lowest and the highest sequence numbers in the local
      * transaction history log or -1 if log is not operating.
-     * 
+     *
      * @throws Exception
      */
     public String[] getMinMaxSeqNo() throws Exception;
@@ -177,7 +185,7 @@ public interface OpenReplicatorManagerMBean
      * it may be some time before the replicator actually reaches the online
      * state. Use the {@link #waitForState(String, long)} call to wait
      * synchronously for the replicator to go fully online.
-     * 
+     *
      * @param controlParams 0 or more control parameters expressed as name-value
      *            pairs
      * @throws Exception
@@ -187,7 +195,7 @@ public interface OpenReplicatorManagerMBean
     /**
      * Puts the replicator into the online state using defaults for all control
      * parameters.
-     * 
+     *
      * @throws Exception
      */
     public void online() throws Exception;
@@ -213,7 +221,7 @@ public interface OpenReplicatorManagerMBean
      * <td>Go offline at the indicated sequence number</td>
      * <td>None</td> </tr> </tbody>
      * </table>
-     * 
+     *
      * @param controlParams 0 or more control parameters expressed as name-value
      *            pairs
      * @throws Exception
@@ -225,7 +233,7 @@ public interface OpenReplicatorManagerMBean
      * Puts the replicator into the offline state immediately, returning once
      * the replicator is offline. The replicator must be in the ONLINE or
      * GOING-ONLINE state for this call to be processed.
-     * 
+     *
      * @throws Exception
      */
     public void offline() throws Exception;
@@ -236,7 +244,7 @@ public interface OpenReplicatorManagerMBean
      * log at the point where the database is synchronized. The replicator must
      * be in the ONLINE:MASTER state for this call to be processed. This call is
      * used to implement safe failover.
-     * 
+     *
      * @param timeout Number of seconds to wait. 0 is indefinite.
      * @return The sequence number at which the log is synchronized
      * @throws Exception Thrown if we timeout or are canceled
@@ -251,7 +259,7 @@ public interface OpenReplicatorManagerMBean
 
     /**
      * Returns the detailed, current status information from the replicator.
-     * 
+     *
      * @return detailed status information as a TungstenProperties instance
      * @throws Exception
      */
@@ -259,7 +267,7 @@ public interface OpenReplicatorManagerMBean
 
     /**
      * Returns a list of status instances for a particular list of items.
-     * 
+     *
      * @param name Name of the status list. 'tasks' is supported by the native
      *            Tungsten replicator plugin.
      * @return List of TungstenProperties instances containing task status
@@ -269,7 +277,7 @@ public interface OpenReplicatorManagerMBean
 
     /**
      * Stops the OpenReplicatorManager
-     * 
+     *
      * @throws Exception
      */
     public void stop() throws Exception;
@@ -279,7 +287,7 @@ public interface OpenReplicatorManagerMBean
      * OFFLINE state. If the map instance is null the Replicator will read its
      * own properties file, whose location is defined by the System property
      * named "replicator.properties."
-     * 
+     *
      * @param props A map instance or null to reread local file
      * @throws Exception
      */
@@ -289,7 +297,7 @@ public interface OpenReplicatorManagerMBean
      * Inserts a heartbeat event into the replicator transaction history. The
      * replicator manager must be in the MASTER state for this call to be
      * successful.
-     * 
+     *
      * @param props A map instance containing heartbeat parameters
      */
     public void heartbeat(Map<String, String> props) throws Exception;
@@ -299,7 +307,7 @@ public interface OpenReplicatorManagerMBean
      * wait time is configurable so that callers do not wait indefinitely. The
      * wait will terminate automatically with an exception if the replicator
      * goes into the error state (unless that is what you are waiting for).
-     * 
+     *
      * @param state Name of state on which to wait. This can be a parent state
      *            name--"OFFLINE" will also detect "OFFLINE:NORMAL" and
      *            "OFFLINE:ERROR".
@@ -312,7 +320,7 @@ public interface OpenReplicatorManagerMBean
 
     /**
      * Wait for a particular event to be applied on the slave.
-     * 
+     *
      * @param sequenceNo Id of the event to wait for
      * @param timeout Number of seconds to wait. 0 is indefinite.
      * @return true if requested sequence number or greater applied, else false
@@ -324,7 +332,7 @@ public interface OpenReplicatorManagerMBean
 
     /**
      * Initiates consistency check transaction on a given table.
-     * 
+     *
      * @param method consistency check method to use
      * @param schemaName name of the table schema
      * @param tableName name of the table, if null all tables in schema are
@@ -341,7 +349,7 @@ public interface OpenReplicatorManagerMBean
     /**
      * Spawns a backup of the database and optionally waits for completion. This
      * command can only be run in the off-line state.
-     * 
+     *
      * @param backupAgentName Name of the backup agent to use or null to use the
      *            default backup
      * @param storageAgentName Name of the storage agent to use or null to use
@@ -358,7 +366,7 @@ public interface OpenReplicatorManagerMBean
     /**
      * Spawns a restore of the database and optionally waits for completion.
      * This command can only be run in the off-line state.
-     * 
+     *
      * @param uri URI of the backup to load
      * @param timeout Number of seconds to wait. 0 is indefinite, negative means
      *            no wait.
@@ -371,7 +379,7 @@ public interface OpenReplicatorManagerMBean
     /**
      * Provisions a database from another copy and optionally waits for
      * completion. This command can only be run from the off-line state.
-     * 
+     *
      * @param donorUri URI of donor replicator
      * @param timeout Number of seconds to wait. 0 is indefinite, negative means
      *            no wait.
@@ -387,7 +395,7 @@ public interface OpenReplicatorManagerMBean
      * must be in the START state. This call is not necessary in a correctly
      * configured replicator. It may be used to attempt to start a replicator
      * that has failed on initial start-up.
-     * 
+     *
      * @throws Exception
      */
     public void start() throws Exception;
@@ -401,7 +409,7 @@ public interface OpenReplicatorManagerMBean
     /**
      * Clears all dynamic properties. The replicator must be in the OFFLINE
      * state when this call is issued.
-     * 
+     *
      * @throws Exception
      */
     public void clearDynamicProperties() throws Exception;
@@ -409,7 +417,7 @@ public interface OpenReplicatorManagerMBean
     /**
      * Sets replicator role. Not all replicators support all roles; check other
      * documentation for details.
-     * 
+     *
      * @param role The new replicator role; must be 'slave', 'master', or
      *            'standby'
      * @param uri Optional uri to identify master or slave.
@@ -435,7 +443,7 @@ public interface OpenReplicatorManagerMBean
      * Notification signaling methods. These sends a notification to the
      * replicator manager. These methods are used by replicator providers, which
      * need to signal of underlying state changes.
-     * 
+     *
      * @param signal one of signal* strings listed in this interface
      * @param msg additional message passed along the signal
      * @throws Exception

@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s): 
+ * Contributor(s):
  */
 
 package com.continuent.tungsten.replicator.management;
@@ -30,7 +30,7 @@ import com.continuent.tungsten.commons.jmx.DynamicMBeanHelper;
 
 /**
  * Management interface for main replicator control class.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -48,15 +48,14 @@ public interface ReplicationServiceManagerMBean
 
     /**
      * Returns status information.
-     * 
-     * @return
+     *
      * @throws Exception
      */
     public TungstenProperties status() throws Exception;
 
     /**
      * Starts a replication service.
-     * 
+     *
      * @param name Name of the replicator service
      * @return True if replicator service exists and was started
      * @throws Exception Thrown if service start-up fails
@@ -65,7 +64,7 @@ public interface ReplicationServiceManagerMBean
 
     /**
      * Stops a replication service.
-     * 
+     *
      * @param name Name of the replicator service
      * @return True if replicator service exists and was stopped
      * @throws Exception Thrown if service stop fails
@@ -74,7 +73,7 @@ public interface ReplicationServiceManagerMBean
 
     /**
      * Resets a replication service.
-     * 
+     *
      * @param name Name of the replicator service
      * @return Map of strings that indicate actions taken.
      * @throws Exception Thrown if service stop fails
@@ -89,15 +88,14 @@ public interface ReplicationServiceManagerMBean
 
     /**
      * Returns a map of status properties for all current replicators
-     * 
-     * @return
+     *
      * @throws Exception
      */
     public TungstenProperties getStatus() throws Exception;
 
     /**
      * Stops all replication services and exits the process cleanly.
-     * 
+     *
      * @throws Exception Thrown if service stop fails
      */
     public void stop() throws Exception;
