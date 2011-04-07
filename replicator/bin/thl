@@ -11,7 +11,7 @@
 #   REPLICATOR_RMI_PORT - Port used for JMX administration calls
 
 # THL utility main class. 
-THL_CTRL=com.continuent.tungsten.replicator.thl.THLManagerCtrl
+THL_CTRL=com.continuent.tungsten.enterprise.replicator.thl.EnterpriseTHLManagerCtrl
 
 # Find home. 
 RPBIN=`dirname $0`
