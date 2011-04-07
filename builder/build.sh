@@ -9,7 +9,7 @@
 #   This script performs a full build of the replicator and all its
 #   dependencies, plus bristlecone tool.
 #   It checks out and builds all components: replicator, commons, fsm and
-#   replicator-extra. 
+#   replicator-extra.
 #
 #   Before building you should review properties in the 'config' file. If
 #   you need to override them, do so in config.local (which is svn:ignored)
@@ -279,7 +279,7 @@ replicator_wrapper_conf=$reldir_replicator/conf/wrapper.conf
 echo "### Replicator: pointing to centralized Java Service Wrapper binaries"
 cp $extra_replicator/conf/wrapper.conf $reldir_replicator/conf
 
-# Following corrupts the wrapper.conf file.  
+# Following corrupts the wrapper.conf file.
 #${SED_DASH_I} 's/^wrapper.java.classpath.1.*/wrapper.java.classpath.1=..\/..\/tungsten-replicator\/lib\/*.jar/' ${replicator_wrapper_conf}
 #${SED_DASH_I} 's/^wrapper.java.classpath.2.*/wrapper.java.classpath.2=..\/..\/tungsten-replicator\/conf/' ${replicator_wrapper_conf}
 #${SED_DASH_I} 's/^wrapper.java.classpath.3.*/wrapper.java.classpath.3=..\/lib\/wrapper*.jar\
@@ -397,12 +397,16 @@ find ${reldir} \( -name '.svn' -a -type d -o -name "*$SEDBAK_EXT" \) -exec \rm -
 ##########################################################################
 # Generate tar file.
 ##########################################################################
-rel_tgz=${relname}.tar.gz
+if [ -z $BUILD_NUMBER ]; then
+  rel_tgz=${relname}.tar.gz
+else
+  rel_tgz=${relname}-${BUILD_NUMBER}.tar.gz
+fi
 echo "### Creating tar file: ${rel_tgz}"
 (cd ${reldir}/..; tar -czf ${rel_tgz} ${relname})
 
 ##########################################################################
-# Create source build if desired. 
+# Create source build if desired.
 ##########################################################################
 
 if [ "$SKIP_SOURCE" = 0 ]; then
@@ -417,11 +421,16 @@ if [ "$SKIP_SOURCE" = 0 ]; then
 
   echo "### Copying in source files"
   modules_sources_folder=$reldir_src/sources
+  builder_folder=$reldir_src/builder
   mkdir $modules_sources_folder
+  mkdir $builder_folder
   cp -r $SRC_DIR/replicator $modules_sources_folder
   cp -r $SRC_DIR/commons $modules_sources_folder
   cp -r $SRC_DIR/fsm $modules_sources_folder
   cp -r $SRC_DIR/bristlecone $modules_sources_folder
+  cp -r $SRC_DIR/replicator-extra $modules_sources_folder
+  cp -r build.sh config extra $builder_folder/
+  echo "SKIP_CHECKOUT=1" > $builder_folder/config.local
 
   # Clean all copied source trees to keep only necessary files
   echo "### Cleaning-up source folders"
@@ -439,7 +448,11 @@ if [ "$SKIP_SOURCE" = 0 ]; then
   # Use the same manifest as for bin distrib
   cp $manifest $reldir_src/
 
-  rel_src_tgz=${relname}-src.tar.gz
+  if [ -z $BUILD_NUMBER ]; then
+    rel_src_tgz=${relname}-src.tar.gz
+  else
+    rel_src_tgz=${relname}-src-${BUILD_NUMBER}.tar.gz
+  fi
 
   echo "### generating source tar file: ${rel_src_tgz}"
   (cd ${reldir}/..; tar -czf ${rel_src_tgz} ${relname}-src/)
