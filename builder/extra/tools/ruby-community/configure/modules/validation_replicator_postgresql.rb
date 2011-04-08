@@ -23,6 +23,30 @@ class PostgreSQLValidationCheck < ConfigureValidationCheck
   end
 end
 
+class PostgreSQLSystemUserCheck < PostgreSQLValidationCheck
+  def set_vars
+    @title = "PostgreSQL system user check"
+  end
+  
+  def validate
+    login = (ENV['USERNAME'] or ENV['USER'])
+    if login.to_s() != "postgres" and login.to_s() != "enterprisedb" then
+      error("You must extract and configure Tungsten with 
+        the database system user.  This is usually 'postgres' for PostgreSQL 
+        and 'enterprisedb' for EnterpriseDB.  Your 
+        current user is: #{login}.  We recommend you do not use this user.")
+    end
+    
+    if @config.getProperty(GLOBAL_USERID) != "postgres" and 
+        @config.getProperty(GLOBAL_USERID) != "enterprisedb" then
+      error("You must run Tungsten with 
+        the database system user.  This is usually 'postgres' for PostgreSQL 
+        and 'enterprisedb' for EnterpriseDB.  You have specified 
+        #{@config.getProperty(GLOBAL_USERID)}.  We recommend you do not use this user.")
+    end
+  end
+end
+
 class PostgreSQLClientCheck < PostgreSQLValidationCheck
   def set_vars
     @title = "PostgreSQL client check"
@@ -49,14 +73,18 @@ class PostgreSQLLoginCheck < PostgreSQLValidationCheck
   end
   
   def validate
-    @config.getProperty(REPL_HOSTS).split(",").each{
-      |repl_host|
-      login_output = psql("select 'ALIVE' as \\\"Return Value\\\"", nil, nil, repl_host)
-      if login_output =~ /ALIVE/
-        info("PostgreSQL server and login to #{repl_host} is OK")
-      else
-        error("PostgreSQL server on #{repl_host} is unavailable or login does not work")
-      end
+    ClusterConfigureModule.each_service(@config) {
+      |parent_name,service_name,service_properties|
+
+      service_properties[REPL_HOSTS].split(",").each{
+        |repl_host|
+        login_output = psql("select 'ALIVE' as \\\"Return Value\\\"", nil, nil, repl_host)
+        if login_output =~ /ALIVE/
+          info("PostgreSQL server and login to #{repl_host} is OK")
+        else
+          error("PostgreSQL server on #{repl_host} is unavailable or login does not work")
+        end
+      }
     }
   end
 end
@@ -143,14 +171,18 @@ class ConnectorUserPostgreSQLCheck < PostgreSQLValidationCheck
   end
   
   def validate
-    @config.getProperty(REPL_HOSTS).split(",").each{
-      |repl_host|
-      login_output = psql("select 'ALIVE' as \\\"Return Value\\\"", @config.getProperty(CONN_CLIENTLOGIN), @config.getProperty(CONN_CLIENTPASSWORD), repl_host)
-      if login_output =~ /ALIVE/
-        info("PostgreSQL server and connector login to #{repl_host} is OK")
-      else
-        error("PostgreSQL server on #{repl_host} is unavailable or connector login does not work")
-      end
+    ClusterConfigureModule.each_service(@config) {
+      |parent_name,service_name,service_properties|
+
+      service_properties[REPL_HOSTS].split(",").each{
+        |repl_host|
+        login_output = psql("select 'ALIVE' as \\\"Return Value\\\"", @config.getProperty(CONN_CLIENTLOGIN), @config.getProperty(CONN_CLIENTPASSWORD), repl_host)
+        if login_output =~ /ALIVE/
+          info("PostgreSQL server and connector login to #{repl_host} is OK")
+        else
+          error("PostgreSQL server on #{repl_host} is unavailable or connector login does not work")
+        end
+      }
     }
   end
   

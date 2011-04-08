@@ -1,7 +1,35 @@
 class ReplicationServices < ConfigurePrompt
   def initialize
-    super(REPL_SERVICES, "Enter unique names for each replication service",
+    super(REPL_SERVICES, "Enter a comma-delimited list of names for the replication services",
       PV_IDENTIFIER, "default")
+  end
+  
+  def get_prompt
+    if @config.getProperty(GLOBAL_DBMS_TYPE) == DBMS_POSTGRESQL
+      "Enter a name for the replication service"
+    else
+      "Enter a comma-delimited list of names for the replication services"
+    end
+  end
+  
+  def get_description
+    if @config.getProperty(GLOBAL_DBMS_TYPE) == DBMS_POSTGRESQL
+      "Replication services are the pipeline for replicating data between hosts.  Tungsten Replicator for PostgreSQL supports a single replication service for master-slave replication between PostgreSQL hosts."
+    else
+      "Replication services are the pipeline for replicating data between hosts.  Tungsten Replicator for MySQL supports multiple replication services to create complex replication topologies between MySQL hosts."
+    end
+  end
+  
+  def accept?(raw_value)
+    value = super(raw_value)
+    
+    if @config.getProperty(GLOBAL_DBMS_TYPE) == DBMS_POSTGRESQL
+      if value.to_s().index(",") != nil
+        raise PropertyValidatorException, "Tungsten Replicator for PostgreSQL only supports a single replication service"
+      end
+    end
+    
+    value
   end
 end
 

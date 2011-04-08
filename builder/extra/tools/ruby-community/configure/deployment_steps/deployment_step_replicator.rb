@@ -22,39 +22,27 @@ module ConfigureDeploymentStepReplicator
   end
   
   def is_replicator?
-    @config.getProperty(REPL_SERVICES).split(",").each{
-      |service_name|
-      service_properties = @config.getProperty(Configurator::SERVICE_CONFIG_PREFIX + service_name)
-      
-      unless service_properties
-        raise "Unable to find service configuration for '#{service_name}'"
-      end
-      
-      unless service_properties[REPL_HOSTS]
-        raise "Missing replication hosts definition for '#{service_name}' configuration"
-      end
+    ClusterConfigureModule.each_service(@config) {
+      |parent_name,service_name,service_properties|
       
       service_hosts = service_properties[REPL_HOSTS].split(",")
       if service_hosts.include?(@config.getProperty(GLOBAL_HOST))
         return true
       end
     }
+    
+    false
   end
   
   def is_master?
-    @config.getProperty(REPL_SERVICES).split(",").each{
-      |service_name|
-      service_properties = @config.getProperty(Configurator::SERVICE_CONFIG_PREFIX + service_name)
+    ClusterConfigureModule.each_service(@config) {
+      |parent_name,service_name,service_properties|
       
-      unless service_properties
-        raise "Unable to find service configuration for '#{service_name}'"
+      if service_properties[REPL_MASTERHOST] == @config.getProperty(GLOBAL_HOST)
+        return true
       end
-      
-      unless service_properties[REPL_MASTER_HOST]
-        raise "Missing replication master definition for '#{service_name}' configuration"
-      end
-      
-      return (service_properties[REPL_MASTER_HOST].split(",") == @config.getProperty(GLOBAL_HOST))
     }
+    
+    false
   end
 end

@@ -18,7 +18,7 @@ class DeploymentConfigureModule < ConfigureModule
       HomeDirectoryPrompt.new(),
       ConfigurePrompt.new(GLOBAL_TEMP_DIRECTORY, "Temporary Directory",
         PV_FILENAME, "/tmp"),
-      ConfigurePrompt.new(GLOBAL_DSNAME, "Cluster Name", 
+      ConfigurePrompt.new(GLOBAL_CLUSTERNAME, "Cluster Name", 
         PV_IDENTIFIER, "default"),
     ])
   end

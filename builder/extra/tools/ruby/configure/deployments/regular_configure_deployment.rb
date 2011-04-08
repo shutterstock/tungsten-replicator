@@ -37,10 +37,10 @@ class RegularConfigureDeployment < ConfigureDeployment
       ConfigureDeploymentStepDeployment
       ]
     
+    modules << ConfigureDeploymentStepReplicationDataservice
     case @config.getProperty(GLOBAL_DBMS_TYPE)
     when "mysql"
       modules << ConfigureDeploymentStepMySQL
-      modules << ConfigureDeploymentStepReplicationDataservice
     when "postgresql"
       modules << ConfigureDeploymentStepPostgresql
     else

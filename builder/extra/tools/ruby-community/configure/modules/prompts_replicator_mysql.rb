@@ -21,11 +21,11 @@ class MySQLConfigurePrompt < ConfigurePrompt
     password = @config.getProperty(REPL_DBPASSWORD)
     port = @config.getProperty(REPL_DBPORT)
     if hostname == nil
-      hosts = @config.getProperty(REPL_HOSTS).split(",")
+      hosts = @config.getProperty(GLOBAL_HOSTS).split(",")
       hostname = hosts[0]
     end
 
-    cmd_result("mysql -u#{user} -p#{password} -h#{hostname} --port=#{port} -e \"#{command}\"", true)
+    ssh_result("mysql -u#{user} -p#{password} -h#{hostname} --port=#{port} -e '#{command}'", true, hostname)
   end
   
   def get_mysql_value(command, column)
@@ -75,15 +75,6 @@ class MySQLBinlogDirectory < MySQLConfigurePrompt
   def initialize
     super(REPL_MYSQL_BINLOGDIR, "MySQL binlog directory", 
       PV_FILENAME, "/var/lib/mysql/")
-  end
-  
-  def get_mysql_default_value
-    datadir = get_mysql_value("SHOW VARIABLES LIKE 'datadir'", "Value")
-    unless datadir == nil
-      datadir
-    else
-      raise "Unable to get value"
-    end
   end
 end
 

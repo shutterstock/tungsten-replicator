@@ -12,97 +12,83 @@ module ConfigureDeploymentStepPostgresql
   module_function :get_deployment_methods
   
   def apply_config_replicator
-    write_replicator_properties()
+    write_replication_service_properties()
     write_wal_shipping_properties()
     write_wrapper_conf()
-		write_monitor_checker_postgresql()
+    
+    if Configurator.instance.is_enterprise?
+		  write_monitor_checker_postgresql()
+		end
   end
   
-  def write_replicator_properties
-    # Configure replicator.properties - this sets up the plugin. 
+  def transform_replication_dataservice_line(line, service_name, service_config)
+    if line =~ /replicator.master.uri/ then
+      if service_config.getProperty(REPL_MASTERHOST)
+        "replicator.master.uri=wal://" + service_config.getProperty(REPL_MASTERHOST) + "/"
+      else
+        "replicator.master.uri=wal://localhost/"
+      end
+    elsif line =~ /replicator.master.connect.uri/ then
+      if service_config.getProperty(REPL_ROLE) == "master" then
+        line
+      else
+        "replicator.master.connect.uri=thl://" + service_config.getProperty(REPL_MASTERHOST) + "/"
+      end
+    elsif line =~ /replicator.script.root/
+      "replicator.script.root_dir=" + File.expand_path("#{get_deployment_basedir()}/tungsten-replicator")
+    elsif line =~ /replicator.script.conf_file/
+      "replicator.script.conf_file=conf/postgresql-wal.properties"
+    elsif line =~ /replicator.script.processor/
+      "replicator.script.processor=bin/pg-wal-plugin"
+    elsif line =~ /replicator.master.listen.uri/ then
+      "replicator.master.listen.uri=thl://" + service_config.getProperty(GLOBAL_HOST) + "/"
+    elsif line =~ /replicator.backup.agent.pg_dump.port/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
+      "replicator.backup.agent.pg_dump.port=" + service_config.getProperty(REPL_DBPORT)
+    elsif line =~ /replicator.backup.agent.pg_dump.user/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
+      "replicator.backup.agent.pg_dump.user=" + service_config.getProperty(REPL_DBLOGIN)
+    elsif line =~ /replicator.backup.agent.pg_dump.password/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
+      "replicator.backup.agent.pg_dump.password=" + service_config.getProperty(REPL_DBPASSWORD)
+    elsif line =~ /replicator.backup.agent.pg_dump.dumpDir/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
+      "replicator.backup.agent.pg_dump.dumpDir=" + service_config.getProperty(REPL_BACKUP_DUMP_DIR)
+		else
+		  super(line, service_name, service_config)
+		end
+	end
+	
+	def get_replication_dataservice_template
+    "#{get_deployment_basedir()}/tungsten-replicator/conf/sample.static.properties.postgresql"
+	end
+  
+  def write_replication_service_properties
+    # Generate the services.properties file.
     transformer = Transformer.new(
-        "#{get_deployment_basedir()}/tungsten-replicator/conf/replicator.properties.postgresql",
-        "#{get_deployment_basedir()}/tungsten-replicator/conf/replicator.properties", "# ")
-    
+      "#{get_deployment_basedir()}/tungsten-replicator/conf/sample.services.properties",
+      "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties", "#")
+
     transformer.transform { |line|
-      if line =~ /replicator.role=master/ then
-        if is_master?()
-          "replicator.role=master"
-        else
-          "replicator.role=slave"
-        end
-      elsif line =~ /replicator.master.uri/ then
-        unless is_master?()
-          "replicator.master.uri=wal://" + @config.getProperty(REPL_MASTERHOST) + "/"
-        else
-          "replicator.master.uri=wal://localhost/"
-        end
-      elsif line =~ /replicator.master.connect.uri/ then
-        if is_master?() then
-          line
-        else
-          "replicator.master.connect.uri=thl://" + @config.getProperty(REPL_MASTERHOST) + "/"
-        end
-      elsif line =~ /replicator.master.listen.uri/ then
-        "replicator.master.listen.uri=thl://" + @config.getProperty(GLOBAL_HOST) + "/"
-      elsif line =~ /replicator.auto_enable/ then
-        "replicator.auto_enable=" + @config.getProperty(REPL_AUTOENABLE)
+      if line =~ /replicator.services/
+        "replicator.services=" + @config.getProperty(REPL_SERVICES)
+      elsif line =~ /replicator.global.db.user=/ then
+        "replicator.global.db.user=" + @config.getProperty(REPL_DBLOGIN)
+      elsif line =~ /replicator.global.db.password=/ then
+        "replicator.global.db.password=" + @config.getProperty(REPL_DBPASSWORD)
+      elsif line =~ /replicator.resourceJdbcUrl=/ then
+        "replicator.resourceJdbcUrl=jdbc:postgresql://" + @config.getProperty(GLOBAL_HOST) + ":" +
+        @config.getProperty(REPL_DBPORT) + "/${DBNAME}"
+      elsif line =~ /replicator.resourceDataServerHost/ then
+        "replicator.resourceDataServerHost=" + @config.getProperty(GLOBAL_HOST)
+      elsif line =~ /replicator.resourceJdbcDriver/ then
+        "replicator.resourceJdbcDriver=org.postgresql.Driver"
+      elsif line =~ /replicator.resourcePort/ then
+        "replicator.resourcePort=" + @config.getProperty(REPL_DBPORT)
       elsif line =~ /replicator.source_id/ then
         "replicator.source_id=" + @config.getProperty(GLOBAL_HOST)
-      elsif line =~ /cluster.name/ then
-        "cluster.name=" + @config.getProperty(GLOBAL_DSNAME)
-      elsif line =~ /replicator.resourceJdbcUrl/
-        line.sub("@HOSTNAME@", @config.getProperty(GLOBAL_HOST))
-      elsif line =~ /replicator.backup.agents/
-        if @config.getProperty(REPL_BACKUP_METHOD) == "none"
-          "replicator.backup.agents="
-        else
-          "replicator.backup.agents=" + @config.getProperty(REPL_BACKUP_METHOD)
-        end
-      elsif line =~ /replicator.backup.default/
-        if @config.getProperty(REPL_BACKUP_METHOD) == "none"
-          "replicator.backup.default="
-        else
-          "replicator.backup.default=" + @config.getProperty(REPL_BACKUP_METHOD)
-        end
-      elsif line =~ /replicator.backup.agent.pg_dump.port/ && @config.getProperty(REPL_BACKUP_METHOD) != "none"
-        "replicator.backup.agent.pg_dump.port=" + @config.getProperty(REPL_DBPORT)
-      elsif line =~ /replicator.backup.agent.pg_dump.user/ && @config.getProperty(REPL_BACKUP_METHOD) != "none"
-        "replicator.backup.agent.pg_dump.user=" + @config.getProperty(REPL_DBLOGIN)
-      elsif line =~ /replicator.backup.agent.pg_dump.password/ && @config.getProperty(REPL_BACKUP_METHOD) != "none"
-        "replicator.backup.agent.pg_dump.password=" + @config.getProperty(REPL_DBPASSWORD)
-      elsif line =~ /replicator.backup.agent.pg_dump.dumpDir/ && @config.getProperty(REPL_BACKUP_METHOD) != "none"
-        "replicator.backup.agent.pg_dump.dumpDir=" + @config.getProperty(REPL_BACKUP_DUMP_DIR)
-      elsif line =~ /replicator.backup.agent.script.script/ && @config.getProperty(REPL_BACKUP_METHOD) == "script"
-        "replicator.backup.agent.script.script=" + @config.getProperty(REPL_BACKUP_SCRIPT)
-      elsif line =~ /replicator.backup.agent.script.commandPrefix/ && @config.getProperty(REPL_BACKUP_METHOD) == "script"
-        "replicator.backup.agent.script.commandPrefix=" + @config.getProperty(REPL_BACKUP_COMMAND_PREFIX)
-      elsif line =~ /replicator.backup.agent.script.hotBackupEnabled/ && @config.getProperty(REPL_BACKUP_METHOD) == "script"
-        "replicator.backup.agent.script.hotBackupEnabled=" + @config.getProperty(REPL_BACKUP_ONLINE)
-      elsif line =~ /replicator.storage.agents/
-        if @config.getProperty(REPL_BACKUP_METHOD) == "none"
-          "replicator.storage.agents="
-        else
-          "replicator.storage.agents=fs"
-        end
-      elsif line =~ /replicator.storage.agent.fs.directory/ && @config.getProperty(REPL_BACKUP_METHOD) != "none"
-        "replicator.storage.agent.fs.directory=" + @config.getProperty(REPL_BACKUP_STORAGE_DIR)
-      elsif line =~ /replicator.storage.agent.fs.retention/ && @config.getProperty(REPL_BACKUP_METHOD) != "none"
-        "replicator.storage.agent.fs.retention=" + @config.getProperty(REPL_BACKUP_RETENTION)
-      elsif line =~ /replicator.script.root/
-        "replicator.script.root_dir=#{get_deployment_basedir()}/tungsten-replicator"
-      elsif line =~ /replicator.script.conf_file/
-        "replicator.script.conf_file=conf/postgresql-wal.properties"
-      elsif line =~ /replicator.script.processor/
-        "replicator.script.processor=bin/pg-wal-plugin"
-      elsif line =~ /replicator.vipInterface/ && @config.getProperty(REPL_MASTER_VIP) != "none"
-        "replicator.vipInterface=" + @config.getProperty(REPL_MASTER_VIP_DEVICE)
-      elsif line =~ /replicator.vipAddress/ && @config.getProperty(REPL_MASTER_VIP) != "none"
-        "replicator.vipAddress=" + @config.getProperty(REPL_MASTER_VIP)
-      elsif line =~ /replicator.store.thl.log_file_retention/ && @config.getProperty(REPL_THL_LOG_RETENTION) != ""
-        "replicator.store.thl.log_file_retention=#{@config.getProperty(REPL_THL_LOG_RETENTION)}"
-      elsif line =~ /replicator.applier.consistency_policy/
-        "replicator.applier.consistency_policy=#{@config.getProperty(REPL_CONSISTENCY_POLICY)}"
+      elsif line =~ /replicator.resourceVendor/ then
+        "replicator.resourceVendor=" + @config.getProperty(GLOBAL_DBMS_TYPE)
+      elsif line =~ /cluster.name=/ then
+        "cluster.name=" + @config.getPropertyOr(GLOBAL_CLUSTERNAME, "")
+      elsif line =~ /replicator.host=/ then
+        "replicator.host=" + @config.getProperty(GLOBAL_HOST)
       else
         line
       end
@@ -155,11 +141,14 @@ module ConfigureDeploymentStepPostgresql
           "postgresql.role=slave"
         end
       elsif line =~ /postgresql.master.host/ then
-        if @config.getProperty(REPL_MASTERHOST)
-          "postgresql.master.host=" + @config.getProperty(REPL_MASTERHOST)
-        else
-          "postgresql.master.host=" 
-        end
+        master_host=""
+        ClusterConfigureModule.each_service(@config) {
+          |parent_name,service_name,service_properties|
+          
+          master_host = service_properties[REPL_MASTERHOST]
+        }
+
+        "postgresql.master.host=" + master_host
       elsif line =~ /postgresql.master.user/ then
         "postgresql.master.user=" + @config.getProperty(REPL_DBLOGIN)
       elsif line =~ /postgresql.master.password/ then
@@ -181,9 +170,7 @@ module ConfigureDeploymentStepPostgresql
         "#{get_deployment_basedir()}/tungsten-replicator/conf/wrapper.conf", nil)
     
     transformer.transform { |line|
-      if line =~ /wrapper.app.parameter.1/ then
-        "wrapper.app.parameter.1=com.continuent.tungsten.replicator.management.OpenReplicatorManager"
-      elsif line =~ /wrapper.java.maxmemory=/
+      if line =~ /wrapper.java.maxmemory=/
         "wrapper.java.maxmemory=" + @config.getProperty(REPL_JAVA_MEM_SIZE)
       else
         line

@@ -91,6 +91,7 @@ class ReplicatorConfigureModule < ConfigureModule
       MySQLReadableLogsCheck.new(),
       MySQLSettingsCheck.new(),
       ConnectorUserMySQLCheck.new(),
+      PostgreSQLSystemUserCheck.new(),
       PostgreSQLClientCheck.new(),
       PostgreSQLLoginCheck.new(),
       PostgreSQLPermissionsCheck.new(),
@@ -183,14 +184,16 @@ class THLStorageCheck < ConfigureValidationCheck
     ClusterConfigureModule.each_service(@config) {
       |parent_name,service_name,service_properties|
       
-      unless File.exists?(service_properties[REPL_SVC_CONFIG_FILE])
-        if File.exists?(service_properties[REPL_LOG_DIR])
-          dir_file_count = cmd_result("ls #{service_properties[REPL_LOG_DIR]} | wc -l")
-          if dir_file_count.to_i() > 0
-            error("Replication log directory #{service_properties[REPL_LOG_DIR]} already contains log files")
+      if service_properties[REPL_LOG_DIR]
+        unless File.exists?(service_properties[REPL_SVC_CONFIG_FILE])
+          if File.exists?(service_properties[REPL_LOG_DIR])
+            dir_file_count = cmd_result("ls #{service_properties[REPL_LOG_DIR]} | wc -l")
+            if dir_file_count.to_i() > 0
+              error("Replication log directory #{service_properties[REPL_LOG_DIR]} already contains log files")
+            end
           end
-        end
-      end  
+        end  
+      end
     }
   end
 end

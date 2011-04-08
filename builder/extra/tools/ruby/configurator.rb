@@ -43,6 +43,9 @@ system_require 'configure/configure_validation_check'
 system_require 'configure/configure_deployment_handler'
 system_require 'configure/configure_deployment'
 
+DBMS_MYSQL = "mysql"
+DBMS_POSTGRESQL = "postgresql"
+
 # Define operating system names.
 OS_LINUX = "linux"
 OS_MACOSX = "macosx"
@@ -130,7 +133,7 @@ class Configurator
   # then deploy on each host
   def run
     unless use_streaming_ssh()
-      #warning("It is recommended that you install the net-ssh rubygem")
+      warning("It is recommended that you install the net-ssh rubygem")
     end
     
     write_header "Tungsten #{tungsten_version()} Configuration Procedure"
@@ -351,10 +354,6 @@ class Configurator
   end
   
   def save_prompts
-    if !File.exists?(@options.config)
-      @options.config = get_deployment().get_default_config_filename()
-    end
-    
     @stored_config.store(@options.config)
   end
 
@@ -625,13 +624,11 @@ class Configurator
   
   # Is the Net::SSH module available
   def use_streaming_ssh()
-    false
-    
-    #if defined?(Net::SSH)
-    #  true
-    #else
-    #  false
-    #end
+    if defined?(Net::SSH)
+      true
+    else
+      false
+    end
   end
   
   def os?

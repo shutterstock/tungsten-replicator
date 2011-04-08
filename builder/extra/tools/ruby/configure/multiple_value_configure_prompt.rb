@@ -68,6 +68,10 @@ class MultipleValueConfigurePrompt
             value = accept?(raw_value)
           end
         rescue PropertyValidatorException => e
+          if raw_value == "" && !required?()
+            value = nil
+            break
+          end
           # Catch a prompt validation error and display the prompt again
           Configurator.instance.error(e.to_s)
         end
