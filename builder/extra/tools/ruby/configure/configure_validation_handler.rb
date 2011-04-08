@@ -27,7 +27,7 @@ class ConfigureValidationHandler
   # Validate the prompt object and add it to the queue
   def register_check(check_obj)    
     unless check_obj.is_a?(ConfigureValidationCheck)
-      raise "Attempt to register invalid check #{class_name} failed " +
+      raise "Attempt to register invalid check #{check_obj.class} failed " +
         "because it does not extend ConfigureValidationCheck"
     end
     
@@ -49,7 +49,7 @@ class ConfigureValidationHandler
     configs.each{
       |config|
       @config.props = config.props
-      preliminary_validation()
+      prevalidate()
     }
     
     unless is_valid?()
@@ -66,7 +66,7 @@ class ConfigureValidationHandler
   end
   
   # The preliminary checks look for ssh access, ruby and java
-  def preliminary_validation
+  def prevalidate
     Configurator.instance.write ""
     Configurator.instance.write_header "Preliminary checks for #{@config.getProperty(GLOBAL_HOST)}:#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
     
@@ -126,9 +126,6 @@ class ConfigureValidationHandler
         end
         val_proc.close()
       else
-        cluster_config = Properties.new()
-        cluster_config.load(Configurator.instance.get_config_filename())
-        
         # Transfer validation code
         validation_temp_directory = "#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
         debug("Transfer configuration code to #{@config.getProperty(GLOBAL_HOST)}")
@@ -139,15 +136,7 @@ class ConfigureValidationHandler
           debug("Transfer Connector/J to #{@config.getProperty(GLOBAL_HOST)}")
           cmd_result("scp #{@config.getProperty(REPL_MYSQL_CONNECTOR_PATH)} #{@config.getProperty(GLOBAL_USERID)}@#{@config.getProperty(GLOBAL_HOST)}:#{validation_temp_directory}")
           @config.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{validation_temp_directory}/#{File.basename(@config.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
-          cluster_config.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{validation_temp_directory}/#{File.basename(@config.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
         end
-        
-        debug("Transfer cluster configuration file to #{@config.getProperty(GLOBAL_HOST)}")
-        cluster_config_tempfile = Tempfile.new("tcfg")
-        cluster_config_tempfile.close()
-        cluster_config.store(cluster_config_tempfile.path())
-        cmd_result("scp #{cluster_config_tempfile.path()} #{@config.getProperty(GLOBAL_USERID)}@#{@config.getProperty(GLOBAL_HOST)}:#{validation_temp_directory}/#{Configurator::TEMP_DEPLOY_CLUSTER_CONFIG}")
-        File.unlink(cluster_config_tempfile.path())
         
         debug("Transfer host configuration file to #{@config.getProperty(GLOBAL_HOST)}")
         config_tempfile = Tempfile.new("tcfg")
@@ -255,7 +244,7 @@ class ConfigureValidationHandler
       |host|
       
       $i = 0
-      
+
       Configurator.instance.write_header("Errors for #{host}", Logger::ERROR)
       until $i >= host_errors[host].length() do
         $host_error = host_errors[host][$i]

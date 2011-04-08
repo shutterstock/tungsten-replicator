@@ -19,7 +19,7 @@ system_require 'tempfile'
 system_require 'uri'
 system_require 'resolv'
 
-# These aren't required, but it makes the output update more often with SSH results
+# This isn't required, but it makes the output update more often with SSH results
 begin
   require 'net/ssh'
 rescue LoadError
@@ -73,7 +73,6 @@ class Configurator
   HOST_CONFIG = "tungsten.cfg"
   TEMP_DEPLOY_DIRECTORY = "tungsten_configure"
   TEMP_DEPLOY_HOST_CONFIG = ".tungsten.cfg"
-  TEMP_DEPLOY_CLUSTER_CONFIG = "cluster.cfg"
   CURRENT_RELEASE_DIRECTORY = "tungsten"
   
   SERVICE_CONFIG_PREFIX = "service_"
@@ -139,7 +138,8 @@ class Configurator
     write_header "Tungsten #{tungsten_version()} Configuration Procedure"
     display_help()
     
-    # Locate and initialize the configure modules
+    # Load each file in the modules or deployments directory and register them
+    # with this Configurator object
     initialize_modules()
     initialize_deployments()
     
@@ -157,9 +157,6 @@ class Configurator
         exit 0
       end
     else
-      # Disabled until the prompt handler is updated to collect information
-      # for multiple services
-      
       # Validate the values in the configuration file against the prompt validation
       unless prompt_handler.is_valid?()
         write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
@@ -168,26 +165,20 @@ class Configurator
       end
     end
     
+    # Execute the validation of each configuration object for the deployment
     deployment_method = get_deployment()
     deployment_method.set_config(@stored_config)
     unless deployment_method.validate()
-      # If there were errors, collect new responses to the prompts
-      if @options.interactive
-        write_header("The configuration values do not pass all validation checks", Logger::ERROR)
-      else
-        write_header("The configuration file does not pass all validation checks", Logger::ERROR)
-      end
+      write_header("The validation failed", Logger::ERROR)
       deployment_method.get_validation_handler().output_errors()
         
       exit 1
     end
     
+    # Execute the deployment of each configuration object for the deployment
     unless deployment_method.deploy()
       write_header("The deployment failed", Logger::ERROR)
-      deployment_method.get_deployment_handler().errors.each{
-        |error|
-        error(error.message)
-      }
+      deployment_method.get_deployment_handler().output_errors()
       
       exit 1
     end
@@ -198,15 +189,18 @@ class Configurator
   
   # Handle the remote side of the validation_handler->run function
   def validate
-    # Locate and initialize the configure modules
+    # Load each file in the modules or deployments directory and register them
+    # with this Configurator object
     initialize_modules()
     initialize_deployments()
     
+    # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
       info("")
-      write_header "Validation checks for #{@stored_config.getProperty(GLOBAL_HOST)}:#{@stored_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+      write_header "Validate #{@stored_config.getProperty(GLOBAL_HOST)}:#{@stored_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
     end
     
+    # Run the validation checks for a single configuration object
     deployment_method = get_deployment()
     result = deployment_method.validate_config(@stored_config)
     if Configurator.instance.has_tty?() && @options.stream_output == false
@@ -222,15 +216,18 @@ class Configurator
   
   # Handle the remote side of the deployment_handler->run function
   def deploy
-    # Locate and initialize the configure modules
+    # Load each file in the modules or deployments directory and register them
+    # with this Configurator object
     initialize_modules()
     initialize_deployments()
     
+    # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
       info("")
       write_header "Deploy #{@stored_config.getProperty(GLOBAL_HOST)}:#{@stored_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
     end
     
+    # Run the deploy steps for a single configuration object
     deployment_method = get_deployment()
     result = deployment_method.deploy_config(@stored_config)
     if has_tty?() && @options.stream_output == false

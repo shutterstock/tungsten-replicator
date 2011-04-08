@@ -89,17 +89,14 @@ class ConfigureDeploymentHandler
     is_valid?()
   end
   
-  # Handle the remote side of the run function
-  def deploy_config
-    # Get the object for the specific deployment type in the config
-    config_deployment = Configurator.instance.get_deployment()
-    # Get an object that represents the deployment steps required by the config
-    obj = config_deployment.get_deployment_object()
-    # Execute each of the deployment steps
-    obj.deploy()
-  end
-  
   def get_message_hostname
     @config.getProperty(GLOBAL_HOST)
+  end
+  
+  def output_errors
+    @errors.each{
+      |error|
+      Configurator.instance.error(error.message)
+    }
   end
 end

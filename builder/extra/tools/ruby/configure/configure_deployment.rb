@@ -62,6 +62,8 @@ class ConfigureDeployment
           next
         end
         
+        # Merge global properties into the service configuration but do not 
+        # overwriting existing properties
         case key
         when REPL_SERVICES then
           next
@@ -75,6 +77,7 @@ class ConfigureDeployment
       }
     }
     
+    # The replication services that are enabled on this host
     expanded_config.setProperty(REPL_SERVICES, repl_services.join(","))
     expanded_config
   end
@@ -100,7 +103,11 @@ class ConfigureDeployment
   def deploy_config(deployment_config)
     expanded_config = expand_deployment_configuration(deployment_config)
     @config.props = expanded_config.props
-    get_deployment_handler().deploy_config()
+    
+    # Get an object that represents the deployment steps required by the config
+    obj = get_deployment_object()
+    # Execute each of the deployment steps
+    obj.deploy()
   end
   
   def get_validation_handler_class

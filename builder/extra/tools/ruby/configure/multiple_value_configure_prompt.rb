@@ -1,5 +1,3 @@
-#super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_MASTERHOST, 
-#  "Enter the master host for service @value", PV_IDENTIFIER)
 class MultipleValueConfigurePrompt
   include ConfigurePromptInterface
   

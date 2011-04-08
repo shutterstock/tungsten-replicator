@@ -96,10 +96,9 @@ module ConfigureDeploymentStepDeployment
     debug("Create symlink to #{@config.getProperty(GLOBAL_HOME_DIRECTORY)}/releases/#{package_basename}")
     cmd_result("rm -f #{get_deployment_basedir()}; ln -s #{@config.getProperty(GLOBAL_HOME_DIRECTORY)}/releases/#{package_basename} #{get_deployment_basedir()}")
     
-    # Remove any copied config files to keep the release directory clean
+    # Remove any copied config files to keep the deployment directory clean
     FileUtils.rm_f("#{get_deployment_basedir()}/#{Configurator::CLUSTER_CONFIG}")
     FileUtils.rm_f("#{get_deployment_basedir()}/#{Configurator::TEMP_DEPLOY_HOST_CONFIG}")
-    FileUtils.rm_f("#{get_deployment_basedir()}/#{Configurator::TEMP_DEPLOY_CLUSTER_CONFIG}")
   end
   
   def deploy_config_files
