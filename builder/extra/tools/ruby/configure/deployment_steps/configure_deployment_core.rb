@@ -1,6 +1,5 @@
 module ConfigureDeploymentCore
   include ConfigureMessages
-  CURRENT_RELEASE_DIRECTORY = "tungsten"
   
   def initialize(config)
     super()
@@ -43,7 +42,7 @@ module ConfigureDeploymentCore
   end
   
   def get_deployment_basedir
-    "#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}/#{ConfigureDeploymentCore::CURRENT_RELEASE_DIRECTORY}"
+    @config.getProperty(GLOBAL_BASEDIR)
   end
   
   # Create a directory if it is absent. 

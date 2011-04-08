@@ -84,6 +84,7 @@ class ReplicatorConfigureModule < ConfigureModule
   
   def register_validation_checks(validation_handler)
     validation_handler.register_checks([
+      THLStorageCheck.new(),
       MySQLClientCheck.new(),
       MySQLLoginCheck.new(),
       MySQLPermissionsCheck.new(),
@@ -170,5 +171,26 @@ class BackupMethodAvailableCheck < ConfigureValidationCheck
         end
       end
     end
+  end
+end
+
+class THLStorageCheck < ConfigureValidationCheck
+  def set_vars
+    @title = "THL storage check"
+  end
+  
+  def validate
+    ClusterConfigureModule.each_service(@config) {
+      |parent_name,service_name,service_properties|
+      
+      unless File.exists?(service_properties[REPL_SVC_CONFIG_FILE])
+        if File.exists?(service_properties[REPL_LOG_DIR])
+          dir_file_count = cmd_result("ls #{service_properties[REPL_LOG_DIR]} | wc -l")
+          if dir_file_count.to_i() > 0
+            error("Replication log directory #{service_properties[REPL_LOG_DIR]} already contains log files")
+          end
+        end
+      end  
+    }
   end
 end

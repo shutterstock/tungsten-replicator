@@ -19,12 +19,64 @@ class ConfigureDeployment
     raise "This function must be overwritten"
   end
   
+  def expand_deployment_configuration(deployment_config)
+    expanded_config = deployment_config.dup()
+    
+    Configurator.instance.info("Set basedir to #{get_deployment_basedir(deployment_config)}")
+    expanded_config.setDefault(GLOBAL_BASEDIR, get_deployment_basedir(deployment_config))
+    ClusterConfigureModule.each_service(deployment_config) {
+      |parent_name,service_name,service_properties|
+      
+      expanded_config.setDefault([parent_name, REPL_SVC_CONFIG_FILE], 
+        "#{expanded_config.getProperty(GLOBAL_BASEDIR)}/tungsten-replicator/conf/static-#{service_name}.properties")
+        
+      if expanded_config.getProperty([parent_name, REPL_REMOTE_HOSTS]) && 
+          expanded_config.getProperty([parent_name, REPL_REMOTE_HOSTS]).split(",").include?(expanded_config.getProperty(GLOBAL_HOST))
+        expanded_config.setProperty([parent_name, REPL_SVC_SERVICE_TYPE], "remote")
+      else
+        expanded_config.setProperty([parent_name, REPL_SVC_SERVICE_TYPE], "local")
+      end
+      
+      if expanded_config.getProperty([parent_name, REPL_MASTERHOST]) == expanded_config.getProperty(GLOBAL_HOST)
+        expanded_config.setProperty([parent_name, REPL_ROLE], "master")
+      else
+        expanded_config.setProperty([parent_name, REPL_ROLE], "slave")
+      end
+      
+      deployment_config.props.each{
+        |key,value|
+        
+        if value.is_a?(Hash)
+          next
+        end
+        
+        case key
+        when REPL_SERVICES then
+          next
+        when REPL_LOG_DIR then
+          expanded_config.setDefault([parent_name, key], "#{value}/#{service_name}")
+        when REPL_RELAY_LOG_DIR then
+          expanded_config.setDefault([parent_name, key], "#{value}/#{service_name}")
+        else
+          expanded_config.setDefault([parent_name, key], value)
+        end
+      }
+    }
+    
+    expanded_config
+  end
+  
+  def get_deployment_basedir(deployment_config)
+    "#{deployment_config.getProperty(GLOBAL_HOME_DIRECTORY)}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
+  end
+  
   def validate
     get_validation_handler().run(get_deployment_configurations())
   end
   
-  def validate_config(config)
-    @config.props = config.props
+  def validate_config(deployment_config)
+    expanded_config = expand_deployment_configuration(deployment_config)
+    @config.props = expanded_config.props
     get_validation_handler().validate_config()
   end
   
@@ -32,8 +84,9 @@ class ConfigureDeployment
     get_deployment_handler().run(get_deployment_configurations())
   end
   
-  def deploy_config(config)
-    @config.props = config.props
+  def deploy_config(deployment_config)
+    expanded_config = expand_deployment_configuration(deployment_config)
+    @config.props = expanded_config.props
     get_deployment_handler().deploy_config()
   end
   

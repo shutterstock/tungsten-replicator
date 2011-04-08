@@ -27,4 +27,13 @@ class ClusterConfigureModule < ConfigureModule
       false
     end
   end
+  
+  def self.each_service(config, &f)
+    config.getProperty(REPL_SERVICES).split(",").each{
+      |service_name|
+      parent_name = Configurator::SERVICE_CONFIG_PREFIX + service_name
+      
+      f.call(parent_name, service_name, config.getProperty(parent_name))
+    }
+  end
 end

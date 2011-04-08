@@ -14,6 +14,10 @@ class DirectDeployment < ConfigureDeployment
     config_objs
   end
   
+  def get_deployment_basedir
+    Configurator.instance.get_base_path()
+  end
+  
   def get_deployment_object_modules
     modules = [
       ConfigureDeploymentStepDirect

@@ -194,6 +194,13 @@ class MySQLSettingsCheck < MySQLValidationCheck
       error("The value of max_allowed_packet is to small")
       help("Add \"max_allowed_packet=48m\" to the MySQL configuration file")
     end
+    
+    info("Check for datadir")
+    datadir_lines = cmd_result("my_print_defaults mysqld | grep '\\-\\-datadir' | wc -l")
+    unless datadir_lines.to_i() > 0
+      error("The datadir setting is not specified")
+      help("Specify a value for datadir in your my.cnf file to ensure that all utilities work properly")
+    end
   end
 end
 

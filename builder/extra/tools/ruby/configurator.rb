@@ -71,6 +71,7 @@ class Configurator
   TEMP_DEPLOY_DIRECTORY = "tungsten_configure"
   TEMP_DEPLOY_HOST_CONFIG = ".tungsten.cfg"
   TEMP_DEPLOY_CLUSTER_CONFIG = "cluster.cfg"
+  CURRENT_RELEASE_DIRECTORY = "tungsten"
   
   SERVICE_CONFIG_PREFIX = "service_"
   

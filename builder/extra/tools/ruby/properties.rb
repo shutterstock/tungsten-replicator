@@ -174,7 +174,7 @@ class Properties
   
   # Set the property to a value only if it is currently unset. 
   def setDefault(key, value)
-    unless getNestedProperty(*key)
+    if getNestedProperty(*key) == nil
       setNestedProperty(value, *key)
     end
   end

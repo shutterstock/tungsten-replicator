@@ -8,32 +8,11 @@ module ConfigureDeploymentStepReplicationDataservice
   module_function :get_deployment_methods
   
   def deploy_replication_dataservices
-    @config.getProperty(REPL_SERVICES).split(",").each{
-      |service_name|
-      service_properties = @config.getProperty(Configurator::SERVICE_CONFIG_PREFIX + service_name)
+    ClusterConfigureModule.each_service(@config) {
+      |parent_name,service_name,service_properties|
       
-      if service_properties[REPL_MASTERHOST] == @config.getProperty(GLOBAL_HOST)
-        @config.setProperty(GLOBAL_DSNAME, service_name)
-      end
-    }
-    
-    @config.getProperty(REPL_SERVICES).split(",").each{
-      |service_name|
-      service_properties = @config.getProperty(Configurator::SERVICE_CONFIG_PREFIX + service_name)
-      
-      unless service_properties
-        raise "Unable to find service configuration for '#{service_name}'"
-      end
-      
-      service_config = @config.dup()
-      service_properties.each {
-        |key,value|
-        service_config.setProperty(key, value)
-      }
-      
-      unless service_config.getProperty(REPL_HOSTS)
-        raise "Missing replication hosts definition for '#{service_name}' configuration"
-      end
+      service_config = Properties.new()
+      service_config.props = service_properties
       
       service_hosts = service_config.getProperty(REPL_HOSTS).split(",")
       if service_hosts.include?(@config.getProperty(GLOBAL_HOST))
@@ -43,36 +22,24 @@ module ConfigureDeploymentStepReplicationDataservice
   end
   
   def deploy_replication_dataservice(service_name, service_config)
-    mkdir_if_absent(service_config.getProperty(REPL_LOG_DIR) + "/" + service_name)
+    mkdir_if_absent(service_config.getProperty(REPL_LOG_DIR))
     
     if service_config.getProperty(REPL_RELAY_LOG_DIR)
-      mkdir_if_absent(service_config.getProperty(REPL_RELAY_LOG_DIR) + "/" + service_name)
-    end
-    
-    if service_config.getProperty(REPL_MASTERHOST) == service_config.getProperty(GLOBAL_HOST)
-      role = "master"
-    else
-      role = "slave"
-    end
-
-    if service_config.getProperty(REPL_REMOTE_HOSTS) && service_config.getProperty(REPL_REMOTE_HOSTS).split(",").include?(service_config.getProperty(GLOBAL_HOST))
-      service_type = 'remote'
-    else
-      service_type = 'local'
+      mkdir_if_absent(service_config.getProperty(REPL_RELAY_LOG_DIR))
     end
     
     # Configure replicator.properties.service.template
 		transformer = Transformer.new(
 		  get_mysql_replicator_properties_template(),
-			"#{get_deployment_basedir()}/tungsten-replicator/conf/static-#{service_name}.properties", "#")
+			service_config.getProperty(REPL_SVC_CONFIG_FILE), "#")
 
 		transformer.transform { |line|
 		  if line =~ /replicator.role=/ then
-        "replicator.role=" + role
+        "replicator.role=" + service_config.getProperty(REPL_ROLE)
 		  elsif line =~ /replicator.global.db.host=/ then
         "replicator.global.db.host=" + service_config.getProperty(GLOBAL_HOST)
       elsif line =~ /replicator.service.type=/ then
-        "replicator.service.type=" + service_type
+        "replicator.service.type=" + service_config.getProperty(REPL_SVC_SERVICE_TYPE)
       elsif line =~ /replicator.global.db.port=/ then
         "replicator.global.db.port=" + service_config.getProperty(REPL_DBPORT)
 			elsif line =~ /replicator.global.db.user=/ then
@@ -88,7 +55,7 @@ module ConfigureDeploymentStepReplicationDataservice
 			elsif line =~ /^service.name=/ then
 				"service.name=" + service_name
 			elsif line =~ /^local.service.name=/ then
-				"local.service.name=" + service_config.getProperty(GLOBAL_DSNAME)
+				"local.service.name=" + service_name
 			elsif line =~ /replicator.service.type=/ then
         "replicator.service.type=local"
 			elsif line =~ /replicator.global.buffer.size=/ then
@@ -119,7 +86,7 @@ module ConfigureDeploymentStepReplicationDataservice
 				end
 			elsif line =~ /replicator.store.thl.log_dir=/
 				if service_config.getProperty(REPL_LOG_TYPE) == "disk" then
-					"replicator.store.thl.log_dir="+ service_config.getProperty(REPL_LOG_DIR) + "/" + service_name
+					"replicator.store.thl.log_dir="+ service_config.getProperty(REPL_LOG_DIR)
 				else
 					"#" + line
 				end
@@ -191,7 +158,7 @@ module ConfigureDeploymentStepReplicationDataservice
 			elsif line =~ /replicator.extractor.mysql.useRelayLogs/ && service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
 				"replicator.extractor.mysql.useRelayLogs=true"
 			elsif line =~ /replicator.extractor.mysql.relayLogDir/ && service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
-				"replicator.extractor.mysql.relayLogDir=" + service_config.getProperty(REPL_RELAY_LOG_DIR) + "/" + service_name
+				"replicator.extractor.mysql.relayLogDir=" + service_config.getProperty(REPL_RELAY_LOG_DIR)
 			elsif line =~ /replicator.extractor.mysql.relayLogRetention/ && service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
 				"replicator.extractor.mysql.relayLogRetention=3"
 			elsif line =~ /replicator.store.thl.log_file_retention/ && service_config.getProperty(REPL_THL_LOG_RETENTION) != ""

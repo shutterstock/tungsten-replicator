@@ -14,15 +14,6 @@ class DeploymentValidationOnly < ConfigureDeployment
       config_obj.setProperty(GLOBAL_HOST, deployment_host)
       config_obj.setProperty(GLOBAL_IP_ADDRESS, Resolv.getaddress(deployment_host))
       
-      config_obj.getProperty(REPL_SERVICES).split(",").each{
-        |service_name|
-        service_config = config_obj.getProperty(Configurator::SERVICE_CONFIG_PREFIX + service_name)
-        
-        unless service_config
-          raise "Unable to find service configuration for '#{service_name}'"
-        end
-      }
-      
       config_objs.push(config_obj)
     }
     

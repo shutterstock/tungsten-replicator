@@ -20,7 +20,7 @@ module ConfigureDeploymentStepDeployment
     out = File.open(script, "w")
     out.puts "# Source this file to set your environment."
     out.puts "export TUNGSTEN_HOME=#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
-    out.puts "export PATH=$TUNGSTEN_HOME/#{ConfigureDeploymentCore::CURRENT_RELEASE_DIRECTORY}/tungsten-manager/bin:$TUNGSTEN_HOME/#{ConfigureDeploymentCore::CURRENT_RELEASE_DIRECTORY}/tungsten-replicator/bin:$PATH"
+    out.puts "export PATH=$TUNGSTEN_HOME/#{Configurator::CURRENT_RELEASE_DIRECTORY}/tungsten-manager/bin:$TUNGSTEN_HOME/#{Configurator::CURRENT_RELEASE_DIRECTORY}/tungsten-replicator/bin:$PATH"
     out.chmod(0755)
     out.close
     debug("Generate environment at #{script}")
