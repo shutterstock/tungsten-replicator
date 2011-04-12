@@ -57,6 +57,34 @@ class ConfigurePromptHandler
         raise csce
       rescue ConfigureAcceptAllDefaults
         force_default_prompt = false
+        
+        fix_default_value = lambda do ||
+          begin
+            # Prompt the user because the default value is invalid
+            @prompts[i].run
+            if @prompts[i].allow_previous?
+              previous_prompts.push(i)
+            end
+            i += 1
+            force_default_prompt = false
+          rescue ConfigureSaveConfigAndExit => csce
+            # Pass the request to save and exit up the chain untouched
+            raise csce
+          rescue ConfigureAcceptAllDefaults
+            # We are already trying to do this
+            puts "The current prompt does not have a valid default, please provide a value"
+            redo
+          rescue ConfigurePreviousPrompt
+            previous_prompt = previous_prompts.pop()
+            if previous_prompt == nil
+              puts "Unable to move to the previous prompt"
+            else
+              i = previous_prompt
+              force_default_prompt = true
+            end
+          end
+        end
+        
         # Store the default value for this and all remaining prompts
         Configurator.instance.write "Accepting the default value for all remaining prompts"
         while i < @prompts.length do
@@ -76,31 +104,10 @@ class ConfigurePromptHandler
               # Ensure that the value is valid 
               @prompts[i].is_valid?
               i += 1
+            rescue ConfigurePromptErrorSet => s
+              fix_default_value.call()
             rescue PropertyValidatorException => e
-              begin
-                # Prompt the user because the default value is invalid
-                @prompts[i].run
-                if @prompts[i].allow_previous?
-                  previous_prompts.push(i)
-                end
-                i += 1
-                force_default_prompt = false
-              rescue ConfigureSaveConfigAndExit => csce
-                # Pass the request to save and exit up the chain untouched
-                raise csce
-              rescue ConfigureAcceptAllDefaults
-                # We are already trying to do this
-                puts "The current prompt does not have a valid default, please provide a value"
-                redo
-              rescue ConfigurePreviousPrompt
-                previous_prompt = previous_prompts.pop()
-                if previous_prompt == nil
-                  puts "Unable to move to the previous prompt"
-                else
-                  i = previous_prompt
-                  force_default_prompt = true
-                end
-              end
+              fix_default_value.call()
             end
           end
         end

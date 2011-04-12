@@ -174,7 +174,7 @@ class MultipleValueConfigurePrompt
   end
   
   def each_source(&block)
-    @config.getProperty(@source_name).split(",").each{
+    @config.getPropertyOr(@source_name, "").split(",").each{
       |source_val|
       block.call(@parent_name_prefix + source_val, source_val)
     }

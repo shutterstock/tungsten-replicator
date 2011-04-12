@@ -28,8 +28,12 @@ class ClusterConfigureModule < ConfigureModule
     end
   end
   
+  def self.services_list(config)
+    config.getPropertyOr(REPL_SERVICES, "").split(",")
+  end
+  
   def self.each_service(config, &f)
-    config.getProperty(REPL_SERVICES).split(",").each{
+    self.services_list(config).each{
       |service_name|
       parent_name = Configurator::SERVICE_CONFIG_PREFIX + service_name
       

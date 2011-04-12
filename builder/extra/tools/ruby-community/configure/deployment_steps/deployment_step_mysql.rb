@@ -101,6 +101,8 @@ module ConfigureDeploymentStepMySQL
         "cluster.name=" + @config.getPropertyOr(GLOBAL_CLUSTERNAME, "")
       elsif line =~ /replicator.host=/ then
         "replicator.host=" + @config.getProperty(GLOBAL_HOST)
+      elsif line =~ /replicator.rmi_port=/ then
+        "replicator.rmi_port=" + @config.getProperty(REPL_RMI_PORT)
       else
         line
       end

@@ -164,6 +164,23 @@ class ReplicationServiceAllowAllSQL < MultipleValueConfigurePrompt
   end
 end
 
+class ReplicationServiceTHLPort < MultipleValueConfigurePrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_THL_PORT, 
+      "Port to use for THL operations", PV_INTEGER, 2112)
+  end
+  
+  def get_default_value
+    @config.getProperty(REPL_SVC_THL_PORT)
+  end
+  
+  def required?
+    false
+  end
+end
+
 class ReplicatorHostsPrompt < AdvancedPrompt
   def initialize
     super(REPL_HOSTS, "Enter a comma-delimited list of replicator hosts", 

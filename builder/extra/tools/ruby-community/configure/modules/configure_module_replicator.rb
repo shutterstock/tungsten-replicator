@@ -15,6 +15,10 @@ class ReplicatorConfigureModule < ConfigureModule
         PV_ANY, "secret"),
       THLStorageType.new(),
       THLStorageDirectory.new(),
+      ConstantValuePrompt.new(REPL_RMI_PORT, "Replication RMI port", 
+        PV_INTEGER, 10000),
+      ConstantValuePrompt.new(REPL_SVC_THL_PORT, "Port to use for THL operations", 
+        PV_INTEGER, 2112),
       
       ReplicationShardIDMode.new(),
       ReplicationServiceShardIDMode.new(),
@@ -22,6 +26,7 @@ class ReplicatorConfigureModule < ConfigureModule
       ReplicationServiceAllowUnsafeSQL.new(),
       ReplicationAllowAllSQL.new(),
       ReplicationServiceAllowAllSQL.new(),
+      ReplicationServiceTHLPort.new(),
       
       MySQLBinlogDirectory.new(),
       MySQLBinlogPattern.new(),
@@ -42,8 +47,6 @@ class ReplicatorConfigureModule < ConfigureModule
       MySQLAdvancedPrompt.new(REPL_SVC_CHANNELS, "Number of channels to use for replication",
         PV_INTEGER, 1),
       ReplicationServiceChannels.new(),
-      MySQLAdvancedPrompt.new(REPL_SVC_THL_PORT, "Port to use for THL operations", 
-        PV_INTEGER, 2112),
       MySQLAdvancedPrompt.new(REPL_SVC_BINLOG_MODE, "Method to use for reading the binary log",
         PV_IDENTIFIER, "master"), 
         
@@ -85,6 +88,7 @@ class ReplicatorConfigureModule < ConfigureModule
   def register_validation_checks(validation_handler)
     validation_handler.register_checks([
       THLStorageCheck.new(),
+      NoHiddenServicesCheck.new(),
       MySQLClientCheck.new(),
       MySQLLoginCheck.new(),
       MySQLPermissionsCheck.new(),
@@ -194,6 +198,30 @@ class THLStorageCheck < ConfigureValidationCheck
           end
         end  
       end
+    }
+  end
+end
+
+class NoHiddenServicesCheck < ConfigureValidationCheck
+  def set_vars
+    @title = "No hidden services check"
+  end
+  
+  def validate
+    config_services = ClusterConfigureModule.services_list(@config)
+    
+    current_services = []
+    Dir[@config.getProperty(GLOBAL_BASEDIR) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
+      service_name = cmd_result("grep ^service.name= #{file} | awk -F = '{print $2}'")
+      if service_name != ""
+        current_services << service_name
+      end
+    end
+    
+    missing_services = current_services - config_services
+    missing_services.each{
+      |service_name|
+      error("Missing configuration information for replication service '#{service_name}'")
     }
   end
 end

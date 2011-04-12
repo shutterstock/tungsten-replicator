@@ -151,6 +151,31 @@ class Configurator
       begin
         prompt_handler.run()
         save_prompts()
+        
+        value = ""
+        while value.to_s == ""
+          puts "Tungsten has all values needed to configure itself properly.  
+Do you want to continue with the configuration (Y) or quit (Q)?"
+          value = STDIN.gets
+          value.strip!
+          
+          case value.to_s().downcase()
+            when "y"
+              next
+            when "yes"
+              next 
+            when "no"
+              raise ConfigureSaveConfigAndExit
+            when "n"
+              raise ConfigureSaveConfigAndExit
+            when "q"
+              raise ConfigureSaveConfigAndExit
+            when "quit"
+              raise ConfigureSaveConfigAndExit
+            else
+              value = nil
+          end
+        end
       rescue ConfigureSaveConfigAndExit => csce 
         write "Saving configuration values and exiting"
         save_prompts()
