@@ -412,6 +412,14 @@ public class DiskLog
     }
 
     /**
+     * Return the minimum sequence number stored in the log.
+     */
+    public long getMinSeqno()
+    {
+        return index.getMinIndexedSeqno();
+    }
+
+    /**
      * Returns the count of files in the log.
      * 
      * @return

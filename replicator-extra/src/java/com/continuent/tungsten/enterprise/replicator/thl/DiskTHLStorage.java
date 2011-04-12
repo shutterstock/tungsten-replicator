@@ -313,8 +313,7 @@ public class DiskTHLStorage implements THLStorage
      */
     public long getMinSeqno() throws THLException
     {
-        // TODO Never called ?
-        return 0;
+        return diskLog.getMinSeqno();
     }
 
     public THLBinaryEvent findBinaryEvent(long seqno, short fragno)

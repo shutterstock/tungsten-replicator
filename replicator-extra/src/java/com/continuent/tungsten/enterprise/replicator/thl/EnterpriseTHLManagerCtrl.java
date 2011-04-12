@@ -48,8 +48,7 @@ import com.continuent.tungsten.replicator.thl.THLStorage;
 public class EnterpriseTHLManagerCtrl
         extends com.continuent.tungsten.replicator.thl.THLManagerCtrl
 {
-    private static Logger logger = Logger
-                                         .getLogger(EnterpriseTHLManagerCtrl.class);
+    private static Logger logger = Logger.getLogger(EnterpriseTHLManagerCtrl.class);
 
     private THLStorage    storageHandler;
     private String        logDir;
@@ -178,13 +177,18 @@ public class EnterpriseTHLManagerCtrl
         if (useDiskStorage)
         {
             long lowIndex = 0;
-            if (low != null)
+            long minSeqno = storageHandler.getMinSeqno();
+            if (low != null && low >= minSeqno)
                 lowIndex = low;
+            else
+                lowIndex = minSeqno;
+
             Long highIndex;
-            if (high != null)
+            long maxSeqno = storageHandler.getMaxSeqno();
+            if (high != null && high <= maxSeqno)
                 highIndex = high;
             else
-                highIndex = storageHandler.getMaxSeqno();
+                highIndex = maxSeqno;
 
             long i = lowIndex;
             short fragno = 0;
@@ -347,8 +351,7 @@ public class EnterpriseTHLManagerCtrl
             {
                 if (service == null)
                 {
-                    fatal(
-                            "You must specify either a config file or a service name (-conf or -service)",
+                    fatal("You must specify either a config file or a service name (-conf or -service)",
                             null);
                 }
                 else
