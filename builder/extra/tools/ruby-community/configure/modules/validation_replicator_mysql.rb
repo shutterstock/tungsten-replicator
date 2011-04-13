@@ -192,6 +192,13 @@ class MySQLSettingsCheck < MySQLValidationCheck
       error("The datadir setting is not specified")
       help("Specify a value for datadir in your my.cnf file to ensure that all utilities work properly")
     end
+    
+    info("Check for server_id")
+    server_id = cmd_result("my_print_defaults mysqld | grep server[-_]id | wc -l")
+    unless server_id.to_i() > 0
+      error("The server_id setting is not specified")
+      help("Specicy a value for server_id in your my.cnf file")
+    end
   end
 end
 

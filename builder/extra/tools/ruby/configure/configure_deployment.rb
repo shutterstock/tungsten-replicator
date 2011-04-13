@@ -41,8 +41,7 @@ class ConfigureDeployment
       expanded_config.setDefault([parent_name, REPL_SVC_CONFIG_FILE], 
         "#{expanded_config.getProperty(GLOBAL_BASEDIR)}/tungsten-replicator/conf/static-#{service_name}.properties")
         
-      if expanded_config.getProperty([parent_name, REPL_REMOTE_HOSTS]) && 
-          expanded_config.getProperty([parent_name, REPL_REMOTE_HOSTS]).split(",").include?(expanded_config.getProperty(GLOBAL_HOST))
+      if ClusterConfigureModule.services_list(expanded_config).include?(expanded_config.getProperty(GLOBAL_HOST))
         expanded_config.setProperty([parent_name, REPL_SVC_SERVICE_TYPE], "remote")
       else
         expanded_config.setProperty(GLOBAL_DSNAME, service_name)

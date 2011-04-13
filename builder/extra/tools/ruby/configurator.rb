@@ -154,6 +154,7 @@ class Configurator
         
         value = ""
         while value.to_s == ""
+          puts ""
           puts "Tungsten has all values needed to configure itself properly.  
 Do you want to continue with the configuration (Y) or quit (Q)?"
           value = STDIN.gets
