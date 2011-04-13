@@ -119,12 +119,6 @@ public class ScriptPlugin extends NotificationBroadcasterSupport
             args = sb.toString();
         }
 
-        if (script == null)
-        {
-            throw new ReplicatorException(
-                    "script plugin command not defined for: " + script);
-        }
-
         String[] cmdBuffer = null;
         try
         {

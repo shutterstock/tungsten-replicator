@@ -22,22 +22,17 @@
 
 package com.continuent.tungsten.replicator.extractor.mysql;
 
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
 import junit.framework.TestCase;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.applier.DummyApplier;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.extractor.ExtractorWrapper;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
 import com.continuent.tungsten.replicator.pipeline.Pipeline;
@@ -184,49 +179,51 @@ public class BinlogTest extends TestCase
     {
         if (true)
             return;
-        try
-        {
-            // Set properties.
-            TungstenProperties conf = this.createConfProperties();
-            conf.setString(ReplicatorConf.EXTRACTOR_ROOT + ".mysql.binlog_dir",
-                    ".");
-            conf.setString(ReplicatorConf.EXTRACTOR_ROOT
-                    + ".mysql.binlog_file_pattern", "mysql-bin-row");
-
-            // Configure runtime with these properties and prepare the
-            // extractor for use.
-            ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
-                    new MockOpenReplicatorContext(), ReplicatorMonitor
-                            .getInstance());
-            runtime.configure();
-
-            MySQLExtractor extractor = getMySQLExtractor(runtime);
-            extractor.setStrictVersionChecking(false);
-            extractor.prepare(runtime);
-            extractor.setLastEventId("000003:0");
-
-            // Extract events. Make sure we get expected number (7).
-            runtime.prepare();
-            Pipeline pipeline = runtime.getPipeline();
-            pipeline.start(new EventDispatcher());
-            Future<ReplDBMSEvent> future = pipeline
-                    .watchForAppliedSequenceNumber(6);
-            future.get(3, TimeUnit.SECONDS);
-            /**
-             * Applier applier = runtime.getApplier(); applier.prepare(runtime);
-             * // applier.configure(); // read all 5 events from file
-             * logger.info("RBR extractor/applier starting"); for (int i = 0; i
-             * < 7; i++) { DBMSEvent event = extractor.extract(); if (event !=
-             * null) { applier.apply(event, i, true); } }
-             */
-            logger.info("RBR extractor/applier finished");
-        }
-        catch (MySQLExtractException e)
-        {
-            fail(e.getMessage());
-            logger.info("RBR extractor/applier failed");
-        }
-        return;
+        
+        // Code clean-up : commenting out dead code
+//        try
+//        {
+//            // Set properties.
+//            TungstenProperties conf = this.createConfProperties();
+//            conf.setString(ReplicatorConf.EXTRACTOR_ROOT + ".mysql.binlog_dir",
+//                    ".");
+//            conf.setString(ReplicatorConf.EXTRACTOR_ROOT
+//                    + ".mysql.binlog_file_pattern", "mysql-bin-row");
+//
+//            // Configure runtime with these properties and prepare the
+//            // extractor for use.
+//            ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
+//                    new MockOpenReplicatorContext(), ReplicatorMonitor
+//                            .getInstance());
+//            runtime.configure();
+//
+//            MySQLExtractor extractor = getMySQLExtractor(runtime);
+//            extractor.setStrictVersionChecking(false);
+//            extractor.prepare(runtime);
+//            extractor.setLastEventId("000003:0");
+//
+//            // Extract events. Make sure we get expected number (7).
+//            runtime.prepare();
+//            Pipeline pipeline = runtime.getPipeline();
+//            pipeline.start(new EventDispatcher());
+//            Future<ReplDBMSEvent> future = pipeline
+//                    .watchForAppliedSequenceNumber(6);
+//            future.get(3, TimeUnit.SECONDS);
+//            /**
+//             * Applier applier = runtime.getApplier(); applier.prepare(runtime);
+//             * // applier.configure(); // read all 5 events from file
+//             * logger.info("RBR extractor/applier starting"); for (int i = 0; i
+//             * < 7; i++) { DBMSEvent event = extractor.extract(); if (event !=
+//             * null) { applier.apply(event, i, true); } }
+//             */
+//            logger.info("RBR extractor/applier finished");
+//        }
+//        catch (MySQLExtractException e)
+//        {
+//            fail(e.getMessage());
+//            logger.info("RBR extractor/applier failed");
+//        }
+//        return;
     }
 
     // Generate a simple runtime.

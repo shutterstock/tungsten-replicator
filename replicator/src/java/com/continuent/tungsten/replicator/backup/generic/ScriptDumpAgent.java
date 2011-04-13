@@ -173,12 +173,8 @@ public class ScriptDumpAgent extends AbstractBackupAgent
             fis.close();
             dumpFile = new File(props.getString("file"));
 
-            // Ensure dump file is non-null, and the file exists and is
-            // readable.
-            if (dumpFile == null)
-                throw new BackupException(
-                        "Dump file not written to properties file");
-            else if (!dumpFile.canRead())
+            // Ensure file exists and is readable.
+            if (!dumpFile.canRead())
                 throw new BackupException("Dump file is not readable: "
                         + dumpFile.getAbsolutePath());
 
