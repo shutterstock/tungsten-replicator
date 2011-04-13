@@ -22,7 +22,6 @@
 
 package com.continuent.tungsten.replicator.event;
 
-import com.continuent.tungsten.replicator.util.WatchPredicate;
 
 /**
  * An implementation of ReplEvent used to transmit control information within
