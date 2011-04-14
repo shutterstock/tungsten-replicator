@@ -128,8 +128,7 @@ public class EventMetadataFilter implements Filter
     private static String       RELAXED                 = "relaxed";
 
     // Class and instance variables.
-    private static Logger       logger                  = Logger
-                                                                .getLogger(EventMetadataFilter.class);
+    private static Logger       logger                  = Logger.getLogger(EventMetadataFilter.class);
     private PluginContext       context;
     private SqlOperationMatcher opMatcher;
     private SqlCommentEditor    commentEditor;
@@ -351,12 +350,21 @@ public class EventMetadataFilter implements Filter
         else if (index.dbMap.size() == normalDbCount)
         {
             // Need to split this into a couple of cases...
-            // First case should happen only if normalDbCount = 1
             if (serviceSessionVar == null)
             {
-                // This is a normal transaction. Assign the shard using the
-                // inferred schema name.
-                metadataTags.put(ReplOptionParams.SHARD_ID, dbName);
+                if (normalDbCount == 1)
+                {
+                    // This is a normal transaction. Assign the shard using the
+                    // inferred schema name.
+                    metadataTags.put(ReplOptionParams.SHARD_ID, dbName);
+                }
+                else
+                {
+                    // More than one schemas are used inside the transaction.
+                    // Assigning to UNKNOWN shard 
+                    metadataTags.put(ReplOptionParams.SHARD_ID,
+                            ReplOptionParams.SHARD_ID_UNKNOWN);
+                }
             }
             else
             {
@@ -381,9 +389,8 @@ public class EventMetadataFilter implements Filter
         {
             // This should not be possible and we should inform the proper
             // authorities.
-            logger
-                    .warn("Multiple Tungsten catalog databases in one transaction: seqno="
-                            + event.getSeqno() + " index=" + index.toString());
+            logger.warn("Multiple Tungsten catalog databases in one transaction: seqno="
+                    + event.getSeqno() + " index=" + index.toString());
             metadataTags.put(ReplOptionParams.SHARD_ID,
                     ReplOptionParams.SHARD_ID_UNKNOWN);
             metadataTags.put(ReplOptionParams.TUNGSTEN_METADATA, "true");
@@ -502,7 +509,9 @@ public class EventMetadataFilter implements Filter
                     // Have to edit the SQL because we don't have a way to make
                     // an appendable comment.
                     String queryCommented = this.commentEditor.addComment(
-                            query, op, "___SERVICE___ = ["
+                            query,
+                            op,
+                            "___SERVICE___ = ["
                                     + tags.get(ReplOptionParams.SERVICE) + "]");
                     sd.setQuery(queryCommented);
                 }
