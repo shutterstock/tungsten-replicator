@@ -86,7 +86,7 @@ public class EnterpriseTHLManagerCtrl
     @Override
     public void connect() throws THLException
     {
-        print("Connecting to storage");
+        println("Connecting to storage");
         if (useDiskStorage)
         {
             DiskTHLStorage storage = (DiskTHLStorage) storageHandler;
