@@ -73,6 +73,8 @@ public class EnterpriseTHL extends THL
                 handler.setEventSerializer(this.eventSerializer);
                 handler.setLogFileRetention(this.logFileRetention);
                 handler.setLogConnectionTimeout(this.logConnectionTimeout);
+                // THL always require a write connection to the log
+                handler.setReadOnly(false);
             }
             storageHandler.prepare(context);
             return storageHandler;
@@ -224,8 +226,8 @@ public class EnterpriseTHL extends THL
         props.setInt("logFileSize", logFileSize);
         props.setBoolean("doChecksum", doChecksum);
         props.setString("logFileRetention", logFileRetention);
-        //props.setLong(Replicator.MIN_STORED_SEQNO, getMinStoredSeqno(true));
-        //props.setLong(Replicator.MAX_STORED_SEQNO, getMaxStoredSeqno(true));
+        // props.setLong(Replicator.MIN_STORED_SEQNO, getMinStoredSeqno(true));
+        // props.setLong(Replicator.MAX_STORED_SEQNO, getMaxStoredSeqno(true));
         return props;
     }
 }

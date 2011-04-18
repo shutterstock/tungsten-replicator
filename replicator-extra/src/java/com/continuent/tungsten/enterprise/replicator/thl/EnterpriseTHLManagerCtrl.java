@@ -81,10 +81,9 @@ public class EnterpriseTHLManagerCtrl
     /**
      * {@inheritDoc}
      * 
-     * @see com.continuent.tungsten.replicator.thl.THLManagerCtrl#connect()
+     * @see com.continuent.tungsten.replicator.thl.THLManagerCtrl#connect(boolean)
      */
-    @Override
-    public void connect() throws THLException
+    public void connect(boolean readOnly) throws THLException
     {
         println("Connecting to storage");
         if (useDiskStorage)
@@ -99,6 +98,7 @@ public class EnterpriseTHLManagerCtrl
                 storage.setLogFileSize(logFileSize);
                 if (serializer != null)
                     storage.setEventSerializer(serializer);
+                storage.setReadOnly(readOnly);
                 storage.prepare(null);
             }
             catch (ReplicatorException e)
@@ -367,7 +367,7 @@ public class EnterpriseTHLManagerCtrl
             {
                 EnterpriseTHLManagerCtrl thlManager = new EnterpriseTHLManagerCtrl(
                         configFile);
-                thlManager.connect();
+                thlManager.connect(true);
 
                 InfoHolder info = thlManager.getInfo();
                 println("min seq# = " + info.getMinSeqNo());
@@ -382,7 +382,7 @@ public class EnterpriseTHLManagerCtrl
             {
                 EnterpriseTHLManagerCtrl thlManager = new EnterpriseTHLManagerCtrl(
                         configFile);
-                thlManager.connect();
+                thlManager.connect(true);
 
                 if (fileName != null)
                 {
@@ -402,7 +402,7 @@ public class EnterpriseTHLManagerCtrl
             {
                 EnterpriseTHLManagerCtrl thlManager = new EnterpriseTHLManagerCtrl(
                         configFile);
-                thlManager.connect();
+                thlManager.connect(false);
 
                 println("WARNING: The purge command will break replication if you delete all events or delete events that have not reached all slaves.");
 
@@ -455,7 +455,7 @@ public class EnterpriseTHLManagerCtrl
                     return;
                 }
 
-                thlManager.connect();
+                thlManager.connect(true);
 
                 println("WARNING: Skipping events may cause data inconsistencies with the master database.");
 
@@ -510,7 +510,7 @@ public class EnterpriseTHLManagerCtrl
             {
                 EnterpriseTHLManagerCtrl thlManager = new EnterpriseTHLManagerCtrl(
                         configFile);
-                thlManager.connect();
+                thlManager.connect(true);
 
                 thlManager.printIndex();
 

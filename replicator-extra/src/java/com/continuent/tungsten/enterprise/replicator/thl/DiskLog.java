@@ -41,8 +41,7 @@ import com.continuent.tungsten.replicator.thl.THLException;
  */
 public class DiskLog
 {
-    static Logger               logger                     = Logger
-                                                                   .getLogger(DiskLog.class);
+    static Logger               logger                     = Logger.getLogger(DiskLog.class);
 
     // Statistical information.
     private int                 eventCount                 = 0;
@@ -88,6 +87,9 @@ public class DiskLog
 
     /** Write lock to prevent log file corruption by concurrent access. */
     protected WriteLock         writeLock;
+
+    /** Indicates whether access should be read only or not */
+    protected boolean           readOnly                   = true;
 
     /**
      * Creates a new log instance.
@@ -169,6 +171,11 @@ public class DiskLog
 
     // Administrative API calls.
 
+    public void setReadOnly(boolean readOnly)
+    {
+        this.readOnly = readOnly;
+    }
+
     /**
      * Prepare the log for use, which includes ensuring that the log is created
      * automatically on first use and building an index of log file contents.
@@ -189,6 +196,13 @@ public class DiskLog
         logDir = new File(logDirName);
         if (!logDir.exists())
         {
+            if (readOnly)
+            {
+                // If read-only, do not create log directory. Just fail.
+                throw new ReplicatorException("Log directory does not exist : "
+                        + logDir.getAbsolutePath());
+            }
+
             logger.info("Log directory does not exist; creating now:"
                     + logDir.getAbsolutePath());
             if (!logDir.mkdirs())
@@ -198,26 +212,34 @@ public class DiskLog
                                 + logDir.getAbsolutePath());
             }
         }
-        
-        if (!logDir.canWrite())
+
+        if (!readOnly && !logDir.canWrite())
         {
+            // Check write permission only when not read only
             throw new ReplicatorException("Log directory is not writable: "
                     + logDir.getAbsolutePath());
         }
 
-        // Attempt to acquire write lock.
-        File lockFile = new File(logDir, "disklog.lck");
-        if (logger.isDebugEnabled())
+        if (!readOnly)
         {
-            logger.debug("Attempting to acquire lock on write lock file: "
-                    + lockFile.getAbsolutePath());
+            // Attempt to acquire write lock when write access is required.
+            File lockFile = new File(logDir, "disklog.lck");
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Attempting to acquire lock on write lock file: "
+                        + lockFile.getAbsolutePath());
+            }
+            writeLock = new WriteLock(lockFile);
+            writeLock.acquire();
+            if (writeLock.isLocked())
+                logger.info("Acquired write lock; log is writable");
+            else
+                logger.info("Unable to acquire write lock; log is read-only");
         }
-        writeLock = new WriteLock(lockFile);
-        writeLock.acquire();
-        if (writeLock.isLocked())
-            logger.info("Acquired write lock; log is writable");
         else
-            logger.info("Unable to acquire write lock; log is read-only");
+        {
+            logger.info("Using read-only log connection");
+        }
 
         // Load event serializer.
         try
@@ -236,7 +258,8 @@ public class DiskLog
 
         // If the log does not have any files, initialize the first log file
         // now.
-        if (LogFile.listLogFiles(logDir, DATA_FILENAME_PREFIX).length == 0)
+        if (!readOnly
+                && LogFile.listLogFiles(logDir, DATA_FILENAME_PREFIX).length == 0)
         {
             String logFileName = getDataFileName(fileIndex);
             LogFile logFile = new LogFile(logDir, logFileName);
@@ -253,7 +276,7 @@ public class DiskLog
         // Open the last index file and parse the name to get the index of the
         // next file to be created. This ensures new files will be properly
         // created.
-        LogFile logFile = openLastFile();
+        LogFile logFile = openLastFile(readOnly);
         String logFileName = logFile.getFile().getName();
         int logFileIndexPos = logFile.getFile().getName().lastIndexOf(".");
         fileIndex = Long.valueOf(logFileName.substring(logFileIndexPos + 1));
@@ -307,7 +330,8 @@ public class DiskLog
                     logger.info("Last log file ends on rotate log event: "
                             + logFile.getFile().getName());
                     logFile.release();
-                    logFile = this.startNewLogFile(maxSeqno + 1);
+                    if (!readOnly)
+                        logFile = this.startNewLogFile(maxSeqno + 1);
                     break;
                 }
 
@@ -321,20 +345,17 @@ public class DiskLog
 
             // If the last record is truncated, we have a corrupt file. Fix it
             // now.
-            if (currentRecord.isTruncated())
+            if (!readOnly && currentRecord.isTruncated())
             {
                 if (writeLock.isLocked())
                 {
-                    logger
-                            .warn("Log file contains partially written record: offset="
-                                    + currentRecord.getOffset()
-                                    + " partially written bytes="
-                                    + (logFile.getLength() - currentRecord
-                                            .getOffset()));
+                    logger.warn("Log file contains partially written record: offset="
+                            + currentRecord.getOffset()
+                            + " partially written bytes="
+                            + (logFile.getLength() - currentRecord.getOffset()));
                     logFile.setLength(currentRecord.getOffset());
-                    logger
-                            .info("Log file truncated to end of last good record: length="
-                                    + logFile.getLength());
+                    logger.info("Log file truncated to end of last good record: length="
+                            + logFile.getLength());
                 }
                 else
                 {
@@ -347,16 +368,13 @@ public class DiskLog
 
             // If the last transaction was not terminated, we need to truncate
             // the log to the end of the last full transaction.
-            if (!lastFrag)
+            if (!readOnly && !lastFrag)
             {
                 if (writeLock.isLocked())
                 {
-                    logger
-                            .warn("Log file contains partially written transaction; "
-                                    + "truncating to last full transaction: seqno="
-                                    + maxSeqno
-                                    + " length="
-                                    + lastCompleteEventOffset);
+                    logger.warn("Log file contains partially written transaction; "
+                            + "truncating to last full transaction: seqno="
+                            + maxSeqno + " length=" + lastCompleteEventOffset);
                     logFile.setLength(lastCompleteEventOffset);
                 }
                 else
@@ -395,7 +413,8 @@ public class DiskLog
      */
     public void release() throws ReplicatorException, InterruptedException
     {
-        writeLock.release();
+        if (!readOnly)
+            writeLock.release();
         connectionManager.release();
     }
 
@@ -460,7 +479,7 @@ public class DiskLog
             throws THLException, InterruptedException
     {
         // Ensure that the log is writable.
-        if (!writeLock.isLocked())
+        if (readOnly || !writeLock.isLocked())
         {
             throw new THLException("Attempt to write to read-only log: seqno="
                     + event.getSeqno() + " fragno=" + event.getFragno());
@@ -488,10 +507,10 @@ public class DiskLog
             {
                 try
                 {
-                    LogFile lastFile = openLastFile();
+                    LogFile lastFile = openLastFile(false);
                     logConnection = connectionManager
-                            .createAndGetLogConnection(lastFile, event
-                                    .getSeqno());
+                            .createAndGetLogConnection(lastFile,
+                                    event.getSeqno());
                 }
                 catch (ReplicatorException e)
                 {
@@ -520,8 +539,8 @@ public class DiskLog
                 {
                     dataFile = rotate(dataFile, event.getSeqno());
                     logConnection = connectionManager
-                            .createAndGetLogConnection(dataFile, event
-                                    .getSeqno());
+                            .createAndGetLogConnection(dataFile,
+                                    event.getSeqno());
                 }
 
                 // Write the event to byte stream.
@@ -587,17 +606,16 @@ public class DiskLog
                     // not have this sequence number.
                     if (logger.isDebugEnabled())
                     {
-                        logger
-                                .debug("Requested seqno does not exist in log: seqno="
-                                        + seqno);
+                        logger.debug("Requested seqno does not exist in log: seqno="
+                                + seqno);
                     }
                     return null;
                 }
-                logger
-                        .debug("No read connection for thread; allocating new one: thread="
-                                + Thread.currentThread().getId()
-                                + " seqno="
-                                + seqno + " logFile=" + newFileName);
+                logger.debug("No read connection for thread; allocating new one: thread="
+                        + Thread.currentThread().getId()
+                        + " seqno="
+                        + seqno
+                        + " logFile=" + newFileName);
                 LogFile data1 = new LogFile(logDir, newFileName);
                 data1.prepareRead();
                 logConnection = connectionManager.createAndGetLogConnection(
@@ -727,7 +745,7 @@ public class DiskLog
             InterruptedException
     {
         // Ensure the log is writable.
-        if (!writeLock.isLocked())
+        if (readOnly || !writeLock.isLocked())
         {
             throw new THLException("Attempt to delete from read-only log");
         }
@@ -790,7 +808,7 @@ public class DiskLog
         LogFile logFile = null;
         try
         {
-            logFile = openFile(entry.fileName);
+            logFile = openFile(entry.fileName, false);
             long offset = logFile.getOffset();
             LogRecord currentRecord = logFile.readRecord(0);
             while (!currentRecord.isEmpty())
@@ -808,9 +826,8 @@ public class DiskLog
                     if (currentSeqno >= seqno)
                     {
                         // This means we found the truncation point.
-                        logger
-                                .info("Truncating log file after sequence number: file="
-                                        + entry.fileName + " seqno=" + seqno);
+                        logger.info("Truncating log file after sequence number: file="
+                                + entry.fileName + " seqno=" + seqno);
                         logFile.setLength(offset);
                         index.setMaxIndexedSeqno(seqno - 1);
                         break;
@@ -819,9 +836,8 @@ public class DiskLog
                 else if (recordType == LogRecord.EVENT_ROTATE)
                 {
                     // This means we hit the end of the file without truncating.
-                    logger
-                            .warn("Unable to truncate log file at intended sequence number: file="
-                                    + entry.fileName + " seqno=" + seqno);
+                    logger.warn("Unable to truncate log file at intended sequence number: file="
+                            + entry.fileName + " seqno=" + seqno);
                     break;
                 }
 
@@ -851,23 +867,26 @@ public class DiskLog
      * Open the last log file for writing. The file is assumed to exist as the
      * log must be initialized at this point.
      * 
+     * @param readOnly
      * @return a {@link LogFile} object referencing the last indexed file
      * @throws ReplicatorException if an error occurs
      */
-    private LogFile openLastFile() throws ReplicatorException
+    private LogFile openLastFile(boolean readOnly) throws ReplicatorException
     {
         String logFileName = index.getLastFile();
-        return openFile(logFileName);
+        return openFile(logFileName, readOnly);
     }
 
     /**
      * Open a specific log file for writing.
      * 
      * @param logFileName Log file name
+     * @param readOnly
      * @return a {@link LogFile} object referencing the last indexed file
      * @throws ReplicatorException if an error occurs
      */
-    private LogFile openFile(String logFileName) throws ReplicatorException
+    private LogFile openFile(String logFileName, boolean readOnly)
+            throws ReplicatorException
     {
         // Get the file reference.
         LogFile data = new LogFile(logDir, logFileName);
@@ -886,7 +905,11 @@ public class DiskLog
         if (logger.isDebugEnabled())
             logger.debug("Opening log file: "
                     + data.getFile().getAbsolutePath());
-        data.prepareWrite(-1);
+
+        if (readOnly)
+            data.prepareRead();
+        else
+            data.prepareWrite(-1);
 
         return data;
     }

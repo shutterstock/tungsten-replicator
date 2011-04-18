@@ -50,8 +50,7 @@ import com.continuent.tungsten.replicator.thl.THLStorage;
  */
 public class DiskTHLStorage implements THLStorage
 {
-    static Logger           logger               = Logger
-                                                         .getLogger(DiskTHLStorage.class);
+    static Logger           logger               = Logger.getLogger(DiskTHLStorage.class);
 
     // Statistical information.
 
@@ -83,6 +82,8 @@ public class DiskTHLStorage implements THLStorage
     /** Idle log Connection timeout in seconds. */
     protected int           logConnectionTimeout = 28800;
 
+    private boolean         readOnly             = true;
+
     /**
      * Prepare the log for use, which includes ensuring that the log is created
      * automatically on first use and building an index of log file contents.
@@ -110,6 +111,7 @@ public class DiskTHLStorage implements THLStorage
         diskLog.setLogFileSize(logFileSize);
         diskLog.setLogFileRetainMillis(logFileRetainMillis);
         diskLog.setLogConnectionTimeoutMillis(logConnectionTimeout * 1000);
+        diskLog.setReadOnly(readOnly);
         diskLog.prepare();
 
         logger.info("Adapter preparation is complete");
@@ -241,6 +243,16 @@ public class DiskTHLStorage implements THLStorage
     public void setLogConnectionTimeout(int logConnectionTimeout)
     {
         this.logConnectionTimeout = logConnectionTimeout;
+    }
+    
+    /**
+     * Set the read only flag. This indicates whether the log should be opened for read or write access.
+     * 
+     * @param readOnly
+     */
+    public void setReadOnly(boolean readOnly)
+    {
+        this.readOnly = readOnly;
     }
 
     /**

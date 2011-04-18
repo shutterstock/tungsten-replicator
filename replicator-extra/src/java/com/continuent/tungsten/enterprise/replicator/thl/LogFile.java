@@ -41,8 +41,7 @@ import com.continuent.tungsten.replicator.thl.THLException;
  */
 public class LogFile
 {
-    static Logger              logger              = Logger
-                                                           .getLogger(LogFile.class);
+    static Logger              logger              = Logger.getLogger(LogFile.class);
 
     private static final int   MAGIC_NUMBER        = 0xC001CAFE;
     private static final short MAJOR_VERSION       = 0x0001;
@@ -219,17 +218,21 @@ public class LogFile
      */
     public void release()
     {
-        try
-        {
-            fsync();
-            randomFile.close();
-        }
-        catch (IOException e)
-        {
-            logger
-                    .warn("Unexpected I/O exception while closing log file: name="
-                            + file.getName() + " exception=" + e.getMessage());
-        }
+        // Do not try to sync twice when releasing
+        if (file != null)
+            try
+            {
+                fsync();
+                randomFile.close();
+                randomFile = null;
+                file = null;
+            }
+            catch (IOException e)
+            {
+                logger.warn(
+                        "Unexpected I/O exception while closing log file: name="
+                                + file.getName(), e);
+            }
     }
 
     /**
