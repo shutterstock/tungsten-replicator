@@ -38,6 +38,7 @@ import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSFilteredEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplEvent;
+import com.continuent.tungsten.replicator.event.ReplOptionParams;
 import com.continuent.tungsten.replicator.extractor.Extractor;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
 import com.continuent.tungsten.replicator.filter.Filter;
@@ -46,12 +47,13 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 /**
  * Implements thread logic for single-threaded, i.e., non-parallel stage
  * execution.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  */
 public class SingleThreadStageTask implements Runnable
 {
-    private static Logger   logger          = Logger.getLogger(SingleThreadStageTask.class);
+    private static Logger   logger          = Logger
+                                                    .getLogger(SingleThreadStageTask.class);
     private Stage           stage;
     private int             taskId;
     private Extractor       extractor;
@@ -86,7 +88,7 @@ public class SingleThreadStageTask implements Runnable
 
     /**
      * Sets the event dispatcher
-     *
+     * 
      * @see com.continuent.tungsten.replicator.pipeline.StageTask#setEventDispatcher(com.continuent.tungsten.replicator.EventDispatcher)
      */
     public void setEventDispatcher(EventDispatcher eventDispatcher)
@@ -162,7 +164,7 @@ public class SingleThreadStageTask implements Runnable
 
     /**
      * Perform single-threaded stage processing.
-     *
+     * 
      * @throws ReplicatorException
      */
     public void runTask()
@@ -175,6 +177,9 @@ public class SingleThreadStageTask implements Runnable
 
         ReplEvent genericEvent = null;
         ReplDBMSEvent event = null;
+
+        String currentService = null;
+
         try
         {
             // If we are supposed to auto-synchronize, do it now.
@@ -239,6 +244,46 @@ public class SingleThreadStageTask implements Runnable
                     continue;
                 }
 
+                // Issue #15. If we detect a change in the service name, we
+                // should commit now to prevent merging of transactions from 
+                // different services in block commit.
+                if (usingBlockCommit && genericEvent instanceof ReplDBMSEvent)
+                {
+                    ReplDBMSEvent re = (ReplDBMSEvent) genericEvent;
+                    String newService = re.getDBMSEvent()
+                            .getMetadataOptionValue(ReplOptionParams.SERVICE);
+                    if (currentService == null)
+                        currentService = newService;
+                    else if (!currentService.equals(newService))
+                    {
+                        // We assume changes in service only happen on the first
+                        // fragment.  Warn if this assumption is violated. 
+                        if (re.getFragno() == 0)
+                        {
+                            if (logger.isDebugEnabled())
+                            {
+                                String msg = String
+                                        .format(
+                                                "Committing due to service change: prev svc=%s seqno=%d new_svc=%s\n",
+                                                currentService, re.getSeqno(),
+                                                newService);
+                                logger.debug(msg);
+                            }
+                            applier.commit();
+                            blockEventCount = 0;
+                        }
+                        else
+                        {
+                            String msg = String
+                                    .format(
+                                            "Service name change between fragments: prev svc=%s seqno=%d fragno=%d new_svc=%s\n",
+                                            currentService, re.getSeqno(), re
+                                                    .getFragno(), newService);
+                            logger.warn(msg);
+                        }
+                    }
+                }
+
                 // Submit the event to the schedule to see what we should do
                 // with it.
                 int disposition = schedule.advise(genericEvent);
@@ -278,8 +323,10 @@ public class SingleThreadStageTask implements Runnable
                 event = (ReplDBMSEvent) genericEvent;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug(loggingPrefix + "Extracted event: seqno="
-                            + event.getSeqno() + " fragno=" + event.getFragno());
+                    logger
+                            .debug(loggingPrefix + "Extracted event: seqno="
+                                    + event.getSeqno() + " fragno="
+                                    + event.getFragno());
                 }
                 currentEvent = event;
 
@@ -428,7 +475,8 @@ public class SingleThreadStageTask implements Runnable
             }
             catch (InterruptedException e1)
             {
-                logWarn("Task cancelled while trying to rollback following cancellation",
+                logWarn(
+                        "Task cancelled while trying to rollback following cancellation",
                         null);
             }
         }
@@ -470,7 +518,8 @@ public class SingleThreadStageTask implements Runnable
         if (header == null)
         {
             if (logger.isDebugEnabled())
-                logger.debug("Unable to update position due to null event value");
+                logger
+                        .debug("Unable to update position due to null event value");
             return;
         }
 

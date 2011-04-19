@@ -56,6 +56,61 @@ public class PipelineHelper
     }
 
     /**
+     * Generate a simple runtime configuration that will process a specified
+     * number of transactions.
+     * 
+     * @return
+     * @throws Exception
+     */
+    public TungstenProperties createSimpleRuntimeWithXacts(int nTrx)
+            throws Exception
+    {
+        PipelineConfigBuilder builder = new PipelineConfigBuilder();
+        builder.setProperty(ReplicatorConf.SERVICE_NAME, "test");
+        builder.setRole("master");
+        builder.addPipeline("master", "master", null);
+        builder.addStage("master", "dummy", "dummy", null);
+        builder.addComponent("extractor", "dummy", DummyExtractor.class);
+        builder.addProperty("extractor", "dummy", "nTrx", new Integer(nTrx)
+                .toString());
+        builder.addComponent("applier", "dummy", DummyApplier.class);
+
+        return builder.getConfig();
+    }
+
+    /**
+     * Generate a simple runtime with a queue on both ends of a simple task.
+     * 
+     * @return
+     * @throws Exception
+     */
+    public TungstenProperties createDoubleQueueRuntime(int size)
+            throws Exception
+    {
+        PipelineConfigBuilder builder = new PipelineConfigBuilder();
+        builder.setProperty(ReplicatorConf.SERVICE_NAME, "test");
+        builder.setRole("master");
+        builder.addPipeline("master", "master", "q1,q2");
+        builder.addStage("extract", "q-extract", "q-apply", null);
+
+        // Stage components.
+        builder.addComponent("extractor", "q-extract", InMemoryQueueAdapter.class);
+        builder.addProperty("extractor", "q-extract", "storeName", "q1");
+        builder.addComponent("applier", "q-apply", InMemoryQueueAdapter.class);
+        builder.addProperty("applier", "q-apply", "storeName", "q2");
+
+        // Storage definition.
+        builder.addComponent("store", "q1", InMemoryQueueStore.class);
+        builder.addProperty("store", "q1", "maxSize", new Integer(size)
+                .toString());
+        builder.addComponent("store", "q2", InMemoryQueueStore.class);
+        builder.addProperty("store", "q2", "maxSize", new Integer(size)
+                .toString());
+
+        return builder.getConfig();
+    }
+
+    /**
      * Generate a runtime configuration with a store. Fragmentation numbers
      * above 0 generate fragmented events.
      */

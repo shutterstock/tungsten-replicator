@@ -73,7 +73,7 @@ public class PipelineProgressTest extends TestCase
     public void testPipelineWithNoEvents() throws Exception
     {
         // Create pipeline.
-        TungstenProperties config = helper.createSimpleRuntime();
+        TungstenProperties config = helper.createSimpleRuntimeWithXacts(0);
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
                 new MockOpenReplicatorContext(), ReplicatorMonitor
                         .getInstance());
@@ -94,7 +94,7 @@ public class PipelineProgressTest extends TestCase
         List<ShardProgress> shards = pipeline.getShardProgress();
         assertEquals("empty shard list", 0, shards.size());
 
-        // Tasks should have a single task.
+        // Pipeline should have one task.
         List<TaskProgress> tasks = pipeline.getTaskProgress();
         assertEquals("single task in list", 1, tasks.size());
         TaskProgress task = tasks.get(0);

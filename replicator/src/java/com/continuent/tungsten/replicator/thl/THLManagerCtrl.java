@@ -232,12 +232,13 @@ public class THLManagerCtrl
      * Format and print schema name if it differs from the last printed schema
      * name.
      * 
+     * @param sb StringBuilder on which to print
      * @param schema Schema name to print.
      * @param lastSchema Last printed schema name.
      * @param pureSQL If true, use pure SQL output. Formatted form otherwise.
      * @return Schema name as given in the schema parameter.
      */
-    private static String printSchema(String schema, String lastSchema,
+    private static String printSchema(StringBuilder sb, String schema, String lastSchema,
             boolean pureSQL)
     {
         if (schema != null
@@ -245,9 +246,9 @@ public class THLManagerCtrl
                         .compareTo(schema) != 0)))
         {
             if (pureSQL) // TODO: what about Oracle and `USE`?
-                println("USE " + schema + ";");
+                println(sb, "USE " + schema + ";");
             else
-                println("- SCHEMA = " + schema);
+                println(sb, "- SCHEMA = " + schema);
         }
         return schema;
     }
@@ -417,7 +418,7 @@ public class THLManagerCtrl
             {
                 LoadDataFileFragment loadDataFileFragment = (LoadDataFileFragment) dataElem;
                 String schema = loadDataFileFragment.getDefaultSchema();
-                printSchema(schema, lastSchema, pureSQL);
+                printSchema(stringBuilder, schema, lastSchema, pureSQL);
                 lastSchema = schema;
                 println("- DATA FILE #" + loadDataFileFragment.getFileID()
                         + " / size : " + loadDataFileFragment.getData().length);
@@ -468,8 +469,8 @@ public class THLManagerCtrl
     {
         // Output schema name if needed.
         String schema = statement.getDefaultSchema();
-        printSchema(schema, lastSchema, pureSQL);
         printOptions(stringBuilder, statement);
+        printSchema(stringBuilder, schema, lastSchema, pureSQL);
         String query = statement.getQuery();
 
         if (query == null)
@@ -514,9 +515,6 @@ public class THLManagerCtrl
         String schema = null;
         for (OneRowChange oneRowChange : rowChange.getRowChanges())
         {
-            schema = oneRowChange.getSchemaName();
-            // Output schema name if needed.
-            lastSchema = printSchema(schema, lastSchema, pureSQL);
             // Output row change details.
             if (pureSQL)
                 println(stringBuilder,
@@ -525,6 +523,8 @@ public class THLManagerCtrl
             {
                 println(stringBuilder, " - ACTION = "
                         + oneRowChange.getAction().toString());
+                println(stringBuilder, 
+                        " - SCHEMA = " + oneRowChange.getSchemaName());
                 println(stringBuilder,
                         " - TABLE = " + oneRowChange.getTableName());
                 ArrayList<OneRowChange.ColumnSpec> keys = oneRowChange

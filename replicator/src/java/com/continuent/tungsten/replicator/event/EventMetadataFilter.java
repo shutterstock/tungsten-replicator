@@ -24,7 +24,6 @@ package com.continuent.tungsten.replicator.event;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -82,60 +81,17 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class EventMetadataFilter implements Filter
 {
-    // Class for counting accesses to databases. This encapsulates the
-    // counting logic but not the data.
-    class SchemaIndex
-    {
-        // Map relating schema names and references.
-        Map<String, Integer> dbMap = new HashMap<String, Integer>();
-
-        SchemaIndex()
-        {
-        }
-
-        // Add to database count ignoring null names.
-        void incrementSchema(String schemaName)
-        {
-            if (schemaName != null)
-            {
-                Integer count = dbMap.get(schemaName);
-                if (count == null)
-                    dbMap.put(schemaName, 1);
-                else
-                    dbMap.put(schemaName, count.intValue() + 1);
-            }
-        }
-
-        // Return a nice set of counts for diagnostic purposes.
-        public String toString()
-        {
-            StringBuffer sb = new StringBuffer();
-            sb.append("{");
-            for (String schema : dbMap.keySet())
-            {
-                if (sb.length() > 1)
-                    sb.append(";");
-                sb.append(schema).append("=>").append(dbMap.get(schema));
-            }
-            sb.append("}");
-            return sb.toString();
-        }
-    }
-
     // Settable properties.
     private boolean             unknownSqlUsesDefaultDb = false;
     private static String       STRINGENT               = "stringent";
     private static String       RELAXED                 = "relaxed";
 
     // Class and instance variables.
-    private static Logger       logger                  = Logger.getLogger(EventMetadataFilter.class);
+    private static Logger       logger                  = Logger
+                                                                .getLogger(EventMetadataFilter.class);
     private PluginContext       context;
     private SqlOperationMatcher opMatcher;
     private SqlCommentEditor    commentEditor;
-    private Pattern             serviceNamePattern      = Pattern
-                                                                .compile(
-                                                                        "tungsten_([a-zA-Z0-9-_]+)",
-                                                                        Pattern.CASE_INSENSITIVE);
     private String              serviceCommentRegex     = "___SERVICE___ = \\[([a-zA-Z0-9-_]+)\\]";
     private Pattern             serviceCommentPattern   = Pattern
                                                                 .compile(
@@ -229,7 +185,7 @@ public class EventMetadataFilter implements Filter
         }
 
         // Create an index to count database references.
-        SchemaIndex index = new SchemaIndex();
+        EventSchemaStatistics schemaStats = new EventSchemaStatistics();
 
         // Iterate through values inferring the database name.
         for (DBMSData dbmsData : dbmsDataValues)
@@ -274,7 +230,7 @@ public class EventMetadataFilter implements Filter
                 // have null schema at this point use the schema from a previous
                 // statement in the transaction, so our work is already done.
                 if (affectedSchema != null)
-                    index.incrementSchema(affectedSchema);
+                    schemaStats.incrementSchema(affectedSchema);
 
                 // Check for unsafe statements for bi-directional replication.
                 if (op.isBidiUnsafe())
@@ -285,7 +241,7 @@ public class EventMetadataFilter implements Filter
                 RowChangeData rd = (RowChangeData) dbmsData;
                 for (OneRowChange orc : rd.getRowChanges())
                 {
-                    index.incrementSchema(orc.getSchemaName());
+                    schemaStats.incrementSchema(orc.getSchemaName());
                 }
             }
             else if (dbmsData instanceof LoadDataFileFragment)
@@ -293,7 +249,7 @@ public class EventMetadataFilter implements Filter
                 // Add whatever we have to the index.
                 String affectedSchema = ((LoadDataFileFragment) dbmsData)
                         .getDefaultSchema();
-                index.incrementSchema(affectedSchema);
+                schemaStats.incrementSchema(affectedSchema);
             }
             else if (dbmsData instanceof RowIdData)
             {
@@ -307,37 +263,11 @@ public class EventMetadataFilter implements Filter
             }
         }
 
-        // Scan the counts looking for regular and tungsten metadata database
-        // names.
-        int normalDbCount = 0;
-        int tungstenDbCount = 0;
-        String dbName = null;
-        String tungstenDbName = null;
-        String service = null;
-        for (String schemaName : index.dbMap.keySet())
-        {
-            String nextServiceName = schemaToServiceName(schemaName);
-            if (nextServiceName == null)
-            {
-                // This is a normal database.
-                dbName = schemaName;
-                normalDbCount++;
-                if (logger.isDebugEnabled())
-                    logger.debug("Found local database: " + schemaName);
-            }
-            else
-            {
-                tungstenDbCount++;
-                tungstenDbName = schemaName;
-                service = nextServiceName;
-                if (logger.isDebugEnabled())
-                    logger.debug("Found tungsten database: " + schemaName);
-            }
-        }
-
         // Process schema counts and assign shards plus metadata according to
         // rules in the header comment. (See above.)
-        if (index.dbMap.size() == 0)
+        schemaStats.countSchemas();
+
+        if (schemaStats.getDbMap().size() == 0)
         {
             // In this case we can't find the schema name, hence cannot assign
             // a specific shard. Use the default shard ID.
@@ -347,21 +277,22 @@ public class EventMetadataFilter implements Filter
                 logger.debug("Unable to infer database: seqno="
                         + event.getSeqno());
         }
-        else if (index.dbMap.size() == normalDbCount)
+        else if (schemaStats.getDbMap().size() == schemaStats.getNormalDbCount())
         {
             // Need to split this into a couple of cases...
             if (serviceSessionVar == null)
             {
-                if (normalDbCount == 1)
+                if (schemaStats.getNormalDbCount() == 1)
                 {
                     // This is a normal transaction. Assign the shard using the
                     // inferred schema name.
-                    metadataTags.put(ReplOptionParams.SHARD_ID, dbName);
+                    metadataTags.put(ReplOptionParams.SHARD_ID,
+                            schemaStats.getSingleDbName());
                 }
                 else
                 {
                     // More than one schemas are used inside the transaction.
-                    // Assigning to UNKNOWN shard 
+                    // Assigning to UNKNOWN shard
                     metadataTags.put(ReplOptionParams.SHARD_ID,
                             ReplOptionParams.SHARD_ID_UNKNOWN);
                 }
@@ -372,35 +303,40 @@ public class EventMetadataFilter implements Filter
                 // service but also assign the shard using Tungsten shard
                 // service conventions.
                 metadataTags.put(ReplOptionParams.SERVICE, serviceSessionVar);
-                tungstenDbName = "tungsten_" + serviceSessionVar;
+                String tungstenDbName = "tungsten_" + serviceSessionVar;
                 metadataTags.put(ReplOptionParams.SHARD_ID, tungstenDbName);
             }
         }
-        else if (tungstenDbCount == 1)
+        else if (schemaStats.getTungstenDbCount() > 0)
         {
             // This transaction contains Tungsten metadata. The fact that this
             // is logged means we must be from a remote service. Note these
             // facts and use the Tungsten catalog schema as the shard name.
-            metadataTags.put(ReplOptionParams.SHARD_ID, tungstenDbName);
-            metadataTags.put(ReplOptionParams.SERVICE, service);
-            metadataTags.put(ReplOptionParams.TUNGSTEN_METADATA, "true");
-        }
-        else if (tungstenDbCount > 1)
-        {
-            // This should not be possible and we should inform the proper
-            // authorities.
-            logger.warn("Multiple Tungsten catalog databases in one transaction: seqno="
-                    + event.getSeqno() + " index=" + index.toString());
-            metadataTags.put(ReplOptionParams.SHARD_ID,
-                    ReplOptionParams.SHARD_ID_UNKNOWN);
-            metadataTags.put(ReplOptionParams.TUNGSTEN_METADATA, "true");
+            if (schemaStats.getService() == null)
+            {
+                // This should not be possible and we should inform the proper
+                // authorities.
+                logger.warn("Ambiguous service name: seqno=" + event.getSeqno()
+                        + " index=" + schemaStats.toString());
+                metadataTags.put(ReplOptionParams.SHARD_ID,
+                        ReplOptionParams.SHARD_ID_UNKNOWN);
+                metadataTags.put(ReplOptionParams.TUNGSTEN_METADATA, "true");
+            }
+            else
+            {
+                // This looks legal.
+                metadataTags.put(ReplOptionParams.SHARD_ID,
+                        schemaStats.getSingleDbName());
+                metadataTags.put(ReplOptionParams.SERVICE, schemaStats.getService());
+                metadataTags.put(ReplOptionParams.TUNGSTEN_METADATA, "true");
+            }
         }
         else
         {
             // This is possible but cannot be processed as a shard. Assign to
             // the default shard.
             logger.debug("Multiple user databases in one transaction: seqno="
-                    + event.getSeqno() + " index=" + index.toString());
+                    + event.getSeqno() + " index=" + schemaStats.toString());
             metadataTags.put(ReplOptionParams.SHARD_ID,
                     ReplOptionParams.SHARD_ID_UNKNOWN);
         }
@@ -509,9 +445,7 @@ public class EventMetadataFilter implements Filter
                     // Have to edit the SQL because we don't have a way to make
                     // an appendable comment.
                     String queryCommented = this.commentEditor.addComment(
-                            query,
-                            op,
-                            "___SERVICE___ = ["
+                            query, op, "___SERVICE___ = ["
                                     + tags.get(ReplOptionParams.SERVICE) + "]");
                     sd.setQuery(queryCommented);
                 }
@@ -526,17 +460,6 @@ public class EventMetadataFilter implements Filter
         }
 
         return event;
-    }
-
-    // Returns the service name if this is a tungsten metadata schema or null if
-    // it is an ordinary schema.
-    private String schemaToServiceName(String schema)
-    {
-        Matcher m = this.serviceNamePattern.matcher(schema);
-        if (m.find())
-            return m.group(1);
-        else
-            return null;
     }
 
     /**
