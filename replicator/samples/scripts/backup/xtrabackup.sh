@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/bin/bash -eu
+# -e: Exit immediately if a command exits with a non-zero status.
+# -u: Treat unset variables as an error when substituting.
 # 
 # Custom backup script that follows conventions for script backups implemented
 # by ScriptBackupAgent.  
@@ -83,7 +85,18 @@ elif [ "$operation" = "restore" ]; then
   tar -xzf $file
 
   # Stop mysql and clear the mysql data directory
-  service $service stop
+  /sbin/service $service stop 1>&2
+
+  # We are expecting the exit code to be 3 so we have to turn off the 
+  # error trapping
+  set +e
+  /sbin/service $service status 1>&2
+  if [ $? -ne 3 ]; then
+    echo "Unable to properly shutdown the MySQL service"
+    exit 1
+  fi
+  set -e
+  
   rm -rf $mysqldatadir/*
 
   # Copy the backup files to the mysql data directory
@@ -91,7 +104,7 @@ elif [ "$operation" = "restore" ]; then
 
   # Fix the permissions and restart the service
   chown -R $mysqluser:$mysqlgroup $mysqldatadir
-  service $service start
+  /sbin/service $service start 1>&2
 
   # Remove the staging directory
   rm -rf $directory
