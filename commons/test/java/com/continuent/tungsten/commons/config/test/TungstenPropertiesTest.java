@@ -210,9 +210,10 @@ public class TungstenPropertiesTest extends TestCase
         System.setProperty("a", "x");
 
         // Make substitutions.
-        TungstenProperties.substituteSystemValues(props);
+        int count = TungstenProperties.substituteSystemValues(props);
 
         // Check results.
+        Assert.assertEquals("substitution count", 1, count);
         Assert.assertEquals("y", props.getProperty("a"));
         Assert.assertEquals("ay", props.getProperty("b1"));
         Assert.assertEquals("a$a", props.getProperty("b2"));
@@ -257,6 +258,28 @@ public class TungstenPropertiesTest extends TestCase
         Assert.assertEquals("e2", props.getProperty("e2"));
         Assert.assertEquals("${novalue}", props.getProperty("e3"));
         Assert.assertEquals("${no value}", props.getProperty("e4"));
+    }
+
+    /**
+     * Tests ability to perform multiple substitutions.  
+     */
+    public void testLoadWithMultipleSubtitutions() throws Exception
+    {
+        Properties props = new Properties();
+        props.setProperty("a", "${b}");
+        props.setProperty("b", "${c}");
+        props.setProperty("c", "x12");
+        props.setProperty("d", "x");
+
+        // Make substitutions.
+        int count = TungstenProperties.substituteSystemValues(props, 3);
+
+        // Check results.
+        Assert.assertEquals("substitution count", 3, count);
+        Assert.assertEquals("x12", props.getProperty("a"));
+        Assert.assertEquals("x12", props.getProperty("b"));
+        Assert.assertEquals("x12", props.getProperty("c"));
+        Assert.assertEquals("x", props.getProperty("d"));
     }
 
     /**

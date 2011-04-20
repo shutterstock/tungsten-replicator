@@ -56,14 +56,15 @@ import org.apache.log4j.Logger;
  * properties using typed getters and setters. There is support for serializing
  * to and from Java properties format, setting variables, merging properties,
  * and other niceties.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class TungstenProperties implements Serializable
 {
     private static final long   serialVersionUID    = 1;
-    private static Logger       logger              = Logger.getLogger(TungstenProperties.class);
+    private static Logger       logger              = Logger
+                                                            .getLogger(TungstenProperties.class);
     public static final String  ENDOFPROPERTIES_TAG = "#EOF";
     public static final String  ENDOFLINE_TAG       = "#EOL";
     private static final String MAP_KEY_SEPARATOR   = "#TP_KEY#";
@@ -113,7 +114,7 @@ public class TungstenProperties implements Serializable
     /**
      * Loads values from Java properties file format. Current values are
      * obliterated.
-     *
+     * 
      * @param is InputStream containing properties.
      * @param doSubstitutions If true perform variable substitutions
      */
@@ -181,7 +182,7 @@ public class TungstenProperties implements Serializable
     /**
      * Get an instances of Properties that is populated by the current values of
      * the instance on which it's called.
-     *
+     * 
      * @return Properties
      */
     public Properties getProperties()
@@ -208,17 +209,40 @@ public class TungstenProperties implements Serializable
     }
 
     /**
+     * Substitute system values up to a certain number of times. This permits
+     * clients to reuse variables to get multiple substitutions without running
+     * into problems with infinite loops.
+     */
+    public static int substituteSystemValues(Properties props, int iterations)
+    {
+        int substitutions = 0;
+        // Substitute until we exhaust either iterations or substitutions. 
+        for (int i = 0; i < iterations; i++)
+        {
+            int count = substituteSystemValues(props);
+            if (count == 0)
+                break;
+            else
+                substitutions += count;
+        }
+        return substitutions;
+    }
+
+    /**
      * Scan Properties instance values replacing any expression of the form
      * ${name} where 'name' is a key in System.properties *or* a local property
      * in the same file, where local property substitutions take priority over
      * system property names. If there is no such value the expression is left
      * as is.
      */
-    public static void substituteSystemValues(Properties props)
+    public static int substituteSystemValues(Properties props)
     {
+        int substitutions = 0;
+
         // Make a copy of the properties object for local variable
         // substitutions.
-        Properties originalProps = new Properties(props);
+        Properties originalProps = new Properties();
+        originalProps.putAll(props);
 
         // Perform substitutions.
         Enumeration<Object> en = props.keys();
@@ -299,10 +323,12 @@ public class TungstenProperties implements Serializable
                                 if (originalValue != null)
                                 {
                                     expression = new StringBuffer(originalValue);
+                                    substitutions++;
                                 }
                                 else if (systemValue != null)
                                 {
                                     expression = new StringBuffer(systemValue);
+                                    substitutions++;
                                 }
                             }
                             name = null;
@@ -328,6 +354,9 @@ public class TungstenProperties implements Serializable
             // Finally, set the new value.
             props.setProperty(key, newValue.toString());
         }
+
+        // Return the total number of substitutions.
+        return substitutions;
     }
 
     /**
@@ -389,7 +418,7 @@ public class TungstenProperties implements Serializable
      * Applies the current proterties to the given object, stopping and throwing
      * errors if a property has no matching setter in the given object. This is
      * equivalent to <code>applyProperties(o, false)</code>
-     *
+     * 
      * @param o instance on which to set properties
      */
     public void applyProperties(Object o)
@@ -412,7 +441,7 @@ public class TungstenProperties implements Serializable
      * The setter method, if found, must have a single argument and must be
      * publicly accessible. Multiple setters that differ only by argument type
      * are not supported.
-     *
+     * 
      * @param o Instance for which we are to set properties
      * @param ignoreIfMissing whether or not stop and throw an error if a
      *            property has no matching setting in the given object instance
@@ -561,15 +590,17 @@ public class TungstenProperties implements Serializable
                     catch (Exception e1)
                     {
                         if (logger.isDebugEnabled())
-                            logger.debug("No valueOf(String) method found for arg type "
-                                    + arg0Type + " - Giving up");
+                            logger
+                                    .debug("No valueOf(String) method found for arg type "
+                                            + arg0Type + " - Giving up");
                         if (ignoreIfMissing)
                         {
                             continue;
                         }
-                        logger.warn("Could not instanciate arg of type "
-                                + arg0Type
-                                + ". No Constructor(String) nor valueOf(String) found in this class");
+                        logger
+                                .warn("Could not instanciate arg of type "
+                                        + arg0Type
+                                        + ". No Constructor(String) nor valueOf(String) found in this class");
                         throw new PropertyException(
                                 "Unsupported property type: key=" + key
                                         + " type=" + arg0Type + " value="
@@ -602,7 +633,7 @@ public class TungstenProperties implements Serializable
     /**
      * Create a set of initialized properties from the set of fields in a
      * specific object instance.
-     *
+     * 
      * @param o
      * @param ignoreIfUnsupported
      */
@@ -660,8 +691,9 @@ public class TungstenProperties implements Serializable
                     {
                         if (logger.isDebugEnabled())
                         {
-                            logger.debug("Skipping property with unsupported type, prop="
-                                    + field.getName());
+                            logger
+                                    .debug("Skipping property with unsupported type, prop="
+                                            + field.getName());
                         }
                         continue;
                     }
@@ -672,10 +704,11 @@ public class TungstenProperties implements Serializable
             }
             catch (IllegalAccessException i)
             {
-                logger.error("Exception while trying to extract values from field="
-                        + field.getName()
-                        + " of class="
-                        + o.getClass().getName());
+                logger
+                        .error("Exception while trying to extract values from field="
+                                + field.getName()
+                                + " of class="
+                                + o.getClass().getName());
             }
         }
 
@@ -803,7 +836,7 @@ public class TungstenProperties implements Serializable
 
     /**
      * Utility method to help with compatibility with Properties
-     *
+     * 
      * @param key
      * @param value
      */
@@ -819,7 +852,7 @@ public class TungstenProperties implements Serializable
 
     /**
      * Utility method to help with compatibility with Properties
-     *
+     * 
      * @param key
      * @param value
      */
@@ -873,7 +906,7 @@ public class TungstenProperties implements Serializable
      * Date type is stored as a long representing the number of milliseconds
      * since January 1, 1970, 00:00:00 GMT as retrieved by
      * {@link Date#getTime()}
-     *
+     * 
      * @param key unique identifier for this property
      * @param value the date to store
      */
@@ -933,7 +966,7 @@ public class TungstenProperties implements Serializable
      * separated by MAP_KEY_SEPARATOR
      * <p>
      * Note that none of the TungstenProperties in the given map can be null
-     *
+     * 
      * @param map the map to store
      */
     public void setDataSourceMap(Map<String, TungstenProperties> map)
@@ -954,7 +987,7 @@ public class TungstenProperties implements Serializable
      * MAP_KEY_SEPARATOR + its Tungsten properties key.
      * <p>
      * Note that none of the TungstenProperties in the given map can be null
-     *
+     * 
      * @param map the map to store
      */
     public void setClusterMap(Map<String, Map<String, TungstenProperties>> map)
@@ -972,7 +1005,7 @@ public class TungstenProperties implements Serializable
 
     /**
      * Given a key, gets the object
-     *
+     * 
      * @param key
      * @param defaultValue
      * @param required
@@ -997,7 +1030,7 @@ public class TungstenProperties implements Serializable
     /**
      * Returns the value as a String with an optional default value and checking
      * to ensure value is present if required
-     *
+     * 
      * @param key The name of the property
      * @param defaultValue An optional default value
      * @param required If true, a value or default must be present
@@ -1159,7 +1192,7 @@ public class TungstenProperties implements Serializable
 
     /**
      * Retrieves a data source map as stored by {@link #setDataSourceMap(Map)}
-     *
+     * 
      * @return a String/TungstenProperties map
      */
     public Map<String, TungstenProperties> getDataSourceMap()
@@ -1171,7 +1204,9 @@ public class TungstenProperties implements Serializable
             String key = keys.iterator().next();
             String realKey = key.substring(0, key.indexOf(MAP_KEY_SEPARATOR));
 
-            result.put(realKey, subset(realKey + MAP_KEY_SEPARATOR, true, true));
+            result
+                    .put(realKey, subset(realKey + MAP_KEY_SEPARATOR, true,
+                            true));
             keys = keyNames();
         }
         return result;
@@ -1179,7 +1214,7 @@ public class TungstenProperties implements Serializable
 
     /**
      * Retrieves a cluster map as stored by {@link #setClusterMap(Map)}
-     *
+     * 
      * @return a String/(String/TungstenProperties) map
      */
     public Map<String, Map<String, TungstenProperties>> getClusterMap()
@@ -1197,12 +1232,10 @@ public class TungstenProperties implements Serializable
                 result = new HashMap<String, TungstenProperties>();
             }
             String valKey = key.substring(key.indexOf(MAP_KEY_SEPARATOR)
-                    + MAP_KEY_SEPARATOR.length(),
-                    key.lastIndexOf(MAP_KEY_SEPARATOR));
-            result.put(
-                    valKey,
-                    subset(serviceKey + MAP_KEY_SEPARATOR + valKey
-                            + MAP_KEY_SEPARATOR, true, true));
+                    + MAP_KEY_SEPARATOR.length(), key
+                    .lastIndexOf(MAP_KEY_SEPARATOR));
+            result.put(valKey, subset(serviceKey + MAP_KEY_SEPARATOR + valKey
+                    + MAP_KEY_SEPARATOR, true, true));
             fullResult.put(serviceKey, result);
             keys = keyNames();
         }
@@ -1258,7 +1291,7 @@ public class TungstenProperties implements Serializable
     /**
      * Returns a TungstenProperties instance consisting of the property names
      * that match the given prefix
-     *
+     * 
      * @param prefix Return only those properties that match the prefix
      * @param removePrefix If true remove the prefix from each property name
      */
@@ -1270,7 +1303,7 @@ public class TungstenProperties implements Serializable
     /**
      * Returns a TungstenProperties instance consisting of the property names
      * that match the given prefix
-     *
+     * 
      * @param prefix Return only those properties that match the prefix
      * @param removePrefix If true remove the prefix from each property name
      * @param removeProps If true remove the matching key/value pairs from these
@@ -1326,8 +1359,8 @@ public class TungstenProperties implements Serializable
             if (++propCount > 1)
                 builder.append("\n");
 
-            builder.append("  ").append(key).append("=")
-                    .append(orderedProps.get(key));
+            builder.append("  ").append(key).append("=").append(
+                    orderedProps.get(key));
         }
 
         builder.append("\n}");
@@ -1347,8 +1380,8 @@ public class TungstenProperties implements Serializable
         Map<String, String> propMap = props.hashMap();
         for (String key : propMap.keySet())
         {
-            builder.append(String.format("%s%s = %s\n", indent, key,
-                    propMap.get(key)));
+            builder.append(String.format("%s%s = %s\n", indent, key, propMap
+                    .get(key)));
         }
         builder.append(String.format("}"));
         return builder.toString();
@@ -1360,7 +1393,7 @@ public class TungstenProperties implements Serializable
      * key/value pair, 1 line for key, 1 line for the class name and 1 for
      * value. The end of the transmission is identified by a predefined key name
      * {@value #ENDOFPROPERTIES_TAG}
-     *
+     * 
      * @see #send(PrintWriter)
      * @param in a ready-to-be-read buffered reader from which to get properties
      * @return a new set of properties containing data read on the stream
@@ -1451,7 +1484,7 @@ public class TungstenProperties implements Serializable
      * key/value pair, 1 line for key an 1 for value. The end of the
      * transmission is identified by a predefined key name
      * {@value #ENDOFPROPERTIES_TAG}
-     *
+     * 
      * @see #createFromStream(BufferedReader)
      * @param out a prepared PrintWriter output stream on which to send
      *            properties
