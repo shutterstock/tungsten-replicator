@@ -97,7 +97,7 @@ public class PropertiesManager
         // Otherwise we lose substitutions that come from the dynamic 
         // properties 
         Properties substitutedProps = rawProps.getProperties();
-        TungstenProperties.substituteSystemValues(substitutedProps);
+        TungstenProperties.substituteSystemValues(substitutedProps, 10);
         TungstenProperties props = new TungstenProperties();
         props.load(substitutedProps);
         return props;

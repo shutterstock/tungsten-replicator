@@ -21,6 +21,12 @@ replicator.global.db.port=3306
 replicator.global.db.user=tungsten
 replicator.global.db.password=secret
 
+# Properties for extractors only.  This supports direct piplines. 
+replicator.global.extract.db.host=${replicator.global.db.host}
+replicator.global.extract.db.port=${replicator.global.db.port}
+replicator.global.extract.db.user=${replicator.global.db.user}
+replicator.global.extract.db.password=${replicator.global.db.password}
+
 # Replicator role.  You must specify a value that corresponds to a 
 # pipeline name like master, slave, direct, etc.  There is no default 
 # for this value--it must be set or the replicator will not go online.
@@ -315,10 +321,10 @@ replicator.extractor.mysql=com.continuent.tungsten.replicator.extractor.mysql.My
 replicator.extractor.mysql.binlog_dir=/var/lib/mysql
 replicator.extractor.mysql.binlog_file_pattern=mysql-bin
 replicator.extractor.mysql.jdbcHeader=jdbc:mysql:thin://
-replicator.extractor.mysql.host=${replicator.global.db.host}
-replicator.extractor.mysql.port=${replicator.global.db.port}
-replicator.extractor.mysql.user=${replicator.global.db.user}
-replicator.extractor.mysql.password=${replicator.global.db.password}
+replicator.extractor.mysql.host=${replicator.global.extract.db.host}
+replicator.extractor.mysql.port=${replicator.global.extract.db.port}
+replicator.extractor.mysql.user=${replicator.global.extract.db.user}
+replicator.extractor.mysql.password=${replicator.global.extract.db.password}
 replicator.extractor.mysql.parseStatements=true
 
 # Binlog mode defines whether we are replicating from a MySQL master
