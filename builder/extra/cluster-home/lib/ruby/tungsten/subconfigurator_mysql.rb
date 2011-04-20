@@ -455,7 +455,6 @@ MEMSIZE
   def configure()
     # Generate the correct template based on whether we are using drizzle or
     # J/Connect driver. 
-    template_tgt = "tungsten-replicator/conf/sample_static_properties_mysql.st"
     if (@configurator.config.props[GLOBAL_USE_MYSQL_CONNECTOR] == "false")
       transformer = Transformer.new(
         "tungsten-replicator/conf/replicator.properties.mysql-with-drizzle-driver",
@@ -534,20 +533,12 @@ MEMSIZE
         "replicator.extractor.mysql.binlog_dir=" + @configurator.config.props[REPL_MYSQL_BINLOGDIR]
       elsif line =~ /replicator.resourceLogDir/ then
         "replicator.resourceLogDir=" + @configurator.config.props[REPL_MYSQL_BINLOGDIR]
-      elsif line =~ /replicator.extractor.mysql.host/ then
-        "replicator.extractor.mysql.host=" + @configurator.config.props[REPL_DATASERVER_HOST]
       elsif line =~ /replicator.resourceLogPattern/ then
         "replicator.resourceLogPattern=" + @configurator.config.props[REPL_MYSQL_BINLOGPATTERN]
       elsif line =~ /replicator.resourceDataServerHost/ then
         "replicator.resourceDataServerHost=" + @configurator.config.props[REPL_DATASERVER_HOST]
       elsif line =~ /replicator.extractor.mysql.binlog_file_pattern/ then
         "replicator.extractor.mysql.binlog_file_pattern=" + @configurator.config.props[REPL_MYSQL_BINLOGPATTERN]
-      elsif line =~ /replicator.extractor.mysql.port/ then
-        "replicator.extractor.mysql.port=" + @configurator.config.props[REPL_DBPORT]
-      elsif line =~ /replicator.applier.mysql.host/ then
-        "replicator.applier.mysql.host=" + @configurator.config.props[REPL_DATASERVER_HOST]
-      elsif line =~ /replicator.applier.mysql.port/ then
-        "replicator.applier.mysql.port=" + @configurator.config.props[REPL_DBPORT]
       elsif line =~ /replicator.resourceJdbcUrl/
         line = line.sub("@HOSTNAME@", @configurator.config.props[REPL_DATASERVER_HOST] + ":" +
         @configurator.config.props[REPL_DBPORT])
@@ -565,16 +556,8 @@ MEMSIZE
         else
           "replicator.backup.default=" + @configurator.config.props[REPL_BACKUP_METHOD]
         end
-      elsif line =~ /replicator.backup.agent.mysqldump.host/
-        "replicator.backup.agent.mysqldump.host=" + @configurator.config.props[REPL_DATASERVER_HOST]
-      elsif line =~ /replicator.backup.agent.mysqldump.port/
-        "replicator.backup.agent.mysqldump.port=" + @configurator.config.props[REPL_DBPORT]
       elsif line =~ /replicator.backup.agent.mysqldump.dumpDir/
         "replicator.backup.agent.mysqldump.dumpDir=" + @configurator.config.props[REPL_BACKUP_DUMP_DIR]
-      elsif line =~ /replicator.backup.agent.lvm.port/
-        "replicator.backup.agent.lvm.port=" + @configurator.config.props[REPL_DBPORT]
-      elsif line =~ /replicator.backup.agent.lvm.host/
-        "replicator.backup.agent.lvm.host=" + @configurator.config.props[REPL_DATASERVER_HOST]
       elsif line =~ /replicator.backup.agent.lvm.dumpDir/
         "replicator.backup.agent.lvm.dumpDir=" + @configurator.config.props[REPL_BACKUP_DUMP_DIR]
       elsif line =~ /replicator.backup.agent.lvm.dataDir/
@@ -726,12 +709,7 @@ MEMSIZE
       puts "Deploying user MySQL Connector/J..."
       connector = @configurator.config.props[GLOBAL_MYSQL_CONNECTOR_PATH]
       if connector != nil and connector != ""
-        FileUtils.cp(connector, "tungsten-sqlrouter/lib-ext/")
-        FileUtils.cp(connector, "tungsten-connector/lib/")
-        FileUtils.cp(connector, "tungsten-manager/lib/")
         FileUtils.cp(connector, "bristlecone/lib-ext/")
-        FileUtils.cp(connector, "tungsten-cluster-manager/lib/")
-        FileUtils.cp(connector, "tungsten-monitor/lib/")
         FileUtils.cp(connector, "tungsten-replicator/lib/")
         else
         puts "FATAL: no MySQL Connector/J JAR specified!"

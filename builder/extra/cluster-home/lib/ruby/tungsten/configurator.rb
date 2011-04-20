@@ -491,7 +491,7 @@ DBMS
       end
 
       if @config.props[GLOBAL_DBMS_TYPE] == "mysql" && 
-         @config.props[REPL_USE_BYTES == "false"]
+         @config.props[REPL_USE_BYTES] == "false"
         # Configure MySQL Connector/J (TENT-222).
         puts
         write_divider
@@ -507,7 +507,7 @@ CONNECTOR_J
         edit_cfg_value PropertyDescriptor.new(
           "Use MySQL Connector/J driver?", PV_BOOLEAN, 
           GLOBAL_USE_MYSQL_CONNECTOR, "false")
-        if @config.props[GLOBAL_USE_MYSQL_CONNECTOR] 
+        if @config.props[GLOBAL_USE_MYSQL_CONNECTOR] == "true"
           edit_cfg_value PropertyDescriptor.new(
             "Path to MySQL Connector/J", PV_READABLE_FILE, 
             GLOBAL_MYSQL_CONNECTOR_PATH,

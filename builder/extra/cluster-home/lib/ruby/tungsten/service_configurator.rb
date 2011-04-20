@@ -39,6 +39,10 @@ class ServiceConfigurator
   REPL_SVC_SHARD_DEFAULT_DB = "repl_svc_shard_default_db"
   REPL_SVC_ALLOW_BIDI_UNSAFE = "repl_svc_allow_bidi_unsafe"
   REPL_SVC_ALLOW_ANY_SERVICE = "repl_svc_allow_any_remote_service"
+  REPL_SVC_EXTRACT_DB_HOST = "repl_svc_extract_db_host"
+  REPL_SVC_EXTRACT_DB_PORT = "repl_svc_extract_db_port"
+  REPL_SVC_EXTRACT_DB_USER = "repl_svc_extract_db_user"
+  REPL_SVC_EXTRACT_DB_PASSWORD = "repl_svc_extract_db_password"
 
   # Initialize configuration arguments.
   def initialize(arguments, stdin)
@@ -119,6 +123,14 @@ class ServiceConfigurator
       @config_overrides.setProperty(REPL_SVC_CHANNELS, val)}
     opts.on("--local-service-name String")    {|val| 
       @config_overrides.setProperty(GLOBAL_DSNAME, val)}
+    opts.on("--extract-db-host String")    {|val| 
+      @config_overrides.setProperty(REPL_SVC_EXTRACT_DB_HOST, val)}
+    opts.on("--extract-db-port String")    {|val| 
+      @config_overrides.setProperty(REPL_SVC_EXTRACT_DB_PORT, val)}
+    opts.on("--extract-db-user String")    {|val| 
+      @config_overrides.setProperty(REPL_SVC_EXTRACT_DB_USER, val)}
+    opts.on("--extract-db-password String")    {|val| 
+      @config_overrides.setProperty(REPL_SVC_EXTRACT_DB_PASSWORD, val)}
     opts.on("--master-host String") {|val| 
       @config_overrides.setProperty(REPL_MASTERHOST, val)}
     opts.on("--master-port String") {|val| 
@@ -217,6 +229,14 @@ class ServiceConfigurator
       output_param(cfg_loaded, REPL_BUFFER_SIZE)
     printf "--channels         Number of channels for parallel apply [%s]\n", 
       output_param(cfg_loaded, REPL_SVC_CHANNELS)
+    printf "--extract-db-host  Extractor DBMS host name [%s]\n", 
+      output_param(cfg_loaded, REPL_DATASERVER_HOST)
+    printf "--extract-db-password  Extractor DBMS password[%s]\n", 
+      output_param(cfg_loaded, REPL_DBPASSWORD)
+    printf "--extract-db-port  Extractor DBMS port number [%s]\n", 
+      output_param(cfg_loaded, REPL_DBPORT)
+    printf "--extract-db-user  Extractor DBMS user [%s]\n", 
+      output_param(cfg_loaded, REPL_DBLOGIN)
     printf "--extract-method   Binlog extraction method (direct|relay) [%s]\n", 
       output_param(cfg_loaded, REPL_MYSQL_EXTRACT_METHOD)
     printf "--local-service-name  Replicator service that owns master [%s]\n", 
@@ -484,7 +504,42 @@ class ServiceConfigurator
       "tungsten-replicator/conf/replicator.properties.service.template", 
       static_props, "#")
     transformer.transform { |line|
-      if line =~ /replicator.role=/ then
+      if line =~ /replicator.global.extract.db.host=/ then
+        if @config.props[REPL_SVC_EXTRACT_DB_HOST]
+          "replicator.global.extract.db.host=" + 
+            @config.props[REPL_SVC_EXTRACT_DB_HOST]
+        else
+          line
+        end
+      elsif line =~ /replicator.global.extract.db.port=/ then
+        if @config.props[REPL_SVC_EXTRACT_DB_PORT]
+          "replicator.global.extract.db.port=" + 
+            @config.props[REPL_SVC_EXTRACT_DB_PORT]
+        else
+          line
+        end
+      elsif line =~ /replicator.global.extract.db.user=/ then
+        if @config.props[REPL_SVC_EXTRACT_DB_USER]
+          "replicator.global.extract.db.user=" + 
+            @config.props[REPL_SVC_EXTRACT_DB_USER]
+        else
+          line
+        end
+      elsif line =~ /replicator.global.extract.db.user=/ then
+        if @config.props[REPL_SVC_EXTRACT_DB_PORT]
+          "replicator.global.extract.db.port=" + 
+            @config.props[REPL_SVC_EXTRACT_DB_PORT]
+        else
+          line
+        end
+      elsif line =~ /replicator.global.extract.db.password=/ then
+        if @config.props[REPL_SVC_EXTRACT_DB_PASSWORD]
+          "replicator.global.extract.db.password=" + 
+            @config.props[REPL_SVC_EXTRACT_DB_PASSWORD]
+        else
+          line
+        end
+      elsif line =~ /replicator.role=/ then
         "replicator.role=" + @config.props[REPL_ROLE]
       elsif line =~ /local.service.name=/ then
         "local.service.name=" + @config.props[GLOBAL_DSNAME]
