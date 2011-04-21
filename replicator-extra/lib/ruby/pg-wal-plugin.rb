@@ -41,7 +41,7 @@ class PgWalPlugin < Plugin
     @pg_wal_restore     = @replicator_home + PG_WAL_RESTORE
     @pg_wal_conf        = @replicator_home + PG_WAL_CONF_DIR
     @pg_wal_when        = @replicator_home + PG_WAL_CONF_DIR + "/when"
-    @pg_tungsten_conf_s = @replicator_home + "/conf" + PG_TUNGSTEN_CONF_S
+    @pg_tungsten_conf_s = @replicator_home + "/samples/conf" + PG_TUNGSTEN_CONF_S
     @pg_tungsten_conf   = @pg_wal_conf + PG_TUNGSTEN_CONF
     @pg_wal_properties  = @pg_wal_conf + PG_WAL_PROPERTIES
     @initialized        = @pg_wal_conf + INITIALIZED
