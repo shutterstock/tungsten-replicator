@@ -47,7 +47,9 @@ class ConfigurePromptHandler
     # Go through each prompt in the system and collect a value for it
     while i < @prompts.length
       begin
+        Configurator.instance.debug("Start prompt #{@prompts[i].class().name()}:#{@prompts[i].get_name()}")
         @prompts[i].run()
+        Configurator.instance.debug("Finish prompt #{@prompts[i].class().name()}:#{@prompts[i].get_name()}")
         if @prompts[i].allow_previous?()
           previous_prompts.push(i)
         end

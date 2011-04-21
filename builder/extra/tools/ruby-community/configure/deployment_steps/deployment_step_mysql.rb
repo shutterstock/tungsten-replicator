@@ -22,31 +22,27 @@ module ConfigureDeploymentStepMySQL
 		if line =~ /replicator.store.thl.url/ then
 			if (service_config.getProperty(REPL_USE_DRIZZLE) == "true")
 				"replicator.store.thl.url=jdbc:mysql:thin://" +
-				  service_config.getProperty(GLOBAL_HOST) + ":" +
+				  service_config.getProperty(REPL_DBHOST) + ":" +
 				  service_config.getProperty(REPL_DBPORT) +
 				  "/tungsten_${service.name}?createDB=true"
 			else
 				"replicator.store.thl.url=jdbc:mysql://" +
-				  service_config.getProperty(GLOBAL_HOST) + ":" +
+				  service_config.getProperty(REPL_DBHOST) + ":" +
 				  service_config.getProperty(REPL_DBPORT) +
 				  "/tungsten_${service.name}?createDatabaseIfNotExist=true"
 			end
 		elsif line =~ /replicator.extractor.mysql.binlog_dir/ then
 			"replicator.extractor.mysql.binlog_dir=" + 
 			  service_config.getProperty(REPL_MYSQL_BINLOGDIR)
-		elsif line =~ /replicator.extractor.mysql.host/ then
-			"replicator.extractor.mysql.host=" + service_config.getProperty(GLOBAL_HOST)
 		elsif line =~ /replicator.extractor.mysql.binlog_file_pattern/ then
 			"replicator.extractor.mysql.binlog_file_pattern=" + 
 			  service_config.getProperty(REPL_MYSQL_BINLOGPATTERN)
-		elsif line =~ /replicator.extractor.mysql.port/ then
-			"replicator.extractor.mysql.port=" + service_config.getProperty(REPL_DBPORT)
 		elsif line =~ /replicator.applier.mysql.host/ then
-			"replicator.applier.mysql.host=" + service_config.getProperty(GLOBAL_HOST)
+			"replicator.applier.mysql.host=" + service_config.getProperty(REPL_DBHOST)
 		elsif line =~ /replicator.applier.mysql.port/ then
 			"replicator.applier.mysql.port=" + service_config.getProperty(REPL_DBPORT)
 		elsif line =~ /replicator.backup.agent.mysqldump.host/
-			"replicator.backup.agent.mysqldump.host=" + service_config.getProperty(GLOBAL_HOST)
+			"replicator.backup.agent.mysqldump.host=" + service_config.getProperty(REPL_DBHOST)
 		elsif line =~ /replicator.backup.agent.mysqldump.port/
 			"replicator.backup.agent.mysqldump.port=" + service_config.getProperty(REPL_DBPORT)
 		elsif line =~ /replicator.backup.agent.mysqldump.dumpDir/ && 
@@ -67,9 +63,9 @@ module ConfigureDeploymentStepMySQL
 		elsif line =~ /replicator.extractor.mysql.relayLogRetention/ && 
 		    service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
 			"replicator.extractor.mysql.relayLogRetention=3"
-    elsif line =~ /replicator.extractor.mysql.binlogMode/ then
-      "replicator.extractor.mysql.binlogMode=" + 
-        service_config.getProperty(REPL_SVC_BINLOG_MODE)
+#    elsif line =~ /replicator.extractor.mysql.binlogMode/ then
+#      "replicator.extractor.mysql.binlogMode=" + 
+#        service_config.getProperty(REPL_SVC_BINLOG_MODE)
 		else
 		  super(line, service_name, service_config)
 		end
@@ -78,7 +74,7 @@ module ConfigureDeploymentStepMySQL
 	def write_replication_service_properties
 	  # Generate the services.properties file.
     transformer = Transformer.new(
-      "#{get_deployment_basedir()}/tungsten-replicator/conf/sample.services.properties",
+      "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
       "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties", "#")
 
     transformer.transform { |line|
@@ -174,9 +170,9 @@ module ConfigureDeploymentStepMySQL
   
   def get_replication_dataservice_template
     if @config.getProperty(REPL_USE_DRIZZLE) == "true"
-			"#{get_deployment_basedir()}/tungsten-replicator/conf/replicator.properties.mysql-with-drizzle-driver"
+			"#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.mysql-with-drizzle-driver"
 		else
-		  "#{get_deployment_basedir()}/tungsten-replicator/conf/replicator.properties.mysql"
+		  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.mysql"
 		end
 	end
 end

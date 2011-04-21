@@ -25,7 +25,7 @@ class HomeDirectoryPrompt < ConfigurePrompt
   end
   
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "direct"
+    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "regular"
   end
 end
 
@@ -39,7 +39,7 @@ class GlobalHostPrompt < ConfigurePrompt
   end
   
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) == "direct"
+    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) == "regular"
   end
 end
 
@@ -53,7 +53,7 @@ class GlobalIPAddressPrompt < ConfigurePrompt
   end
   
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) == "direct"
+    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) == "regular"
   end
 end
 
@@ -78,9 +78,15 @@ class DeploymentTypePrompt < ConfigurePrompt
     
     validator = PropertyValidator.new(deployment_types.join("|"), 
       "Value must be #{deployment_types.join(',')}")
+    
+    if Configurator.instance.is_full_tungsten_package?
+      default = "regular"
+    else
+      default = "distributed"
+    end
       
     super(GLOBAL_DEPLOYMENT_TYPE, "Deployment type (#{deployment_types.join(',')})", 
-      validator, "regular")
+      validator, default)
   end
 end
 
@@ -90,7 +96,7 @@ class DeployCurrentPackagePrompt < ConfigurePrompt
   end
   
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "direct" &&
+    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "regular" &&
       Configurator.instance.is_full_tungsten_package?()
   end
   
@@ -106,7 +112,7 @@ class DeployPackageURIPrompt < ConfigurePrompt
   end
 
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "direct" && 
+    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "regular" && 
       @config.getProperty(DEPLOY_CURRENT_PACKAGE) == "false"
   end
   

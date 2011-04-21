@@ -96,6 +96,11 @@ class ConfigurePrompt
      @config.setProperty(get_name(), get_disabled_value())
   end
   
+  # Get the value that should be set if this prompt is disabled
+  def get_disabled_value
+    nil
+  end
+  
   # Ensure that the values in the config object pass all of the 
   def is_valid?
     value = get_value(false)

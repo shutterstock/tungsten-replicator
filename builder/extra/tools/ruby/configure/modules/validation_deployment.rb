@@ -216,13 +216,13 @@ class SudoCheck < ConfigureValidationCheck
   end
   
   def validate
-    sudo_output = cmd_result("sudo -l", true)
-    sudo_output_status = $?
-    
-    if sudo_output_status != 0
+    sudo_ls_output = cmd_result("sudo -n ls", true)
+    if $? != 0
       error "Sudo is not setup correctly"
       add_help()
     else
+      sudo_output = cmd_result("sudo -l")
+      
       if sudo_output =~ /requiretty/
         error "Sudo has the requiretty option enabled"
       end

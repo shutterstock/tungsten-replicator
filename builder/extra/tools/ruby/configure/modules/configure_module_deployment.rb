@@ -39,6 +39,10 @@ class DeploymentConfigureModule < ConfigureModule
   end
   
   def include_module_for_package?(package)
-    true
+    if package.is_a?(ConfigurePackageCluster)
+      true
+    else
+      false
+    end
   end
 end

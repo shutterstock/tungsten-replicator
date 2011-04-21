@@ -21,6 +21,11 @@ class DeploymentValidationOnly < ConfigureDeployment
   end
   
   def include_deployment_for_package?(package)
-    true
+    case package.class().name()
+    when ConfigurePackageDeleteService
+      false
+    else
+      true
+    end
   end
 end

@@ -1,6 +1,6 @@
 class RegularConfigureDeployment < ConfigureDeployment
   def get_name
-    "regular"
+    "distributed"
   end
   
   def get_deployment_configurations()
@@ -19,6 +19,7 @@ class RegularConfigureDeployment < ConfigureDeployment
       config_obj.props = @config.props.dup
       config_obj.setProperty(DSNAME, config_obj.getProperty(GLOBAL_DSNAME))
       config_obj.setProperty(GLOBAL_HOST, deployment_host)
+      config_obj.setProperty(REPL_DBHOST, deployment_host)
       config_obj.setProperty(GLOBAL_IP_ADDRESS, Resolv.getaddress(deployment_host))
       
       if uri && uri.scheme == "file" && (uri.host == nil || uri.host == "localhost")

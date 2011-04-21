@@ -1,24 +1,35 @@
+REPL_MODE_MS = "master-slave"
+REPL_MODE_DI = "direct"
+
 class ReplicatorConfigureModule < ConfigureModule
   def register_prompts(prompt_handler)
     prompt_handler.register_prompts([
-      ReplicationServices.new(),
-      ReplicationServiceMasters.new(),
-      ReplicationServiceHosts.new(),
-      ReplicationServiceRemoteHosts.new(),
-      ConfigurePrompt.new(REPL_AUTOENABLE, "Auto-enable replicator after start-up", 
-        PV_BOOLEAN, "true"),
+      THLStorageType.new(),
+      THLStorageDirectory.new(),
+      
+      MySQLBinlogDirectory.new(),
+      MySQLBinlogPattern.new(),
       DatabaseInitScript.new(),
+      DatabaseHost.new(),
       DatabasePort.new(),
       ConfigurePrompt.new(REPL_DBLOGIN, "Database login for Tungsten", 
         PV_IDENTIFIER, "tungsten"),
       ConfigurePrompt.new(REPL_DBPASSWORD, "Database password", 
         PV_ANY, "secret"),
-      THLStorageType.new(),
-      THLStorageDirectory.new(),
-      ConstantValuePrompt.new(REPL_RMI_PORT, "Replication RMI port", 
-        PV_INTEGER, 10000),
-      ConstantValuePrompt.new(REPL_SVC_THL_PORT, "Port to use for THL operations", 
-        PV_INTEGER, 2112),
+        
+      ReplicationServices.new(),
+      MySQLReplicationServiceMode.new(),
+      ReplicationServiceMasters.new(),
+      ReplicationServiceHosts.new(),
+      ReplicationServiceRemoteHosts.new(),
+      MySQLDirectReplicationExtractHost.new(),
+      MySQLDirectReplicationExtractPort.new(),
+      MySQLDirectReplicationExtractLogin.new(),
+      MySQLDirectReplicationExtractPassword.new(),
+      ReplicationServiceChannels.new(),
+      ReplicationServiceAutoEnable.new(),
+      ReplicationServiceTHLPort.new(),
+      MySQLReplicationUseRelayLogs.new(),
       
       ReplicationShardIDMode.new(),
       ReplicationServiceShardIDMode.new(),
@@ -26,30 +37,21 @@ class ReplicatorConfigureModule < ConfigureModule
       ReplicationServiceAllowUnsafeSQL.new(),
       ReplicationAllowAllSQL.new(),
       ReplicationServiceAllowAllSQL.new(),
-      ReplicationServiceTHLPort.new(),
       
-      MySQLBinlogDirectory.new(),
-      MySQLBinlogPattern.new(),
+      MySQLRelayLogDirectory.new(),
+      
       #MySQLConfigurePrompt.new(REPL_MYSQL_RO_SLAVE, "Make MySQL server read-only when acting as slave",
       #  PV_BOOLEAN, "true"),
-      MySQLConfigurePrompt.new(REPL_USE_BYTES, "Transfer string data using binary format", 
+      MySQLAdvancedPrompt.new(REPL_USE_BYTES, "Transfer string data using binary format", 
         PV_BOOLEAN, "true"),
       MySQLConfigurePrompt.new(REPL_USE_DRIZZLE, "Use the Drizzle MySQL driver", 
         PV_BOOLEAN, "true"),
-      MySQLConfigurePrompt.new(REPL_EXTRACTOR_USE_RELAY_LOGS, "Configure the extractor to access the binlog via local relay-logs?",
-        PV_BOOLEAN, "false"),
-      MySQLRelayLogDirectory.new(),
+      
       MySQLAdvancedPrompt.new(REPL_THL_DO_CHECKSUM, "Execute checksum operations on THL log files", PV_BOOLEAN, "false"),
       MySQLAdvancedPrompt.new(REPL_THL_LOG_CONNECTION_TIMEOUT, "Number of seconds to wait for a connection to the THL log", PV_INTEGER, 600),
       MySQLAdvancedPrompt.new(REPL_THL_LOG_RETENTION, "How long do you want to keep THL files?", PV_ANY, "7d"),
       MySQLAdvancedPrompt.new(REPL_CONSISTENCY_POLICY, "Should the replicator stop or warn if a consistency check fails?", PV_ANY, "stop"),
       MySQLAdvancedPrompt.new(REPL_THL_LOG_FILE_SIZE, "File size in bytes for THL disk logs", PV_INTEGER, 1000000000),
-      MySQLAdvancedPrompt.new(REPL_SVC_CHANNELS, "Number of channels to use for replication",
-        PV_INTEGER, 1),
-      ReplicationServiceChannels.new(),
-      MySQLAdvancedPrompt.new(REPL_SVC_BINLOG_MODE, "Method to use for reading the binary log",
-        PV_IDENTIFIER, "master"), 
-        
         
       PostgresConfigurePrompt.new(REPL_PG_STREAMING, "Use streaming replication (available from PostgreSQL 9)",
         PV_BOOLEAN, "false"),
@@ -75,13 +77,15 @@ class ReplicatorConfigureModule < ConfigureModule
       BackupScriptPathConfigurePrompt.new(),
       BackupScriptCommandPrefixConfigurePrompt.new(),
       BackupScriptOnlineConfigurePrompt.new(),
+      
       ConstantValuePrompt.new(REPL_MONITOR_INTERVAL, "Replication monitor interval", 
         PV_INTEGER, 3000),
-      
       AdvancedPrompt.new(REPL_BUFFER_SIZE, "Replicator block commit size (min 1, max 100)",
         PV_REPL_BUFFER_SIZE, 10),
       AdvancedPrompt.new(REPL_JAVA_MEM_SIZE, "Replicator Java heap memory size in Mb (min 128)",
-        PV_JAVA_MEM_SIZE, 512)
+        PV_JAVA_MEM_SIZE, 512),
+      AdvancedPrompt.new(REPL_RMI_PORT, "Replication RMI port", 
+        PV_INTEGER, 10000)
     ])
   end
   
@@ -218,6 +222,8 @@ class NoHiddenServicesCheck < ConfigureValidationCheck
       end
     end
     
+    debug("Current services: #{current_services.join(',')}")
+    debug("Configured services: #{config_services.join(',')}")
     missing_services = current_services - config_services
     missing_services.each{
       |service_name|

@@ -38,20 +38,32 @@ module ConfigureDeploymentStepReplicationDataservice
   def transform_replication_dataservice_line(line, service_name, service_config)
     if line =~ /replicator.role=/ then
       "replicator.role=" + service_config.getProperty(REPL_ROLE)
-	  elsif line =~ /replicator.global.db.host=/ then
-      "replicator.global.db.host=" + service_config.getProperty(GLOBAL_HOST)
-    elsif line =~ /replicator.service.type=/ then
+	  elsif line =~ /replicator.service.type=/ then
       "replicator.service.type=" + service_config.getProperty(REPL_SVC_SERVICE_TYPE)
+    elsif line =~ /replicator.global.db.host=/ then
+      "replicator.global.db.host=" + service_config.getProperty(REPL_DBHOST)
     elsif line =~ /replicator.global.db.port=/ then
       "replicator.global.db.port=" + service_config.getProperty(REPL_DBPORT)
 		elsif line =~ /replicator.global.db.user=/ then
 			"replicator.global.db.user=" + service_config.getProperty(REPL_DBLOGIN)
 		elsif line =~ /replicator.global.db.password=/ then
 			"replicator.global.db.password=" + service_config.getProperty(REPL_DBPASSWORD)
+		elsif line =~ /replicator.global.extract.db.host=/ &&
+        service_config.getProperty(REPL_EXTRACTOR_DBHOST) then
+      "replicator.global.extract.db.host=" + service_config.getProperty(REPL_EXTRACTOR_DBHOST)
+    elsif line =~ /replicator.global.extract.db.port=/ &&
+        service_config.getProperty(REPL_EXTRACTOR_DBPORT) then
+      "replicator.global.extract.db.port=" + service_config.getProperty(REPL_EXTRACTOR_DBPORT)
+		elsif line =~ /replicator.global.extract.db.user=/ &&
+        service_config.getProperty(REPL_EXTRACTOR_DBLOGIN) then
+			"replicator.global.extract.db.user=" + service_config.getProperty(REPL_EXTRACTOR_DBLOGIN)
+		elsif line =~ /replicator.global.extract.db.password=/ &&
+        service_config.getProperty(REPL_EXTRACTOR_DBPASSWORD) then
+			"replicator.global.extract.db.password=" + service_config.getProperty(REPL_EXTRACTOR_DBPASSWORD)
 		elsif line =~ /replicator.auto_enable/ then
 			"replicator.auto_enable=" + service_config.getProperty(REPL_AUTOENABLE)
 		elsif line =~ /replicator.source_id/ then
-			"replicator.source_id=" + service_config.getProperty(GLOBAL_HOST)
+			"replicator.source_id=" + service_config.getProperty(REPL_DBHOST)
 		elsif line =~ /cluster.name=/ then
 			"cluster.name=" + @config.getPropertyOr(GLOBAL_CLUSTERNAME, "")
 		elsif line =~ /^service.name=/ then
@@ -100,7 +112,7 @@ module ConfigureDeploymentStepReplicationDataservice
 		elsif line =~ /replicator.backup.agent.lvm.port/
 			"replicator.backup.agent.lvm.port=" + service_config.getProperty(REPL_DBPORT)
 		elsif line =~ /replicator.backup.agent.lvm.host/
-			"replicator.backup.agent.lvm.host=" + service_config.getProperty(GLOBAL_HOST)
+			"replicator.backup.agent.lvm.host=" + service_config.getProperty(REPL_DBHOST)
 		elsif line =~ /replicator.backup.agent.lvm.dumpDir/ && service_config.getProperty(REPL_BACKUP_METHOD) != "none"
 			"replicator.backup.agent.lvm.dumpDir=" + service_config.getProperty(REPL_BACKUP_DUMP_DIR)
 		elsif line =~ /replicator.backup.agent.lvm.dataDir/

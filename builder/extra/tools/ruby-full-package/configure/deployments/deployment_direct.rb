@@ -1,6 +1,6 @@
 class DirectDeployment < ConfigureDeployment
   def get_name
-    "direct"
+    "regular"
   end
   
   def get_deployment_configurations()
@@ -14,7 +14,7 @@ class DirectDeployment < ConfigureDeployment
     config_objs
   end
   
-  def get_deployment_basedir
+  def get_deployment_basedir(deployment_config)
     Configurator.instance.get_base_path()
   end
   
@@ -25,8 +25,8 @@ class DirectDeployment < ConfigureDeployment
       
     case @config.getProperty(GLOBAL_DBMS_TYPE)
     when "mysql"
-      modules << ConfigureDeploymentStepMySQL
       modules << ConfigureDeploymentStepReplicationDataservice
+      modules << ConfigureDeploymentStepMySQL
     when "postgresql"
       modules << ConfigureDeploymentStepPostgresql
     else

@@ -57,11 +57,6 @@ module ConfigurePromptInterface
     @weight
   end
   
-  # Get the value that should be set if this prompt is disabled
-  def get_disabled_value
-    nil
-  end
-  
   # Read the prompt response from the command line.
   def input_value(prompt, default)
     default = default.to_s

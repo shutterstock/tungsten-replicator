@@ -38,12 +38,20 @@ class ReplicationServiceMasters < MultipleValueConfigurePrompt
     super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_MASTERHOST, 
       "Enter the master host for service @value", PV_IDENTIFIER)
   end
+  
+  def enabled_for_source?(parent_name, source_val)
+    @config.getProperty([parent_name,REPL_SVC_MODE]) == "master-slave"
+  end
 end
 
 class ReplicationServiceHosts < MultipleValueConfigurePrompt
   def initialize
     super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_HOSTS, 
       "Enter the replication hosts (including the master) for service @value", PV_IDENTIFIER)
+  end
+  
+  def enabled_for_source?(parent_name, source_val)
+    @config.getProperty([parent_name,REPL_SVC_MODE]) == "master-slave"
   end
 end
 
@@ -56,22 +64,9 @@ class ReplicationServiceRemoteHosts < MultipleValueConfigurePrompt
   def required?
     false
   end
-end
-
-class ReplicationServiceChannels < MultipleValueConfigurePrompt
-  include AdvancedPromptModule
   
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_CHANNELS, 
-      "How many replication channels should be used for service @value", PV_INTEGER)
-  end
-  
-  def get_default_value
-    @config.getProperty(REPL_SVC_CHANNELS)
-  end
-  
-  def required?
-    false
+  def enabled_for_source?(parent_name, source_val)
+    @config.getProperty([parent_name,REPL_SVC_MODE]) == "master-slave"
   end
 end
 
@@ -196,6 +191,68 @@ class ReplicatorHostsPrompt < AdvancedPrompt
   end
 end
 
+class ReplicationServiceAutoEnable < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
+      REPL_AUTOENABLE, "Auto-enable service @value after start-up", 
+      PV_BOOLEAN, "true")
+  end
+end
+
+class ReplicationServiceChannels < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
+      REPL_SVC_CHANNELS, "Number of replication channels to use for service @value",
+      PV_INTEGER, 1)
+  end
+end
+
+class THLStorageType < ConfigurePrompt
+  def initialize
+    super(REPL_LOG_TYPE, "Replicator event log storage (dbms|disk)",
+      PV_LOGTYPE, "disk")
+  end
+  
+  def enabled?
+    @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql" && 
+      Configurator.instance.advanced_mode?()
+  end
+  
+  def get_disabled_value
+    "disk"
+  end
+end
+
+class THLStorageDirectory < ConfigurePrompt
+  def initialize
+    super(REPL_LOG_DIR, "Replicator log directory", PV_FILENAME)
+  end
+  
+  def enabled?
+    @config.getProperty(REPL_LOG_TYPE) == "disk"
+  end
+  
+  def get_default_value
+    if @config.getProperty(GLOBAL_HOME_DIRECTORY)
+      @config.getProperty(GLOBAL_HOME_DIRECTORY) + "/thl-logs"
+    else
+      ""
+    end
+  end
+end
+
+class ReplicationServiceTHLPort < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
+      REPL_SVC_THL_PORT, "Port to use for THL operations", 
+      PV_INTEGER, 2112)
+  end
+  
+  def enabled?
+    @config.getProperty(REPL_LOG_TYPE) == "disk"
+  end
+end
+
 class VIPConfigurePrompt < ConfigurePrompt
   def enabled?
     @config.getProperty(REPL_MASTER_VIP) != "none" && @config.getProperty(REPL_MASTER_VIP) != ""
@@ -228,6 +285,16 @@ class DatabasePort < ConfigurePrompt
     else
       5432
     end
+  end
+end
+
+class DatabaseHost < ConfigurePrompt
+  def initialize
+    super(REPL_DBHOST, "Database server hostname", PV_IDENTIFIER)
+  end
+  
+  def get_default_value
+    @config.getPropertyOr(GLOBAL_HOST, "")
   end
 end
 

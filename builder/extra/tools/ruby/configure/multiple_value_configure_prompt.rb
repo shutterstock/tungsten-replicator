@@ -11,6 +11,7 @@ class MultipleValueConfigurePrompt
     @default = default.to_s
     @config = nil
     @weight = 0
+    @current_source_val = nil
   end
   
   # Used to ensure that the basics have been set
@@ -24,23 +25,38 @@ class MultipleValueConfigurePrompt
   
   # Collect the value from the command line
   def run
+    first_prompt = true
+    
     # Skip this prompt and remove the config value if this prompt isn't needed
     unless enabled?()
       save_disabled_value()
       return
     end
     
-    puts
-    Configurator.instance.write_divider
-    
-    description = get_description()
-    unless description == nil
-      puts description
-    end
-    
-    puts
     each_source{
       |parent_name,source_val|
+      
+      debug("run #{@source_name}:#{source_val}")
+      unless enabled_for_source?(parent_name, source_val)
+        debug("disabled for #{@source_name}:#{source_val}")
+        @config.setProperty([parent_name, get_name()], get_disabled_value_for_source(parent_name, source_val))
+        next
+      end
+      debug("enabled for #{@source_name}:#{source_val}")
+      
+      if first_prompt
+        puts
+        Configurator.instance.write_divider
+
+        description = get_description()
+        unless description == nil
+          puts description
+        end
+
+        puts
+        first_prompt = false
+      end
+      
       value = nil
       while value == nil do
         begin
@@ -118,8 +134,13 @@ class MultipleValueConfigurePrompt
   def save_disabled_value
     each_source{
       |parent_name,source_val|
-      @config.setProperty([parent_name, get_name()], get_disabled_value())
+      @config.setProperty([parent_name, get_name()], get_disabled_value_for_source(parent_name, source_val))
     }
+  end
+  
+  # Get the value that should be set if this prompt is disabled
+  def get_disabled_value_for_source(parent_name, source_val)
+    nil
   end
   
   # Ensure that the values in the config object pass all of the 
@@ -130,7 +151,7 @@ class MultipleValueConfigurePrompt
       |parent_name,source_val|
       value = @config.getNestedProperty(parent_name, get_name())
       
-      if enabled?
+      if enabled? && enabled_for_source?(parent_name, source_val)
         if value == nil && required?()
           # The prompt is enabled, the value should not be missing
           errors << ConfigurePromptError.new(
@@ -148,7 +169,7 @@ class MultipleValueConfigurePrompt
         end
       else
         if value.to_s() == ""
-          if get_disabled_value() == nil
+          if get_disabled_value_for_source(parent_name, source_val) == nil
             # The prompt is disabled, no value should be given
           elsif required?()
             errors << ConfigurePromptError.new(
@@ -156,7 +177,7 @@ class MultipleValueConfigurePrompt
               "Value is missing", "")
           end
         else
-          if get_disabled_value() == nil
+          if get_disabled_value_for_source(parent_name, source_val) == nil
             # The prompt is disabled, the value should be empty
             errors << ConfigurePromptError.new(
               ConfigurePrompt.new("#{parent_name}.#{get_name()}", get_prompt(source_val)),
@@ -176,7 +197,12 @@ class MultipleValueConfigurePrompt
   def each_source(&block)
     @config.getPropertyOr(@source_name, "").split(",").each{
       |source_val|
+      
       block.call(@parent_name_prefix + source_val, source_val)
     }
+  end
+  
+  def enabled_for_source?(parent_name, source_val)
+    true
   end
 end

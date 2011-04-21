@@ -78,35 +78,43 @@ class MySQLBinlogDirectory < MySQLConfigurePrompt
   end
 end
 
-class THLStorageType < MySQLConfigurePrompt
+class MySQLReplicationServiceMode < MultipleValueConfigurePrompt
   def initialize
-    super(REPL_LOG_TYPE, "Replicator event log storage (dbms|disk)",
-      PV_LOGTYPE, "disk")
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
+      REPL_SVC_MODE, "What type of replication service do you want to use? (#{REPL_MODE_MS}|#{REPL_MODE_DI})",
+      PropertyValidator.new("#{REPL_MODE_MS}|#{REPL_MODE_DI}", 
+      "Value must be #{REPL_MODE_MS} or #{REPL_MODE_DI}"), "master-slave")
   end
   
   def enabled?
-    super() && Configurator.instance.advanced_mode?()
+    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
   end
   
-  def get_disabled_value
-    "disk"
+  def get_disabled_value_for_source(parent_name, source_val)
+    "master-slave"
   end
 end
 
-class THLStorageDirectory < MySQLConfigurePrompt
+class MySQLReplicationUseRelayLogs < MultipleValueConfigurePrompt
   def initialize
-    super(REPL_LOG_DIR, "Replicator log directory", PV_FILENAME)
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
+      REPL_EXTRACTOR_USE_RELAY_LOGS, "Configure the extractor to access the binlog via local relay-logs?",
+      PV_BOOLEAN, "false")
   end
   
   def enabled?
-    super() && @config.getProperty(REPL_LOG_TYPE) == "disk"
+    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
   end
   
-  def get_default_value
-    if @config.getProperty(GLOBAL_HOME_DIRECTORY)
-      @config.getProperty(GLOBAL_HOME_DIRECTORY) + "/thl-logs"
+  def enabled_for_source?(parent_name, source_val)
+    @config.getProperty([parent_name, REPL_SVC_MODE]) == "master-slave"
+  end
+  
+  def get_disabled_value_for_source(parent_name, source_val)
+    if @config.getProperty([parent_name, REPL_SVC_MODE]) == "direct"
+      "true"
     else
-      ""
+      nil
     end
   end
 end
@@ -126,6 +134,94 @@ class MySQLRelayLogDirectory < MySQLConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
+    unless super()
+      false
+    end
+    
+    ClusterConfigureModule.each_service(@config) {
+      |parent_name, source_val|
+      
+      if @config.getProperty([parent_name, REPL_EXTRACTOR_USE_RELAY_LOGS]) == "true"
+        return true
+      end
+    }
+    
+    false
+  end
+end
+
+class MySQLDirectReplicationExtractHost < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
+      REPL_EXTRACTOR_DBHOST, "Enter the hostname to use when extracting events for service @value",
+      PV_IDENTIFIER)
+  end
+  
+  def enabled?
+    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+  end
+  
+  def enabled_for_source?(parent_name, source_val)
+    @config.getProperty([parent_name,REPL_SVC_MODE]) == "direct"
+  end
+end
+
+class MySQLDirectReplicationExtractPort < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
+      REPL_EXTRACTOR_DBPORT, "Enter the connection port to use when extracting events for service @value",
+      PV_IDENTIFIER)
+  end
+  
+  def get_default_value
+    @config.getProperty(REPL_DBPORT)
+  end
+  
+  def enabled?
+    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+  end
+  
+  def enabled_for_source?(parent_name, source_val)
+    @config.getProperty([parent_name,REPL_SVC_MODE]) == "direct"
+  end
+end
+
+class MySQLDirectReplicationExtractLogin < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
+      REPL_EXTRACTOR_DBLOGIN, "Enter the username to use when extracting events for service @value",
+      PV_IDENTIFIER)
+  end
+  
+  def get_default_value
+    @config.getProperty(REPL_DBLOGIN)
+  end
+  
+  def enabled?
+    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+  end
+  
+  def enabled_for_source?(parent_name, source_val)
+    @config.getProperty([parent_name,REPL_SVC_MODE]) == "direct"
+  end
+end
+
+class MySQLDirectReplicationExtractPassword < MultipleValueConfigurePrompt
+  def initialize
+    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
+      REPL_EXTRACTOR_DBPASSWORD, "Enter the password to use when extracting events for service @value",
+      PV_IDENTIFIER)
+  end
+  
+  def get_default_value
+    @config.getProperty(REPL_DBPASSWORD)
+  end
+  
+  def enabled?
+    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+  end
+  
+  def enabled_for_source?(parent_name, source_val)
+    @config.getProperty([parent_name,REPL_SVC_MODE]) == "direct"
   end
 end

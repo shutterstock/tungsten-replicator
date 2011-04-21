@@ -157,18 +157,11 @@ class MySQLSettingsCheck < MySQLValidationCheck
       error("MySQL binary logs are not configured.")
       help("Add \"log-bin=mysql-bin\" to the MySQL configuration file.")
     end
-
-    info("Checking server_id")
-    server_id = get_value("show variables like 'server_id'", "Value")
-    if server_id == nil || server_id == ""
-      error("Unable to determine the current server_id")
-      help("Add a \"server_id\" value to the MySQL configuration file")
-    end
     
     info("Checking sync_binlog setting")
     sync_binlog = get_value("show variables like 'sync_binlog'", "Value")
     if sync_binlog == nil || sync_binlog != "0"
-      error("The value of sync_binlog is wrong")
+      warn("The value of sync_binlog is wrong")
       help("Add \"sync_binlog=0\" to the MySQL configuration file to increase MySQL performance")
     end
     
@@ -182,8 +175,8 @@ class MySQLSettingsCheck < MySQLValidationCheck
     info("Checking max_allowed_packet")
     max_allowed_packet = get_value("show variables like 'max_allowed_packet'", "Value")
     if max_allowed_packet == nil || max_allowed_packet.to_i() < (48*1024*1024)
-      error("The value of max_allowed_packet is to small")
-      help("Add \"max_allowed_packet=48m\" to the MySQL configuration file")
+      error("The value of max_allowed_packet is too small")
+      help("Add \"max_allowed_packet=52m\" to the MySQL configuration file")
     end
     
     info("Check for datadir")
@@ -197,7 +190,7 @@ class MySQLSettingsCheck < MySQLValidationCheck
     server_id = cmd_result("my_print_defaults mysqld | grep server[-_]id | wc -l")
     unless server_id.to_i() > 0
       error("The server_id setting is not specified")
-      help("Specicy a value for server_id in your my.cnf file")
+      help("Specify a value for server_id in your my.cnf file")
     end
   end
 end

@@ -64,7 +64,7 @@ OS_ARCH_UNKNOWN = "unknown"
 class Configurator
   include Singleton
   
-  attr_reader :modules, :deployments
+  attr_reader :modules, :deployments, :package
   
   TUNGSTEN_COMMUNITY = "Community"
   TUNGSTEN_ENTERPRISE = "Enterprise"
@@ -121,6 +121,8 @@ class Configurator
       output_usage()
       exit
     end
+    
+    @package = Module.const_get(@options.package).new()
     
     # Load the current configuration values
     if File.exist?(@options.config)
@@ -194,11 +196,14 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     # Execute the validation of each configuration object for the deployment
     deployment_method = get_deployment()
     deployment_method.set_config(@stored_config)
-    unless deployment_method.validate()
-      write_header("The validation failed", Logger::ERROR)
-      deployment_method.get_validation_handler().output_errors()
+    
+    unless @options.force
+      unless deployment_method.validate()
+        write_header("The validation failed", Logger::ERROR)
+        deployment_method.get_validation_handler().output_errors()
         
-      exit 1
+        exit 1
+      end
     end
     
     # Execute the deployment of each configuration object for the deployment
@@ -274,13 +279,12 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     @modules = []
-    package = Module.const_get(@options.package).new()
     ConfigureModule.subclasses().each {
       |module_class|
       module_obj = module_class.new()
       module_obj.set_config(@stored_config)
       
-      if module_obj.include_module_for_package?(package)
+      if module_obj.include_module_for_package?(@package)
         @modules.push(module_obj)
       end
     }
@@ -294,13 +298,12 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     @deployments = []
-    package = Module.const_get(@options.package).new()
     ConfigureDeployment.subclasses().each {
       |deployment_class|
       deployment_obj = deployment_class.new()
       deployment_obj.set_config(@stored_config)
       
-      if deployment_obj.include_deployment_for_package?(package)
+      if deployment_obj.include_deployment_for_package?(@package)
         @deployments.push(deployment_obj)
       end
     }
@@ -377,7 +380,9 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   end
   
   def save_prompts
-    @stored_config.store(@options.config)
+    if @package.store_config_file?
+      @stored_config.store(@options.config)
+    end
   end
 
   def output_help

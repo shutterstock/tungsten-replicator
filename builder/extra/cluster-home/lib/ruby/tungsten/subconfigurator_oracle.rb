@@ -73,7 +73,7 @@ class SubConfiguratorOracle  < SubConfigurator
     replicator_properties = "tungsten-replicator/conf/static-" + 
         @configurator.config.props[GLOBAL_DSNAME] + ".properties"
     transformer = Transformer.new(
-        "tungsten-replicator/conf/sample.static.properties.oracle",
+        "tungsten-replicator/samples/conf/sample.static.properties.oracle",
         replicator_properties, "# ")
 
     transformer.transform { |line|

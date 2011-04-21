@@ -40,8 +40,6 @@ module ConfigureDeploymentStepPostgresql
       "replicator.script.conf_file=conf/postgresql-wal.properties"
     elsif line =~ /replicator.script.processor/
       "replicator.script.processor=bin/pg-wal-plugin"
-    elsif line =~ /replicator.master.listen.uri/ then
-      "replicator.master.listen.uri=thl://" + service_config.getProperty(GLOBAL_HOST) + "/"
     elsif line =~ /replicator.backup.agent.pg_dump.port/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
       "replicator.backup.agent.pg_dump.port=" + service_config.getProperty(REPL_DBPORT)
     elsif line =~ /replicator.backup.agent.pg_dump.user/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
@@ -56,13 +54,13 @@ module ConfigureDeploymentStepPostgresql
 	end
 	
 	def get_replication_dataservice_template
-    "#{get_deployment_basedir()}/tungsten-replicator/conf/sample.static.properties.postgresql"
+    "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.static.properties.postgresql"
 	end
   
   def write_replication_service_properties
     # Generate the services.properties file.
     transformer = Transformer.new(
-      "#{get_deployment_basedir()}/tungsten-replicator/conf/sample.services.properties",
+      "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
       "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties", "#")
 
     transformer.transform { |line|
@@ -99,7 +97,7 @@ module ConfigureDeploymentStepPostgresql
   
   def write_wal_shipping_properties
     transformer = Transformer.new(
-        "#{get_deployment_basedir()}/tungsten-replicator/conf/sample.postgresql-wal.properties",
+        "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.postgresql-wal.properties",
         "#{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties", "# ")
     
     transformer.transform { |line|
@@ -120,7 +118,7 @@ module ConfigureDeploymentStepPostgresql
         if pg_standby
           "postgresql.pg_standby=" + pg_standby
         else
-           raise RemoteError, "Unable to locate pg_standby; please ensure it is defined correctly in tungsten-replicator/conf/sample.postgresql-wal.properties" 
+           raise RemoteError, "Unable to locate pg_standby; please ensure it is defined correctly in tungsten-replicator/conf/postgresql-wal.properties" 
         end
       elsif line =~ /^\s*postgresql.pg_archivecleanup=\s*(\S*)\s*$/ then
         pg_archivecleanup = which $1
@@ -130,7 +128,7 @@ module ConfigureDeploymentStepPostgresql
         if pg_archivecleanup
           "postgresql.pg_archivecleanup=" + pg_archivecleanup
         elsif @config.getProperty(REPL_PG_STREAMING) == "true"
-           raise RemoteError, "Unable to locate pg_archivecleanup; please ensure it is defined correctly in tungsten-replicator/conf/sample.postgresql-wal.properties" 
+           raise RemoteError, "Unable to locate pg_archivecleanup; please ensure it is defined correctly in tungsten-replicator/conf/postgresql-wal.properties" 
         end
       elsif line =~ /postgresql.archive_timeout/ then
         "postgresql.archive_timeout=" + @config.getProperty(REPL_PG_ARCHIVE_TIMEOUT)
