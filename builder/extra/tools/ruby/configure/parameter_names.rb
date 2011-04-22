@@ -11,17 +11,16 @@ CLUSTER_DEPLOYMENTS = "deployments"
 CLUSTER_DATASERVERS = "dataservers"
 
 # Generic parameters that control the entire installation.
-GLOBAL_DEPLOYMENT_TYPE = "global_deployment_type"
-GLOBAL_HOST = "global_host_name"
-GLOBAL_IP_ADDRESS = "global_ip_address"
+DEPLOYMENT_TYPE = "deployment_type"
+HOST = "host_name"
+IP_ADDRESS = "ip_address"
 DSNAME = "data_service_name"
-GLOBAL_DSNAME = "global_data_service_name"
-GLOBAL_CLUSTERNAME = "global_cluster_name"
-GLOBAL_USERID = "global_userid"
-GLOBAL_DBMS_TYPE = "global_dbms_type"
-GLOBAL_HOME_DIRECTORY = "global_home_directory"
-GLOBAL_BASEDIR = 'global_basedir'
-GLOBAL_TEMP_DIRECTORY = "global_temp_directory"
+CLUSTERNAME = "cluster_name"
+USERID = "userid"
+DBMS_TYPE = "dbms_type"
+HOME_DIRECTORY = "home_directory"
+BASEDIR = 'basedir'
+TEMP_DIRECTORY = "temp_directory"
 SANDBOX_COUNT = "sandbox_instance_count"
 DEPLOY_CURRENT_PACKAGE = "deploy_current_package"
 GLOBAL_DEPLOY_PACKAGE_URI = "global_deploy_package_uri"
@@ -30,16 +29,16 @@ SHELL_STARTUP_SCRIPT = "shell_startup_script"
 OPTION_MONITOR_INTERNAL = "internal_monitor"
 
 # Operating system service parameters.
-GLOBAL_SVC_INSTALL = "global_install_svc_scripts"
-GLOBAL_SVC_START = "global_start_svc_scripts"
-GLOBAL_ROOT_PREFIX = "global_root_command_prefix"
+SVC_INSTALL = "install_svc_scripts"
+SVC_START = "start_svc_scripts"
+ROOT_PREFIX = "root_command_prefix"
 
 # Network control parameters.
-GLOBAL_GC_MEMBERSHIP = "global_gc_membership_protocol"
-GLOBAL_GOSSIP_PORT = "global_gossip_port"
-GLOBAL_GOSSIP_HOSTS = "global_gossip_hosts"
-GLOBAL_HOSTS = "global_hosts"
-GLOBAL_WITNESSES = "global_witnesses"
+GC_MEMBERSHIP = "gc_membership_protocol"
+GOSSIP_PORT = "gossip_port"
+GOSSIP_HOSTS = "gossip_hosts"
+HOSTS = "hosts"
+WITNESSES = "witnesses"
 DATASERVERS =  "dataservers"
 
 # Generic replication parameters.
@@ -100,7 +99,7 @@ REPL_USE_BYTES = "repl_use_bytes"
 REPL_USE_DRIZZLE = "repl_use_drizzle"
 
 # MySQL-specific parameters
-REPL_MYSQL_CONNECTOR_PATH = "global_mysql_connector_path"
+REPL_MYSQL_CONNECTOR_PATH = "mysql_connector_path"
 REPL_MYSQL_BINLOGDIR = "repl_mysql_binlog_dir"
 REPL_MYSQL_MYCNF = "repl_mysql_mycnf"
 REPL_MYSQL_BINLOGPATTERN = "repl_mysql_binlog_pattern"

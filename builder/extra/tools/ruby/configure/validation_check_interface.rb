@@ -88,11 +88,11 @@ module ValidationCheckInterface
   end
   
   def get_userid
-    @config.getProperty(GLOBAL_USERID)
+    @config.getProperty(USERID)
   end
   
   def get_hostname
-    @config.getProperty(GLOBAL_HOST)
+    @config.getProperty(HOST)
   end
   
   def ssh_result(command, ignore_fail = false, host = nil, user = nil)
@@ -117,7 +117,7 @@ module ValidationCheckInterface
   end
   
   def get_message_hostname
-    @config.getProperty(GLOBAL_HOST)
+    @config.getProperty(HOST)
   end
   
   def build_error_object(message)

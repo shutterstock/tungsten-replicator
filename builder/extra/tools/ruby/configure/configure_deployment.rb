@@ -22,7 +22,7 @@ class ConfigureDeployment
   def expand_deployment_configuration(deployment_config)
     expanded_config = deployment_config.dup()
     
-    expanded_config.setDefault(GLOBAL_BASEDIR, get_deployment_basedir(expanded_config))
+    expanded_config.setDefault(BASEDIR, get_deployment_basedir(expanded_config))
 
     hostname = Configurator.instance.hostname()
     unless expanded_config.getProperty(DEFAULT_DATASERVER)
@@ -48,18 +48,17 @@ class ConfigureDeployment
       |parent_name,service_name,service_properties|
       
       expanded_config.setDefault([parent_name, REPL_SVC_CONFIG_FILE], 
-        "#{expanded_config.getProperty(GLOBAL_BASEDIR)}/tungsten-replicator/conf/static-#{service_name}.properties")
+        "#{expanded_config.getProperty(BASEDIR)}/tungsten-replicator/conf/static-#{service_name}.properties")
         
-      if ClusterConfigureModule.services_list(expanded_config).include?(expanded_config.getProperty(GLOBAL_HOST))
+      if ClusterConfigureModule.services_list(expanded_config).include?(expanded_config.getProperty(HOST))
         expanded_config.setProperty([parent_name, REPL_SVC_SERVICE_TYPE], "remote")
       else
-        expanded_config.setProperty(GLOBAL_DSNAME, service_name)
         expanded_config.setProperty([parent_name, REPL_SVC_SERVICE_TYPE], "local")
       end
       
       case expanded_config.getProperty([parent_name, REPL_SVC_MODE])
       when REPL_MODE_MS
-        if expanded_config.getProperty([parent_name, REPL_MASTERHOST]) == expanded_config.getProperty(GLOBAL_HOST)
+        if expanded_config.getProperty([parent_name, REPL_MASTERHOST]) == expanded_config.getProperty(HOST)
           expanded_config.setProperty([parent_name, REPL_ROLE], "master")
         else
           expanded_config.setProperty([parent_name, REPL_ROLE], "slave")
@@ -67,16 +66,16 @@ class ConfigureDeployment
         
         service_hosts = service_properties[REPL_HOSTS].to_s().split(",")
         remote_hosts = service_properties[REPL_REMOTE_HOSTS].to_s().split(",")
-        if (service_hosts.include?(expanded_config.getProperty(GLOBAL_HOST)) ||
-            remote_hosts.include?(expanded_config.getProperty(GLOBAL_HOST)) ||
-            service_properties[REPL_MASTERHOST] == expanded_config.getProperty(GLOBAL_HOST))
+        if (service_hosts.include?(expanded_config.getProperty(HOST)) ||
+            remote_hosts.include?(expanded_config.getProperty(HOST)) ||
+            service_properties[REPL_MASTERHOST] == expanded_config.getProperty(HOST))
           repl_services << service_name
         end
       when REPL_MODE_DI
         expanded_config.setProperty([parent_name, REPL_ROLE], "direct")
-        expanded_config.setDefault([parent_name, REPL_MASTERHOST], expanded_config.getProperty(GLOBAL_HOST))
+        expanded_config.setDefault([parent_name, REPL_MASTERHOST], expanded_config.getProperty(HOST))
         expanded_config.setDefault([parent_name, REPL_SVC_THL_PORT], "2112")
-        expanded_config.setDefault([parent_name, REPL_HOSTS], expanded_config.getProperty(GLOBAL_HOST))
+        expanded_config.setDefault([parent_name, REPL_HOSTS], expanded_config.getProperty(HOST))
         repl_services << service_name
       else
         raise "Unable to determine the replication role based on replication mode: #{expanded_config.getProperty([parent_name, REPL_SVC_MODE])}"
@@ -110,7 +109,7 @@ class ConfigureDeployment
   end
   
   def get_deployment_basedir(deployment_config)
-    "#{deployment_config.getProperty(GLOBAL_HOME_DIRECTORY)}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
+    "#{deployment_config.getProperty(HOME_DIRECTORY)}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
   end
   
   def validate

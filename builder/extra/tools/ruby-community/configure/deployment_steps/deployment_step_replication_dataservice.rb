@@ -65,11 +65,11 @@ module ConfigureDeploymentStepReplicationDataservice
 		elsif line =~ /replicator.source_id/ then
 			"replicator.source_id=" + service_config.getProperty(REPL_DBHOST)
 		elsif line =~ /cluster.name=/ then
-			"cluster.name=" + @config.getPropertyOr(GLOBAL_CLUSTERNAME, "")
+			"cluster.name=" + @config.getPropertyOr(CLUSTERNAME, "")
 		elsif line =~ /^service.name=/ then
 			"service.name=" + service_name
 		elsif line =~ /^local.service.name=/ then
-			"local.service.name=" + @config.getPropertyOr(GLOBAL_DSNAME, "")
+			"local.service.name=" + @config.getPropertyOr(DSNAME, "")
 		elsif line =~ /replicator.service.type=/ then
       "replicator.service.type=local"
 		elsif line =~ /replicator.global.buffer.size=/ then
@@ -93,9 +93,9 @@ module ConfigureDeploymentStepReplicationDataservice
 				"#" + line
 			end
 		elsif line =~ /replicator.master.listen.uri=/ then
-			"replicator.master.listen.uri=thl://" + service_config.getProperty(GLOBAL_HOST) + "/"
+			"replicator.master.listen.uri=thl://" + service_config.getProperty(HOST) + "/"
 		elsif line =~ /replicator.resourceJdbcUrl/
-			line = line.sub("@HOSTNAME@", service_config.getProperty(GLOBAL_HOST) + ":" +
+			line = line.sub("@HOSTNAME@", service_config.getProperty(HOST) + ":" +
 							service_config.getProperty(REPL_DBPORT))
 		elsif line =~ /replicator.backup.agents/
 			if service_config.getProperty(REPL_BACKUP_METHOD) == "none"
@@ -153,7 +153,7 @@ module ConfigureDeploymentStepReplicationDataservice
         service_config.getProperty(REPL_SVC_THL_PORT) + "/"
     elsif line =~ /replicator.master.listen.uri=/ then
       "replicator.master.listen.uri=thl://" + 
-        service_config.getProperty(GLOBAL_HOST) + ":" + 
+        service_config.getProperty(HOST) + ":" + 
         service_config.getProperty(REPL_SVC_THL_PORT) + "/"
     elsif line =~ /replicator.store.thl.storageListenerUri=/ then
       "replicator.store.thl.storageListenerUri=thl://0.0.0.0:" + 

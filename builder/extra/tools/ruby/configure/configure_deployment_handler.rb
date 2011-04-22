@@ -23,9 +23,9 @@ class ConfigureDeploymentHandler
   def run_config(config)
     @config.props = config.props
     
-    if @config.getProperty(GLOBAL_HOST) == Configurator.instance.hostname()
+    if @config.getProperty(HOST) == Configurator.instance.hostname()
       Configurator.instance.write ""
-      Configurator.instance.write_header "Local deploy #{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+      Configurator.instance.write_header "Local deploy #{@config.getProperty(HOME_DIRECTORY)}"
       
       result = @deployment_method.deploy_config(@config)
     else
@@ -38,15 +38,15 @@ class ConfigureDeploymentHandler
       end
       
       Configurator.instance.write ""
-      Configurator.instance.write_header "Remote deploy #{@config.getProperty(GLOBAL_HOST)}:#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+      Configurator.instance.write_header "Remote deploy #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
       
-      deployment_temp_directory = "#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}"
+      deployment_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}"
       command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options}"
       
       if Configurator.instance.use_streaming_ssh()
-        Configurator.instance.debug("Execute `#{command}` on #{@config.getProperty(GLOBAL_HOST)}")
+        Configurator.instance.debug("Execute `#{command}` on #{@config.getProperty(HOST)}")
         result_dump = ""
-        ssh = Net::SSH.start(@config.getProperty(GLOBAL_HOST), @config.getProperty(GLOBAL_USERID))
+        ssh = Net::SSH.start(@config.getProperty(HOST), @config.getProperty(USERID))
         ssh.exec!(". /etc/profile; #{command} --stream") do
           |ch, stream, data|
           unless data =~ /RemoteResult/ || result_dump != ""
@@ -57,8 +57,8 @@ class ConfigureDeploymentHandler
         end
         ssh.close()
       else
-        user = @config.getProperty(GLOBAL_USERID)
-        host = @config.getProperty(GLOBAL_HOST)
+        user = @config.getProperty(USERID)
+        host = @config.getProperty(HOST)
         Configurator.instance.debug("Execute `#{command}` on #{host}")
         result_dump = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; #{command}\" 2>/dev/null`.chomp
         rc = $?
@@ -81,7 +81,7 @@ class ConfigureDeploymentHandler
   end
   
   def get_message_hostname
-    @config.getProperty(GLOBAL_HOST)
+    @config.getProperty(HOST)
   end
   
   def output_errors

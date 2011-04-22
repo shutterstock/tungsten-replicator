@@ -233,7 +233,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
       info("")
-      write_header "Validate #{@stored_config.getProperty(GLOBAL_HOST)}:#{@stored_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+      write_header "Validate #{@stored_config.getProperty(HOST)}:#{@stored_config.getProperty(HOME_DIRECTORY)}"
     end
     
     # Run the validation checks for a single configuration object
@@ -260,7 +260,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
       info("")
-      write_header "Deploy #{@stored_config.getProperty(GLOBAL_HOST)}:#{@stored_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+      write_header "Deploy #{@stored_config.getProperty(HOST)}:#{@stored_config.getProperty(HOME_DIRECTORY)}"
     end
     
     # Run the deploy steps for a single configuration object
@@ -318,7 +318,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   def get_deployment()
     Configurator.instance.deployments.each{
       |deployment|
-      if deployment.get_name() == @stored_config.getProperty(GLOBAL_DEPLOYMENT_TYPE)
+      if deployment.get_name() == @stored_config.getProperty(DEPLOYMENT_TYPE)
         return deployment
       end
     }
@@ -509,7 +509,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     if hostname == nil
-      hostname = @stored_config.getProperty(GLOBAL_HOST)
+      hostname = @stored_config.getProperty(HOST)
     end
     
     if hostname == nil

@@ -71,22 +71,22 @@ module ConfigureDeploymentStepPostgresql
       elsif line =~ /replicator.global.db.password=/ then
         "replicator.global.db.password=" + @config.getProperty(REPL_DBPASSWORD)
       elsif line =~ /replicator.resourceJdbcUrl=/ then
-        "replicator.resourceJdbcUrl=jdbc:postgresql://" + @config.getProperty(GLOBAL_HOST) + ":" +
+        "replicator.resourceJdbcUrl=jdbc:postgresql://" + @config.getProperty(HOST) + ":" +
         @config.getProperty(REPL_DBPORT) + "/${DBNAME}"
       elsif line =~ /replicator.resourceDataServerHost/ then
-        "replicator.resourceDataServerHost=" + @config.getProperty(GLOBAL_HOST)
+        "replicator.resourceDataServerHost=" + @config.getProperty(HOST)
       elsif line =~ /replicator.resourceJdbcDriver/ then
         "replicator.resourceJdbcDriver=org.postgresql.Driver"
       elsif line =~ /replicator.resourcePort/ then
         "replicator.resourcePort=" + @config.getProperty(REPL_DBPORT)
       elsif line =~ /replicator.source_id/ then
-        "replicator.source_id=" + @config.getProperty(GLOBAL_HOST)
+        "replicator.source_id=" + @config.getProperty(HOST)
       elsif line =~ /replicator.resourceVendor/ then
-        "replicator.resourceVendor=" + @config.getProperty(GLOBAL_DBMS_TYPE)
+        "replicator.resourceVendor=" + @config.getProperty(DBMS_TYPE)
       elsif line =~ /cluster.name=/ then
-        "cluster.name=" + @config.getPropertyOr(GLOBAL_CLUSTERNAME, "")
+        "cluster.name=" + @config.getPropertyOr(CLUSTERNAME, "")
       elsif line =~ /replicator.host=/ then
-        "replicator.host=" + @config.getProperty(GLOBAL_HOST)
+        "replicator.host=" + @config.getProperty(HOST)
       elsif line =~ /replicator.rmi_port=/ then
         "replicator.rmi_port=" + @config.getProperty(REPL_RMI_PORT)
       else
@@ -189,13 +189,13 @@ module ConfigureDeploymentStepPostgresql
     
     transformer.transform { |line|
       if line =~ /serverName=/
-          "serverName=" + @config.getProperty(GLOBAL_HOST)
+          "serverName=" + @config.getProperty(HOST)
       elsif line =~ /url=/ 
-          "url=jdbc:postgresql://" + @config.getProperty(GLOBAL_HOST) + ':' + @config.getProperty(REPL_DBPORT) + "/" + user
+          "url=jdbc:postgresql://" + @config.getProperty(HOST) + ':' + @config.getProperty(REPL_DBPORT) + "/" + user
       elsif line =~ /frequency=/
           "frequency=" + @config.getProperty(REPL_MONITOR_INTERVAL)
       elsif line =~ /host=/
-          "host=" + @config.getProperty(GLOBAL_HOST)
+          "host=" + @config.getProperty(HOST)
       elsif line =~ /username=/
           "username=" + user
       elsif line =~ /password=/
@@ -216,9 +216,9 @@ module ConfigureDeploymentStepPostgresql
     info("Running procedure to configure warm standby...")
     cmd1 = "#{get_deployment_basedir()}/tungsten-replicator/bin/pg-wal-plugin -o uninstall -c #{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties"
     cmd2 = "#{get_deployment_basedir()}/tungsten-replicator/bin/pg-wal-plugin -o install -c #{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties"
-    info("############ RESTART=#{@config.getProperty(GLOBAL_SVC_START)} ##################")
+    info("############ RESTART=#{@config.getProperty(SVC_START)} ##################")
     
-    if (@config.getProperty(GLOBAL_SVC_START) == "false")
+    if (@config.getProperty(SVC_START) == "false")
       cmd2 = cmd2 + " -s"
     end
     

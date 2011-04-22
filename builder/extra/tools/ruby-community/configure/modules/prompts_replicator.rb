@@ -46,7 +46,7 @@ class ReplicationServices < GroupConfigurePrompt
   end
   
   def get_prompt
-    if @config.getProperty(GLOBAL_DBMS_TYPE) == DBMS_POSTGRESQL
+    if @config.getProperty(DBMS_TYPE) == DBMS_POSTGRESQL
       "Enter a name for the replication service"
     else
       "Enter a comma-delimited list of names for the replication services"
@@ -54,7 +54,7 @@ class ReplicationServices < GroupConfigurePrompt
   end
   
   def get_description
-    if @config.getProperty(GLOBAL_DBMS_TYPE) == DBMS_POSTGRESQL
+    if @config.getProperty(DBMS_TYPE) == DBMS_POSTGRESQL
       "Replication services are the pipeline for replicating data between hosts.  Tungsten Replicator for PostgreSQL supports a single replication service for master-slave replication between PostgreSQL hosts."
     else
       "Replication services are the pipeline for replicating data between hosts.  Tungsten Replicator for MySQL supports multiple replication services to create complex replication topologies between MySQL hosts."
@@ -64,7 +64,7 @@ class ReplicationServices < GroupConfigurePrompt
   def accept?(raw_value)
     value = super(raw_value)
     
-    if @config.getProperty(GLOBAL_DBMS_TYPE) == DBMS_POSTGRESQL
+    if @config.getProperty(DBMS_TYPE) == DBMS_POSTGRESQL
       if value.to_s().index(",") != nil
         raise PropertyValidatorException, "Tungsten Replicator for PostgreSQL only supports a single replication service"
       end
@@ -235,11 +235,11 @@ class ReplicatorHostsPrompt < AdvancedPrompt
   end
   
   def get_default_value
-    @config.getProperty(GLOBAL_HOSTS)
+    @config.getProperty(HOSTS)
   end
   
   def get_disabled_value
-    @config.getProperty(GLOBAL_HOSTS)
+    @config.getProperty(HOSTS)
   end
 end
 
@@ -288,8 +288,8 @@ class THLStorageDirectory < ConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(GLOBAL_HOME_DIRECTORY)
-      @config.getProperty(GLOBAL_HOME_DIRECTORY) + "/thl-logs"
+    if @config.getProperty(HOME_DIRECTORY)
+      @config.getProperty(HOME_DIRECTORY) + "/thl-logs"
     else
       ""
     end
@@ -404,7 +404,7 @@ class DatabasePort < ConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    if @config.getProperty(DBMS_TYPE) == "mysql"
       3306
     else
       5432
@@ -420,7 +420,7 @@ class DatabaseHost < ConfigurePrompt
   end
   
   def get_default_value
-    @config.getPropertyOr(GLOBAL_HOST, "")
+    @config.getPropertyOr(HOST, "")
   end
 end
 
@@ -432,7 +432,7 @@ class DatabaseInitScript < ConfigurePrompt
   end
   
   def get_prompt
-    if @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    if @config.getProperty(DBMS_TYPE) == "mysql"
       "MySQL start script"
     else
       "Postgres start script"
@@ -440,7 +440,7 @@ class DatabaseInitScript < ConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    if @config.getProperty(DBMS_TYPE) == "mysql"
       "/etc/init.d/mysql"
     else
       "/etc/init.d/postgres"
@@ -454,7 +454,7 @@ class BackupMethod < ConfigurePrompt
   end
   
   def get_prompt
-    if @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    if @config.getProperty(DBMS_TYPE) == "mysql"
       "Database backup method (none|mysqldump|lvm|xtrabackup|script)"
     else
       "Database backup method (none|pg_dump|lvm|script)"
@@ -462,7 +462,7 @@ class BackupMethod < ConfigurePrompt
   end
   
   def accept?(raw_value)
-    if @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    if @config.getProperty(DBMS_TYPE) == "mysql"
       @validator = PV_MYSQL_BACKUP_METHOD
     else
       @validator = PV_PG_BACKUP_METHOD
@@ -472,7 +472,7 @@ class BackupMethod < ConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    if @config.getProperty(DBMS_TYPE) == "mysql"
       "mysqldump"
     else
       "pg_dump"
@@ -498,8 +498,8 @@ class BackupStorageDirectory < BackupConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(GLOBAL_HOME_DIRECTORY)
-      @config.getProperty(GLOBAL_HOME_DIRECTORY) + "/backups"
+    if @config.getProperty(HOME_DIRECTORY)
+      @config.getProperty(HOME_DIRECTORY) + "/backups"
     else
       ""
     end

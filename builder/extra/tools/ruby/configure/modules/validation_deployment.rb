@@ -3,7 +3,7 @@ class SSHLoginCheck < ConfigureValidationCheck
   def set_vars
     @title = "SSH login"
     @description = "Ensure that the configuration host can login to each member of the cluster via SSH"
-    @properties << GLOBAL_USERID
+    @properties << USERID
     @fatal_on_error = true
     @weight = -5
   end
@@ -12,8 +12,8 @@ class SSHLoginCheck < ConfigureValidationCheck
     # whoami will output the current user and we can confirm that the login succeeded
     login_result = ssh_result("whoami", true)
     
-    if login_result != @config.getProperty(GLOBAL_USERID)
-      error "Unable to SSH to #{@config.getProperty(GLOBAL_HOST)} as #{@config.getProperty(GLOBAL_USERID)}."
+    if login_result != @config.getProperty(USERID)
+      error "Unable to SSH to #{@config.getProperty(HOST)} as #{@config.getProperty(USERID)}."
       help "Ensure that the host is running and that you can login via SSH using key authentication"
     else
       debug "SSH login successful"
@@ -21,7 +21,7 @@ class SSHLoginCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    (@config.getProperty(GLOBAL_HOST) != Configurator.instance.hostname())
+    (@config.getProperty(HOST) != Configurator.instance.hostname())
   end
 end
 
@@ -29,33 +29,33 @@ class WriteableTempDirectoryCheck < ConfigureValidationCheck
   include LocalValidationCheck
   def set_vars
     @title = "Writeable temp directory"
-    @properties << GLOBAL_TEMP_DIRECTORY
+    @properties << TEMP_DIRECTORY
   end
   
   def validate
-    debug "Checking #{@config.getProperty(GLOBAL_TEMP_DIRECTORY)}"
+    debug "Checking #{@config.getProperty(TEMP_DIRECTORY)}"
     
-    create_dir = ssh_result("mkdir -p #{@config.getProperty(GLOBAL_TEMP_DIRECTORY)}")
+    create_dir = ssh_result("mkdir -p #{@config.getProperty(TEMP_DIRECTORY)}")
     unless create_dir
-      error("There was an issue creating #{@config.getProperty(GLOBAL_TEMP_DIRECTORY)}")
+      error("There was an issue creating #{@config.getProperty(TEMP_DIRECTORY)}")
     end
     
     # The -D flag will tell us if it is a directory
-    writeable = ssh_result("if [ -d #{@config.getProperty(GLOBAL_TEMP_DIRECTORY)} ]; then echo 0; else echo 1; fi")
+    writeable = ssh_result("if [ -d #{@config.getProperty(TEMP_DIRECTORY)} ]; then echo 0; else echo 1; fi")
     
     unless writeable == "0"
-      error "#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)} is not a directory"
+      error "#{@config.getProperty(TEMP_DIRECTORY)} is not a directory"
     else
-      debug "#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)} is adirectory"
+      debug "#{@config.getProperty(TEMP_DIRECTORY)} is adirectory"
     end
     
     # The -w flag will tell us if it is writeable
-    writeable = ssh_result("if [ -w #{@config.getProperty(GLOBAL_TEMP_DIRECTORY)} ]; then echo 0; else echo 1; fi")
+    writeable = ssh_result("if [ -w #{@config.getProperty(TEMP_DIRECTORY)} ]; then echo 0; else echo 1; fi")
     
     unless writeable == "0"
-      error "#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)} is not writeable"
+      error "#{@config.getProperty(TEMP_DIRECTORY)} is not writeable"
     else
-      debug "#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)} is writeable"
+      debug "#{@config.getProperty(TEMP_DIRECTORY)} is writeable"
     end
   end
 end
@@ -64,38 +64,38 @@ class WriteableHomeDirectoryCheck < ConfigureValidationCheck
   include LocalValidationCheck
   def set_vars
     @title = "Writeable home directory"
-    @properties << GLOBAL_HOME_DIRECTORY
+    @properties << HOME_DIRECTORY
   end
   
   def validate
-    debug "Checking #{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+    debug "Checking #{@config.getProperty(HOME_DIRECTORY)}"
     
-    create_dir = ssh_result("mkdir -p #{@config.getProperty(GLOBAL_HOME_DIRECTORY)}")
+    create_dir = ssh_result("mkdir -p #{@config.getProperty(HOME_DIRECTORY)}")
     unless create_dir
-      error("There was an issue creating #{@config.getProperty(GLOBAL_HOME_DIRECTORY)}")
+      error("There was an issue creating #{@config.getProperty(HOME_DIRECTORY)}")
     end
     
     # The -D flag will tell us if it is a directory
-    writeable = ssh_result("if [ -d #{@config.getProperty(GLOBAL_HOME_DIRECTORY)} ]; then echo 0; else echo 1; fi")
+    writeable = ssh_result("if [ -d #{@config.getProperty(HOME_DIRECTORY)} ]; then echo 0; else echo 1; fi")
     
     unless writeable == "0"
-      error "#{@config.getProperty(GLOBAL_HOME_DIRECTORY)} is not a directory"
+      error "#{@config.getProperty(HOME_DIRECTORY)} is not a directory"
     else
-      debug "#{@config.getProperty(GLOBAL_HOME_DIRECTORY)} is adirectory"
+      debug "#{@config.getProperty(HOME_DIRECTORY)} is adirectory"
     end
     
     # The -w flag will tell us if it is writeable
-    writeable = ssh_result("if [ -w #{@config.getProperty(GLOBAL_HOME_DIRECTORY)} ]; then echo 0; else echo 1; fi")
+    writeable = ssh_result("if [ -w #{@config.getProperty(HOME_DIRECTORY)} ]; then echo 0; else echo 1; fi")
     
     unless writeable == "0"
-      error "#{@config.getProperty(GLOBAL_HOME_DIRECTORY)} is not writeable"
+      error "#{@config.getProperty(HOME_DIRECTORY)} is not writeable"
     else
-      debug "#{@config.getProperty(GLOBAL_HOME_DIRECTORY)} is writeable"
+      debug "#{@config.getProperty(HOME_DIRECTORY)} is writeable"
     end
   end
   
   def enabled?
-    @config.getProperty(GLOBAL_HOME_DIRECTORY) != nil
+    @config.getProperty(HOME_DIRECTORY) != nil
   end
 end
 
@@ -108,8 +108,8 @@ class DeploymentPackageCheck < ConfigureValidationCheck
   def validate
     uri = URI::parse(@config.getProperty(GLOBAL_DEPLOY_PACKAGE_URI))
     if uri.scheme == "file" && (uri.host == nil || uri.host == "localhost")
-      debug("Send deployment package to #{@config.getProperty(GLOBAL_HOST)}")
-      cmd_result("rsync -aze ssh --delete #{uri.path} #{@config.getProperty(GLOBAL_USERID)}@#{@config.getProperty(GLOBAL_HOST)}:#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)}")
+      debug("Send deployment package to #{@config.getProperty(HOST)}")
+      cmd_result("rsync -aze ssh --delete #{uri.path} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{@config.getProperty(TEMP_DIRECTORY)}")
     end
   end
   
@@ -243,12 +243,12 @@ class SudoCheck < ConfigureValidationCheck
   end
   
   def add_help
-    help("Add \"#{@config.getProperty(GLOBAL_USERID)}        ALL=(ALL)       NOPASSWD: ALL\" to the /etc/sudoers file.")
+    help("Add \"#{@config.getProperty(USERID)}        ALL=(ALL)       NOPASSWD: ALL\" to the /etc/sudoers file.")
     help("Comment out or remove the requiretty line in the /etc/sudoers file.")
   end
   
   def enabled?
-    (@config.getProperty(GLOBAL_ROOT_PREFIX) == "true")
+    (@config.getProperty(ROOT_PREFIX) == "true")
   end
 end
 
@@ -262,8 +262,8 @@ class HostnameCheck < ConfigureValidationCheck
   def validate
     # Check operating system.
     hostname = cmd_result("hostname")
-    if hostname != @config.getProperty(GLOBAL_HOST)
-      error "Hostname must be #{@config.getProperty(GLOBAL_HOST)}"
+    if hostname != @config.getProperty(HOST)
+      error "Hostname must be #{@config.getProperty(HOST)}"
     else
       debug "Hostname is OK"
     end

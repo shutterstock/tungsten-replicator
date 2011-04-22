@@ -24,7 +24,7 @@ class PostgreSQLValidationCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    (@config.getProperty(GLOBAL_DBMS_TYPE) == "postgresql")
+    (@config.getProperty(DBMS_TYPE) == "postgresql")
   end
 end
 
@@ -42,12 +42,12 @@ class PostgreSQLSystemUserCheck < PostgreSQLValidationCheck
         current user is: #{login}.  We recommend you do not use this user.")
     end
     
-    if @config.getProperty(GLOBAL_USERID) != "postgres" and 
-        @config.getProperty(GLOBAL_USERID) != "enterprisedb" then
+    if @config.getProperty(USERID) != "postgres" and 
+        @config.getProperty(USERID) != "enterprisedb" then
       error("You must run Tungsten with 
         the database system user.  This is usually 'postgres' for PostgreSQL 
         and 'enterprisedb' for EnterpriseDB.  You have specified 
-        #{@config.getProperty(GLOBAL_USERID)}.  We recommend you do not use this user.")
+        #{@config.getProperty(USERID)}.  We recommend you do not use this user.")
     end
   end
 end

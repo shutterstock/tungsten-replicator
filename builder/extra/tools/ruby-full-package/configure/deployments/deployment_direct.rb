@@ -6,10 +6,10 @@ class DirectDeployment < ConfigureDeployment
   def get_deployment_configurations()
     config_objs = []
     
-    @config.getProperty(GLOBAL_HOSTS).each{
+    @config.getProperty(HOSTS).each{
       |host_alias, host_props|
       
-      unless host_props[GLOBAL_HOST] == Configurator.instance.hostname()
+      unless host_props[HOST] == Configurator.instance.hostname()
         continue
       end
 
@@ -32,13 +32,13 @@ class DirectDeployment < ConfigureDeployment
       ]
       
     modules << ConfigureDeploymentStepReplicationDataservice
-    case @config.getProperty(GLOBAL_DBMS_TYPE)
+    case @config.getProperty(DBMS_TYPE)
     when "mysql"
       modules << ConfigureDeploymentStepMySQL
     when "postgresql"
       modules << ConfigureDeploymentStepPostgresql
     else
-      raise "Invalid value for #{GLOBAL_DBMS_TYPE}"
+      raise "Invalid value for #{DBMS_TYPE}"
     end
     
     modules << ConfigureDeploymentStepServices

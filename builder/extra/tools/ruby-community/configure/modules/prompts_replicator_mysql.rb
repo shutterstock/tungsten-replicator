@@ -1,6 +1,6 @@
 class MySQLConfigurePrompt < ConfigurePrompt
   def enabled?
-    @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    @config.getProperty(DBMS_TYPE) == "mysql"
   end
   
   def get_default_value
@@ -21,7 +21,7 @@ class MySQLConfigurePrompt < ConfigurePrompt
     password = @config.getProperty(REPL_DBPASSWORD)
     port = @config.getProperty(REPL_DBPORT)
     if hostname == nil
-      hosts = @config.getProperty(GLOBAL_HOSTS).split(",")
+      hosts = @config.getProperty(HOSTS).split(",")
       hostname = hosts[0]
     end
 
@@ -49,7 +49,7 @@ end
 
 class MySQLAdvancedPrompt < AdvancedPrompt
   def enabled?
-    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    super() && @config.getProperty(DBMS_TYPE) == "mysql"
   end
 end
 
@@ -91,7 +91,7 @@ class MySQLReplicationServiceMode < MultipleValueConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    super() && @config.getProperty(DBMS_TYPE) == "mysql"
   end
   
   def get_disabled_value_for_source(parent_name, source_val)
@@ -107,7 +107,7 @@ class MySQLReplicationUseRelayLogs < MultipleValueConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    super() && @config.getProperty(DBMS_TYPE) == "mysql"
   end
   
   def enabled_for_source?(parent_name, source_val)
@@ -132,8 +132,8 @@ class MySQLRelayLogDirectory < MySQLConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(GLOBAL_HOME_DIRECTORY)
-      @config.getProperty(GLOBAL_HOME_DIRECTORY) + "/relay-logs"
+    if @config.getProperty(HOME_DIRECTORY)
+      @config.getProperty(HOME_DIRECTORY) + "/relay-logs"
     else
       ""
     end
@@ -164,7 +164,7 @@ class MySQLDirectReplicationExtractHost < MultipleValueConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    super() && @config.getProperty(DBMS_TYPE) == "mysql"
   end
   
   def enabled_for_source?(parent_name, source_val)
@@ -184,7 +184,7 @@ class MySQLDirectReplicationExtractPort < MultipleValueConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    super() && @config.getProperty(DBMS_TYPE) == "mysql"
   end
   
   def enabled_for_source?(parent_name, source_val)
@@ -204,7 +204,7 @@ class MySQLDirectReplicationExtractLogin < MultipleValueConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    super() && @config.getProperty(DBMS_TYPE) == "mysql"
   end
   
   def enabled_for_source?(parent_name, source_val)
@@ -224,7 +224,7 @@ class MySQLDirectReplicationExtractPassword < MultipleValueConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    super() && @config.getProperty(DBMS_TYPE) == "mysql"
   end
   
   def enabled_for_source?(parent_name, source_val)

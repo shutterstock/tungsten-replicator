@@ -166,10 +166,10 @@ module ConfigurePromptInterface
   
   def ssh_result(command, ignore_fail = false, host = nil, user = nil)
     if (user == nil)
-      user = @config.getProperty(GLOBAL_USERID)
+      user = @config.getProperty(USERID)
     end
     if (host == nil)
-      host = @config.getProperty(GLOBAL_HOST)
+      host = @config.getProperty(HOST)
     end
     
     debug("Execute `#{command}` on #{host}")

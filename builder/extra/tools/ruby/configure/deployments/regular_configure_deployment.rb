@@ -14,7 +14,7 @@ class RegularConfigureDeployment < ConfigureDeployment
       uri = nil
     end
     
-    @config.getProperty(GLOBAL_HOSTS).each{
+    @config.getProperty(HOSTS).each{
       |host_alias, host_props|
 
       config_obj = Properties.new
@@ -22,7 +22,7 @@ class RegularConfigureDeployment < ConfigureDeployment
       
       if uri && uri.scheme == "file" && (uri.host == nil || uri.host == "localhost")
         config_obj.setProperty(GLOBAL_DEPLOY_PACKAGE_URI, @config.getProperty(DEPLOY_PACKAGE_URI))
-        config_obj.setProperty(DEPLOY_PACKAGE_URI, "file://localhost#{config_obj.getProperty(GLOBAL_TEMP_DIRECTORY)}/#{package_basename}")
+        config_obj.setProperty(DEPLOY_PACKAGE_URI, "file://localhost#{config_obj.getProperty(TEMP_DIRECTORY)}/#{package_basename}")
       end
     
       config_objs.push(config_obj)
@@ -37,13 +37,13 @@ class RegularConfigureDeployment < ConfigureDeployment
       ]
     
     modules << ConfigureDeploymentStepReplicationDataservice
-    case @config.getProperty(GLOBAL_DBMS_TYPE)
+    case @config.getProperty(DBMS_TYPE)
     when "mysql"
       modules << ConfigureDeploymentStepMySQL
     when "postgresql"
       modules << ConfigureDeploymentStepPostgresql
     else
-      raise "Invalid value for #{GLOBAL_DBMS_TYPE}"
+      raise "Invalid value for #{DBMS_TYPE}"
     end
     
     modules << ConfigureDeploymentStepServices

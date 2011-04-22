@@ -1,6 +1,6 @@
 class ClusterHosts < GroupConfigurePrompt
   def initialize
-    super(GLOBAL_HOSTS, "Enter host information for @value", 
+    super(HOSTS, "Enter host information for @value", 
       "host", "hosts")
     self.add_prompts(
       GlobalHostPrompt.new(),
@@ -30,7 +30,7 @@ class ClusterHosts < GroupConfigurePrompt
   end
   
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "sandbox"
+    @config.getProperty(DEPLOYMENT_TYPE) != "sandbox"
   end
 end
 
@@ -65,12 +65,12 @@ class HomeDirectoryPrompt < ConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
-    super(GLOBAL_HOME_DIRECTORY, "Installation directory", PV_FILENAME)
+    super(HOME_DIRECTORY, "Installation directory", PV_FILENAME)
   end
   
   def get_default_value
     begin
-      ssh_result('pwd', false, @config.getProperty(get_member_key(GLOBAL_HOST)))
+      ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)))
     rescue => e
       if Configurator.instance.is_full_tungsten_package?()
         Configurator.instance.get_base_path()
@@ -89,7 +89,7 @@ class GlobalHostPrompt < ConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
-    super(GLOBAL_HOST, "DNS hostname", PV_HOSTNAME)
+    super(HOST, "DNS hostname", PV_HOSTNAME)
   end
   
   def get_default_value
@@ -105,11 +105,11 @@ class GlobalIPAddressPrompt < ConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
-    super(GLOBAL_IP_ADDRESS, "IP address", PV_HOSTNAME)
+    super(IP_ADDRESS, "IP address", PV_HOSTNAME)
   end
   
   def get_default_value
-    hostname = @config.getProperty(get_member_key(GLOBAL_HOST))
+    hostname = @config.getProperty(get_member_key(HOST))
     
     if hostname.to_s() != ""
       Resolv.getaddress(hostname)
@@ -127,7 +127,7 @@ class UserIDPrompt < ConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
-    super(GLOBAL_USERID, "System User", 
+    super(USERID, "System User", 
       PV_IDENTIFIER, Configurator.instance.whoami())
   end
 end
@@ -136,7 +136,7 @@ class TempDirectoryPrompt < ConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
-    super(GLOBAL_TEMP_DIRECTORY, "Temporary Directory",
+    super(TEMP_DIRECTORY, "Temporary Directory",
       PV_FILENAME, "/tmp")
   end
 end
@@ -148,7 +148,7 @@ class SandboxCountPrompt < ConfigurePrompt
   end
   
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) == "sandbox"
+    @config.getProperty(DEPLOYMENT_TYPE) == "sandbox"
   end
 end
 
@@ -169,7 +169,7 @@ class DeploymentTypePrompt < ConfigurePrompt
       default = "distributed"
     end
       
-    super(GLOBAL_DEPLOYMENT_TYPE, "Deployment type (#{deployment_types.join(',')})", 
+    super(DEPLOYMENT_TYPE, "Deployment type (#{deployment_types.join(',')})", 
       validator, default)
   end
 end
@@ -180,7 +180,7 @@ class DeployCurrentPackagePrompt < ConfigurePrompt
   end
   
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "regular" &&
+    @config.getProperty(DEPLOYMENT_TYPE) != "regular" &&
       Configurator.instance.is_full_tungsten_package?()
   end
   
@@ -196,7 +196,7 @@ class DeployPackageURIPrompt < ConfigurePrompt
   end
 
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "regular" && 
+    @config.getProperty(DEPLOYMENT_TYPE) != "regular" && 
       @config.getProperty(DEPLOY_CURRENT_PACKAGE) == "false"
   end
   

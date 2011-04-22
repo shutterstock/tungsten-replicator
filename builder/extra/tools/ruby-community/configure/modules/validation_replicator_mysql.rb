@@ -38,7 +38,7 @@ class MySQLValidationCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    (@config.getProperty(GLOBAL_DBMS_TYPE) == "mysql")
+    (@config.getProperty(DBMS_TYPE) == "mysql")
   end
 end
 
@@ -72,7 +72,7 @@ class MySQLLoginCheck < MySQLValidationCheck
     if login_output =~ /ALIVE/
       info("MySQL server and login to #{@config.getProperty(get_member_key(REPL_DBHOST))} is OK")
     else
-      help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'@'#{@config.getProperty(get_member_key(GLOBAL_HOST))}' IDENTIFIED BY '#{@config.getProperty(get_member_key(REPL_DBPASSWORD))}' WITH GRANT OPTION\" on #{@config.getProperty(get_member_key(REPL_DBHOST))}")
+      help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'@'#{@config.getProperty(get_member_key(HOST))}' IDENTIFIED BY '#{@config.getProperty(get_member_key(REPL_DBPASSWORD))}' WITH GRANT OPTION\" on #{@config.getProperty(get_member_key(REPL_DBHOST))}")
       error("MySQL server on #{@config.getProperty(get_member_key(REPL_DBHOST))} is unavailable or login does not work")
     end
   end
@@ -112,7 +112,7 @@ class MySQLPermissionsCheck < MySQLValidationCheck
     }
     
     if has_missing_priv
-      error("The database user is missing some privileges. Run 'mysql -u#{@config.getProperty(get_member_key(REPL_DBLOGIN))} -p#{@config.getProperty(get_member_key(REPL_DBPASSWORD))} -h#{@config.getProperty(get_member_key(GLOBAL_HOST))} -e\"GRANT ALL ON *.* to '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'@'#{@config.getProperty(get_member_key(GLOBAL_HOST))}' WITH GRANT OPTION\"' on #{@config.getProperty(get_member_key(GLOBAL_HOST))}")
+      error("The database user is missing some privileges. Run 'mysql -u#{@config.getProperty(get_member_key(REPL_DBLOGIN))} -p#{@config.getProperty(get_member_key(REPL_DBPASSWORD))} -h#{@config.getProperty(get_member_key(HOST))} -e\"GRANT ALL ON *.* to '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'@'#{@config.getProperty(get_member_key(HOST))}' WITH GRANT OPTION\"' on #{@config.getProperty(get_member_key(HOST))}")
     else
       info("All privileges configured correctly")
     end
@@ -198,7 +198,7 @@ class ConnectorUserMySQLCheck < MySQLValidationCheck
       if login_output =~ /ALIVE/
         info("MySQL server and connector login to #{repl_host} is OK")
       else
-        help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(CONN_CLIENTLOGIN)}'@'#{@config.getProperty(GLOBAL_HOST)}' IDENTIFIED BY '#{@config.getProperty(CONN_CLIENTPASSWORD)}'\" on #{repl_host}")
+        help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(CONN_CLIENTLOGIN)}'@'#{@config.getProperty(HOST)}' IDENTIFIED BY '#{@config.getProperty(CONN_CLIENTPASSWORD)}'\" on #{repl_host}")
         error("MySQL server on #{repl_host} is unavailable or connector login does not work")
       end
     }

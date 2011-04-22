@@ -7,7 +7,7 @@ class DeploymentValidationOnly < ConfigureDeployment
     config_objs = []
     hosts = []
     
-    @config.getProperty(GLOBAL_HOSTS).each{
+    @config.getProperty(HOSTS).each{
       |host_alias, host_props|
 
       config_obj = Properties.new

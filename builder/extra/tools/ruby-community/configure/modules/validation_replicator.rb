@@ -17,7 +17,7 @@ class VIPInterfaceAvailableCheck < ConfigureValidationCheck
   		if iface_addr == @config.getProperty(REPL_MASTER_VIP)
   		  info("#{iface} is already assigned as the VIP address on this host")
   		  
-  		  if @config.getProperty(GLOBAL_HOST) != @config.getProperty(REPL_MASTERHOST)
+  		  if @config.getProperty(HOST) != @config.getProperty(REPL_MASTERHOST)
   		    error("The VIP address is assigned to this host that is not the master")
   		  end
   		else
@@ -93,7 +93,7 @@ class NoHiddenServicesCheck < ConfigureValidationCheck
     config_services = ClusterConfigureModule.services_list(@config)
     
     current_services = []
-    Dir[@config.getProperty(GLOBAL_BASEDIR) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
+    Dir[@config.getProperty(BASEDIR) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
       service_name = cmd_result("grep ^service.name= #{file} | awk -F = '{print $2}'")
       if service_name != ""
         current_services << service_name

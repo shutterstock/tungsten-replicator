@@ -1,6 +1,6 @@
 class PostgresConfigurePrompt < ConfigurePrompt
   def enabled?
-    @config.getProperty(GLOBAL_DBMS_TYPE) == "postgresql"
+    @config.getProperty(DBMS_TYPE) == "postgresql"
   end
   
   def get_default_value
@@ -21,7 +21,7 @@ class PostgresConfigurePrompt < ConfigurePrompt
     password = @config.getProperty(REPL_DBPASSWORD)
     port = @config.getProperty(REPL_DBPORT)
     if hostname == nil
-      hosts = @config.getProperty(GLOBAL_HOSTS).split(",")
+      hosts = @config.getProperty(HOSTS).split(",")
       hostname = hosts[0]
     end
 
@@ -46,7 +46,7 @@ class PostgresRootDirectory < PostgresConfigurePrompt
   end
   
   def get_default_value
-    @default = @config.getProperty(GLOBAL_HOME_DIRECTORY)
+    @default = @config.getProperty(HOME_DIRECTORY)
     super()
   end
   
@@ -72,7 +72,7 @@ class PostgresDataDirectory < PostgresConfigurePrompt
   end
   
   def get_default_value
-    @default = @config.getProperty(GLOBAL_HOME_DIRECTORY)
+    @default = @config.getProperty(HOME_DIRECTORY)
     super()
   end
   

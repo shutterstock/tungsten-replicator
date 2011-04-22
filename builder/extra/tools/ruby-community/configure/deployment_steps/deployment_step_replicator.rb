@@ -26,7 +26,7 @@ module ConfigureDeploymentStepReplicator
       |parent_name,service_name,service_properties|
       
       service_hosts = service_properties[REPL_HOSTS].split(",")
-      if service_hosts.include?(@config.getProperty(GLOBAL_HOST))
+      if service_hosts.include?(@config.getProperty(HOST))
         return true
       end
     }
@@ -38,7 +38,7 @@ module ConfigureDeploymentStepReplicator
     ClusterConfigureModule.each_service(@config) {
       |parent_name,service_name,service_properties|
       
-      if service_properties[REPL_MASTERHOST] == @config.getProperty(GLOBAL_HOST)
+      if service_properties[REPL_MASTERHOST] == @config.getProperty(HOST)
         return true
       end
     }

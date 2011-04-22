@@ -90,13 +90,13 @@ module ConfigureDeploymentStepMySQL
       elsif line =~ /replicator.resourceDiskLogDir/ then
         "replicator.resourceDiskLogDir=" + @config.getProperty(REPL_LOG_DIR)
       elsif line =~ /replicator.source_id/ then
-        "replicator.source_id=" + @config.getProperty(GLOBAL_HOST)
+        "replicator.source_id=" + @config.getProperty(HOST)
       elsif line =~ /replicator.resourceVendor/ then
-        "replicator.resourceVendor=" + @config.getProperty(GLOBAL_DBMS_TYPE)
+        "replicator.resourceVendor=" + @config.getProperty(DBMS_TYPE)
       elsif line =~ /cluster.name=/ then
-        "cluster.name=" + @config.getPropertyOr(GLOBAL_CLUSTERNAME, "")
+        "cluster.name=" + @config.getPropertyOr(CLUSTERNAME, "")
       elsif line =~ /replicator.host=/ then
-        "replicator.host=" + @config.getProperty(GLOBAL_HOST)
+        "replicator.host=" + @config.getProperty(HOST)
       elsif line =~ /replicator.rmi_port=/ then
         "replicator.rmi_port=" + @config.getProperty(REPL_RMI_PORT)
       else
