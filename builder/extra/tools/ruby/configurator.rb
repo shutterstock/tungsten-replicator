@@ -38,10 +38,13 @@ system_require 'configure/configure_prompt_handler'
 system_require 'configure/configure_prompt_interface'
 system_require 'configure/configure_prompt'
 system_require 'configure/multiple_value_configure_prompt'
+system_require 'configure/group_configure_prompt'
 system_require 'configure/configure_validation_handler'
 system_require 'configure/configure_validation_check'
 system_require 'configure/configure_deployment_handler'
 system_require 'configure/configure_deployment'
+
+DEFAULTS = "__defaults__"
 
 DBMS_MYSQL = "mysql"
 DBMS_POSTGRESQL = "postgresql"

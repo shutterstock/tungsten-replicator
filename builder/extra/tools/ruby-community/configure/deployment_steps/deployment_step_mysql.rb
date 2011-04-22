@@ -37,14 +37,6 @@ module ConfigureDeploymentStepMySQL
 		elsif line =~ /replicator.extractor.mysql.binlog_file_pattern/ then
 			"replicator.extractor.mysql.binlog_file_pattern=" + 
 			  service_config.getProperty(REPL_MYSQL_BINLOGPATTERN)
-		elsif line =~ /replicator.applier.mysql.host/ then
-			"replicator.applier.mysql.host=" + service_config.getProperty(REPL_DBHOST)
-		elsif line =~ /replicator.applier.mysql.port/ then
-			"replicator.applier.mysql.port=" + service_config.getProperty(REPL_DBPORT)
-		elsif line =~ /replicator.backup.agent.mysqldump.host/
-			"replicator.backup.agent.mysqldump.host=" + service_config.getProperty(REPL_DBHOST)
-		elsif line =~ /replicator.backup.agent.mysqldump.port/
-			"replicator.backup.agent.mysqldump.port=" + service_config.getProperty(REPL_DBPORT)
 		elsif line =~ /replicator.backup.agent.mysqldump.dumpDir/ && 
 		    service_config.getProperty(REPL_BACKUP_METHOD) != "none"
 			"replicator.backup.agent.mysqldump.dumpDir=" + 
@@ -63,9 +55,6 @@ module ConfigureDeploymentStepMySQL
 		elsif line =~ /replicator.extractor.mysql.relayLogRetention/ && 
 		    service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
 			"replicator.extractor.mysql.relayLogRetention=3"
-#    elsif line =~ /replicator.extractor.mysql.binlogMode/ then
-#      "replicator.extractor.mysql.binlogMode=" + 
-#        service_config.getProperty(REPL_SVC_BINLOG_MODE)
 		else
 		  super(line, service_name, service_config)
 		end

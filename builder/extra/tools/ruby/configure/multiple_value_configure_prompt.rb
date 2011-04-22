@@ -45,15 +45,14 @@ class MultipleValueConfigurePrompt
       debug("enabled for #{@source_name}:#{source_val}")
       
       if first_prompt
-        puts
-        Configurator.instance.write_divider
-
         description = get_description()
         unless description == nil
+          puts
+          Configurator.instance.write_divider
           puts description
+          puts
         end
 
-        puts
         first_prompt = false
       end
       

@@ -154,6 +154,10 @@ class Properties
   
   # Get a property value. 
   def getProperty(key) 
+    if key.is_a?(String)
+      key = key.split('.')
+    end
+    
     getNestedProperty(*key)
   end
   
@@ -169,11 +173,19 @@ class Properties
   
   # Set a property value. 
   def setProperty(key, value)
+    if key.is_a?(String)
+      key = key.split('.')
+    end
+    
     setNestedProperty(value, *key)
   end 
   
   # Set the property to a value only if it is currently unset. 
   def setDefault(key, value)
+    if key.is_a?(String)
+      key = key.split('.')
+    end
+    
     if getNestedProperty(*key) == nil
       setNestedProperty(value, *key)
     end

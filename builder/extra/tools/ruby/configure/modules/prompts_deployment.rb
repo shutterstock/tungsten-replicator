@@ -1,7 +1,32 @@
-class ClusterHostsPrompt < ConfigurePrompt
+class ClusterHosts < GroupConfigurePrompt
   def initialize
-    super(GLOBAL_HOSTS, "Enter a comma-delimited list of cluster member hosts", 
-      PV_HOSTNAME)
+    super(CLUSTER_DEPLOYMENTS, "Enter deployment information for @value", 
+      "deployment", "deployments")
+    self.add_prompts(
+      GlobalHostPrompt.new(),
+      GlobalIPAddressPrompt.new(),
+      UserIDPrompt.new(),
+      HomeDirectoryPrompt.new(),
+      TempDirectoryPrompt.new(),
+      
+      ShellStartupScriptPrompt.new(),
+      RootCommandPrefixPrompt.new(),
+      InstallServicesPrompt.new(),
+      StartServicesPrompt.new(),
+        
+      THLStorageType.new(),
+      THLStorageDirectory.new(),
+      THLStorageChecksum.new(),
+      THLStorageConnectionTimeout.new(),
+      THLStorageRetention.new(),
+      THLStorageConsistency.new(),
+      THLStorageFileSize.new(),
+      MySQLRelayLogDirectory.new(),
+      
+      #ReplicationMonitorInterval.new(),
+      JavaMemorySize.new(),
+      RMIPort.new()
+    )
   end
   
   def enabled?
@@ -9,51 +34,110 @@ class ClusterHostsPrompt < ConfigurePrompt
   end
 end
 
+class ReplicationMonitorInterval < ConstantValuePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_MONITOR_INTERVAL, "Replication monitor interval", 
+      PV_INTEGER, 3000)
+  end
+end
+
+class JavaMemorySize < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_JAVA_MEM_SIZE, "Replicator Java heap memory size in Mb (min 128)",
+      PV_JAVA_MEM_SIZE, 512)
+  end
+end
+
+class RMIPort < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_RMI_PORT, "Replication RMI port", 
+      PV_INTEGER, 10000)
+  end
+end
+
 class HomeDirectoryPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(GLOBAL_HOME_DIRECTORY, "Installation directory", PV_FILENAME)
   end
   
   def get_default_value
     begin
-      hosts = @config.getProperty(GLOBAL_HOSTS).split(",")
-      hostname = hosts[0]
-      ssh_result('pwd', false, hostname)
+      ssh_result('pwd', false, @config.getProperty(get_member_key(GLOBAL_HOST)))
     rescue => e
-      ENV['HOME']
+      if Configurator.instance.is_full_tungsten_package?()
+        Configurator.instance.get_base_path()
+      else
+        ENV['HOME']
+      end
     end
   end
   
-  def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "regular"
+  def allow_group_default
+    false
   end
 end
 
 class GlobalHostPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
-    super(GLOBAL_HOST, "Name of this host", PV_HOSTNAME)
+    super(GLOBAL_HOST, "DNS hostname", PV_HOSTNAME)
   end
   
   def get_default_value
     Configurator.instance.hostname()
   end
   
-  def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) == "regular"
+  def allow_group_default
+    false
   end
 end
 
 class GlobalIPAddressPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
-    super(GLOBAL_IP_ADDRESS, "IP address for this host", PV_HOSTNAME)
+    super(GLOBAL_IP_ADDRESS, "IP address", PV_HOSTNAME)
   end
   
   def get_default_value
-    Resolv.getaddress(@config.getProperty(GLOBAL_HOST))
+    hostname = @config.getProperty(get_member_key(GLOBAL_HOST))
+    
+    if hostname.to_s() != ""
+      Resolv.getaddress(hostname)
+    else
+      @default
+    end
   end
   
-  def enabled?
-    @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) == "regular"
+  def allow_group_default
+    false
+  end
+end
+
+class UserIDPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(GLOBAL_USERID, "System User", 
+      PV_IDENTIFIER, Configurator.instance.whoami())
+  end
+end
+
+class TempDirectoryPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(GLOBAL_TEMP_DIRECTORY, "Temporary Directory",
+      PV_FILENAME, "/tmp")
   end
 end
 

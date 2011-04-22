@@ -30,20 +30,19 @@ class ConfigurePrompt
       return
     end
     
-    puts
-    Configurator.instance.write_divider
-    
     description = get_description()
     unless description == nil
+      puts
+      Configurator.instance.write_divider
       puts description
+      puts
     end
     
-    puts
     value = nil
     while value == nil do
       begin
         # Display the prompt and collect the response
-        raw_value = input_value(get_prompt(), get_value())
+        raw_value = input_value(get_display_prompt(), get_value())
         
         case raw_value
         when COMMAND_HELP
@@ -88,10 +87,13 @@ class ConfigurePrompt
     value
   end
   
+  # Save the current value back to the config object or the default 
+  # value if none is set
   def save_current_value
      @config.setProperty(get_name(), get_value())
   end
-  
+
+  # Save the disabled value back to the config object
   def save_disabled_value
      @config.setProperty(get_name(), get_disabled_value())
   end
@@ -101,36 +103,40 @@ class ConfigurePrompt
     nil
   end
   
-  # Ensure that the values in the config object pass all of the 
   def is_valid?
     value = get_value(false)
     
     if enabled?
       if value == nil && required?()
         # The prompt is enabled, the value should not be missing
-        raise PropertyValidatorException.new("Value is missing")
+        raise ConfigurePromptError.new(
+          ConfigurePrompt.new(get_name(), get_display_prompt()),
+          "Value is missing", "")
+      elsif value != nil
+        begin
+          value = accept?(value.to_s())
+        rescue Exception => e
+          # There was an issue in the validation
+          raise ConfigurePromptError.new(
+            ConfigurePrompt.new(get_name(), get_display_prompt()),
+            e.to_s(), value)
+        end
       end
-      
-      if value != nil
-        value = accept?(value.to_s())
-      end
-      
-      # Validation passed
-      true
     else
       if value.to_s() == ""
         if get_disabled_value() == nil
           # The prompt is disabled, no value should be given
-          true
         elsif required?()
-          raise PropertyValidatorException.new("Value is missing")
+          raise ConfigurePromptError.new(
+            ConfigurePrompt.new(get_name(), get_display_prompt()),
+            "Value is missing", "")
         end
       else
         if get_disabled_value() == nil
           # The prompt is disabled, the value should be empty
-          raise PropertyValidatorException.new("Value should not be given, remove it from the configuration")
-        else
-          true
+          raise ConfigurePromptError.new(
+            ConfigurePrompt.new(get_name(), get_display_prompt()),
+            "Value should not be given, remove it from the configuration", value)
         end
       end
     end
@@ -143,6 +149,10 @@ class ConfigurePrompt
   # Get the prompt text
   def get_prompt
     @prompt
+  end
+  
+  def get_display_prompt
+    get_prompt()
   end
   
   # Get the default value for the prompt

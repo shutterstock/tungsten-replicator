@@ -10,16 +10,9 @@ class DeploymentConfigureModule < ConfigureModule
       DeploymentTypePrompt.new(),
       DeployCurrentPackagePrompt.new(),
       DeployPackageURIPrompt.new(),
-      ClusterHostsPrompt.new(),
-      GlobalHostPrompt.new(),
-      GlobalIPAddressPrompt.new(),
-      ConfigurePrompt.new(GLOBAL_USERID, "System User", 
-        PV_IDENTIFIER, Configurator.instance.whoami()),
-      HomeDirectoryPrompt.new(),
-      ConfigurePrompt.new(GLOBAL_TEMP_DIRECTORY, "Temporary Directory",
-        PV_FILENAME, "/tmp"),
       ConfigurePrompt.new(GLOBAL_CLUSTERNAME, "Cluster Name", 
         PV_IDENTIFIER, "default"),
+      ClusterHosts.new()
     ])
   end
   

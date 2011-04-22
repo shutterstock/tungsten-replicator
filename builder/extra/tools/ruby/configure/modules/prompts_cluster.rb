@@ -1,4 +1,6 @@
 class InstallServicesPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(GLOBAL_SVC_INSTALL, "Install service start scripts", 
       PV_BOOLEAN, "false")
@@ -6,36 +8,42 @@ class InstallServicesPrompt < ConfigurePrompt
   
   def enabled?
     @config.getProperty(GLOBAL_DEPLOYMENT_TYPE) != "sandbox" && 
-    (@config.getProperty(GLOBAL_USERID) == "root" || 
-      @config.getProperty(GLOBAL_ROOT_PREFIX) == "true")
+    (@config.getProperty(get_member_key(GLOBAL_USERID)) == "root" || 
+      @config.getProperty(get_member_key(GLOBAL_ROOT_PREFIX)) == "true")
   end
 end
 
 class StartServicesPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
-    super(GLOBAL_SVC_START, "Start services after configuration", PV_BOOLEAN, "true")
+    super(GLOBAL_SVC_START, "Start services after configuration", 
+      PV_BOOLEAN, "true")
   end
   
   def get_prompt
     if @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
-      @prompt
+      super()
     else
       "Restart PostgreSQL server and start services after configuration"
     end
   end
   
-  def get_prompt_description_filename(prompt_name)
+  def get_prompt_description_filename()
     if @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
-      super(prompt_name)
+      super()
     else
-      "#{get_interface_text_directory()}/prompt_#{prompt_name}_postgresql"
+      "#{get_interface_text_directory()}/prompt_#{@name}_postgresql"
     end
   end
 end
 
-class ShellStartupScriptPrompt < ConfigurePrompt
+class ShellStartupScriptPrompt < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
   def initialize
-    super(SHELL_STARTUP_SCRIPT, "Filename for the system user shell startup script", PV_SCRIPTNAME)
+    super(SHELL_STARTUP_SCRIPT, "Filename for the system user shell startup script", 
+      PV_SCRIPTNAME)
   end
   
   def get_default_value
@@ -44,6 +52,8 @@ class ShellStartupScriptPrompt < ConfigurePrompt
 end
 
 class RootCommandPrefixPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(GLOBAL_ROOT_PREFIX, "Run root commands using sudo", 
       PV_BOOLEAN, "true")

@@ -106,9 +106,9 @@ class ConfigurePromptHandler
               # Ensure that the value is valid 
               @prompts[i].is_valid?
               i += 1
-            rescue ConfigurePromptErrorSet => s
+            rescue ConfigurePromptError => e
               fix_default_value.call()
-            rescue PropertyValidatorException => e
+            rescue ConfigurePromptErrorSet => s
               fix_default_value.call()
             end
           end
@@ -134,10 +134,10 @@ class ConfigurePromptHandler
       begin
         prompt_keys = prompt_keys + prompt.get_keys()
         prompt.is_valid?()
+      rescue ConfigurePromptError => e
+        @errors << e
       rescue ConfigurePromptErrorSet => s
         @errors = @errors + s.errors
-      rescue PropertyValidatorException => e
-        @errors.push(ConfigurePromptError.new(prompt, e.to_s(), @config.getProperty(prompt.get_name())))
       end
     }
     

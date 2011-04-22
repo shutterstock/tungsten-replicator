@@ -54,7 +54,7 @@ module ConfigurePromptInterface
   
   # Get the sorting weight
   def get_weight
-    @weight
+    @weight || 0
   end
   
   # Read the prompt response from the command line.
@@ -84,13 +84,13 @@ module ConfigurePromptInterface
   end
   
   # Build the help filename based on the config key
-  def get_prompt_help_filename(prompt_name)
-    "#{get_interface_text_directory()}/help_#{prompt_name}"
+  def get_prompt_help_filename()
+    "#{get_interface_text_directory()}/help_#{get_name()}"
   end
   
   # Get the help text for this prompt
   def get_help
-    help = get_prompt_help(get_name())
+    help = get_prompt_help()
     
     if help == nil || help == ""
       help = get_description()
@@ -104,8 +104,8 @@ module ConfigurePromptInterface
   end
   
   # Read the help from the prompt help file
-  def get_prompt_help(prompt_name)
-    help_filename = get_prompt_help_filename(prompt_name)
+  def get_prompt_help()
+    help_filename = get_prompt_help_filename()
     unless File.exists?(help_filename)
       return nil
     end
@@ -121,12 +121,12 @@ module ConfigurePromptInterface
   end
   
   def get_description
-    get_prompt_description(get_name())
+    get_prompt_description()
   end
   
   # Build the description filename based on the config key
-  def get_prompt_description_filename(prompt_name)
-    "#{get_interface_text_directory()}/prompt_#{prompt_name}"
+  def get_prompt_description_filename()
+    "#{get_interface_text_directory()}/prompt_#{get_name()}"
   end
   
   def get_interface_text_directory
@@ -134,8 +134,8 @@ module ConfigurePromptInterface
   end
   
   # Read the help from the prompt help file
-  def get_prompt_description(prompt_name)
-    description_filename = get_prompt_description_filename(prompt_name)
+  def get_prompt_description()
+    description_filename = get_prompt_description_filename()
     unless File.exists?(description_filename)
       return nil
     end

@@ -29,7 +29,18 @@ class PostgresConfigurePrompt < ConfigurePrompt
   end
 end
 
+class PostgresStreamingReplication < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_PG_STREAMING, "Use streaming replication (available from PostgreSQL 9)",
+      PV_BOOLEAN, "false")
+  end
+end
+
 class PostgresRootDirectory < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_ROOT, "Root directory for postgresql installation", PV_FILENAME)
   end
@@ -50,6 +61,8 @@ class PostgresRootDirectory < PostgresConfigurePrompt
 end
 
 class PostgresDataDirectory < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_HOME, "PostgreSQL data directory", PV_FILENAME)
   end
@@ -74,6 +87,8 @@ class PostgresDataDirectory < PostgresConfigurePrompt
 end
 
 class PostgresArchiveDirectory < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_ARCHIVE, "PostgreSQL archive location", PV_FILENAME)
   end
@@ -84,6 +99,8 @@ class PostgresArchiveDirectory < PostgresConfigurePrompt
 end
 
 class PostgresConfFile < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_POSTGRESQL_CONF, "Location of postgresql.conf", PV_FILENAME)
   end
@@ -103,6 +120,8 @@ class PostgresConfFile < PostgresConfigurePrompt
 end
 
 class PostgresArchiveTimeout < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_ARCHIVE_TIMEOUT, "Timeout for sending unfilled WAL buffers (data loss window)", 
       PV_INTEGER, 60)

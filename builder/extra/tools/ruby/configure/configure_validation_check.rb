@@ -1,4 +1,5 @@
 class ConfigureValidationCheck
+  include ValidationCheckInterface
   include ConfigureMessages
   attr_reader :title, :description, :properties, :messages, :fatal_on_error, :support_remote_fix
   def initialize

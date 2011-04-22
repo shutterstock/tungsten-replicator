@@ -7,6 +7,9 @@
 
 # Named properties for Tungsten configuration.
 
+CLUSTER_DEPLOYMENTS = "deployments"
+CLUSTER_DATASERVERS = "dataservers"
+
 # Generic parameters that control the entire installation.
 GLOBAL_DEPLOYMENT_TYPE = "global_deployment_type"
 GLOBAL_HOST = "global_host_name"

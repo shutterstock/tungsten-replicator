@@ -54,6 +54,8 @@ class MySQLAdvancedPrompt < AdvancedPrompt
 end
 
 class MySQLBinlogPattern < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_MYSQL_BINLOGPATTERN, "MySQL binlog pattern", PV_ANY, "mysql-bin")
   end
@@ -72,6 +74,8 @@ class MySQLBinlogPattern < MySQLConfigurePrompt
 end
 
 class MySQLBinlogDirectory < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_MYSQL_BINLOGDIR, "MySQL binlog directory", 
       PV_FILENAME, "/var/lib/mysql/")
@@ -81,7 +85,7 @@ end
 class MySQLReplicationServiceMode < MultipleValueConfigurePrompt
   def initialize
     super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_SVC_MODE, "What type of replication service do you want to use? (#{REPL_MODE_MS}|#{REPL_MODE_DI})",
+      REPL_SVC_MODE, "What type of replication do you want to use for service @value? (#{REPL_MODE_MS}|#{REPL_MODE_DI})",
       PropertyValidator.new("#{REPL_MODE_MS}|#{REPL_MODE_DI}", 
       "Value must be #{REPL_MODE_MS} or #{REPL_MODE_DI}"), "master-slave")
   end
@@ -120,6 +124,8 @@ class MySQLReplicationUseRelayLogs < MultipleValueConfigurePrompt
 end
 
 class MySQLRelayLogDirectory < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_RELAY_LOG_DIR, "Enter the local-disk directory into which the relay-logs will be stored",
 		  PV_FILENAME)
