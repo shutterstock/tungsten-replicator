@@ -109,3 +109,29 @@ class NoHiddenServicesCheck < ConfigureValidationCheck
     }
   end
 end
+
+class DataserversChecks < GroupValidationCheck
+  def initialize
+    super(DATASERVERS, "dataserver", "dataservers")
+    
+    add_checks(
+      MySQLClientCheck.new(),
+      MySQLLoginCheck.new(),
+      MySQLPermissionsCheck.new(),
+      MySQLReadableLogsCheck.new(),
+      MySQLSettingsCheck.new(),
+      ConnectorUserMySQLCheck.new(),
+      PostgreSQLSystemUserCheck.new(),
+      PostgreSQLClientCheck.new(),
+      PostgreSQLLoginCheck.new(),
+      PostgreSQLPermissionsCheck.new(),
+      PostgreSQLStandbyCheck.new(),
+      PostgreSQLSettingsCheck.new(),
+      ConnectorUserPostgreSQLCheck.new()
+    )
+  end
+  
+  def set_vars
+    @title = "Dataserver checks"
+  end
+end

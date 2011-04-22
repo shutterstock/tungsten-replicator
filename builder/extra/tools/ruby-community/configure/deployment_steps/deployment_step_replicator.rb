@@ -31,7 +31,7 @@ module ConfigureDeploymentStepReplicator
       end
     }
     
-    false
+    true
   end
   
   def is_master?

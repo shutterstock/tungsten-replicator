@@ -58,20 +58,9 @@ class ReplicatorConfigureModule < ConfigureModule
   def register_validation_checks(validation_handler)
     validation_handler.register_checks([
       THLStorageCheck.new(),
-      NoHiddenServicesCheck.new(),
-      MySQLClientCheck.new(),
-      MySQLLoginCheck.new(),
-      MySQLPermissionsCheck.new(),
-      MySQLReadableLogsCheck.new(),
-      MySQLSettingsCheck.new(),
-      ConnectorUserMySQLCheck.new(),
-      PostgreSQLSystemUserCheck.new(),
-      PostgreSQLClientCheck.new(),
-      PostgreSQLLoginCheck.new(),
-      PostgreSQLPermissionsCheck.new(),
-      PostgreSQLStandbyCheck.new(),
-      PostgreSQLSettingsCheck.new(),
-      ConnectorUserPostgreSQLCheck.new(),
+#      NoHiddenServicesCheck.new(),
+
+      DataserversChecks.new(),
       VIPInterfaceAvailableCheck.new(),
       BackupMethodAvailableCheck.new(),
     ])

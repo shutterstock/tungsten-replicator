@@ -40,8 +40,10 @@ GLOBAL_GOSSIP_PORT = "global_gossip_port"
 GLOBAL_GOSSIP_HOSTS = "global_gossip_hosts"
 GLOBAL_HOSTS = "global_hosts"
 GLOBAL_WITNESSES = "global_witnesses"
+DATASERVERS =  "dataservers"
 
 # Generic replication parameters.
+DEFAULT_DATASERVER = "default_dataserver"
 REPL_SERVICES = "repl_services"
 REPL_HOSTS = "repl_hosts"
 REPL_ROLE = "repl_role"

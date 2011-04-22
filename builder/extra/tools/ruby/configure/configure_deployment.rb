@@ -22,9 +22,28 @@ class ConfigureDeployment
   def expand_deployment_configuration(deployment_config)
     expanded_config = deployment_config.dup()
     
-    repl_services = []
-    expanded_config.setDefault(GLOBAL_BASEDIR, get_deployment_basedir(deployment_config))
+    expanded_config.setDefault(GLOBAL_BASEDIR, get_deployment_basedir(expanded_config))
+
+    hostname = Configurator.instance.hostname()
+    unless expanded_config.getProperty(DEFAULT_DATASERVER)
+      default_ds = nil
+      expanded_config.getPropertyOr(DATASERVERS, {}).each{
+        |ds_alias, ds_props|
+        
+        if ds_props[REPL_DBHOST] == hostname
+          default_ds = ds_alias
+          break
+        end
+      }
+      
+      unless default_ds
+        raise "Unable to determine the default dataserver"
+      end
+      
+      expanded_config.setProperty(DEFAULT_DATASERVER, default_ds)
+    end
     
+    repl_services = []
     ClusterConfigureModule.each_service(deployment_config) {
       |parent_name,service_name,service_properties|
       
@@ -100,8 +119,7 @@ class ConfigureDeployment
   
   def validate_config(deployment_config)
     expanded_config = expand_deployment_configuration(deployment_config)
-    @config.props = expanded_config.props
-    get_validation_handler().validate_config()
+    get_validation_handler().validate_config(expanded_config)
   end
   
   def deploy
@@ -109,11 +127,30 @@ class ConfigureDeployment
   end
   
   def deploy_config(deployment_config)
+    # Load each of the files in the deployement_steps directory
+    Dir[File.dirname(__FILE__) + '/deployment_steps/*.rb'].each do |file| 
+      system_require File.dirname(file) + '/' + File.basename(file, File.extname(file))
+    end
+    
     expanded_config = expand_deployment_configuration(deployment_config)
-    @config.props = expanded_config.props
     
     # Get an object that represents the deployment steps required by the config
-    obj = get_deployment_object()
+    obj = Class.new{
+      include ConfigureDeploymentCore
+    }.new(expanded_config)
+
+    deployment_methods = []
+    get_deployment_object_modules().each{
+      |module_name|
+      obj.extend(module_name)
+      begin
+        deployment_methods = deployment_methods + module_name.get_deployment_methods()
+      rescue
+      end
+    }
+
+    obj.set_deployment_methods(deployment_methods)
+
     # Execute each of the deployment steps
     obj.deploy()
   end
@@ -124,7 +161,7 @@ class ConfigureDeployment
   
   def get_validation_handler
     unless @validation_handler
-      @validation_handler = get_validation_handler_class().new(@config)
+      @validation_handler = get_validation_handler_class().new()
     end
     
     @validation_handler
@@ -136,34 +173,10 @@ class ConfigureDeployment
   
   def get_deployment_handler
     unless @deployment_handler
-      @deployment_handler = get_deployment_handler_class().new(@config)
+      @deployment_handler = get_deployment_handler_class().new(self)
     end
     
     @deployment_handler
-  end
-  
-  def get_deployment_object
-    # Load each of the files in the deployement_steps directory
-    Dir[File.dirname(__FILE__) + '/deployment_steps/*.rb'].each do |file| 
-      system_require File.dirname(file) + '/' + File.basename(file, File.extname(file))
-    end
-    
-    obj = Class.new{
-      include ConfigureDeploymentCore
-    }.new(@config)
-    
-    deployment_methods = []
-    get_deployment_object_modules().each{
-      |module_name|
-      obj.extend(module_name)
-      begin
-        deployment_methods = deployment_methods + module_name.get_deployment_methods()
-      rescue
-      end
-    }
-    
-    obj.set_deployment_methods(deployment_methods)
-    obj
   end
   
   def get_deployment_object_modules

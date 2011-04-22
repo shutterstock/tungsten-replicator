@@ -61,6 +61,7 @@ module ConfigureDeploymentStepMySQL
 	end
 	
 	def write_replication_service_properties
+	  default_ds = @config.getProperty(DEFAULT_DATASERVER)
 	  # Generate the services.properties file.
     transformer = Transformer.new(
       "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
@@ -70,22 +71,22 @@ module ConfigureDeploymentStepMySQL
       if line =~ /replicator.services/
         "replicator.services=" + @config.getProperty(REPL_SERVICES)
       elsif line =~ /replicator.global.db.user=/ then
-        "replicator.global.db.user=" + @config.getProperty(REPL_DBLOGIN)
+        "replicator.global.db.user=" + @config.getProperty([DATASERVERS, default_ds, REPL_DBLOGIN])
       elsif line =~ /replicator.global.db.password=/ then
-        "replicator.global.db.password=" + @config.getProperty(REPL_DBPASSWORD)
+        "replicator.global.db.password=" + @config.getProperty([DATASERVERS, default_ds, REPL_DBPASSWORD])
       elsif line =~ /replicator.resourceLogDir/ then
-        "replicator.resourceLogDir=" + @config.getProperty(REPL_MYSQL_BINLOGDIR)
+        "replicator.resourceLogDir=" + @config.getProperty([DATASERVERS, default_ds, REPL_MYSQL_BINLOGDIR])
       elsif line =~ /replicator.resourceLogPattern/ then
-        "replicator.resourceLogPattern=" + @config.getProperty(REPL_MYSQL_BINLOGPATTERN)
+        "replicator.resourceLogPattern=" + @config.getProperty([DATASERVERS, default_ds, REPL_MYSQL_BINLOGPATTERN])
       elsif line =~ /replicator.resourceJdbcUrl/
-        line = line.sub("$serviceFacet.name$", @config.getProperty(GLOBAL_HOST) + ":" +
-          @config.getProperty(REPL_DBPORT))
+        line = line.sub("$serviceFacet.name$", @config.getProperty([DATASERVERS, default_ds, REPL_DBHOST]) + 
+          ":" + @config.getProperty([DATASERVERS, default_ds, REPL_DBPORT]))
       elsif line =~ /replicator.resourceDataServerHost/ then
-        "replicator.resourceDataServerHost=" + @config.getProperty(GLOBAL_HOST)
+        "replicator.resourceDataServerHost=" + @config.getProperty([DATASERVERS, default_ds, REPL_DBHOST])
       elsif line =~ /replicator.resourceJdbcDriver/ then
         "replicator.resourceJdbcDriver=com.mysql.jdbc.Driver"
       elsif line =~ /replicator.resourcePort/ then
-        "replicator.resourcePort=" + @config.getProperty(REPL_DBPORT)
+        "replicator.resourcePort=" + @config.getProperty([DATASERVERS, default_ds, REPL_DBPORT])
       elsif line =~ /replicator.resourceDiskLogDir/ then
         "replicator.resourceDiskLogDir=" + @config.getProperty(REPL_LOG_DIR)
       elsif line =~ /replicator.source_id/ then

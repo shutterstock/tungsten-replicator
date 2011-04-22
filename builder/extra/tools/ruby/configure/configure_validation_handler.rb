@@ -2,11 +2,11 @@ class ConfigureValidationHandler
   include ConfigureMessages
   attr_reader :deployment_checks, :local_checks
   
-  def initialize(config)
+  def initialize()
     super()
     @deployment_checks = []
     @local_checks = []
-    @config = config
+    @config = Properties.new()
     initialize_validation_checks()
   end
   
@@ -26,9 +26,9 @@ class ConfigureValidationHandler
   
   # Validate the prompt object and add it to the queue
   def register_check(check_obj)    
-    unless check_obj.is_a?(ConfigureValidationCheck)
+    unless check_obj.is_a?(ValidationCheckInterface)
       raise "Attempt to register invalid check #{check_obj.class} failed " +
-        "because it does not extend ConfigureValidationCheck"
+        "because it does not extend ValidationCheckInterface"
     end
     
     check_obj.set_config(@config)
@@ -98,34 +98,19 @@ class ConfigureValidationHandler
     Configurator.instance.write_header "Validation checks for #{@config.getProperty(GLOBAL_HOST)}:#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
     
     begin
-      # Invoke ValidationChecks on the remote server
-      extra_options = ""
-      if Configurator.instance.enable_log_level(Logger::DEBUG)
-        extra_options = "-v"
-      end
-      unless Configurator.instance.enable_log_level(Logger::INFO)
-        extra_options = "-q"
-      end
-      
       if @config.getProperty(GLOBAL_HOST) == Configurator.instance.hostname()
-        config_tempfile = Tempfile.new("tcfg")
-        config_tempfile.close()
-        @config.store(config_tempfile.path())
-
         debug("Local validation checks for #{@config.getProperty(GLOBAL_HOME_DIRECTORY)}")
-        command = "cd #{Configurator.instance.get_base_path()}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/validate.rb -c #{config_tempfile.path()} #{extra_options} --stream"
-        result_dump = ""
-
-        val_proc = IO.popen(command)
-        while (data = val_proc.gets())
-          unless data =~ /RemoteResult/ || result_dump != ""
-        		puts data
-          else
-            result_dump += data
-          end
-        end
-        val_proc.close()
+        result = validate_config(@config)
       else
+        # Invoke ValidationChecks on the remote server
+        extra_options = ""
+        if Configurator.instance.enable_log_level(Logger::DEBUG)
+          extra_options = "-v"
+        end
+        unless Configurator.instance.enable_log_level(Logger::INFO)
+          extra_options = "-q"
+        end
+        
         # Transfer validation code
         validation_temp_directory = "#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
         debug("Transfer configuration code to #{@config.getProperty(GLOBAL_HOST)}")
@@ -173,13 +158,14 @@ class ConfigureValidationHandler
             Configurator.instance.debug("RC: #{rc}, Result: #{result_dump}")
           end
         end
+        
+        begin
+          result = Marshal.load(result_dump)
+        rescue ArgumentError => ae
+          raise "Unable to load validation result: #{result_dump}"
+        end
       end
       
-      begin
-        result = Marshal.load(result_dump)
-      rescue ArgumentError => ae
-        raise "Unable to load validation result: #{result_dump}"
-      end
       @errors = @errors + result.errors
       result.messages.each{
         |message|
@@ -196,7 +182,8 @@ class ConfigureValidationHandler
   end
   
   # Handle the remote side of the validate function
-  def validate_config
+  def validate_config(config)
+    @config.props = config.props
     begin
       @deployment_checks.each{
         |check|

@@ -5,12 +5,14 @@ class DeploymentValidationOnly < ConfigureDeployment
   
   def get_deployment_configurations()
     config_objs = []
+    hosts = []
     
-    @config.getProperty(CLUSTER_DEPLOYMENTS).each{
-      |deployment_alias, deployment_config|
+    @config.getProperty(GLOBAL_HOSTS).each{
+      |host_alias, host_props|
+
       config_obj = Properties.new
-      config_obj.props = @config.props.dup
-      
+      config_obj.props = @config.props.merge(host_props)
+    
       config_objs.push(config_obj)
     }
     
@@ -18,11 +20,6 @@ class DeploymentValidationOnly < ConfigureDeployment
   end
   
   def include_deployment_for_package?(package)
-    case package.class().name()
-    when ConfigurePackageDeleteService
-      false
-    else
-      true
-    end
+    true
   end
 end

@@ -1,7 +1,7 @@
 class ClusterHosts < GroupConfigurePrompt
   def initialize
-    super(CLUSTER_DEPLOYMENTS, "Enter deployment information for @value", 
-      "deployment", "deployments")
+    super(GLOBAL_HOSTS, "Enter host information for @value", 
+      "host", "hosts")
     self.add_prompts(
       GlobalHostPrompt.new(),
       GlobalIPAddressPrompt.new(),
@@ -52,7 +52,7 @@ class JavaMemorySize < AdvancedPrompt
   end
 end
 
-class RMIPort < ConfigurePrompt
+class RMIPort < AdvancedPrompt
   include GroupConfigurePromptMember
   
   def initialize

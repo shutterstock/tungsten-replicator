@@ -5,6 +5,7 @@ class RegularConfigureDeployment < ConfigureDeployment
   
   def get_deployment_configurations()
     config_objs = []
+    hosts = []
     
     if @config.getProperty(DEPLOY_PACKAGE_URI)
       uri = URI::parse(@config.getProperty(DEPLOY_PACKAGE_URI))
@@ -13,20 +14,17 @@ class RegularConfigureDeployment < ConfigureDeployment
       uri = nil
     end
     
-    @config.getProperty(GLOBAL_HOSTS).split(",").each{
-      |deployment_host|
+    @config.getProperty(GLOBAL_HOSTS).each{
+      |host_alias, host_props|
+
       config_obj = Properties.new
-      config_obj.props = @config.props.dup
-      config_obj.setProperty(DSNAME, config_obj.getProperty(GLOBAL_DSNAME))
-      config_obj.setProperty(GLOBAL_HOST, deployment_host)
-      config_obj.setProperty(REPL_DBHOST, deployment_host)
-      config_obj.setProperty(GLOBAL_IP_ADDRESS, Resolv.getaddress(deployment_host))
+      config_obj.props = @config.props.merge(host_props)
       
       if uri && uri.scheme == "file" && (uri.host == nil || uri.host == "localhost")
         config_obj.setProperty(GLOBAL_DEPLOY_PACKAGE_URI, @config.getProperty(DEPLOY_PACKAGE_URI))
         config_obj.setProperty(DEPLOY_PACKAGE_URI, "file://localhost#{config_obj.getProperty(GLOBAL_TEMP_DIRECTORY)}/#{package_basename}")
       end
-      
+    
       config_objs.push(config_obj)
     }
     

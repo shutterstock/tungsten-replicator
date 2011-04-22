@@ -19,6 +19,10 @@ class SSHLoginCheck < ConfigureValidationCheck
       debug "SSH login successful"
     end
   end
+  
+  def enabled?
+    (@config.getProperty(GLOBAL_HOST) != Configurator.instance.hostname())
+  end
 end
 
 class WriteableTempDirectoryCheck < ConfigureValidationCheck

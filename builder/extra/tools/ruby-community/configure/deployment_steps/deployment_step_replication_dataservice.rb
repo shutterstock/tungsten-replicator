@@ -2,7 +2,7 @@ module ConfigureDeploymentStepReplicationDataservice
   # The deploy_replicator method is defined in ConfigureDeploymentStepReplicator
   def get_deployment_methods
     [
-      ConfigureDeploymentMethod.new("deploy_replication_dataservices", 50)
+      #ConfigureDeploymentMethod.new("deploy_replication_dataservices", 50)
     ]
   end
   module_function :get_deployment_methods
@@ -37,7 +37,7 @@ module ConfigureDeploymentStepReplicationDataservice
   
   def transform_replication_dataservice_line(line, service_name, service_config)
     if line =~ /replicator.role=/ then
-      "replicator.role=" + service_config.getProperty(REPL_ROLE)
+      "replicator.role=" + service_config.getPropertyOr(REPL_ROLE)
 	  elsif line =~ /replicator.service.type=/ then
       "replicator.service.type=" + service_config.getProperty(REPL_SVC_SERVICE_TYPE)
     elsif line =~ /replicator.global.db.host=/ then

@@ -1,6 +1,6 @@
 class DataServers < GroupConfigurePrompt
   def initialize
-    super("dataservers", "Enter dataserver information for @value", "dataserver", "dataservers")
+    super(DATASERVERS, "Enter dataserver information for @value", "dataserver", "dataservers")
     self.add_prompts(
       DatabaseHost.new(),
       DatabasePort.new(),
@@ -280,7 +280,7 @@ class THLStorageDirectory < ConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
-    super(REPL_LOG_DIR, "Replicator log directory on @value", PV_FILENAME)
+    super(REPL_LOG_DIR, "Replicator log directory", PV_FILENAME)
   end
   
   def enabled?

@@ -6,10 +6,18 @@ class DirectDeployment < ConfigureDeployment
   def get_deployment_configurations()
     config_objs = []
     
-    config_obj = Properties.new
-    config_obj.props = @config.props.dup
-    config_obj.setProperty(DSNAME, config_obj.getProperty(GLOBAL_DSNAME))
-    config_objs.push(config_obj)
+    @config.getProperty(GLOBAL_HOSTS).each{
+      |host_alias, host_props|
+      
+      unless host_props[GLOBAL_HOST] == Configurator.instance.hostname()
+        continue
+      end
+
+      config_obj = Properties.new
+      config_obj.props = @config.props.merge(host_props)
+      
+      config_objs.push(config_obj)
+    }
     
     config_objs
   end
@@ -23,9 +31,9 @@ class DirectDeployment < ConfigureDeployment
       ConfigureDeploymentStepDirect
       ]
       
+    modules << ConfigureDeploymentStepReplicationDataservice
     case @config.getProperty(GLOBAL_DBMS_TYPE)
     when "mysql"
-      modules << ConfigureDeploymentStepReplicationDataservice
       modules << ConfigureDeploymentStepMySQL
     when "postgresql"
       modules << ConfigureDeploymentStepPostgresql

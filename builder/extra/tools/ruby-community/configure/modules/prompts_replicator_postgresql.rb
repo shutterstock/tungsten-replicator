@@ -94,7 +94,7 @@ class PostgresArchiveDirectory < PostgresConfigurePrompt
   end
   
   def get_default_value
-    @config.getProperty(REPL_PG_ROOT) + "/archive"
+    @config.getProperty(get_member_key(REPL_PG_ROOT)) + "/archive"
   end
 end
 
@@ -106,7 +106,7 @@ class PostgresConfFile < PostgresConfigurePrompt
   end
   
   def get_default_value
-    @default = @config.getProperty(REPL_PG_ROOT) + "/data/postgresql.conf"
+    @default = @config.getProperty(get_member_key(REPL_PG_ROOT)) + "/data/postgresql.conf"
   end
   
   def get_pgsql_default_value

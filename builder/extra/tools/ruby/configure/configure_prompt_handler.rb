@@ -195,7 +195,7 @@ class ConfigurePromptHandler
   end
 end
 
-class ConfigurePromptError
+class ConfigurePromptError < StandardError
   attr_reader :prompt, :message, :current_value
   
   def initialize(prompt, message, current_value = nil)

@@ -127,7 +127,11 @@ class GroupConfigurePrompt
     each_member_prompt{
       |member, prompt|
       
-      prompt.save_current_value()
+      if prompt.enabled?
+        prompt.save_current_value()
+      else
+        prompt.save_disabled_value()
+      end
     }
   end
   
@@ -167,7 +171,7 @@ class GroupConfigurePrompt
     each_member_prompt{
       |member, prompt|
       
-      if prompt.is_enabled?()
+      if prompt.enabled?() || (prompt.get_disabled_value() != nil)
         keys << prompt.get_name()
       end
     }
@@ -287,8 +291,12 @@ module GroupConfigurePromptMember
   
   # Get the value for this member-property pair from the current config 
   # or the default value if none is found
-  def get_value
-    @config.getPropertyOr([@parent_group.name, get_member(), @name], get_default_value())
+  def get_value(allow_default = true)
+    if allow_default
+      @config.getPropertyOr([@parent_group.name, get_member(), @name], get_default_value())
+    else
+      @config.getProperty([@parent_group.name, get_member(), @name])
+    end
   end
   
   # Does this prompt support a group-wide default value to be specified
