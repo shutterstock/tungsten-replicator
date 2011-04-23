@@ -59,6 +59,8 @@ class PgWalPlugin < Plugin
     @master_max_startup_time = 120
     # Name of system 'tungsten' database in PostgreSQL instance.
     @tungsten_db = "tungsten"
+    # Default port for PostgreSQL if not defined.
+    @default_pg_port = 5432
   end
   
   # IMPLEMENTATION METHODS. 
@@ -94,7 +96,8 @@ class PgWalPlugin < Plugin
   # for primary and standby.  
   def plugin_install
     # Fetch properties and define variables used for initialization.
-    master_host           = @config.getProperty("postgresql.master.host")
+    master_host         = @config.getProperty("postgresql.master.host")
+    master_port         = @config.getProperty("postgresql.master.port")
     pg_data             = @config.getProperty("postgresql.data")
     archive_timeout     = @config.getProperty("postgresql.archive_timeout")
     pg_standby          = @config.getProperty("postgresql.pg_standby")
@@ -191,7 +194,9 @@ class PgWalPlugin < Plugin
     
     # Create initial copy of current properties. 
     ckeys = ["postgresql.role", 
+             "postgresql.port",
              "postgresql.master.host",
+             "postgresql.master.port",
              "postgresql.archive",
              "postgresql.pg_standby",
              "postgresql.pg_standby.trigger",
@@ -224,12 +229,12 @@ class PgWalPlugin < Plugin
         wait_until_login_works
       end
       create_tungsten_db(true)
-      exec_cmd2("psql -t -c \"CREATE TABLE progress_timestamp (wal varchar(32), segment varchar(12), datetime timestamp)\" #{@tungsten_db};", false)
+      exec_cmd2("psql -p#{@config.getProperty("postgresql.port")} -t -c \"CREATE TABLE progress_timestamp (wal varchar(32), segment varchar(12), datetime timestamp)\" #{@tungsten_db};", false)
     else
       raise UserError, "Unknown role: #{role}"
     end
     
-    generate_recovery_conf(master_host)
+    generate_recovery_conf(master_host, master_port)
     
     # Note the happy outcome.  
     tag_file_write(@initialized, role)
@@ -237,12 +242,11 @@ class PgWalPlugin < Plugin
   end 
   
   # Generate recovery.conf so we can go online later.
-  def generate_recovery_conf(master_host)
+  def generate_recovery_conf(master_host, master_port)
     config = getConfig()
     cprops = getPgWalProperties()
     
     master_user = config.getProperty("postgresql.master.user")
-    master_port = 5432 # TODO: add and use: config.getProperty("postgresql.master.port")
     trigger = cprops.getProperty("postgresql.pg_standby.trigger")
     pg_archive  = @config.getProperty("postgresql.archive")
     
@@ -309,7 +313,7 @@ class PgWalPlugin < Plugin
     sleep_time = 0
     sleep_timeout = @master_max_startup_time
     while true
-      psql_out = `echo "select 'UP'" |psql 2>&1`
+      psql_out = `echo "select 'UP'" |psql -p#{@config.getProperty("postgresql.port")} 2>&1`
       if psql_out =~ /UP/
         puts "Master is up and responding"
         break;
@@ -383,6 +387,7 @@ class PgWalPlugin < Plugin
     cprops = getPgWalProperties()
     current_role = cprops.getProperty("postgresql.role")
     current_host = cprops.getProperty("postgresql.master.host")
+    current_port = cprops.getProperty("postgresql.master.port")
     
     # Fetch arguments and ensure they are valid and different from current values. 
     role = @args.getProperty("role")
@@ -394,13 +399,18 @@ class PgWalPlugin < Plugin
     if raw_uri
       uri = URI.parse(raw_uri)
       host = uri.host
+      port = uri.port
     end
     if ! host 
       host = "none"
     end
+    if ! port
+      # Use default PG port if none specified.
+      port = @default_pg_port
+    end
     
-    log("Processing set role operation: role=#{role} host=#{host}")
-    if role == current_role && host == current_host
+    log("Processing set role operation: role=#{role} master.host=#{host} master.port=#{port}")
+    if role == current_role && host == current_host && port == current_port
       log("Role value is unchanged; no action taken")
     end
     
@@ -431,12 +441,13 @@ class PgWalPlugin < Plugin
     end
     
     # Update properties.  
-    log("Updating pg-wal properties: role=#{role} host=#{host}")
+    log("Updating pg-wal properties: role=#{role} master.host=#{host} master.port=#{port}")
     cprops.setProperty("postgresql.role", role)
     cprops.setProperty("postgresql.master.host", host)
+    cprops.setProperty("postgresql.master.port", port)
     cprops.store(@pg_wal_properties)
     
-    generate_recovery_conf(host)
+    generate_recovery_conf(host, port)
   end
   
   # Turns the replicator offline, which stops replication. 
@@ -466,7 +477,7 @@ class PgWalPlugin < Plugin
   
   # Query PG for one field and one row result.
   def psql_atom_query(sql)
-    `echo "#{sql}" |psql -q -A -t 2>&1`
+    `echo "#{sql}" |psql -p#{@config.getProperty("postgresql.port")} -q -A -t 2>&1`
   end
   
   def pg_current_xlog_location()
@@ -570,10 +581,10 @@ class PgWalPlugin < Plugin
   def create_tungsten_db(create)
     if create
       log "Ensuring that database '#{@tungsten_db}' is created"
-      exec_cmd2("psql -t -c \"CREATE DATABASE #{@tungsten_db}\";", true)
+      exec_cmd2("psql -p#{@config.getProperty("postgresql.port")} -t -c \"CREATE DATABASE #{@tungsten_db}\";", true)
     else
       log "Dropping database '#{@tungsten_db}'"
-      exec_cmd2("psql -t -c \"DROP DATABASE #{@tungsten_db}\";", true)
+      exec_cmd2("psql -p#{@config.getProperty("postgresql.port")} -t -c \"DROP DATABASE #{@tungsten_db}\";", true)
     end
   end
   
@@ -589,10 +600,10 @@ class PgWalPlugin < Plugin
     create_tungsten_db(true)
     # Create table might fail, if it already exists, eg. after a failed flush
     # from the previous time.
-    exec_cmd2("psql -t -c \"CREATE TABLE force_log_switch (i int)\" #{@tungsten_db};", true)
+    exec_cmd2("psql -p#{@config.getProperty("postgresql.port")} -t -c \"CREATE TABLE force_log_switch (i int)\" #{@tungsten_db};", true)
     # Drop table should always succeed, unless we failed to create table in the
     # previous step, which would indicate a problem.
-    exec_cmd2("psql -t -c \"DROP TABLE force_log_switch\" #{@tungsten_db};", false)
+    exec_cmd2("psql -p#{@config.getProperty("postgresql.port")} -t -c \"DROP TABLE force_log_switch\" #{@tungsten_db};", false)
     switch_sql = "SELECT pg_switch_xlog()"
     log switch_sql
     pg_switch_xlog = psql_atom_query(switch_sql)
@@ -628,15 +639,15 @@ class PgWalPlugin < Plugin
     # Make sure we are online. 
     if tag_file_exist?(@online)
       # We don't need old records.
-      exec_cmd2("psql -t -c \"DELETE FROM progress_timestamp\" #{@tungsten_db};", true, true)
+      exec_cmd2("psql -p#{@config.getProperty("postgresql.port")} -t -c \"DELETE FROM progress_timestamp\" #{@tungsten_db};", true, true)
       # Link current WAL file and SR offset to current time.
-      exec_cmd2("psql -t -c \"INSERT INTO progress_timestamp VALUES (pg_xlogfile_name(pg_current_xlog_location()), pg_current_xlog_location(), CURRENT_TIMESTAMP)\" #{@tungsten_db};", true, true)
+      exec_cmd2("psql -p#{@config.getProperty("postgresql.port")} -t -c \"INSERT INTO progress_timestamp VALUES (pg_xlogfile_name(pg_current_xlog_location()), pg_current_xlog_location(), CURRENT_TIMESTAMP)\" #{@tungsten_db};", true, true)
     end
   end
   
   def get_streaming_replication_latency()
     # Current time minus time of the last applied segment = approx. delay in replication.
-    latency = `psql -t -c \"SELECT TRUNC(CAST(EXTRACT(EPOCH FROM CURRENT_TIMESTAMP-MAX(datetime)) AS DECIMAL),1) AS latency FROM progress_timestamp\" #{@tungsten_db}`.strip()
+    latency = `psql -p#{@config.getProperty("postgresql.port")} -t -c \"SELECT TRUNC(CAST(EXTRACT(EPOCH FROM CURRENT_TIMESTAMP-MAX(datetime)) AS DECIMAL),1) AS latency FROM progress_timestamp\" #{@tungsten_db}`.strip()
     if latency == ""
       return "-1.0"
     else
@@ -735,6 +746,7 @@ class PgWalPlugin < Plugin
     # Get dynamic properties. 
     dynamicConfig = getPgWalProperties()
     master_host = dynamicConfig.getProperty("postgresql.master.host")
+    master_port = dynamicConfig.getProperty("postgresql.master.port")
     
     # Shut down the standby server, ignoring errors. 
     stop_pg_server(true)
@@ -759,7 +771,7 @@ class PgWalPlugin < Plugin
     retry_i = 0
     retry_max = @master_max_startup_time / retry_sleep
     begin
-      exec_cmd("psql -h#{master_host} -U#{master_user} -t -c \"select 'archiving_active written at '||pg_switch_xlog()\";")
+      exec_cmd("psql -h#{master_host} -p#{master_port} -U#{master_user} -t -c \"select 'archiving_active written at '||pg_switch_xlog()\";")
     rescue SystemError => e
       puts "Failed to execute pg_switch_xlog() on a master: " + e.message
       if retry_i <= retry_max
@@ -775,16 +787,16 @@ class PgWalPlugin < Plugin
     # This has to be in a block so we don't forget to terminate backup. 
     begin
       # Backup and rsync data files. 
-      puts "### Starting backup on #{master_host}"
-      exec_cmd("psql -h#{master_host} -U#{master_user} -t -c \"select 'Starting online backup at WAL file '|| pg_xlogfile_name(pg_start_backup('base_backup'));\"")
+      puts "### Starting backup on #{master_host}:#{master_port}"
+      exec_cmd("psql -h#{master_host} -p#{master_port} -U#{master_user} -t -c \"select 'Starting online backup at WAL file '|| pg_xlogfile_name(pg_start_backup('base_backup'));\"")
       
       puts "### Rsyncing files from #{master_host}:#{pg_data}..."
       # TENT-159: accepting exit code 24 - partial transfer due to vanished source files.
       exec_cmd2("rsync -azv --delete --exclude=*pg_log* --exclude=*pg_xlog* --exclude=postgresql.conf --exclude=pg_hba.conf --exclude=server.crt --exclude=server.key #{master_host}:#{pg_data}/ #{pg_data}/", 24)
       
     ensure
-      puts "### Ending backup on #{master_host}..."
-      exec_cmd("psql -h#{master_host} -U#{master_user} -t -c \"select 'Stopping online backup at WAL file ' ||pg_xlogfile_name(pg_stop_backup());\"")
+      puts "### Ending backup on #{master_host}:#{master_port}..."
+      exec_cmd("psql -h#{master_host} -p#{master_port} -U#{master_user} -t -c \"select 'Stopping online backup at WAL file ' ||pg_xlogfile_name(pg_stop_backup());\"")
     end
     
     # Clean up the PG data directory. 
