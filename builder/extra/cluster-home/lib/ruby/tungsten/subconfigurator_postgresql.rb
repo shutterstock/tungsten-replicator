@@ -366,6 +366,8 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
       transformer.transform { |line|
         if line =~ /postgresql.streaming_replication/ then
           "postgresql.streaming_replication=" + @configurator.config.props[REPL_PG_STREAMING]
+        elsif line =~ /postgresql.port/ then
+          "postgresql.port=" + @configurator.config.props[REPL_DBPORT]
         elsif line =~ /postgresql.data/ then
           "postgresql.data=" + @configurator.config.props[REPL_PG_HOME]
         elsif line =~ /postgresql.conf/ then
