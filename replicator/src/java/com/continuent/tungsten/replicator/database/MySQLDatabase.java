@@ -121,12 +121,12 @@ public class MySQLDatabase extends AbstractDatabase
         // an out of bounds number.
         try
         {
-            executeUpdate("SET wait_timeout = 99999999");
+            executeUpdate("SET wait_timeout = 2147483");
         }
         catch (SQLException e)
         {
             logger
-                    .debug("Unable to set wait_timeout to maximum value of 99999999");
+                    .debug("Unable to set wait_timeout to maximum value of 2147483");
             logger
                     .debug("Please consider using an explicit JDBC URL setting to avoid connection timeouts");
         }

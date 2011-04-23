@@ -162,10 +162,9 @@
 	        <include name="*txn*"/>
 	    </fileset>
         </copy>
-        <copy file="conf/sample_static_properties_mysql.st.drizzle"
+        <copy file="conf/replicator.properties.mysql"
               toFile="${test.work}/replicator.properties"/>
-        <copy file="conf/sample_static_properties_mysql.st.jconnect"
-              toFile="${test.work}/replicator.properties"/>
+
         <junit printsummary="yes" haltonfailure="no" fork="yes"
           dir="${test.work}" failureproperty="tests.failed">
             <jvmarg value="-Dreplicator.log.dir=." />
