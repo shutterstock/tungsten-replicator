@@ -41,7 +41,8 @@ import com.continuent.tungsten.replicator.thl.THLException;
  */
 public class LogFile
 {
-    static Logger              logger              = Logger.getLogger(LogFile.class);
+    static Logger              logger              = Logger
+                                                           .getLogger(LogFile.class);
 
     private static final int   MAGIC_NUMBER        = 0xC001CAFE;
     private static final short MAJOR_VERSION       = 0x0001;
@@ -459,6 +460,7 @@ public class LogFile
      * 
      * @param barr Array containing data to write
      * @param logFileSize Maximum log file size
+     * @return true if log file size exceeded
      */
     public boolean writeRecord(LogRecord record, int logFileSize)
             throws IOException, InterruptedException
@@ -513,15 +515,6 @@ public class LogFile
                     "Unable to read a long from the file : expecting 8 bytes, but only "
                             + available() + "byte(s) available");
         return randomFile.readLong();
-    }
-
-    /**
-     * Writes a UTF-8 special encoded string.
-     */
-    protected void write(String string) throws IOException
-    {
-        assertWritable();
-        randomFile.writeUTF(string);
     }
 
     protected void write(int myInt) throws IOException

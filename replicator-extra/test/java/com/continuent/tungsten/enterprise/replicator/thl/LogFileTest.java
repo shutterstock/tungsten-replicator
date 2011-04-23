@@ -75,8 +75,8 @@ public class LogFileTest extends TestCase
     }
 
     /**
-     * Confirm that reading from a new file returns an empty record 
-     * if you don't wait or a timeout exception if you do. 
+     * Confirm that reading from a new file returns an empty record if you don't
+     * wait or a timeout exception if you do.
      */
     public void testReadEmpty1() throws Exception
     {
@@ -89,7 +89,7 @@ public class LogFileTest extends TestCase
         assertTrue("Record from empty log is empty", logRec.isEmpty());
         assertFalse("Record is not truncated", logRec.isTruncated());
 
-        // Read with 2 second wait generates a timeout exception. 
+        // Read with 2 second wait generates a timeout exception.
         try
         {
             LogRecord logRec2 = tfro.readRecord(2000);
@@ -306,50 +306,5 @@ public class LogFileTest extends TestCase
         assertEquals("Checking CRC failures", 0, lr.crcFailures);
         if (lr.error != null)
             throw lr.error;
-    }
-}
-
-// Local class to read records.
-class SimpleLogFileReader implements Runnable
-{
-    LogFile   tf;
-    int       howMany;
-    long      recordsRead;
-    long      bytesRead;
-    long      crcFailures;
-    Exception error;
-
-    /** Store file instance. */
-    SimpleLogFileReader(LogFile tf, int howMany)
-    {
-        this.tf = tf;
-        this.howMany = howMany;
-    }
-
-    /** Read all records from file. */
-    public void run()
-    {
-        while (recordsRead < howMany)
-        {
-            try
-            {
-                // Read until we run out of records or hit exception.
-                LogRecord rec;
-                rec = tf.readRecord(2000);
-                if (rec.isEmpty())
-                    break;
-
-                // Update counters.
-                recordsRead++;
-                bytesRead += rec.getRecordLength();
-                if (!rec.checkCrc())
-                    crcFailures++;
-            }
-            catch (Exception e)
-            {
-                error = e;
-                break;
-            }
-        }
     }
 }

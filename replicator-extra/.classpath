@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry kind="lib" path="/commons/lib/protobuf-java-2.3.0.jar"/>
 	<classpathentry kind="src" path="src/java"/>
 	<classpathentry kind="src" path="test/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/commons"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/replicator"/>
 	<classpathentry kind="lib" path="/commons/lib/log4j-1.2.15.jar" sourcepath="/commons/lib/apache-log4j-1.2.15_src.zip"/>
-	<classpathentry kind="lib" path="/commons/lib/protobuf-java-2.3.0.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/fsm"/>
 	<classpathentry kind="lib" path="/commons/lib-test/junit-4.4.jar" sourcepath="/commons/lib-test/junit-4.4-src.zip"/>
 	<classpathentry kind="output" path="bin"/>

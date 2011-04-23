@@ -74,13 +74,14 @@ public class DiskLogTest extends TestCase
     }
 
     /**
-     * Confirm that we can prepare and release the log.
+     * Confirm that we can prepare and release a new log when in write-only
+     * mode.
      */
     public void testLogPreparation() throws Exception
     {
-        File logDir = new File("testLogPreparation");
-        prepareLogDir(logDir);
+        File logDir = prepareLogDir("testLogPreparation");
         DiskLog log = new DiskLog();
+        log.setReadOnly(false);
         log.setDoChecksum(true);
         log.setEventSerializer(ProtobufSerializer.class.getName());
         log.setLogDir(logDir.getAbsolutePath());
@@ -94,20 +95,40 @@ public class DiskLogTest extends TestCase
     }
 
     /**
+     * Confirm that read-only log preparation fails if the log goes not exist.
+     */
+    public void testLogReadonlyPrepFailure() throws Exception
+    {
+        File logDir = prepareLogDir("testLogReadonlyPrepFailure");
+        DiskLog log = new DiskLog();
+        log.setReadOnly(true);
+        log.setLogDir(logDir.getAbsolutePath());
+        try
+        {
+            log.prepare();
+            throw new Exception("Able to prepare r/o log that has no files");
+        }
+        catch (ReplicatorException e)
+        {
+        }
+    }
+
+    /**
      * Confirm that log correctly identifies the max sequence number when
      * starting new log with sequence number above 0.
      */
     public void testLogNonZeroStart() throws Exception
     {
         // Create the log and write an event that starts with seqno > 0.
-        DiskLog log = openLog("testLogNonZeroStart", true);
+        File logDir = prepareLogDir("testLogNonZeroStart");
+        DiskLog log = openLog(logDir, false);
         writeEventsToLog(log, 100, 1);
         assertEquals("Should show correct max seqno from single record", 100,
                 log.getMaxSeqno());
         log.release();
 
         // Reopen the log and read back.
-        DiskLog log2 = openLog("testLogNonZeroStart", false);
+        DiskLog log2 = openLog(logDir, false);
         log.validate();
         assertEquals("Should show correct max seqno from single record", 100,
                 log.getMaxSeqno());
@@ -142,6 +163,7 @@ public class DiskLogTest extends TestCase
         log.setEventSerializer(ProtobufSerializer.class.getName());
         log.setLogDir(logDir.getAbsolutePath());
         log.setLogFileSize(1000000);
+        log.setReadOnly(false);
 
         log.prepare();
         log.validate();
@@ -179,13 +201,14 @@ public class DiskLogTest extends TestCase
     public void testLogReadback() throws Exception
     {
         // Create the log and write 50 events.
-        DiskLog log = openLog("testLogReadback", true);
+        File logDir = prepareLogDir("testLogReadback");
+        DiskLog log = openLog(logDir, false);
         this.writeEventsToLog(log, 10000);
         assertEquals("Should have stored 10000 events", 9999, log.getMaxSeqno());
         log.release();
 
         // Reopen the log and read back.
-        DiskLog log2 = openLog("testLogReadback", false);
+        DiskLog log2 = openLog(logDir, true);
         log.validate();
         assertEquals("Should have stored 10000 events", 9999, log2
                 .getMaxSeqno());
@@ -201,7 +224,8 @@ public class DiskLogTest extends TestCase
     {
         // Create the log and write groups of events interspersed with
         // filtered events.
-        DiskLog log = openLog("testLogReadbackWithFiltering", true);
+        File logDir = prepareLogDir("testLogReadbackWithFiltering");
+        DiskLog log = openLog(logDir, false);
         long seqno = 0;
         for (int i = 1; i <= 3; i++)
         {
@@ -221,7 +245,7 @@ public class DiskLogTest extends TestCase
         log.release();
 
         // Reopen the log and read back events.
-        DiskLog log2 = openLog("testLogReadbackWithFiltering", false);
+        DiskLog log2 = openLog(logDir, true);
         log.validate();
         assertEquals("Should have seqno 27 as last entry on reopen", 27, log
                 .getMaxSeqno());
@@ -263,8 +287,8 @@ public class DiskLogTest extends TestCase
     public void testStutteringLogReadback() throws Exception
     {
         // Create the log.
-        String name = "testStutteringLogReadback";
-        DiskLog log = openLog(name, true);
+        File logDir = prepareLogDir("testStutteringLogReadback");
+        DiskLog log = openLog(logDir, false);
 
         // Write a series of events to the log.
         for (int i = 0; i < 100; i++)
@@ -276,7 +300,7 @@ public class DiskLogTest extends TestCase
             if (i > 0 && i % 10 == 0)
             {
                 log.release();
-                log = openLog(name, false);
+                log = openLog(logDir, false);
                 log.validate();
             }
         }
@@ -286,14 +310,14 @@ public class DiskLogTest extends TestCase
         // Release and reopen the existing log.
         log.release();
         log = null;
-        DiskLog log2 = openLog(name, false);
+        DiskLog log2 = openLog(logDir, true);
         assertEquals("Should have stored 100 events", 99, log2.getMaxSeqno());
 
         // Read back events from the log.
         for (int i = 0; i < 100; i++)
         {
             THLEvent e = log2.find(i, (short) 0);
-            assertNotNull("Returned event must not be null!", e);
+            assertNotNull("Returned event must not be null! i=" + i, e);
             assertEquals("Test expected seqno", i, e.getSeqno());
             assertEquals("Test expected fragno", (short) 0, e.getFragno());
             assertEquals("Test expected eventId", new Long(i).toString(), e
@@ -304,7 +328,7 @@ public class DiskLogTest extends TestCase
             if (i > 0 && i % 15 == 0)
             {
                 log2.release();
-                log2 = openLog(name, false);
+                log2 = openLog(logDir, true);
             }
         }
 
@@ -320,9 +344,10 @@ public class DiskLogTest extends TestCase
     {
         // Part 1: Look for events on an empty log. This is the trivial
         // case but still important.
-        DiskLog log = openLog("testFindNonExistent", true);
+        File logDir = prepareLogDir("testStutteringLogReadback");
+        DiskLog log = openLog(logDir, false);
         log.release();
-        DiskLog logR = openLog("testFindNonExistent", false, 1000000, 1000, 0);
+        DiskLog logR = openLog(logDir, true, 1000000, 1000, 0);
 
         // Ensure that we don't find anything when the number is less than what
         // is in the log.
@@ -347,10 +372,11 @@ public class DiskLogTest extends TestCase
 
         // Part 2: Look for events on a log with events in it. This is the
         // more realistic case.
-        log = openLog("testFindNonExistent", true);
+        log = openLog(logDir, false);
         writeEventsToLog(log, 50);
         log.release();
-        logR = openLog("testFindNonExistent", false, 1000000, 1000, 0);
+        logR = openLog(logDir, false, 1000000, 1000, 0);
+
         // Ensure that we don't find anything when the number is less than what
         // is in the log.
         THLEvent e2 = logR.find(-1, (short) 0);
@@ -380,7 +406,8 @@ public class DiskLogTest extends TestCase
     public void testMultipleLogs() throws Exception
     {
         // Create the log and write multiple events.
-        DiskLog log = openLog("testMultipleLogs", true, 3000);
+        File logDir = prepareLogDir("testMultipleLogs");
+        DiskLog log = openLog(logDir, false, 3000);
         writeEventsToLog(log, 200);
 
         // Assert that we stored the proper number of events in multiple files.
@@ -389,7 +416,7 @@ public class DiskLogTest extends TestCase
         log.release();
 
         // Reopen and read back.
-        DiskLog log2 = openLog("testMultipleLogs", false);
+        DiskLog log2 = openLog(logDir, true);
         log.validate();
         assertEquals("Should have stored 200 events", 199, log2.getMaxSeqno());
 
@@ -406,7 +433,8 @@ public class DiskLogTest extends TestCase
     public void testDeleteUp() throws Exception
     {
         // Create the log and write multiple events.
-        DiskLog log = openLog("testDelete", true, 3000);
+        File logDir = prepareLogDir("testDelete");
+        DiskLog log = openLog(logDir, false, 3000);
         writeEventsToLog(log, 200);
 
         // Delete from the bottom up.
@@ -421,7 +449,7 @@ public class DiskLogTest extends TestCase
         log.release();
 
         // Reopen and check.
-        DiskLog log2 = openLog("testDelete", false);
+        DiskLog log2 = openLog(logDir, false);
         log.validate();
 
         // Write more events to the log and validate.
@@ -440,7 +468,8 @@ public class DiskLogTest extends TestCase
     public void testDeleteDown() throws Exception
     {
         // Create the log and write multiple events.
-        DiskLog log = openLog("testDeleteDown", true, 3000);
+        File logDir = prepareLogDir("testDeleteDown");
+        DiskLog log = openLog(logDir, false, 3000);
         writeEventsToLog(log, 200);
 
         // Delete from the top down.
@@ -463,7 +492,7 @@ public class DiskLogTest extends TestCase
         log.release();
 
         // Reopen and check.
-        DiskLog log2 = openLog("testDeleteDown", false);
+        DiskLog log2 = openLog(logDir, false);
         log.validate();
 
         // Write more events to the log and validate.
@@ -481,7 +510,8 @@ public class DiskLogTest extends TestCase
     public void testFragmentsAndRotation() throws Exception
     {
         // Create log with short file size.
-        DiskLog log = openLog("testFragmentsAndRotation", true, 3000);
+        File logDir = prepareLogDir("testFragmentsAndRotation");
+        DiskLog log = openLog(logDir, false, 3000);
 
         // Write fragmented events to the log and confirm that the number
         // of files never changes during a single fragment.
@@ -524,7 +554,7 @@ public class DiskLogTest extends TestCase
         log.release();
 
         // Reopen and check size. Ensure we can find the last fragments.
-        DiskLog log2 = openLog("testFragmentsAndRotation", false);
+        DiskLog log2 = openLog(logDir, true);
         log.validate();
         assertEquals("Should have stored 6 events", 5, log2.getMaxSeqno());
         THLEvent e2 = log2.find(4, (short) 100);
@@ -542,8 +572,8 @@ public class DiskLogTest extends TestCase
     public void testFragmentCleanup() throws Exception
     {
         // Create log with short file size.
-        String logName = "testFragmentCleanup";
-        DiskLog log = openLog(logName, true, 3000);
+        File logDir = prepareLogDir("testFragmentCleanup");
+        DiskLog log = openLog(logDir, false, 3000);
 
         // Perform a test that writes a few properly terminated transactions
         // into the log and then writes a partial transaction. Reopen the log
@@ -574,7 +604,7 @@ public class DiskLogTest extends TestCase
             // Close and reopen the log. Confirm that we can find the last full
             // transaction but not the next partial transaction.
             log.release();
-            log = openLog(logName, false);
+            log = openLog(logDir, false);
 
             THLEvent eLastFrag = log.find(seqno, (short) i);
             assertNotNull("Last full xact frag should not be null", eLastFrag);
@@ -584,7 +614,7 @@ public class DiskLogTest extends TestCase
 
             // Close and reopen the log to ready for next iteration of writes.
             log.release();
-            log = openLog(logName, false);
+            log = openLog(logDir, false);
         }
 
         log.release();
@@ -597,7 +627,8 @@ public class DiskLogTest extends TestCase
     public void testMultipleLogsBackwardScan() throws Exception
     {
         // Create the log and write multiple events.
-        DiskLog log = openLog("testMultipleLogsBackwards", true, 3000);
+        File logDir = prepareLogDir("testMultipleLogsBackwards");
+        DiskLog log = openLog(logDir, false, 3000);
         writeEventsToLog(log, 50);
 
         // Assert that we stored the proper number of events in multiple files.
@@ -605,7 +636,7 @@ public class DiskLogTest extends TestCase
         log.release();
 
         // Reopen the log and read events back in reverse order.
-        DiskLog log2 = openLog("testMultipleLogsBackwards", false);
+        DiskLog log2 = openLog(logDir, true);
         for (int i = 49; i >= 0; i--)
         {
             THLEvent e = log2.find(i, (short) 0);
@@ -632,7 +663,8 @@ public class DiskLogTest extends TestCase
     public void testConcurrentAccess() throws Exception
     {
         // Create the log and write multiple events.
-        DiskLog log = openLog("testConcurrentAccess", true, 1000000);
+        File logDir = prepareLogDir("testConcurrentAccess");
+        DiskLog log = openLog(logDir, false, 1000000);
 
         // Write a bunch of events to the log.
         writeEventsToLog(log, 10000);
@@ -677,7 +709,8 @@ public class DiskLogTest extends TestCase
     public void testLogRetention() throws Exception
     {
         // Create the log with with 5K log files and a 5 second retention.
-        DiskLog log = openLog("testLogRetention", true, 3000, 10000, 5000);
+        File logDir = prepareLogDir("testLogRetention");
+        DiskLog log = openLog(logDir, false, 3000, 10000, 5000);
         writeEventsToLog(log, 200);
 
         // Collect the log file count and ensure it is greater than two.
@@ -705,8 +738,9 @@ public class DiskLogTest extends TestCase
 
     // Create an empty log directory or if the directory exists remove
     // any files within it.
-    private void prepareLogDir(File logDir)
+    private File prepareLogDir(String logDirName)
     {
+        File logDir = new File(logDirName);
         if (logDir.exists())
         {
             for (File f : logDir.listFiles())
@@ -718,21 +752,18 @@ public class DiskLogTest extends TestCase
         {
             logDir.mkdirs();
         }
+        return logDir;
     }
 
     // Open a new or existing log.
-    private DiskLog openLog(String logDirName, boolean create, int fileSize,
+    private DiskLog openLog(File logDir, boolean readonly, int fileSize,
             int timeoutMillis, int logFileRetainMillis)
             throws ReplicatorException, InterruptedException
     {
         // Create the log directory if this is a new log.
-        File logDir = new File(logDirName);
-        if (create)
-        {
-            prepareLogDir(logDir);
-        }
         DiskLog log = new DiskLog();
         log.setDoChecksum(true);
+        log.setReadOnly(readonly);
         log.setEventSerializer(serializer.getName());
         log.setLogDir(logDir.getAbsolutePath());
         log.setLogFileSize(fileSize);
@@ -744,17 +775,17 @@ public class DiskLogTest extends TestCase
     }
 
     // Default open to create log with 10 second read timeout.
-    private DiskLog openLog(String logDirName, boolean create, int fileSize)
+    private DiskLog openLog(File logDir, boolean readonly, int fileSize)
             throws ReplicatorException, InterruptedException
     {
-        return openLog(logDirName, create, fileSize, 10000, 0);
+        return openLog(logDir, readonly, fileSize, 10000, 0);
     }
 
     // Open new or existing with default size of 1M bytes.
-    private DiskLog openLog(String logDirName, boolean create)
+    private DiskLog openLog(File logDir, boolean readonly)
             throws ReplicatorException, InterruptedException
     {
-        return openLog(logDirName, create, 1000000);
+        return openLog(logDir, readonly, 1000000);
     }
 
     // Write a prescribed number of events to the log starting at zero.
@@ -823,57 +854,5 @@ public class DiskLogTest extends TestCase
     private THLEvent createTHLEvent(long seqno)
     {
         return createTHLEvent(seqno, (short) 0, true, "test");
-    }
-}
-
-// Local class to read records.
-class SimpleLogReader implements Runnable
-{
-    private static Logger logger = Logger.getLogger(SimpleLogReader.class);
-    DiskLog               log;
-    long                  startSeqno;
-    int                   howMany;
-    int                   eventsRead;
-    Throwable             error;
-
-    /** Store file instance. */
-    SimpleLogReader(DiskLog log, long startSeqno, int howMany)
-    {
-        this.log = log;
-        this.startSeqno = startSeqno;
-        this.howMany = howMany;
-    }
-
-    /** Read all records from file. */
-    public void run()
-    {
-        for (long seqno = startSeqno; seqno < startSeqno + howMany; seqno++)
-        {
-            try
-            {
-                THLEvent e = log.find(seqno, (short) 0);
-                if (e == null)
-                    throw new Exception("Event is null: seqno=" + seqno);
-                if (seqno != e.getSeqno())
-                {
-                    throw new Exception(
-                            "Sequence numbers do not match: expected=" + seqno
-                                    + " actual=" + e.getSeqno());
-                }
-                eventsRead++;
-
-                if (eventsRead > 0 && eventsRead % 1000 == 0)
-                {
-                    logger.info("Reading events: threadId="
-                            + Thread.currentThread().getId() + " events="
-                            + eventsRead);
-                }
-            }
-            catch (Throwable t)
-            {
-                error = t;
-                break;
-            }
-        }
     }
 }

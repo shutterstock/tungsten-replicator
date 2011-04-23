@@ -88,8 +88,8 @@ public class LogRecord
     /**
      * Creates a readable record with indicated content.
      * 
+     * @param offset File offset at which this record was read
      * @param bytes Data in record
-     * @param length Size of the record according to the log file
      * @param offset Starting offset in source log file
      * @param If true, the record is truncated, i.e., contains only partial
      *            record data

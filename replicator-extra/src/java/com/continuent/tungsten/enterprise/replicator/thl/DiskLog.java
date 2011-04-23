@@ -41,7 +41,8 @@ import com.continuent.tungsten.replicator.thl.THLException;
  */
 public class DiskLog
 {
-    static Logger               logger                     = Logger.getLogger(DiskLog.class);
+    static Logger               logger                     = Logger
+                                                                   .getLogger(DiskLog.class);
 
     // Statistical information.
     private int                 eventCount                 = 0;
@@ -194,6 +195,8 @@ public class DiskLog
         }
 
         logDir = new File(logDirName);
+
+        // Ensure the log directory exists or can be created.
         if (!logDir.exists())
         {
             if (readOnly)
@@ -202,26 +205,41 @@ public class DiskLog
                 throw new ReplicatorException("Log directory does not exist : "
                         + logDir.getAbsolutePath());
             }
-
-            logger.info("Log directory does not exist; creating now:"
-                    + logDir.getAbsolutePath());
-            if (!logDir.mkdirs())
+            else
             {
-                throw new ReplicatorException(
-                        "Unable to create log directory: "
-                                + logDir.getAbsolutePath());
+                // Otherwise create the directory.
+                logger.info("Log directory does not exist; creating now:"
+                        + logDir.getAbsolutePath());
+                if (!logDir.mkdirs())
+                {
+                    throw new ReplicatorException(
+                            "Unable to create log directory: "
+                                    + logDir.getAbsolutePath());
+                }
             }
         }
 
-        if (!readOnly && !logDir.canWrite())
+        // Ensure we have a directory and not some other type of file.
+        if (!logDir.isDirectory())
         {
-            // Check write permission only when not read only
-            throw new ReplicatorException("Log directory is not writable: "
+            throw new ReplicatorException("Log directory is not a directory: "
                     + logDir.getAbsolutePath());
         }
 
-        if (!readOnly)
+        // Ensure we have appropriate access to the file.
+        if (readOnly)
         {
+            logger.info("Using read-only log connection");
+        }
+        else
+        {
+            // Ensure the directory is writable.
+            if (!logDir.canWrite())
+            {
+                // Check write permission only when not read only
+                throw new ReplicatorException("Log directory is not writable: "
+                        + logDir.getAbsolutePath());
+            }
             // Attempt to acquire write lock when write access is required.
             File lockFile = new File(logDir, "disklog.lck");
             if (logger.isDebugEnabled())
@@ -235,10 +253,6 @@ public class DiskLog
                 logger.info("Acquired write lock; log is writable");
             else
                 logger.info("Unable to acquire write lock; log is read-only");
-        }
-        else
-        {
-            logger.info("Using read-only log connection");
         }
 
         // Load event serializer.
@@ -258,14 +272,23 @@ public class DiskLog
 
         // If the log does not have any files, initialize the first log file
         // now.
-        if (!readOnly
-                && LogFile.listLogFiles(logDir, DATA_FILENAME_PREFIX).length == 0)
+        if (LogFile.listLogFiles(logDir, DATA_FILENAME_PREFIX).length == 0)
         {
-            String logFileName = getDataFileName(fileIndex);
-            LogFile logFile = new LogFile(logDir, logFileName);
-            logger.info("Initializing logs: logDir=" + logDir.getAbsolutePath()
-                    + " file=" + logFile.getFile().getName());
-            logFile.prepareWrite(-1);
+            if (readOnly)
+            {
+                throw new ReplicatorException(
+                        "Attempting to read a non-existent log; is log initialized? dirName="
+                                + logDir.getAbsolutePath());
+            }
+            else
+            {
+                String logFileName = getDataFileName(fileIndex);
+                LogFile logFile = new LogFile(logDir, logFileName);
+                logger.info("Initializing logs: logDir="
+                        + logDir.getAbsolutePath() + " file="
+                        + logFile.getFile().getName());
+                logFile.prepareWrite(-1);
+            }
         }
 
         // Create an index on the log.
@@ -349,13 +372,16 @@ public class DiskLog
             {
                 if (writeLock.isLocked())
                 {
-                    logger.warn("Log file contains partially written record: offset="
-                            + currentRecord.getOffset()
-                            + " partially written bytes="
-                            + (logFile.getLength() - currentRecord.getOffset()));
+                    logger
+                            .warn("Log file contains partially written record: offset="
+                                    + currentRecord.getOffset()
+                                    + " partially written bytes="
+                                    + (logFile.getLength() - currentRecord
+                                            .getOffset()));
                     logFile.setLength(currentRecord.getOffset());
-                    logger.info("Log file truncated to end of last good record: length="
-                            + logFile.getLength());
+                    logger
+                            .info("Log file truncated to end of last good record: length="
+                                    + logFile.getLength());
                 }
                 else
                 {
@@ -372,9 +398,12 @@ public class DiskLog
             {
                 if (writeLock.isLocked())
                 {
-                    logger.warn("Log file contains partially written transaction; "
-                            + "truncating to last full transaction: seqno="
-                            + maxSeqno + " length=" + lastCompleteEventOffset);
+                    logger
+                            .warn("Log file contains partially written transaction; "
+                                    + "truncating to last full transaction: seqno="
+                                    + maxSeqno
+                                    + " length="
+                                    + lastCompleteEventOffset);
                     logFile.setLength(lastCompleteEventOffset);
                 }
                 else
@@ -509,8 +538,8 @@ public class DiskLog
                 {
                     LogFile lastFile = openLastFile(false);
                     logConnection = connectionManager
-                            .createAndGetLogConnection(lastFile,
-                                    event.getSeqno());
+                            .createAndGetLogConnection(lastFile, event
+                                    .getSeqno());
                 }
                 catch (ReplicatorException e)
                 {
@@ -539,8 +568,8 @@ public class DiskLog
                 {
                     dataFile = rotate(dataFile, event.getSeqno());
                     logConnection = connectionManager
-                            .createAndGetLogConnection(dataFile,
-                                    event.getSeqno());
+                            .createAndGetLogConnection(dataFile, event
+                                    .getSeqno());
                 }
 
                 // Write the event to byte stream.
@@ -606,16 +635,17 @@ public class DiskLog
                     // not have this sequence number.
                     if (logger.isDebugEnabled())
                     {
-                        logger.debug("Requested seqno does not exist in log: seqno="
-                                + seqno);
+                        logger
+                                .debug("Requested seqno does not exist in log: seqno="
+                                        + seqno);
                     }
                     return null;
                 }
-                logger.debug("No read connection for thread; allocating new one: thread="
-                        + Thread.currentThread().getId()
-                        + " seqno="
-                        + seqno
-                        + " logFile=" + newFileName);
+                logger
+                        .debug("No read connection for thread; allocating new one: thread="
+                                + Thread.currentThread().getId()
+                                + " seqno="
+                                + seqno + " logFile=" + newFileName);
                 LogFile data1 = new LogFile(logDir, newFileName);
                 data1.prepareRead();
                 logConnection = connectionManager.createAndGetLogConnection(
@@ -826,8 +856,9 @@ public class DiskLog
                     if (currentSeqno >= seqno)
                     {
                         // This means we found the truncation point.
-                        logger.info("Truncating log file after sequence number: file="
-                                + entry.fileName + " seqno=" + seqno);
+                        logger
+                                .info("Truncating log file after sequence number: file="
+                                        + entry.fileName + " seqno=" + seqno);
                         logFile.setLength(offset);
                         index.setMaxIndexedSeqno(seqno - 1);
                         break;
@@ -836,8 +867,9 @@ public class DiskLog
                 else if (recordType == LogRecord.EVENT_ROTATE)
                 {
                     // This means we hit the end of the file without truncating.
-                    logger.warn("Unable to truncate log file at intended sequence number: file="
-                            + entry.fileName + " seqno=" + seqno);
+                    logger
+                            .warn("Unable to truncate log file at intended sequence number: file="
+                                    + entry.fileName + " seqno=" + seqno);
                     break;
                 }
 
