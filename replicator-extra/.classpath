@@ -9,5 +9,5 @@
 	<classpathentry kind="lib" path="/commons/lib/log4j-1.2.15.jar" sourcepath="/commons/lib/apache-log4j-1.2.15_src.zip"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/fsm"/>
 	<classpathentry kind="lib" path="/commons/lib-test/junit-4.4.jar" sourcepath="/commons/lib-test/junit-4.4-src.zip"/>
-	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="output" path="build/classes"/>
 </classpath>
