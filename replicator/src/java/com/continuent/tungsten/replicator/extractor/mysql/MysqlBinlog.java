@@ -349,7 +349,6 @@ public class MysqlBinlog
         loadCharset(14, "cp1251", "cp1251_bulgarian_ci");
         loadCharset(15, "latin1", "latin1_danish_ci");
         loadCharset(16, "hebrew", "hebrew_general_ci");
-        loadCharset(17, "filename", "filename");
         loadCharset(18, "tis620", "tis620_thai_ci");
         loadCharset(19, "euckr", "euckr_korean_ci");
         loadCharset(20, "latin7", "latin7_estonian_cs");
@@ -377,6 +376,8 @@ public class MysqlBinlog
         loadCharset(42, "latin7", "latin7_general_cs");
         loadCharset(43, "macce", "macce_bin");
         loadCharset(44, "cp1250", "cp1250_croatian_ci");
+        loadCharset(45, "utf8mb4", "utf8mb4_general_ci");
+        loadCharset(46, "utf8mb4", "utf8mb4_bin");
         loadCharset(47, "latin1", "latin1_bin");
         loadCharset(48, "latin1", "latin1_general_ci");
         loadCharset(49, "latin1", "latin1_general_cs");
@@ -384,9 +385,13 @@ public class MysqlBinlog
         loadCharset(51, "cp1251", "cp1251_general_ci");
         loadCharset(52, "cp1251", "cp1251_general_cs");
         loadCharset(53, "macroman", "macroman_bin");
+        loadCharset(54, "utf16", "utf16_general_ci");
+        loadCharset(55, "utf16", "utf16_bin");
         loadCharset(57, "cp1256", "cp1256_general_ci");
         loadCharset(58, "cp1257", "cp1257_bin");
         loadCharset(59, "cp1257", "cp1257_general_ci");
+        loadCharset(60, "utf32", "utf32_general_ci");
+        loadCharset(61, "utf32", "utf32_bin");
         loadCharset(63, "binary", "binary");
         loadCharset(64, "armscii8", "armscii8_bin");
         loadCharset(65, "ascii", "ascii_bin");
@@ -423,6 +428,26 @@ public class MysqlBinlog
         loadCharset(97, "eucjpms", "eucjpms_japanese_ci");
         loadCharset(98, "eucjpms", "eucjpms_bin");
         loadCharset(99, "cp1250", "cp1250_polish_ci");
+        loadCharset(101, "utf16", "utf16_unicode_ci");
+        loadCharset(102, "utf16", "utf16_icelandic_ci");
+        loadCharset(103, "utf16", "utf16_latvian_ci");
+        loadCharset(104, "utf16", "utf16_romanian_ci");
+        loadCharset(105, "utf16", "utf16_slovenian_ci");
+        loadCharset(106, "utf16", "utf16_polish_ci");
+        loadCharset(107, "utf16", "utf16_estonian_ci");
+        loadCharset(108, "utf16", "utf16_spanish_ci");
+        loadCharset(109, "utf16", "utf16_swedish_ci");
+        loadCharset(110, "utf16", "utf16_turkish_ci");
+        loadCharset(111, "utf16", "utf16_czech_ci");
+        loadCharset(112, "utf16", "utf16_danish_ci");
+        loadCharset(113, "utf16", "utf16_lithuanian_ci");
+        loadCharset(114, "utf16", "utf16_slovak_ci");
+        loadCharset(115, "utf16", "utf16_spanish2_ci");
+        loadCharset(116, "utf16", "utf16_roman_ci");
+        loadCharset(117, "utf16", "utf16_persian_ci");
+        loadCharset(118, "utf16", "utf16_esperanto_ci");
+        loadCharset(119, "utf16", "utf16_hungarian_ci");
+        loadCharset(120, "utf16", "utf16_sinhala_ci");
         loadCharset(128, "ucs2", "ucs2_unicode_ci");
         loadCharset(129, "ucs2", "ucs2_icelandic_ci");
         loadCharset(130, "ucs2", "ucs2_latvian_ci");
@@ -442,6 +467,27 @@ public class MysqlBinlog
         loadCharset(144, "ucs2", "ucs2_persian_ci");
         loadCharset(145, "ucs2", "ucs2_esperanto_ci");
         loadCharset(146, "ucs2", "ucs2_hungarian_ci");
+        loadCharset(147, "ucs2", "ucs2_sinhala_ci");
+        loadCharset(160, "utf32", "utf32_unicode_ci");
+        loadCharset(161, "utf32", "utf32_icelandic_ci");
+        loadCharset(162, "utf32", "utf32_latvian_ci");
+        loadCharset(163, "utf32", "utf32_romanian_ci");
+        loadCharset(164, "utf32", "utf32_slovenian_ci");
+        loadCharset(165, "utf32", "utf32_polish_ci");
+        loadCharset(166, "utf32", "utf32_estonian_ci");
+        loadCharset(167, "utf32", "utf32_spanish_ci");
+        loadCharset(168, "utf32", "utf32_swedish_ci");
+        loadCharset(169, "utf32", "utf32_turkish_ci");
+        loadCharset(170, "utf32", "utf32_czech_ci");
+        loadCharset(171, "utf32", "utf32_danish_ci");
+        loadCharset(172, "utf32", "utf32_lithuanian_ci");
+        loadCharset(173, "utf32", "utf32_slovak_ci");
+        loadCharset(174, "utf32", "utf32_spanish2_ci");
+        loadCharset(175, "utf32", "utf32_roman_ci");
+        loadCharset(176, "utf32", "utf32_persian_ci");
+        loadCharset(177, "utf32", "utf32_esperanto_ci");
+        loadCharset(178, "utf32", "utf32_hungarian_ci");
+        loadCharset(179, "utf32", "utf32_sinhala_ci");
         loadCharset(192, "utf8", "utf8_unicode_ci");
         loadCharset(193, "utf8", "utf8_icelandic_ci");
         loadCharset(194, "utf8", "utf8_latvian_ci");
@@ -461,6 +507,27 @@ public class MysqlBinlog
         loadCharset(208, "utf8", "utf8_persian_ci");
         loadCharset(209, "utf8", "utf8_esperanto_ci");
         loadCharset(210, "utf8", "utf8_hungarian_ci");
+        loadCharset(211, "utf8", "utf8_sinhala_ci");
+        loadCharset(224, "utf8mb4", "utf8mb4_unicode_ci");
+        loadCharset(225, "utf8mb4", "utf8mb4_icelandic_ci");
+        loadCharset(226, "utf8mb4", "utf8mb4_latvian_ci");
+        loadCharset(227, "utf8mb4", "utf8mb4_romanian_ci");
+        loadCharset(228, "utf8mb4", "utf8mb4_slovenian_ci");
+        loadCharset(229, "utf8mb4", "utf8mb4_polish_ci");
+        loadCharset(230, "utf8mb4", "utf8mb4_estonian_ci");
+        loadCharset(231, "utf8mb4", "utf8mb4_spanish_ci");
+        loadCharset(232, "utf8mb4", "utf8mb4_swedish_ci");
+        loadCharset(233, "utf8mb4", "utf8mb4_turkish_ci");
+        loadCharset(234, "utf8mb4", "utf8mb4_czech_ci");
+        loadCharset(235, "utf8mb4", "utf8mb4_danish_ci");
+        loadCharset(236, "utf8mb4", "utf8mb4_lithuanian_ci");
+        loadCharset(237, "utf8mb4", "utf8mb4_slovak_ci");
+        loadCharset(238, "utf8mb4", "utf8mb4_spanish2_ci");
+        loadCharset(239, "utf8mb4", "utf8mb4_roman_ci");
+        loadCharset(240, "utf8mb4", "utf8mb4_persian_ci");
+        loadCharset(241, "utf8mb4", "utf8mb4_esperanto_ci");
+        loadCharset(242, "utf8mb4", "utf8mb4_hungarian_ci");
+        loadCharset(243, "utf8mb4", "utf8mb4_sinhala_ci");
         loadCharset(254, "utf8", "utf8_general_cs");
     }
 
@@ -541,8 +608,18 @@ public class MysqlBinlog
             javaCharset = "EUC_JP";
         else if ("utf8".equals(mysqlCharset))
             javaCharset = "UTF-8";
+        else if ("utf8mb4".equals(mysqlCharset))
+            javaCharset = "UTF-8";
+        else if ("utf16".equals(mysqlCharset))
+            javaCharset = "UTF-16";
+        else if ("utf32".equals(mysqlCharset))
+            javaCharset = "UTF-32";
         else
-            javaCharset = "";
+        {
+            logger.warn("Unknown charset: index=" + index + " mysqlCharset="
+                    + mysqlCharset);
+            javaCharset = null;
+        }
 
         charsets[index] = new CharsetInfo(index, mysqlCharset, mysqlCollation,
                 javaCharset);
@@ -705,9 +782,9 @@ public class MysqlBinlog
          * additional bytes are used.</li>
          * <li>252 Two more bytes are used. The number is in the range
          * 251-0xffff.</li>
-         * <li> 253 Three more bytes are used. The number is in the range
+         * <li>253 Three more bytes are used. The number is in the range
          * 0xffff-0xffffff.</li>
-         * <li> 254 Eight more bytes are used. The number is in the range
+         * <li>254 Eight more bytes are used. The number is in the range
          * 0xffffff-0xffffffffffffffff.</li>
          * </ul>
          * That representation allows a first byte value of 251 to represent the

@@ -13,6 +13,6 @@
 	<classpathentry kind="lib" path="lib/tungsten-fsm-0.5.jar"/>
 	<classpathentry kind="lib" path="/commons/lib/protobuf-java-2.2.0.jar"/>
 	<classpathentry kind="lib" path="lib/mysql-connector-java-5.1.6WithEscapeProcessingFix-bin.jar"/>
-	<classpathentry kind="lib" path="lib/drizzle-jdbc-0.8-SNAPSHOT.jar" sourcepath="lib/drizzle-jdbc-0.8-SNAPSHOT-sources.jar"/>
+	<classpathentry kind="lib" path="lib/drizzle-jdbc-0.9-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="build/java/classes"/>
 </classpath>
