@@ -491,18 +491,6 @@ MEMSIZE
         "replicator.service.type=local"
       elsif line =~ /replicator.global.buffer.size=/ then
         "replicator.global.buffer.size=" + @configurator.config.props[REPL_BUFFER_SIZE]
-      elsif line =~ /replicator.store.thl.url/ then
-        if (@configurator.config.props[GLOBAL_USE_MYSQL_CONNECTOR] == "true")
-          "replicator.store.thl.url=jdbc:mysql://" +
-          @configurator.config.props[GLOBAL_HOST] + ":" +
-          @configurator.config.props[REPL_DBPORT] +
-          "/tungsten_${service.name}?createDatabaseIfNotExist=true"
-        else
-          "replicator.store.thl.url=jdbc:mysql:thin://" +
-          @configurator.config.props[GLOBAL_HOST] + ":" +
-          @configurator.config.props[REPL_DBPORT] +
-          "/tungsten_${service.name}?createDB=true"
-        end
       elsif line =~ /replicator.store.thl=/
         if @configurator.config.props[REPL_LOG_TYPE] == "disk" then
           "replicator.store.thl=com.continuent.tungsten.enterprise.replicator.thl.EnterpriseTHL"
