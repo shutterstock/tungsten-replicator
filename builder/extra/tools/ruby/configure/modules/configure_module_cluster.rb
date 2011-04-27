@@ -1,24 +1,4 @@
 class ClusterConfigureModule < ConfigureModule
-  def initialize
-    super()
-    @weight = -5
-  end
-  
-  def register_validation_checks(validation_handler)
-    validation_handler.register_checks([
-      ClusterSSHLoginCheck.new(),
-      InstallServicesCheck.new(),
-    ])
-  end
-  
-  def include_module_for_package?(package)
-    if package.is_a?(ConfigurePackageCluster)
-      true
-    else
-      false
-    end
-  end
-  
   def self.services_list(config)
     config.getPropertyOr(REPL_SERVICES, "").split(",")
   end

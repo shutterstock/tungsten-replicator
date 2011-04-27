@@ -4,9 +4,15 @@ module ConfigureDeploymentStepMySQL
   
   # The deploy_replicator method is defined in ConfigureDeploymentStepReplicator
   def get_deployment_methods
-    [
-      ConfigureDeploymentMethod.new("deploy_replicator")
-    ]
+    unless Configurator.instance.package.is_a?(ConfigureServicePackage)
+      [
+        ConfigureDeploymentMethod.new("deploy_replicator"),
+        ConfigureDeploymentMethod.new("deploy_replication_dataservices", 50)
+      ]
+    else
+      [
+      ]
+    end
   end
   module_function :get_deployment_methods
   
@@ -43,7 +49,7 @@ module ConfigureDeploymentStepMySQL
 			  service_config.getProperty(REPL_BACKUP_DUMP_DIR)
 		elsif line =~ /replicator.extractor.mysql.usingBytesForString/
 			"replicator.extractor.mysql.usingBytesForString=" + 
-			  service_config.getProperty(REPL_USE_BYTES)
+			  service_config.getProperty(REPL_USE_DRIZZLE)
 		elsif line =~ /replicator.extractor.mysql.useRelayLogs/ && 
 		    service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
 			"replicator.extractor.mysql.useRelayLogs=" + 

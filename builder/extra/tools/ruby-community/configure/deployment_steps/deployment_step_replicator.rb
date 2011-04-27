@@ -22,15 +22,6 @@ module ConfigureDeploymentStepReplicator
   end
   
   def is_replicator?
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
-      
-      service_hosts = service_properties[REPL_HOSTS].split(",")
-      if service_hosts.include?(@config.getProperty(HOST))
-        return true
-      end
-    }
-    
     true
   end
   

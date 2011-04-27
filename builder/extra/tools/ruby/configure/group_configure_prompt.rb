@@ -17,6 +17,7 @@ class GroupConfigurePrompt
     @weight = 0
     @singular = singular.to_s().downcase()
     @plural = plural.to_s().downcase()
+    @allowed_group_members = -1
   end
   
   # The config object must be set down on each of the prompts so that they
@@ -73,10 +74,12 @@ class GroupConfigurePrompt
     
     # Loop over the group until the user does not specify a new alias or
     # triggers one of the keywords
-    while true
-      new_alias = nil
+    while can_add_member()
+      new_alias = default_member_alias(get_members().size())
 
-      puts "Enter an alias for the next #{@singular}.  Enter nothing to stop entering #{@plural}."
+      if new_alias != nil
+        puts "Enter an alias for the next #{@singular}.  Enter nothing to stop entering #{@plural}."
+      end
       while new_alias == nil
         new_alias = input_value("New #{@singular} alias", "")
         case new_alias
@@ -128,8 +131,10 @@ class GroupConfigurePrompt
       |member, prompt|
       
       if prompt.enabled?
+        debug("Save current value for #{prompt.get_name()}")
         prompt.save_current_value()
       else
+        debug("Save disabled value for #{prompt.get_name()}")
         prompt.save_disabled_value()
       end
     }
@@ -151,6 +156,7 @@ class GroupConfigurePrompt
       |member, prompt|
       
       begin
+        debug("Validate #{prompt.get_name()}")
         prompt.is_valid?()
       rescue ConfigurePromptError => e
         errors << e
@@ -162,6 +168,14 @@ class GroupConfigurePrompt
     else
       true
     end
+  end
+  
+  def can_add_member
+    (@allowed_group_members == -1 || (get_members().size() < @allowed_group_members))
+  end
+  
+  def default_member_alias(member_key)
+    nil
   end
   
   # Collect the full list of keys that are allowed in the config file

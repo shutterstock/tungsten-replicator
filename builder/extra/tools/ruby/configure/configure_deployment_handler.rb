@@ -21,7 +21,7 @@ class ConfigureDeploymentHandler
   end
   
   def run_config(config)
-    @config.props = config.props
+    @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
     
     if @config.getProperty(HOST) == Configurator.instance.hostname()
       Configurator.instance.write ""

@@ -51,12 +51,12 @@ class ShellStartupScriptPrompt < AdvancedPrompt
   end
 end
 
-class RootCommandPrefixPrompt < ConfigurePrompt
+class RootCommandPrefixPrompt < AdvancedPrompt
   include GroupConfigurePromptMember
   
   def initialize
     super(ROOT_PREFIX, "Run root commands using sudo", 
-      PV_BOOLEAN, "true")
+      PV_BOOLEAN, "false")
   end
   
   def enabled?

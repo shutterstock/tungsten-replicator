@@ -155,7 +155,7 @@ module ConfigureDeploymentCore
   end
   
   def get_message_hostname
-    @config.getProperty(HOST)
+    @config.getProperty(DEPLOYMENT_HOST)
   end
   
   def is_connector?

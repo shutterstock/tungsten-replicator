@@ -11,19 +11,26 @@ class ConfigurePromptHandler
   # Tell each ConfigureModule to register their prompts
   def initialize_prompts
     @prompts = []
-    Configurator.instance.modules.each{
-      |configure_module| 
-      configure_module.register_prompts(self)
+    Configurator.instance.package.get_prompts().each{
+      |prompt_obj| 
+      register_prompt(prompt_obj, @prompts)
     }
     @prompts = @prompts.sort{|a,b| a.get_weight <=> b.get_weight}
+    
+    @non_interactive_prompts = []
+    Configurator.instance.package.get_non_interactive_prompts().each{
+      |prompt_obj| 
+      register_prompt(prompt_obj, @non_interactive_prompts)
+    }
+    @non_interactive_prompts = @non_interactive_prompts.sort{|a,b| a.get_weight <=> b.get_weight}
   end
   
   def register_prompts(prompt_objs)
-    prompt_objs.each{|prompt_obj| register_prompt(prompt_obj)}
+    prompt_objs.each{|prompt_obj| register_prompt(prompt_obj, @prompts)}
   end
   
   # Validate the prompt object and add it to the queue
-  def register_prompt(prompt_obj)    
+  def register_prompt(prompt_obj, container)    
     unless prompt_obj.is_a?(ConfigurePromptInterface)
       raise "Attempt to register invalid prompt #{prompt_obj.class} failed " +
         "because it does not extend ConfigurePromptInterface"
@@ -34,7 +41,7 @@ class ConfigurePromptHandler
       raise "#{class_name} cannot be used because it has not been properly initialized"
     end
     
-    @prompts.push(prompt_obj)
+    container.push(prompt_obj)
   end
   
   # Loop over each ConfigurePrompt object and collect the response
@@ -122,17 +129,35 @@ class ConfigurePromptHandler
         end
       end
     end
+    
+    Configurator.instance.debug("Validate non-interactive prompts")
+    unless is_valid?()
+      return false
+    end
+    
+    true
   end
   
   def is_valid?
+    validate_prompts(@non_interactive_prompts + @prompts)
+  end
+    
+  def validate_prompts(prompts)
     prompt_keys = []
     @errors = []
 
     # Test each ConfigurePrompt to ensure the config value passes the validation rule
-    @prompts.each{
+    prompts.each{
       |prompt|
       begin
+        if prompt.enabled?()
+          prompt.save_current_value()
+        else
+          prompt.save_disabled_value()
+        end
+        Configurator.instance.debug("Get keys for #{prompt.get_name()}")
         prompt_keys = prompt_keys + prompt.get_keys()
+        Configurator.instance.debug("Validate #{prompt.get_name()}")
         prompt.is_valid?()
       rescue ConfigurePromptError => e
         @errors << e

@@ -4,10 +4,15 @@ module ConfigureDeploymentStepPostgresql
   
   # The deploy_replicator method is defined in ConfigureDeploymentStepReplicator
   def get_deployment_methods
-    [
-      ConfigureDeploymentMethod.new("deploy_replicator"),
-      ConfigureDeploymentMethod.new("postgresql_configuration", ConfigureDeployment::FINAL_STEP_WEIGHT-1)
-    ]
+    unless Configurator.instance.package.is_a?(ConfigureServicePackage)
+      [
+        ConfigureDeploymentMethod.new("deploy_replicator"),
+        ConfigureDeploymentMethod.new("deploy_replication_dataservices", 50),
+        ConfigureDeploymentMethod.new("postgresql_configuration", ConfigureDeployment::FINAL_STEP_WEIGHT-1)
+      ]
+    else
+      []
+    end
   end
   module_function :get_deployment_methods
   

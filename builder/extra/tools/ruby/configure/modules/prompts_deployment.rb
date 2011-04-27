@@ -2,11 +2,15 @@ class ClusterHosts < GroupConfigurePrompt
   def initialize
     super(HOSTS, "Enter host information for @value", 
       "host", "hosts")
+    
+    @allowed_group_members = 1  
+      
     self.add_prompts(
       GlobalHostPrompt.new(),
       GlobalIPAddressPrompt.new(),
       UserIDPrompt.new(),
       HomeDirectoryPrompt.new(),
+      BaseDirectoryPrompt.new(),
       TempDirectoryPrompt.new(),
       
       ShellStartupScriptPrompt.new(),
@@ -25,12 +29,43 @@ class ClusterHosts < GroupConfigurePrompt
       
       #ReplicationMonitorInterval.new(),
       JavaMemorySize.new(),
-      RMIPort.new()
+      RMIPort.new(),
+      
+      BackupMethod.new(),
+      BackupStorageDirectory.new(),
+      BackupConfigurePrompt.new(REPL_BACKUP_DUMP_DIR, "Backup temporary dump directory",
+        PV_FILENAME, "/tmp"),
+      BackupConfigurePrompt.new(REPL_BACKUP_RETENTION, "Number of backups to retain", 
+        PV_INTEGER, 3),
+      BackupScriptPathConfigurePrompt.new(),
+      BackupScriptCommandPrefixConfigurePrompt.new(),
+      BackupScriptOnlineConfigurePrompt.new()
     )
   end
   
   def enabled?
     @config.getProperty(DEPLOYMENT_TYPE) != "sandbox"
+  end
+  
+  def default_member_alias(member_key)
+    DIRECT_DEPLOYMENT_HOST_ALIAS
+  end
+end
+
+class DBMSTypePrompt < ConfigurePrompt
+  def initialize
+    super(DBMS_TYPE, "Database type (mysql, or postgresql)", PV_DBMSTYPE)
+  end
+  
+  def get_default_value
+    case Configurator.instance.whoami()
+    when "postgres"
+      return "postgresql"
+    when "enterprisedb"
+      return "postgresql"
+    else
+      return "mysql"
+    end
   end
 end
 
@@ -69,14 +104,38 @@ class HomeDirectoryPrompt < ConfigurePrompt
   end
   
   def get_default_value
-    begin
-      ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)))
-    rescue => e
-      if Configurator.instance.is_full_tungsten_package?()
-        Configurator.instance.get_base_path()
-      else
-        ENV['HOME']
+    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
+      Configurator.instance.get_base_path()
+    else
+      begin
+        ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
+      rescue => e
+        if Configurator.instance.is_full_tungsten_package?()
+          Configurator.instance.get_base_path()
+        else
+          ENV['HOME']
+        end
       end
+    end
+  end
+  
+  def allow_group_default
+    false
+  end
+end
+
+class BaseDirectoryPrompt < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(BASEDIR, "Directory for the latest release", PV_FILENAME)
+  end
+  
+  def get_default_value
+    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
+      @config.getProperty(get_member_key(HOME_DIRECTORY))
+    else
+      "#{@config.getProperty(get_member_key(HOME_DIRECTORY))}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
     end
   end
   
@@ -93,7 +152,11 @@ class GlobalHostPrompt < ConfigurePrompt
   end
   
   def get_default_value
-    Configurator.instance.hostname()
+    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
+      Configurator.instance.hostname()
+    else
+      get_member()
+    end
   end
   
   def allow_group_default
@@ -155,16 +218,18 @@ end
 class DeploymentTypePrompt < ConfigurePrompt
   def initialize
     deployment_types = []
-    Configurator.instance.deployments.each {
-      |deployment_method|
-      deployment_types << deployment_method.get_name()
+    Configurator.instance.get_deployments().each {
+      |deployment|
+      if deployment.include_deployment_for_package?(Configurator.instance.package)
+        deployment_types << deployment.get_name()
+      end
     }
     
     validator = PropertyValidator.new(deployment_types.join("|"), 
       "Value must be #{deployment_types.join(',')}")
     
     if Configurator.instance.is_full_tungsten_package?
-      default = "regular"
+      default = DIRECT_DEPLOYMENT_NAME
     else
       default = "distributed"
     end
@@ -180,12 +245,8 @@ class DeployCurrentPackagePrompt < ConfigurePrompt
   end
   
   def enabled?
-    @config.getProperty(DEPLOYMENT_TYPE) != "regular" &&
+    Configurator.instance.get_deployment().require_package_uri() && 
       Configurator.instance.is_full_tungsten_package?()
-  end
-  
-  def get_disabled_value
-    "false"
   end
 end
 
@@ -196,11 +257,48 @@ class DeployPackageURIPrompt < ConfigurePrompt
   end
 
   def enabled?
-    @config.getProperty(DEPLOYMENT_TYPE) != "regular" && 
-      @config.getProperty(DEPLOY_CURRENT_PACKAGE) == "false"
+    Configurator.instance.get_deployment().require_package_uri() && 
+      @config.getProperty(DEPLOY_CURRENT_PACKAGE) != "true"
   end
   
   def get_default_value
     "https://s3.amazonaws.com/releases.continuent.com/#{Configurator.instance.get_release_name()}.tar.gz"
+  end
+end
+
+class DeploymentHost < ConfigurePrompt
+  def initialize
+    super(DEPLOYMENT_HOST, "Host alias for the host to be deployed here", PV_ANY)
+  end
+  
+  def enabled?
+    Configurator.instance.get_deployment().require_deployment_host() &&
+      get_value() == ""
+  end
+  
+  def get_default_value
+    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
+      return DIRECT_DEPLOYMENT_HOST_ALIAS
+    else
+      @config.getPropertyOr(HOSTS, {}).each{
+        |host_alias, host_props|
+      
+        if host_props[HOST] == Configurator.instance.hostname()
+          if host_props[HOME_DIRECTORY] == Configurator.instance.get_base_path()
+            return host_alias
+          end
+        end
+      }
+    end
+    
+    ""
+  end
+  
+  def get_disabled_value
+    if Configurator.instance.get_deployment().require_deployment_host()
+      get_value()
+    else
+      nil
+    end
   end
 end

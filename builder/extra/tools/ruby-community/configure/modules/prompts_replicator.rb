@@ -1,3 +1,9 @@
+REPL_ROLE_M = "master"
+REPL_ROLE_S = "slave"
+REPL_ROLE_DI = "direct"
+REPL_MODE_MS = "master-slave"
+REPL_MODE_DI = "direct"
+
 class DataServers < GroupConfigurePrompt
   def initialize
     super(DATASERVERS, "Enter dataserver information for @value", "dataserver", "dataservers")
@@ -8,14 +14,17 @@ class DataServers < GroupConfigurePrompt
       DataserverPassword.new(),
       MySQLBinlogDirectory.new(),
       MySQLBinlogPattern.new(),
-      DatabaseInitScript.new(),
+      MySQLReplicationUseRelayLogs.new(),
+      ReplicationServiceUseDrizzle.new(),
       
       PostgresStreamingReplication.new(),
       PostgresRootDirectory.new(),
       PostgresDataDirectory.new(),
       PostgresArchiveDirectory.new(),
       PostgresConfFile.new(),
-      PostgresArchiveTimeout.new()
+      PostgresArchiveTimeout.new(),
+      
+      DatabaseInitScript.new()
     )
   end
 end
@@ -74,19 +83,6 @@ class ReplicationServices < GroupConfigurePrompt
   end
 end
 
-class ReplicationServiceMaster < ConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(REPL_MASTERHOST, "Enter the master host for service @value", 
-    PV_IDENTIFIER)
-  end
-  
-  def enabled?
-    @config.getProperty(get_member_key(REPL_SVC_MODE)) == "master-slave"
-  end
-end
-
 class ReplicationServiceHosts < ConfigurePrompt
   include GroupConfigurePromptMember
   
@@ -119,115 +115,6 @@ class ReplicationServiceRemoteHosts < ConfigurePrompt
   end
 end
 
-class ReplicationShardIDMode < AdvancedPrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(REPL_SVC_SHARD_DEFAULT_DB, 
-      "Mode for setting the shard ID from the default db (stringent|relaxed)", 
-      PropertyValidator.new("stringent|relaxed", 
-      "Value must be stringent or relaxed"))
-  end
-  
-  def get_default_value
-    "stringent"
-  end
-end
-
-class ReplicationServiceShardIDMode < ConfigurePrompt
-  include GroupConfigurePromptMember
-  include AdvancedPromptModule
-  
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_SHARD_DEFAULT_DB, 
-      "Mode for setting the shard ID from the default db for service @value (stringent|relaxed)", 
-      PropertyValidator.new("stringent|relaxed", 
-      "Value must be stringent or relaxed"))
-  end
-  
-  def get_default_value
-    @config.getProperty(REPL_SVC_SHARD_DEFAULT_DB)
-  end
-  
-  def required?
-    false
-  end
-end
-
-class ReplicationAllowUnsafeSQL < AdvancedPrompt
-  def initialize
-    super(REPL_SVC_ALLOW_BIDI_UNSAFE, 
-      "Allow unsafe SQL from remote service (true|false)", PV_BOOLEAN)
-  end
-  
-  def get_default_value
-    "false"
-  end
-end
-
-class ReplicationServiceAllowUnsafeSQL < MultipleValueConfigurePrompt
-  include AdvancedPromptModule
-  
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_ALLOW_BIDI_UNSAFE, 
-      "Allow unsafe SQL from remote service for service @value (true|false)", PV_BOOLEAN)
-  end
-  
-  def get_default_value
-    @config.getProperty(REPL_SVC_ALLOW_BIDI_UNSAFE)
-  end
-  
-  def required?
-    false
-  end
-end
-
-class ReplicationAllowAllSQL < AdvancedPrompt
-  def initialize
-    super(REPL_SVC_ALLOW_ANY_SERVICE, 
-      "Replicate from any service (true|false)", 
-      PV_BOOLEAN)
-  end
-  
-  def get_default_value
-    "false"
-  end
-end
-
-class ReplicationServiceAllowAllSQL < MultipleValueConfigurePrompt
-  include AdvancedPromptModule
-  
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_ALLOW_ANY_SERVICE, 
-      "Replicate from any service for service @value (true|false)", PV_BOOLEAN)
-  end
-  
-  def get_default_value
-    @config.getProperty(REPL_SVC_ALLOW_ANY_SERVICE)
-  end
-  
-  def required?
-    false
-  end
-end
-
-class ReplicationServiceTHLPort < MultipleValueConfigurePrompt
-  include AdvancedPromptModule
-  
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, REPL_SVC_THL_PORT, 
-      "Port to use for THL operations", PV_INTEGER, 2112)
-  end
-  
-  def get_default_value
-    @config.getProperty(REPL_SVC_THL_PORT)
-  end
-  
-  def required?
-    false
-  end
-end
-
 class ReplicatorHostsPrompt < AdvancedPrompt
   def initialize
     super(REPL_HOSTS, "Enter a comma-delimited list of replicator hosts", 
@@ -240,22 +127,6 @@ class ReplicatorHostsPrompt < AdvancedPrompt
   
   def get_disabled_value
     @config.getProperty(HOSTS)
-  end
-end
-
-class ReplicationServiceAutoEnable < MultipleValueConfigurePrompt
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_AUTOENABLE, "Auto-enable service @value after start-up", 
-      PV_BOOLEAN, "true")
-  end
-end
-
-class ReplicationServiceChannels < MultipleValueConfigurePrompt
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_SVC_CHANNELS, "Number of replication channels to use for service @value",
-      PV_INTEGER, 1)
   end
 end
 
@@ -288,8 +159,8 @@ class THLStorageDirectory < ConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(HOME_DIRECTORY)
-      @config.getProperty(HOME_DIRECTORY) + "/thl-logs"
+    if @config.getProperty(get_member_key(HOME_DIRECTORY))
+      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/thl-logs"
     else
       ""
     end
@@ -354,18 +225,6 @@ class THLStorageFileSize < AdvancedPrompt
   def initialize
     super(REPL_THL_LOG_FILE_SIZE, "File size in bytes for THL disk logs", 
       PV_INTEGER, 1000000000)
-  end
-  
-  def enabled?
-    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
-  end
-end
-
-class ReplicationServiceTHLPort < MultipleValueConfigurePrompt
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_SVC_THL_PORT, "Port to use for THL operations", 
-      PV_INTEGER, 2112)
   end
   
   def enabled?
@@ -449,6 +308,8 @@ class DatabaseInitScript < ConfigurePrompt
 end
 
 class BackupMethod < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_BACKUP_METHOD, "Database backup method")
   end
@@ -481,25 +342,31 @@ class BackupMethod < ConfigurePrompt
 end
 
 class BackupConfigurePrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def enabled?
-    @config.getProperty(REPL_BACKUP_METHOD) != "none"
+    @config.getProperty(get_member_key(REPL_BACKUP_METHOD)) != "none"
   end
 end
 
 class ScriptBackupConfigurePrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def enabled?
-    @config.getProperty(REPL_BACKUP_METHOD) == "script"
+    @config.getProperty(get_member_key(REPL_BACKUP_METHOD)) == "script"
   end
 end
 
 class BackupStorageDirectory < BackupConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_BACKUP_STORAGE_DIR, "Backup permanent shared storage", PV_FILENAME)
   end
   
   def get_default_value
-    if @config.getProperty(HOME_DIRECTORY)
-      @config.getProperty(HOME_DIRECTORY) + "/backups"
+    if @config.getProperty(get_member_key(HOME_DIRECTORY))
+      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/backups"
     else
       ""
     end
@@ -507,18 +374,24 @@ class BackupStorageDirectory < BackupConfigurePrompt
 end
 
 class BackupScriptPathConfigurePrompt < ScriptBackupConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_BACKUP_SCRIPT, "What is the path to the backup script", PV_FILENAME)
   end
 end
 
 class BackupScriptCommandPrefixConfigurePrompt < ScriptBackupConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_BACKUP_COMMAND_PREFIX, "What is the command prefix required for this script (typically sudo)", PV_BOOLEAN)
   end
 end
 
 class BackupScriptOnlineConfigurePrompt < ScriptBackupConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_BACKUP_ONLINE, "Does this script support backing up a datasource while it is ONLINE", PV_BOOLEAN)
   end

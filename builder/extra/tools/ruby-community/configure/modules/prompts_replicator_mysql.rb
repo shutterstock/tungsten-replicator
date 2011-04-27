@@ -82,44 +82,16 @@ class MySQLBinlogDirectory < MySQLConfigurePrompt
   end
 end
 
-class MySQLReplicationServiceMode < MultipleValueConfigurePrompt
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_SVC_MODE, "What type of replication do you want to use for service @value? (#{REPL_MODE_MS}|#{REPL_MODE_DI})",
-      PropertyValidator.new("#{REPL_MODE_MS}|#{REPL_MODE_DI}", 
-      "Value must be #{REPL_MODE_MS} or #{REPL_MODE_DI}"), "master-slave")
-  end
+class MySQLReplicationUseRelayLogs < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
   
-  def enabled?
-    super() && @config.getProperty(DBMS_TYPE) == "mysql"
-  end
-  
-  def get_disabled_value_for_source(parent_name, source_val)
-    "master-slave"
-  end
-end
-
-class MySQLReplicationUseRelayLogs < MultipleValueConfigurePrompt
   def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_EXTRACTOR_USE_RELAY_LOGS, "Configure the extractor to access the binlog via local relay-logs?",
+    super(REPL_EXTRACTOR_USE_RELAY_LOGS, "Configure the extractor to access the binlog via local relay-logs?",
       PV_BOOLEAN, "false")
   end
   
   def enabled?
     super() && @config.getProperty(DBMS_TYPE) == "mysql"
-  end
-  
-  def enabled_for_source?(parent_name, source_val)
-    @config.getProperty([parent_name, REPL_SVC_MODE]) == "master-slave"
-  end
-  
-  def get_disabled_value_for_source(parent_name, source_val)
-    if @config.getProperty([parent_name, REPL_SVC_MODE]) == "direct"
-      "true"
-    else
-      nil
-    end
   end
 end
 
@@ -132,102 +104,19 @@ class MySQLRelayLogDirectory < MySQLConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(HOME_DIRECTORY)
-      @config.getProperty(HOME_DIRECTORY) + "/relay-logs"
+    if @config.getProperty(get_member_key(HOME_DIRECTORY))
+      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/relay-logs"
     else
       ""
     end
   end
-  
-  def enabled?
-    unless super()
-      false
-    end
-    
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name, source_val|
-      
-      if @config.getProperty([parent_name, REPL_EXTRACTOR_USE_RELAY_LOGS]) == "true"
-        return true
-      end
-    }
-    
-    false
-  end
 end
 
-class MySQLDirectReplicationExtractHost < MultipleValueConfigurePrompt
+class ReplicationServiceUseDrizzle < MySQLAdvancedPrompt
+  include GroupConfigurePromptMember
+  
   def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_EXTRACTOR_DBHOST, "Enter the hostname to use when extracting events for service @value",
-      PV_IDENTIFIER)
-  end
-  
-  def enabled?
-    super() && @config.getProperty(DBMS_TYPE) == "mysql"
-  end
-  
-  def enabled_for_source?(parent_name, source_val)
-    @config.getProperty([parent_name,REPL_SVC_MODE]) == "direct"
-  end
-end
-
-class MySQLDirectReplicationExtractPort < MultipleValueConfigurePrompt
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_EXTRACTOR_DBPORT, "Enter the connection port to use when extracting events for service @value",
-      PV_IDENTIFIER)
-  end
-  
-  def get_default_value
-    @config.getProperty(REPL_DBPORT)
-  end
-  
-  def enabled?
-    super() && @config.getProperty(DBMS_TYPE) == "mysql"
-  end
-  
-  def enabled_for_source?(parent_name, source_val)
-    @config.getProperty([parent_name,REPL_SVC_MODE]) == "direct"
-  end
-end
-
-class MySQLDirectReplicationExtractLogin < MultipleValueConfigurePrompt
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_EXTRACTOR_DBLOGIN, "Enter the username to use when extracting events for service @value",
-      PV_IDENTIFIER)
-  end
-  
-  def get_default_value
-    @config.getProperty(REPL_DBLOGIN)
-  end
-  
-  def enabled?
-    super() && @config.getProperty(DBMS_TYPE) == "mysql"
-  end
-  
-  def enabled_for_source?(parent_name, source_val)
-    @config.getProperty([parent_name,REPL_SVC_MODE]) == "direct"
-  end
-end
-
-class MySQLDirectReplicationExtractPassword < MultipleValueConfigurePrompt
-  def initialize
-    super(REPL_SERVICES, Configurator::SERVICE_CONFIG_PREFIX, 
-      REPL_EXTRACTOR_DBPASSWORD, "Enter the password to use when extracting events for service @value",
-      PV_IDENTIFIER)
-  end
-  
-  def get_default_value
-    @config.getProperty(REPL_DBPASSWORD)
-  end
-  
-  def enabled?
-    super() && @config.getProperty(DBMS_TYPE) == "mysql"
-  end
-  
-  def enabled_for_source?(parent_name, source_val)
-    @config.getProperty([parent_name,REPL_SVC_MODE]) == "direct"
+    super(REPL_USE_DRIZZLE, "Use the Drizzle MySQL driver", 
+      PV_BOOLEAN, "true")
   end
 end

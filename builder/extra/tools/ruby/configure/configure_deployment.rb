@@ -8,7 +8,7 @@ class ConfigureDeployment
   end
   
   def set_config(config)
-    @config.props = config.props.dup()
+    @config = config
   end
   
   def get_name
@@ -19,10 +19,10 @@ class ConfigureDeployment
     raise "This function must be overwritten"
   end
   
-  def expand_deployment_configuration(deployment_config)
-    expanded_config = deployment_config.dup()
+  def expand_deployment_configuration(config)
+    expanded_config = config.dup()
     
-    expanded_config.setDefault(BASEDIR, get_deployment_basedir(expanded_config))
+    expanded_config.props = expanded_config.props.merge(expanded_config.getPropertyOr([HOSTS, expanded_config.getProperty(DEPLOYMENT_HOST)], {}))
 
     hostname = Configurator.instance.hostname()
     unless expanded_config.getProperty(DEFAULT_DATASERVER)
@@ -44,7 +44,7 @@ class ConfigureDeployment
     end
     
     repl_services = []
-    ClusterConfigureModule.each_service(deployment_config) {
+    ClusterConfigureModule.each_service(config) {
       |parent_name,service_name,service_properties|
       
       expanded_config.setDefault([parent_name, REPL_SVC_CONFIG_FILE], 
@@ -81,7 +81,7 @@ class ConfigureDeployment
         raise "Unable to determine the replication role based on replication mode: #{expanded_config.getProperty([parent_name, REPL_SVC_MODE])}"
       end
       
-      deployment_config.props.each{
+      config.props.each{
         |key,value|
         
         if value.is_a?(Hash)
@@ -105,11 +105,12 @@ class ConfigureDeployment
     
     # The replication services that are enabled on this host
     expanded_config.setProperty(REPL_SERVICES, repl_services.join(","))
+    
     expanded_config
   end
   
-  def get_deployment_basedir(deployment_config)
-    "#{deployment_config.getProperty(HOME_DIRECTORY)}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
+  def get_deployment_basedir(config)
+    "#{config.getProperty(BASEDIR)}"
   end
   
   def validate
@@ -192,6 +193,14 @@ class ConfigureDeployment
   
   def get_default_config_filename
     Configurator.instance().get_base_path() + "/" + Configurator::CLUSTER_CONFIG
+  end
+  
+  def require_package_uri
+    false
+  end
+  
+  def require_deployment_host
+    false
   end
   
   def self.inherited(subclass)

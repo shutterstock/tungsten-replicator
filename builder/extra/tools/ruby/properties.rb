@@ -18,6 +18,11 @@ class Properties
     @props = {}
   end
   
+  def initialize_copy(source)
+    super(source)
+    @props = @props.dup
+  end
+  
   # Read properties from a file. 
   def load(properties_filename)
     file_contents = ""
@@ -121,6 +126,10 @@ class Properties
     @props.size
   end
   
+  def output()
+    puts JSON.pretty_generate(@props)
+  end
+  
   # Fetch a nested hash value
   def getNestedProperty(*attrs)
     attr_count = attrs.size
@@ -162,7 +171,7 @@ class Properties
   end
   
   # Get the property value or return the default if nil
-  def getPropertyOr(key, default)
+  def getPropertyOr(key, default = "")
     value = getNestedProperty(*key)
     if value == nil
       default

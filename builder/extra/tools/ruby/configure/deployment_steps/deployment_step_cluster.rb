@@ -107,7 +107,7 @@ module ConfigureDeploymentStepDeployment
 
     host_config = Properties.new()
     host_config.load("#{@config.getProperty(HOME_DIRECTORY)}/configs/#{Configurator::HOST_CONFIG}")
-    host_config.setProperty(DEPLOYMENT_TYPE, "regular")
+    host_config.setProperty(DEPLOYMENT_TYPE, DIRECT_DEPLOYMENT_NAME)
     host_config.setProperty(GLOBAL_DEPLOY_PACKAGE_URI, nil)
     host_config.setProperty(DEPLOY_PACKAGE_URI, nil)
     host_config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)

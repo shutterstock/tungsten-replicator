@@ -17,8 +17,8 @@ class RegularConfigureDeployment < ConfigureDeployment
     @config.getProperty(HOSTS).each{
       |host_alias, host_props|
 
-      config_obj = Properties.new
-      config_obj.props = @config.props.merge(host_props)
+      config_obj = @config.dup()
+      config_obj.setProperty(DEPLOYMENT_HOST, host_alias)
       
       if uri && uri.scheme == "file" && (uri.host == nil || uri.host == "localhost")
         config_obj.setProperty(GLOBAL_DEPLOY_PACKAGE_URI, @config.getProperty(DEPLOY_PACKAGE_URI))
@@ -57,5 +57,9 @@ class RegularConfigureDeployment < ConfigureDeployment
     else
       false
     end
+  end
+  
+  def require_package_uri
+    true
   end
 end

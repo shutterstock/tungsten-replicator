@@ -14,10 +14,8 @@ class ConfigureValidationHandler
   def initialize_validation_checks
     @local_checks = []
     @deployment_checks = []
-    Configurator.instance.modules.each{
-      |configure_module| 
-      configure_module.register_validation_checks(self)
-    }
+    
+    register_checks(Configurator.instance.package.get_validation_checks())
   end
   
   def register_checks(check_objs)
@@ -48,8 +46,7 @@ class ConfigureValidationHandler
     
     configs.each{
       |config|
-      @config.props = config.props
-      prevalidate()
+      prevalidate(config)
     }
     
     unless is_valid?()
@@ -58,15 +55,16 @@ class ConfigureValidationHandler
     
     configs.each{
       |config|
-      @config.props = config.props
-      validate()
+      validate(config)
     }
     
     is_valid?()
   end
   
   # The preliminary checks look for ssh access, ruby and java
-  def prevalidate
+  def prevalidate(config)
+    @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+    
     Configurator.instance.write ""
     Configurator.instance.write_header "Preliminary checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
     
@@ -93,7 +91,9 @@ class ConfigureValidationHandler
   end
   
   # These checks are more in-depth
-  def validate
+  def validate(config)
+    @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+    
     Configurator.instance.write ""
     Configurator.instance.write_header "Validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
     
@@ -126,7 +126,7 @@ class ConfigureValidationHandler
         debug("Transfer host configuration file to #{@config.getProperty(HOST)}")
         config_tempfile = Tempfile.new("tcfg")
         config_tempfile.close()
-        @config.store(config_tempfile.path())
+        config.store(config_tempfile.path())
         cmd_result("scp #{config_tempfile.path()} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}/#{Configurator::TEMP_DEPLOY_HOST_CONFIG}")
         File.unlink(config_tempfile.path())
         
@@ -184,6 +184,7 @@ class ConfigureValidationHandler
   # Handle the remote side of the validate function
   def validate_config(config)
     @config.props = config.props
+    
     begin
       @deployment_checks.each{
         |check|
