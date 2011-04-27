@@ -45,18 +45,18 @@ import com.continuent.tungsten.replicator.util.AtomicCounter;
  */
 public class ConnectorHandler implements ReplicatorPlugin, Runnable
 {
-    private Server           server      = null;
-    private PluginContext    context     = null;
-    private Thread           thd         = null;
-    private SocketChannel    channel     = null;
-    private AtomicCounter    seq         = null;
-    private THL              thl         = null;
+    private Server           server    = null;
+    private PluginContext    context   = null;
+    private Thread           thd       = null;
+    private SocketChannel    channel   = null;
+    private AtomicCounter    seq       = null;
+    private THL              thl       = null;
     private int              resetPeriod;
-    private volatile boolean cancelled   = false;
-    private volatile boolean finished    = false;
+    private volatile boolean cancelled = false;
+    private volatile boolean finished  = false;
 
-    private static Logger    logger      = Logger
-                                                 .getLogger(ConnectorHandler.class);
+    private static Logger    logger    = Logger
+                                               .getLogger(ConnectorHandler.class);
 
     // Implements call-back to check log consistency between client and
     // master.
@@ -92,7 +92,7 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                 if (event == null)
                 {
                     throw new THLException(
-                            "Client log has higher sequence number than master: client source ID="
+                            "Client requested non-existent transaction: client source ID="
                                     + handshakeResponse.getSourceId()
                                     + " seqno=" + clientLastSeqno
                                     + " client epoch number="
@@ -210,9 +210,10 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                     // Event can be null if it cannot be retrieved from database
                     if (event == null)
                     {
-                        logger.warn("Requested event (#" + (seqno + i) + " / "
-                                + fragno + ") not found in database");
-                        sendEvent(protocol, new ReplDBMSEvent(-1, null), true);
+                        String message = "Requested event (#" + (seqno + i)
+                                + " / " + fragno + ") not found in database";
+                        logger.warn(message);
+                        sendError(protocol, message);
                         return;
                     }
 
@@ -345,6 +346,12 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
             throws IOException
     {
         protocol.sendReplEvent(event, forceSend);
+    }
+
+    private void sendError(Protocol protocol, String message)
+            throws IOException
+    {
+        protocol.sendError(message);
     }
 
     /**
