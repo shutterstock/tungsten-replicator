@@ -237,7 +237,7 @@ replicator.store.thl=com.continuent.tungsten.enterprise.replicator.thl.Enterpris
 replicator.store.thl.storage=com.continuent.tungsten.enterprise.replicator.thl.DiskTHLStorage
 
 # All THL implementations require database access to store metadata. 
-replicator.store.thl.url=jdbc:thin://${replicator.global.db.host}/tungsten_${service.name}?createDB=true
+replicator.store.thl.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_${service.name}?createDB=true
 replicator.store.thl.user=${replicator.global.db.user}
 replicator.store.thl.password=${replicator.global.db.password}
 
