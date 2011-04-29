@@ -17,6 +17,12 @@ class GroupConfigurePrompt
     @weight = 0
     @singular = singular.to_s().downcase()
     @plural = plural.to_s().downcase()
+    
+    @prompt_pairs = nil
+    @previous_prompts = []
+    @last_run_prompt_pair_i = 0
+    
+    add_prompt(DeleteGroupMemberPrompt.new())
   end
   
   # The config object must be set down on each of the prompts so that they
@@ -48,28 +54,34 @@ class GroupConfigurePrompt
       puts
     end
     
-    # Do we want to collect default values?
-    #each_prompt{
-    #  |prompt|
-    #  unless prompt.allow_group_default()
-    #    next
-    #  end
-    #  
-    #  prompt.run()
-    #}
+    unless @prompt_pairs != nil
+      @prompt_pairs = []
+
+      # Do we want to collect default values?
+      #each_prompt{
+      #  |prompt|
+      #  unless prompt.allow_group_default()
+      #    next
+      #  end
+      #  
+      #  @prompt_pairs << [DEFAULTS, prompt]
+      #}
     
-    each_member{
-      |member|
-      
-      puts @prompt.sub('@value', member)
-      each_prompt{
-        |prompt|
-        
-        prompt.set_member(member)
-        prompt.run()
+      each_member{
+        |member|
+        each_prompt{
+          |prompt|
+          @prompt_pairs << [member, prompt]
+        }
       }
-      puts
-    }
+    end
+    
+    previous_prompt = @previous_prompts.pop()
+    unless previous_prompt == nil
+      @last_run_prompt_pair_i = previous_prompt
+    end
+    
+    run_pairs()
     
     # Loop over the group until the user does not specify a new alias or
     # triggers one of the keywords
@@ -79,22 +91,12 @@ class GroupConfigurePrompt
       if new_alias != nil
         puts "Enter an alias for the next #{@singular}.  Enter nothing to stop entering #{@plural}."
       end
+      
+      new_alias_prompt = TemporaryPrompt.new("New #{@singular} alias")
       while new_alias == nil
-        new_alias = input_value("New #{@singular} alias", "")
+        new_alias = new_alias_prompt.run()
+
         case new_alias
-        when COMMAND_HELP
-          puts
-          puts get_help()
-          puts
-        when COMMAND_PREVIOUS
-          # Go back
-          raise ConfigurePreviousPrompt
-        when COMMAND_ACCEPT_DEFAULTS
-          # Accept the default value for this and all remaining prompts
-          raise ConfigureAcceptAllDefaults
-        when COMMAND_SAVE
-          # Save the current config values and exit
-          raise ConfigureSaveConfigAndExit
         when DEFAULTS
           error("You may not use '#{DEFAULTS} as an alias'")
           new_alias = nil
@@ -114,15 +116,59 @@ class GroupConfigurePrompt
       # Exit the while true loop
       break if new_alias.to_s() == ""
       
+      # Place prompts into the stack for the new member
       each_prompt{
         |prompt|
-        prompt.set_member(new_alias)
-        prompt.run();
+        @prompt_pairs << [new_alias, prompt]
       }
-      puts
+      
+      run_pairs()
     end
     
+    puts
     puts "#{@singular.capitalize()} information defined for #{get_members().join(', ')}"
+  end
+  
+  # Run through the prompt_pairs list using last_prompt_pair_i as the starting point
+  def run_pairs()
+    prev_i = nil
+    
+    while @last_run_prompt_pair_i < @prompt_pairs.length()
+      i = @last_run_prompt_pair_i
+      begin
+        member = @prompt_pairs[i][0]
+        prompt = @prompt_pairs[i][1]
+        if prev_i == nil || (@prompt_pairs[prev_i][0] != member)
+          puts ""
+          puts @prompt.sub('@value', member)
+        end
+        prev_i = i
+        
+        Configurator.instance.debug("Start prompt #{prompt.class().name()}:#{prompt.get_name()}")
+        prompt.set_member(member)
+        prompt.run()
+        Configurator.instance.debug("Finish prompt #{prompt.class().name()}:#{prompt.get_name()}")
+        if prompt.allow_previous?()
+          @previous_prompts.push(i)
+        end
+        
+        @last_run_prompt_pair_i += 1
+      rescue DeleteGroupMember
+        @prompt_pairs.delete_if{
+          |item|
+          (item[0] == member)
+        }
+        @config.setProperty([@name, member], nil)
+        prev_i = nil
+      rescue ConfigurePreviousPrompt
+        previous_prompt = @previous_prompts.pop()
+        if previous_prompt == nil
+          raise ConfigurePreviousPrompt
+        else
+          @last_run_prompt_pair_i = previous_prompt
+        end
+      end
+    end
   end
   
   def save_current_value
@@ -323,4 +369,31 @@ module GroupConfigurePromptMember
   def get_prompt_description_filename()
     "#{get_interface_text_directory()}/prompt_#{@name}"
   end
+end
+
+class DeleteGroupMemberPrompt < TemporaryPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super("Do you want to remove this member from the configuration?")
+  end
+  
+  def get_prompt
+    "Do you want to remove this #{@parent_group.singular} from the configuration?"
+  end
+  
+  def run
+    value = super()
+    
+    if value != nil && value.downcase() =~ /[true|yes|y]/
+      raise DeleteGroupMember
+    end
+  end
+  
+  def enabled?
+    super() && @config.getProperty([@parent_group.name, get_member()]) != nil
+  end
+end
+
+class DeleteGroupMember < StandardError
 end

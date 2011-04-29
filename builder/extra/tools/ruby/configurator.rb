@@ -333,10 +333,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("-a", "--advanced")       {|val| @options.advanced = true}
     opts.on("-b", "--batch")          {|val| @options.interactive = false}
     opts.on("-c", "--config String")  {|val| @options.config = val }
-    opts.on("-f", "--force")          {|val| @options.force = true }
     opts.on("-h", "--help")           {|val| @options.display_help = true }
     opts.on("-q", "--quiet")          {@options.output_threshold = Logger::ERROR}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
+    opts.on("--no-validation")        {|val| @options.force = true }
     opts.on("--validate-only")        {@options.validate_only = true}
     
     # Argument used by the validation and deployment handlers

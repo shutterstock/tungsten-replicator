@@ -113,7 +113,7 @@ module ConfigurePromptInterface
     help = ''
     f = File.open(help_filename, "r") 
     f.each_line do |line|
-      help += line
+      help += line.gsub(/\n/," ").scan(/\S.{0,#{70-2}}\S(?=\s|$)|\S+/).join("\n") + "\n"
     end
     f.close
     
@@ -143,7 +143,7 @@ module ConfigurePromptInterface
     description = ''
     f = File.open(description_filename, "r") 
     f.each_line do |line|
-      description += line
+      description += line.gsub(/\n/," ").scan(/\S.{0,#{70-2}}\S(?=\s|$)|\S+/).join("\n") + "\n"
     end
     f.close
     

@@ -38,6 +38,13 @@ class ConfigurePrompt
       puts
     end
     
+    value = get_input_value()
+    
+    # Save the validated response to the config object
+     @config.setProperty(get_name(), value)
+  end
+  
+  def get_input_value
     value = nil
     while value == nil do
       begin
@@ -72,8 +79,7 @@ class ConfigurePrompt
       end
     end
     
-    # Save the validated response to the config object
-     @config.setProperty(get_name(), value)
+    value
   end
   
   # Get the current value for the prompt, use the default if the config does
@@ -223,5 +229,43 @@ end
 class AdvancedInterfaceMessage < InterfaceMessage
   def enabled?
     Configurator.instance.advanced_mode?()
+  end
+end
+
+class TemporaryPrompt < ConfigurePrompt
+  def initialize(prompt, validator = nil, default = "")
+    super("", prompt, validator, default)
+    @config = Properties.new
+  end
+  
+  def is_initialized?
+    if get_prompt() == nil
+      false
+    else
+      true
+    end
+  end
+  
+  # Collect the value from the command line
+  def run
+    # Skip this prompt and remove the config value if this prompt isn't needed
+    unless enabled?()
+      save_disabled_value()
+      return
+    end
+    
+    description = get_description()
+    unless description == nil
+      puts
+      Configurator.instance.write_divider
+      puts description
+      puts
+    end
+    
+    get_input_value()
+  end
+  
+  def get_name
+    ""
   end
 end

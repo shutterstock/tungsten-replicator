@@ -305,47 +305,47 @@ class ReplicatorInstallPackage < ConfigurePackage
     output_general_usage()
     Configurator.instance.write_divider()
     puts "Install options: --direct"
-    puts "--dbms-type                 (mysql|postgresql) [mysql]"
-    puts "--master-alias"
-    puts "--master-host"
-    puts "--master-port               [3306]"
-    puts "--master-user               [#{Configurator.instance.whoami()}]"
-    puts "--master-password"
-    puts "--master-log-file           PENDING"
-    puts "--master-log-pos            PENDING"
-    puts "--slave-alias"
-    puts "--slave-host                [#{Configurator.instance.hostname()}]"
-    puts "--slave-port                [3306]"
-    puts "--slave-user                [#{Configurator.instance.whoami()}]"
-    puts "--slave-password"
-    puts "--slave-thl-directory       [/opt/continuent/thl]"
-    puts "--slave-thl-port            [2112]"
-    puts "--slave-relay-directory     [/opt/continuent/relay]"
-    puts "--buffer-size               Size of buffers for block commit and queues [#{ReplicationServiceBufferSize.new().get_default_value()}]"
-    puts "--channels                  Number of channels for parallel apply [#{ReplicationServiceChannels.new().get_default_value()}]"
-    puts "--rmi-port                  [10001]"
-    puts "--service-name"
+    output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
+    output_usage_line("--master-alias")
+    output_usage_line("--master-host")
+    output_usage_line("--master-port", "", "3306")
+    output_usage_line("--master-user", "", Configurator.instance.whoami())
+    output_usage_line("--master-password")
+    output_usage_line("--master-log-file", "PENDING")
+    output_usage_line("--master-log-pos", "PENDING")
+    output_usage_line("--slave-alias")
+    output_usage_line("--slave-host", "", Configurator.instance.hostname())
+    output_usage_line("--slave-port", "", "3306")
+    output_usage_line("--slave-user", "", Configurator.instance.whoami())
+    output_usage_line("--slave-password")
+    output_usage_line("--slave-thl-directory", "", "/opt/continuent/thl")
+    output_usage_line("--slave-thl-port", "", "2112")
+    output_usage_line("--slave-relay-directory", "", "/opt/continuent/relay")
+    output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
+    output_usage_line("--channels", "Number of channels for parallel apply", "1")
+    output_usage_line("--rmi-port", "", "10001")
+    output_usage_line("--service-name")
     Configurator.instance.write_divider()
     puts "Install options: --master-slave"
-    puts "--dbms-type                 (mysql|postgresql) [mysql]"
-    puts "--cluster-hosts"
-    puts "--master-host"
-    puts "--user"
-    puts "--home-directory            [/opt/continuent]"
-    puts "--datasource-port           [3306]"
-    puts "--datasource-user           [#{Configurator.instance.whoami()}]"
-    puts "--datasource-password"
-    puts "--datasource-log-directory  [/var/lib/mysql]"
-    puts "--datasource-log-pattern    [mysql-bin]"
-    puts "--master-log-file           PENDING"
-    puts "--master-log-pos            PENDING"
-    puts "--datasource-transfer-logs"
-    puts "--thl-directory             [/opt/continuent/thl]"
-    puts "--thl-port                  [2112]"
-    puts "--relay-directory           [/opt/continuent/relay]"
-    puts "--buffer-size               Size of buffers for block commit and queues [#{ReplicationServiceBufferSize.new().get_default_value()}]"
-    puts "--channels                  Number of channels for parallel apply [#{ReplicationServiceChannels.new().get_default_value()}]"
-    puts "--rmi-port                  [10001]"
-    puts "--service-name"
-    end
+    output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
+    output_usage_line("--cluster-hosts")
+    output_usage_line("--master-host")
+    output_usage_line("--user")
+    output_usage_line("--home-directory", "", "/opt/continuent")
+    output_usage_line("--datasource-port", "", "3306")
+    output_usage_line("--datasource-user", "", Configurator.instance.whoami())
+    output_usage_line("--datasource-password")
+    output_usage_line("--datasource-log-directory", "", "/var/lib/mysql")
+    output_usage_line("--datasource-log-pattern", "", "mysql-bin")
+    output_usage_line("--master-log-file", "PENDING")
+    output_usage_line("--master-log-pos", "PENDING")
+    output_usage_line("--datasource-transfer-logs")
+    output_usage_line("--thl-directory", "", "/opt/continuent/thl")
+    output_usage_line("--thl-port", "", "2112")
+    output_usage_line("--relay-directory", "", "/opt/continuent/relay")
+    output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
+    output_usage_line("--channels", "Number of channels for parallel apply", "1")
+    output_usage_line("--rmi-port", "", "10001")
+    output_usage_line("--service-name")
+  end
 end

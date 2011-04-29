@@ -62,18 +62,21 @@ class ConfigureServicePackage < ConfigurePackage
     puts "Usage: configure-service [general-options] {-C|-D|-U} [service-options] service-name"
     output_general_usage()
     Configurator.instance.write_divider()
-    puts "Service options"
-    puts "--allow-bidi-unsafe         Allow unsafe SQL from remote service [#{@config.getProperty(REPL_SVC_ALLOW_BIDI_UNSAFE)}]"
-    puts "--allow-any-remote-service  Replicate from any service [#{@config.getProperty(REPL_SVC_ALLOW_ANY_SERVICE)}]"
-    puts "--auto-enable               If true, service goes online at startup [#{@config.getProperty(REPL_AUTOENABLE)}]"
-    puts "--buffer-size               Size of buffers for block commit and queues [#{@config.getProperty(REPL_BUFFER_SIZE)}]"
-    puts "--channels                  Number of channels for parallel apply [#{@config.getProperty(REPL_SVC_CHANNELS)}]"
-    puts "--local-service-name        Replicator service that owns master [#{@config.getProperty(DSNAME)}]"
-    puts "--master-host               Replicator remote master host name [#{@config.getProperty(REPL_MASTERHOST)}]"
-    puts "--master-port               Replicator remote master THL port [#{@config.getProperty(REPL_MASTERPORT)}]"
-    puts "--role                      Replicator role [#{@config.getProperty(REPL_ROLE)}]"
-    puts "--service-type              Replicator service type (local|remote) [#{@config.getProperty(REPL_SVC_SERVICE_TYPE)}]"
-    puts "--shard-default-db          Use default db for shard ID (stringent|relaxed) [#{@config.getProperty(REPL_SVC_SHARD_DEFAULT_DB)}]"
+    puts "Service options:"
+    output_usage_line("-C", "Create a replication service")
+    output_usage_line("-D", "Delete a replication service")
+    output_usage_line("-U", "Update a replication service")
+    output_usage_line("--allow-bidi-unsafe [true|false]", "Allow unsafe SQL from remote services", "false")
+    output_usage_line("--allow-any-remote-service [true|false]", "Replicate from any service", "false")
+    output_usage_line("--auto-enable [true|false]", "If true, service goes online at startup", "true")
+    output_usage_line("--buffer-size #", "Size of buffers for block commit and queues", "10")
+    output_usage_line("--channels #", "Number of channels for parallel apply", "1")
+    output_usage_line("--local-service-name name", "Replicator service that owns master")
+    output_usage_line("--master-host host_name", "Replicator remote master host name")
+    output_usage_line("--master-port #", "Replicator remote master THL port")
+    output_usage_line("--role [master|slave|direct]", "Replicator role", "slave")
+    output_usage_line("--service-type [local|remote]", "Replicator service type", "local")
+    output_usage_line("--shard-default-db [stringent|relaxed]", "Use default db for shard ID", "stringent")
   end
   
   def get_prompts

@@ -181,7 +181,12 @@ class GlobalIPAddressPrompt < ConfigurePrompt
     hostname = @config.getProperty(get_member_key(HOST))
     
     if hostname.to_s() != ""
-      Resolv.getaddress(hostname)
+      begin
+        Resolv.getaddress(hostname)
+      rescue
+      end
+      
+      @default
     else
       @default
     end
