@@ -75,7 +75,12 @@ module ConfigureDeploymentStepMySQL
 
     transformer.transform { |line|
       if line =~ /replicator.services/
-        "replicator.services=" + @config.getProperty(REPL_SERVICES)
+        repl_services = []
+        @config.getPropertyOr(REPL_SERVICES, {}).each{
+          |service_alias,service_properties|
+          repl_services << service_properties[DEPLOYMENT_SERVICE]
+        }
+        "replicator.services=" + repl_services.join(',')
       elsif line =~ /replicator.global.db.user=/ then
         "replicator.global.db.user=" + @config.getProperty([DATASERVERS, default_ds, REPL_DBLOGIN])
       elsif line =~ /replicator.global.db.password=/ then
@@ -164,8 +169,8 @@ module ConfigureDeploymentStepMySQL
     }
   end
   
-  def get_replication_dataservice_template
-    if @config.getProperty(REPL_USE_DRIZZLE) == "true"
+  def get_replication_dataservice_template(service_config)
+    if service_config.getProperty(REPL_USE_DRIZZLE) == "true"
 			"#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.mysql-with-drizzle-driver"
 		else
 		  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.mysql"

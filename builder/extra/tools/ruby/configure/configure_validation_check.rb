@@ -2,27 +2,18 @@ class ConfigureValidationCheck
   include ValidationCheckInterface
   
   def is_connector?
-    (@config.getPropertyOr(CONN_HOSTS, "").split(",").include?(@config.getProperty(HOST)))
-  end
-  
-  def is_replicator?
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
-      
-      service_hosts = service_properties[REPL_HOSTS].split(",")
-      if service_hosts.include?(@config.getProperty(HOST))
-        return true
-      end
-    }
-    
     false
   end
   
+  def is_replicator?
+    @config.getPropertyOr(REPL_SERVICES, {}).size() > 0
+  end
+  
   def is_master?
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
+    @config.getPropertyOr(REPL_SERVICES, {}).each{
+      |service_alias,service_properties|
       
-      if service_properties[REPL_MASTERHOST] == @config.getProperty(HOST)
+      if service_properties[REPL_ROLE] == REPL_ROLE_M
         return true
       end
     }

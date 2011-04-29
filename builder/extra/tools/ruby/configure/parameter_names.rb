@@ -7,9 +7,6 @@
 
 # Named properties for Tungsten configuration.
 
-CLUSTER_DEPLOYMENTS = "deployments"
-CLUSTER_DATASERVERS = "dataservers"
-
 # Generic parameters that control the entire installation.
 DEPLOYMENT_TYPE = "deployment_type"
 DEPLOYMENT_HOST = "deployment_host"
@@ -36,9 +33,6 @@ SVC_START = "start_svc_scripts"
 ROOT_PREFIX = "root_command_prefix"
 
 # Network control parameters.
-GC_MEMBERSHIP = "gc_membership_protocol"
-GOSSIP_PORT = "gossip_port"
-GOSSIP_HOSTS = "gossip_hosts"
 HOSTS = "hosts"
 WITNESSES = "witnesses"
 DATASERVERS =  "dataservers"
@@ -127,34 +121,3 @@ REPL_PG_ROOT = "repl_pg_root"
 REPL_PG_POSTGRESQL_CONF = "repl_pg_postgresql_conf"
 REPL_PG_ARCHIVE = "repl_pg_archive"
 REPL_PG_ARCHIVE_TIMEOUT = "repl_pg_archive_timeout"
-
-ROUTER_WAITFOR_DISCONNECT = "router_waitfor_disconnect"
-
-CONN_HOSTS = "conn_hosts"
-CONN_ACTIVE = "conn_is_active"
-CONN_CLIENTLOGIN = "conn_client_login"
-CONN_CLIENTPASSWORD = "conn_client_password"
-CONN_CLIENTDEFAULTDB = "conn_client_default_db"
-CONN_RWSPLITTING = "conn_rw_splitting"
-CONN_LISTEN_PORT = "conn_listen_port"
-CONN_DELETE_USER_MAP = "conn_delete_user_map"
-SQLR_USENEWPROTOCOL = "sqlr_use_new_protocol"
-SQLR_DELAY_BEFORE_OFFLINE = "sqlr_delay_before_offline"
-SQLR_KEEP_ALIVE_TIMEOUT = "sqlr_keep_alive_timeout"
-
-POLICY_MGR_MODE = "policy_mgr_mode"
-
-MGR_DB_PING_TIMEOUT = "mgr_db_ping_timeout"
-MGR_HOST_PING_TIMEOUT = "mgr_host_ping_timeout"
-MGR_IDLE_ROUTER_TIMEOUT = "mgr_idle_router_timeout"
-MGR_POLICY_LIVENESS_SAMPLE_PERIOD_SECS = "mgr_policy_liveness_sample_period_secs"
-MGR_POLICY_LIVENESS_SAMPLE_PERIOD_THRESHOLD = "mgr_policy_liveness_sample_period_threshold"
-MGR_POLICY_FENCE_SLAVE_REPLICATOR = "mgr_policy_fence_slave_replicator"
-MGR_POLICY_FENCE_MASTER_REPLICATOR = "mgr_policy_fence_master_replicator"
-MGR_POLICY_FAIL_THRESHOLD = "mgr_policy_fail_threshold"
-MGR_NOTIFICATIONS_TIMEOUT = "mgr_notifications_timeout"
-MGR_NOTIFICATIONS_SEND = "mgr_notifications_send"
-
-MON_REPLICATOR_CHECK_FREQUENCY = "mon_replicator_check_frequency"
-MON_DB_CHECK_FREQUENCY = "mon_db_check_frequency"
-MON_DB_QUERY_TIMEOUT = "mon_db_query_timeout"

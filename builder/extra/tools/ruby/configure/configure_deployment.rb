@@ -19,15 +19,15 @@ class ConfigureDeployment
     raise "This function must be overwritten"
   end
   
-  def expand_deployment_configuration(config)
-    expanded_config = config.dup()
+  def expand_deployment_configuration(deployment_config)
+    config = deployment_config.dup()
     
-    expanded_config.props = expanded_config.props.merge(expanded_config.getPropertyOr([HOSTS, expanded_config.getProperty(DEPLOYMENT_HOST)], {}))
+    config.props = config.props.merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
 
     hostname = Configurator.instance.hostname()
-    unless expanded_config.getProperty(DEFAULT_DATASERVER)
+    unless config.getProperty(DEFAULT_DATASERVER)
       default_ds = nil
-      expanded_config.getPropertyOr(DATASERVERS, {}).each{
+      config.getPropertyOr(DATASERVERS, {}).each{
         |ds_alias, ds_props|
         
         if ds_props[REPL_DBHOST] == hostname
@@ -40,77 +40,66 @@ class ConfigureDeployment
         raise "Unable to determine the default dataserver"
       end
       
-      expanded_config.setProperty(DEFAULT_DATASERVER, default_ds)
+      config.setProperty(DEFAULT_DATASERVER, default_ds)
     end
     
-    repl_services = []
-    ClusterConfigureModule.each_service(config) {
-      |parent_name,service_name,service_properties|
+    config.getPropertyOr(REPL_SERVICES, {}).each{
+      |service_alias,service_properties|
       
-      expanded_config.setDefault([parent_name, REPL_SVC_CONFIG_FILE], 
-        "#{expanded_config.getProperty(BASEDIR)}/tungsten-replicator/conf/static-#{service_name}.properties")
-        
-      if ClusterConfigureModule.services_list(expanded_config).include?(expanded_config.getProperty(HOST))
-        expanded_config.setProperty([parent_name, REPL_SVC_SERVICE_TYPE], "remote")
-      else
-        expanded_config.setProperty([parent_name, REPL_SVC_SERVICE_TYPE], "local")
+      unless config.getProperty([REPL_SERVICES, service_alias, DEPLOYMENT_HOST]) == config.getProperty(DEPLOYMENT_HOST)
+        config.setProperty([REPL_SERVICES, service_alias], nil)
+        next
       end
       
-      case expanded_config.getProperty([parent_name, REPL_SVC_MODE])
-      when REPL_MODE_MS
-        if expanded_config.getProperty([parent_name, REPL_MASTERHOST]) == expanded_config.getProperty(HOST)
-          expanded_config.setProperty([parent_name, REPL_ROLE], "master")
-        else
-          expanded_config.setProperty([parent_name, REPL_ROLE], "slave")
-        end
-        
-        service_hosts = service_properties[REPL_HOSTS].to_s().split(",")
-        remote_hosts = service_properties[REPL_REMOTE_HOSTS].to_s().split(",")
-        if (service_hosts.include?(expanded_config.getProperty(HOST)) ||
-            remote_hosts.include?(expanded_config.getProperty(HOST)) ||
-            service_properties[REPL_MASTERHOST] == expanded_config.getProperty(HOST))
-          repl_services << service_name
-        end
-      when REPL_MODE_DI
-        expanded_config.setProperty([parent_name, REPL_ROLE], "direct")
-        expanded_config.setDefault([parent_name, REPL_MASTERHOST], expanded_config.getProperty(HOST))
-        expanded_config.setDefault([parent_name, REPL_SVC_THL_PORT], "2112")
-        expanded_config.setDefault([parent_name, REPL_HOSTS], expanded_config.getProperty(HOST))
-        repl_services << service_name
-      else
-        raise "Unable to determine the replication role based on replication mode: #{expanded_config.getProperty([parent_name, REPL_SVC_MODE])}"
+      config.setDefault([REPL_SERVICES, service_alias, REPL_SVC_CONFIG_FILE], 
+        "#{config.getProperty(BASEDIR)}/tungsten-replicator/conf/static-#{service_properties[DEPLOYMENT_SERVICE]}.properties")
+      
+      case config.getProperty([REPL_SERVICES, service_alias, REPL_ROLE])
+      when REPL_ROLE_M
+        config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], config.getProperty(HOST))
+      when REPL_ROLE_DI
+        config.setProperty([REPL_SERVICES, service_alias, REPL_EXTRACTOR_USE_RELAY_LOGS], "true")
+
+        direct_datasource = config.getProperty([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DATASERVER])
+        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBHOST], config.getProperty([DATASERVERS, direct_datasource, REPL_DBHOST]))
+        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBPORT], config.getProperty([DATASERVERS, direct_datasource, REPL_DBPORT]))
+        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBLOGIN], config.getProperty([DATASERVERS, direct_datasource, REPL_DBLOGIN]))
+        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBPASSWORD], config.getProperty([DATASERVERS, direct_datasource, REPL_DBPASSWORD]))
       end
       
-      config.props.each{
+      config.getPropertyOr([DATASERVERS, service_properties[REPL_DATASERVER]], {}).each{
         |key,value|
         
         if value.is_a?(Hash)
           next
         end
         
-        # Merge global properties into the service configuration but do not 
-        # overwriting existing properties
-        case key
-        when REPL_SERVICES then
+        config.setDefault([REPL_SERVICES, service_alias, key], value)
+      }
+      
+      config.getPropertyOr([HOSTS, service_properties[DEPLOYMENT_HOST]], {}).each{
+        |key,value|
+        
+        if value.is_a?(Hash)
           next
-        when REPL_LOG_DIR then
-          expanded_config.setDefault([parent_name, key], "#{value}/#{service_name}")
-        when REPL_RELAY_LOG_DIR then
-          expanded_config.setDefault([parent_name, key], "#{value}/#{service_name}")
+        end
+        
+        case key
+        when REPL_LOG_DIR
+          config.setDefault([REPL_SERVICES, service_alias, key], "#{value}/#{service_properties[DEPLOYMENT_SERVICE]}")
+        when REPL_RELAY_LOG_DIR
+          config.setDefault([REPL_SERVICES, service_alias, key], "#{value}/#{service_properties[DEPLOYMENT_SERVICE]}")
         else
-          expanded_config.setDefault([parent_name, key], value)
+          config.setDefault([REPL_SERVICES, service_alias, key], value)
         end
       }
     }
     
-    # The replication services that are enabled on this host
-    expanded_config.setProperty(REPL_SERVICES, repl_services.join(","))
-    
-    expanded_config
+    config
   end
   
   def get_deployment_basedir(config)
-    "#{config.getProperty(BASEDIR)}"
+    config.getProperty(BASEDIR)
   end
   
   def validate

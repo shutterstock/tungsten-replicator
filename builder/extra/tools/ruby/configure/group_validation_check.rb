@@ -33,7 +33,7 @@ class GroupValidationCheck
       
       check.set_member(member)
       check.run()
-      @errors + check.errors
+      @errors = @errors + check.errors
     }
   end
   

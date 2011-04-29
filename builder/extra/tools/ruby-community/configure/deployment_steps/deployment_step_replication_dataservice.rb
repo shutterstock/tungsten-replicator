@@ -6,13 +6,13 @@ module ConfigureDeploymentStepReplicationDataservice
   module_function :get_deployment_methods
   
   def deploy_replication_dataservices
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
+    @config.getPropertyOr(REPL_SERVICES, {}).each{
+      |service_alias,service_properties|
       
       service_config = Properties.new()
-      service_config.props = service_properties
+      service_config.props = @config.props.merge(service_properties)
       
-      deploy_replication_dataservice(service_name, service_config)
+      deploy_replication_dataservice(service_properties[DEPLOYMENT_SERVICE], service_config)
     }
   end
   
@@ -25,7 +25,7 @@ module ConfigureDeploymentStepReplicationDataservice
     
     # Configure replicator.properties.service.template
 		transformer = Transformer.new(
-		  get_replication_dataservice_template(),
+		  get_replication_dataservice_template(service_config),
 			service_config.getProperty(REPL_SVC_CONFIG_FILE), "#")
 
 		transformer.transform { |line|

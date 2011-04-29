@@ -1,6 +1,8 @@
+DISTRIBUTED_DEPLOYMENT_NAME = "distributed"
+
 class RegularConfigureDeployment < ConfigureDeployment
   def get_name
-    "distributed"
+    DISTRIBUTED_DEPLOYMENT_NAME
   end
   
   def get_deployment_configurations()
@@ -53,6 +55,8 @@ class RegularConfigureDeployment < ConfigureDeployment
   
   def include_deployment_for_package?(package)
     if package.is_a?(ConfigurePackageCluster)
+      true
+    elsif package.is_a?(ReplicatorInstallPackage)
       true
     else
       false

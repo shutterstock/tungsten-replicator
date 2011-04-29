@@ -165,7 +165,7 @@ end
 
 module AdvancedPromptModule
   def enabled?
-    Configurator.instance.advanced_mode?()
+    super() && Configurator.instance.advanced_mode?()
   end
   
   def get_disabled_value

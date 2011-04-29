@@ -111,6 +111,7 @@ module ConfigureDeploymentStepDeployment
     host_config.setProperty(GLOBAL_DEPLOY_PACKAGE_URI, nil)
     host_config.setProperty(DEPLOY_PACKAGE_URI, nil)
     host_config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
+    host_config.setProperty(REPL_SERVICES, nil)
     host_config.store("#{@config.getProperty(HOME_DIRECTORY)}/configs/#{Configurator::HOST_CONFIG}")
   end
 end

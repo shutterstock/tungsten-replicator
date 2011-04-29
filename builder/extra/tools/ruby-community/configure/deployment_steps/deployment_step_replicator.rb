@@ -26,10 +26,10 @@ module ConfigureDeploymentStepReplicator
   end
   
   def is_master?
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
+    @config.getPropertyOr(REPL_SERVICES, {}).each{
+      |service_alias,service_properties|
       
-      if service_properties[REPL_MASTERHOST] == @config.getProperty(HOST)
+      if service_properties[REPL_ROLE] == REPL_ROLE_M
         return true
       end
     }

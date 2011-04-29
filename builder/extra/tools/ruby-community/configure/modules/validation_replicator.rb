@@ -67,8 +67,8 @@ class THLStorageCheck < ConfigureValidationCheck
   end
   
   def validate
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
+    @config.getPropertyOr(REPL_SERVICES).each{
+      |service_alias,service_properties|
       
       if service_properties[REPL_LOG_DIR]
         unless File.exists?(service_properties[REPL_SVC_CONFIG_FILE])
@@ -90,7 +90,7 @@ class NoHiddenServicesCheck < ConfigureValidationCheck
   end
   
   def validate
-    config_services = ClusterConfigureModule.services_list(@config)
+    config_services = ConfigurePackageCluster.services_list(@config)
     
     current_services = []
     Dir[@config.getProperty(BASEDIR) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 

@@ -17,7 +17,6 @@ class GroupConfigurePrompt
     @weight = 0
     @singular = singular.to_s().downcase()
     @plural = plural.to_s().downcase()
-    @allowed_group_members = -1
   end
   
   # The config object must be set down on each of the prompts so that they
@@ -171,10 +170,10 @@ class GroupConfigurePrompt
   end
   
   def can_add_member
-    (@allowed_group_members == -1 || (get_members().size() < @allowed_group_members))
+    true
   end
   
-  def default_member_alias(member_key)
+  def default_member_alias(member_index)
     nil
   end
   

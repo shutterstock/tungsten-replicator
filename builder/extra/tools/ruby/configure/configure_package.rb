@@ -1,9 +1,8 @@
 class ConfigurePackage
-  attr_accessor :remainder_option_property
+  include ConfigureMessages
   
   def initialize(config)
     @config = config
-    @remainder_option_property = nil
   end
   
   def store_config_file?
@@ -22,11 +21,16 @@ class ConfigurePackage
     []
   end
   
-  def prepare_parser(opts)
+  def parsed_options?(arguments)
+    true
   end
   
-  def allowed_property_options
-    {}
+  def post_prompt_handler_run
+    true
+  end
+  
+  def prepare_saved_config(config)
+    config
   end
   
   def output_usage
@@ -46,9 +50,5 @@ class ConfigurePackage
     puts "-q, --quiet        Quiet output"
     puts "-v, --verbose      Verbose output"
     puts "--validate-only    Do not execute the deployment"
-  end
-  
-  def expand_deployment_configuration(config)
-    config.dup()
   end
 end

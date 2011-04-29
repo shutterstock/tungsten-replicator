@@ -2,8 +2,6 @@ class ClusterHosts < GroupConfigurePrompt
   def initialize
     super(HOSTS, "Enter host information for @value", 
       "host", "hosts")
-    
-    @allowed_group_members = 1  
       
     self.add_prompts(
       GlobalHostPrompt.new(),
@@ -43,12 +41,20 @@ class ClusterHosts < GroupConfigurePrompt
     )
   end
   
-  def enabled?
-    @config.getProperty(DEPLOYMENT_TYPE) != "sandbox"
+  def can_add_member
+    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
+      (get_members().size() < 1)
+    else
+      true
+    end
   end
   
-  def default_member_alias(member_key)
-    DIRECT_DEPLOYMENT_HOST_ALIAS
+  def default_member_alias(member_index)
+    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
+      DIRECT_DEPLOYMENT_HOST_ALIAS
+    else
+      super(member_index)
+    end
   end
 end
 
@@ -263,6 +269,174 @@ class DeployPackageURIPrompt < ConfigurePrompt
   
   def get_default_value
     "https://s3.amazonaws.com/releases.continuent.com/#{Configurator.instance.get_release_name()}.tar.gz"
+  end
+end
+
+class InstallServicesPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(SVC_INSTALL, "Install service start scripts", 
+      PV_BOOLEAN, "false")
+  end
+  
+  def enabled?
+    @config.getProperty(DEPLOYMENT_TYPE) != "sandbox" && 
+    (@config.getProperty(get_member_key(USERID)) == "root" || 
+      @config.getProperty(get_member_key(ROOT_PREFIX)) == "true")
+  end
+end
+
+class StartServicesPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(SVC_START, "Start services after configuration", 
+      PV_BOOLEAN, "true")
+  end
+  
+  def get_prompt
+    if @config.getProperty(DBMS_TYPE) == "mysql"
+      super()
+    else
+      "Restart PostgreSQL server and start services after configuration"
+    end
+  end
+  
+  def get_prompt_description_filename()
+    if @config.getProperty(DBMS_TYPE) == "mysql"
+      super()
+    else
+      "#{get_interface_text_directory()}/prompt_#{@name}_postgresql"
+    end
+  end
+end
+
+class ShellStartupScriptPrompt < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(SHELL_STARTUP_SCRIPT, "Filename for the system user shell startup script", 
+      PV_SCRIPTNAME)
+  end
+  
+  def get_default_value
+    Configurator.instance.get_startup_script_filename(ENV['SHELL'])
+  end
+end
+
+class RootCommandPrefixPrompt < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(ROOT_PREFIX, "Run root commands using sudo", 
+      PV_BOOLEAN, "false")
+  end
+  
+  def enabled?
+    @config.getProperty(USERID) != "root"
+  end
+end
+
+class THLStorageType < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_LOG_TYPE, "Replicator event log storage (dbms|disk)",
+      PV_LOGTYPE, "disk")
+  end
+  
+  def enabled?
+    Configurator.instance.advanced_mode?()
+  end
+  
+  def get_disabled_value
+    "disk"
+  end
+end
+
+class THLStorageDirectory < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_LOG_DIR, "Replicator log directory", PV_FILENAME)
+  end
+  
+  def enabled?
+    @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+  end
+  
+  def get_default_value
+    if @config.getProperty(get_member_key(HOME_DIRECTORY))
+      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/thl-logs"
+    else
+      ""
+    end
+  end
+end
+
+class THLStorageChecksum < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_THL_DO_CHECKSUM, "Execute checksum operations on THL log files", 
+      PV_BOOLEAN, "false")
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+  end
+end
+
+class THLStorageConnectionTimeout < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_THL_LOG_CONNECTION_TIMEOUT, "Number of seconds to wait for a connection to the THL log", 
+      PV_INTEGER, 600)
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+  end
+end
+
+class THLStorageRetention < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_THL_LOG_RETENTION, "How long do you want to keep THL files?", 
+      PV_ANY, "7d")
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+  end
+end
+
+class THLStorageConsistency < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_CONSISTENCY_POLICY, "Should the replicator stop or warn if a consistency check fails?", 
+      PV_ANY, "stop")
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+  end
+end
+
+class THLStorageFileSize < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_THL_LOG_FILE_SIZE, "File size in bytes for THL disk logs", 
+      PV_INTEGER, 1000000000)
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
   end
 end
 

@@ -140,6 +140,10 @@ class MySQLReadableLogsCheck < MySQLValidationCheck
       info("The system user is able to read binary logs")
     end
   end
+  
+  def enabled?
+    super() && (@config.getProperty(get_member_key(REPL_DBHOST)) == @config.getProperty(DEPLOYMENT_HOST))
+  end
 end
 
 class MySQLSettingsCheck < MySQLValidationCheck

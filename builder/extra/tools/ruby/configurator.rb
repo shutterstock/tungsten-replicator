@@ -37,7 +37,6 @@ system_require 'configure/configure_package'
 system_require 'configure/configure_prompt_handler'
 system_require 'configure/configure_prompt_interface'
 system_require 'configure/configure_prompt'
-system_require 'configure/multiple_value_configure_prompt'
 system_require 'configure/group_configure_prompt'
 system_require 'configure/configure_validation_handler'
 system_require 'configure/validation_check_interface'
@@ -80,7 +79,6 @@ class Configurator
   include Singleton
   
   attr_reader :package
-  attr_accessor :command_properties
   
   TUNGSTEN_COMMUNITY = "Community"
   TUNGSTEN_ENTERPRISE = "Enterprise"
@@ -96,11 +94,8 @@ class Configurator
   # Initialize configuration arguments.
   def initialize()
     # Set instance variables.
-    @stdin = STDIN
-    @modules = []
     @remote_messages = []
-    
-    @command_properties = {}
+    @package = ConfigurePackageCluster.new(@config)
     
     # This is the configuration object that will be stored
     @config = Properties.new
@@ -112,7 +107,6 @@ class Configurator
     @options.interactive = true
     @options.advanced = false
     @options.stream_output = false
-    @options.package = "ConfigurePackageCluster"
     @options.display_help = false
     @options.validate_only = false
 
@@ -135,7 +129,7 @@ class Configurator
   # The standard process, collect prompt values, validate on each host
   # then deploy on each host
   def run
-    unless parsed_options?
+    unless parsed_options?(ARGV)
       output_usage()
       exit
     end
@@ -163,8 +157,8 @@ class Configurator
         
         value = ""
         while value.to_s == ""
-          puts ""
-          puts "Tungsten has all values needed to configure itself properly.  
+          puts "
+Tungsten has all values needed to configure itself properly.  
 Do you want to continue with the configuration (Y) or quit (Q)?"
           value = STDIN.gets
           value.strip!
@@ -200,6 +194,8 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       end
     end
     
+    @package.post_prompt_handler_run()
+    
     deployment_method = get_deployment()
     unless @options.force
       unless deployment_method.validate()
@@ -229,7 +225,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   # Handle the remote side of the validation_handler->run function
   def validate
-    unless parsed_options?
+    unless parsed_options?(ARGV)
       output_usage()
       exit
     end
@@ -255,7 +251,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   # Handle the remote side of the deployment_handler->run function
   def deploy
-    unless parsed_options?
+    unless parsed_options?(ARGV)
       output_usage()
       exit
     end
@@ -277,10 +273,6 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       @config = nil
       puts Marshal.dump(result)
     end
-  end
-  
-  # Locate and initialize modules in the configure/modules directory
-  def initialize_modules
   end
   
   # Locate and initialize deployments in the configure/deployments directory
@@ -316,43 +308,27 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     @deployments
   end
   
-  def advanced_mode?
-    @options.advanced == true
-  end
-  
   # Parse command line arguments.
-  def parsed_options?
-    # Determine if there is a package specified
-    begin
-      opts = OptionParser.new
-      opts.on("-h")                     { @options.display_help = true }
-      opts.on("-p", "--package String") {|val| @options.package = val }
-      
-      opts.parse(ARGV)
-    rescue
-    end
-    
-    begin
-      @package = Module.const_get(@options.package).new(@config)
-    rescue => e
-      error("Unable to instantiate package: #{e.to_s()}")
-      return false
-    end
-    
-    unless defined?(@options.package)
-      error("Unable to find the #{@options.package} package")
-      return false
-    end
-    
-    unless @package.is_a?(ConfigurePackage)
-      error("Package '#{@options.package}' does not extend ConfigurePackage")
-      return false
-    end
-    
+  def parsed_options?(arguments)
     opts=OptionParser.new
     
     # Needed again so that an exception isn't thrown
-    opts.on("-p", "--package String") {|val| @options.package = val }
+    opts.on("-p", "--package String") {|klass|
+      begin
+        unless defined?(klass)
+          raise "Unable to find the #{klass} package"
+        end
+        
+        @package = Module.const_get(klass).new(@config)
+        
+        unless @package.is_a?(ConfigurePackage)
+          raise "Package '#{klass}' does not extend ConfigurePackage"
+        end
+      rescue => e
+        error("Unable to instantiate package: #{e.to_s()}")
+        return false
+      end
+    }
     
     opts.on("-a", "--advanced")       {|val| @options.advanced = true}
     opts.on("-b", "--batch")          {|val| @options.interactive = false}
@@ -365,29 +341,36 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     
     # Argument used by the validation and deployment handlers
     opts.on("--stream")               {@options.stream_output = true }
-    
-    @package.allowed_property_options().each{
-      |key, prop_key|
-      opts.on("#{key} String")  {|val|  @command_properties[prop_key] = val }
-    }
-    
-    @package.prepare_parser(opts)
 
     begin
-      remainder = opts.parse!(ARGV)
-      
-      case remainder.size()
-      when 1
-        if @package.remainder_option_property
-          @command_properties[@package.remainder_option_property] = remainder[0]
-        end
-      end
+      opts.order!(arguments)
+    rescue OptionParser::InvalidOption => io
+      # Prepend the invalid option onto the arguments array
+      arguments = io.recover(arguments)
     rescue => e
       error("Argument parsing failed: #{e.to_s()}")
       return false
     end
 
-    return arguments_valid?()
+    unless arguments_valid?()
+      return false
+    end
+    
+    begin
+      unless @package.parsed_options?(arguments)
+        return false
+      end
+    rescue => e
+      error(e.to_s())
+      return false
+    end
+    
+    if @options.display_help
+      output_help
+      exit 0
+    end
+    
+    true
   end
 
   # True if required arguments were provided
@@ -407,8 +390,8 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       end
     else
       # For batch mode, options file must be readable.
-      if ! File.readable?(@options.config)
-        write "Config file does not exist or is not readable: #{@options.config}", Logger::ERROR
+      if ! File.readable?(@options.config) && File.exist?(@options.config)
+        write "Config file is not readable: #{@options.config}", Logger::ERROR
         return false
       end
     end
@@ -417,24 +400,14 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     if File.exist?(@options.config)
       @config.load(@options.config)
     end
-
-    # Apply override values from the command line
-    @command_properties.each{
-      |key, value|
-      @config.setProperty(key, value)
-    }
-    
-    if @options.display_help
-      output_help
-      exit 0
-    end
     
     true
   end
   
   def save_prompts
     if @package.store_config_file?
-      @config.store(@options.config)
+      temp = @package.prepare_saved_config(@config)
+      temp.store(@options.config)
     end
   end
 
@@ -444,9 +417,6 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   end
 
   def output_usage
-    prompt_handler = ConfigurePromptHandler.new(@config)
-    prompt_handler.is_valid?()
-    
     @package.output_usage()
   end
 
@@ -658,6 +628,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   def get_release_name
     release_details = get_release_details()
     release_details["name"]
+  end
+  
+  def advanced_mode?
+    @options.advanced == true
   end
   
   def is_interactive?

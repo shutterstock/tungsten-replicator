@@ -38,7 +38,7 @@ class ConfigurePromptHandler
     
     prompt_obj.set_config(@config)
     unless prompt_obj.is_initialized?()
-      raise "#{class_name} cannot be used because it has not been properly initialized"
+      raise "#{prompt_obj.class().name()} cannot be used because it has not been properly initialized"
     end
     
     container.push(prompt_obj)

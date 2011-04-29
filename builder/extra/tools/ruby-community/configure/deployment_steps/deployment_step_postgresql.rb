@@ -58,7 +58,7 @@ module ConfigureDeploymentStepPostgresql
 		end
 	end
 	
-	def get_replication_dataservice_template
+	def get_replication_dataservice_template(service_config)
     "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.static.properties.postgresql"
 	end
   
@@ -145,15 +145,8 @@ module ConfigureDeploymentStepPostgresql
         else
           "postgresql.role=slave"
         end
-      elsif line =~ /postgresql.master.host/ then
-        master_host=""
-        ClusterConfigureModule.each_service(@config) {
-          |parent_name,service_name,service_properties|
-          
-          master_host = service_properties[REPL_MASTERHOST]
-        }
-
-        "postgresql.master.host=" + master_host
+      elsif line =~ /postgresql.master.host/ && service_properties[REPL_ROLE] == REPL_ROLE_M then
+        "postgresql.master.host=" + service_properties[REPL_MASTERHOST]
       elsif line =~ /postgresql.master.user/ then
         "postgresql.master.user=" + @config.getProperty(REPL_DBLOGIN)
       elsif line =~ /postgresql.master.password/ then
