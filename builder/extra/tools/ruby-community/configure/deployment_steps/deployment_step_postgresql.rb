@@ -4,10 +4,15 @@ module ConfigureDeploymentStepPostgresql
   
   # The deploy_replicator method is defined in ConfigureDeploymentStepReplicator
   def get_deployment_methods
-    [
-      ConfigureDeploymentMethod.new("deploy_replicator"),
-      ConfigureDeploymentMethod.new("postgresql_configuration", ConfigureDeployment::FINAL_STEP_WEIGHT-1)
-    ]
+    unless Configurator.instance.package.is_a?(ConfigureServicePackage)
+      [
+        ConfigureDeploymentMethod.new("deploy_replicator"),
+        ConfigureDeploymentMethod.new("deploy_replication_dataservices", 50),
+        ConfigureDeploymentMethod.new("postgresql_configuration", ConfigureDeployment::FINAL_STEP_WEIGHT-1)
+      ]
+    else
+      []
+    end
   end
   module_function :get_deployment_methods
   
@@ -40,8 +45,6 @@ module ConfigureDeploymentStepPostgresql
       "replicator.script.conf_file=conf/postgresql-wal.properties"
     elsif line =~ /replicator.script.processor/
       "replicator.script.processor=bin/pg-wal-plugin"
-    elsif line =~ /replicator.master.listen.uri/ then
-      "replicator.master.listen.uri=thl://" + service_config.getProperty(GLOBAL_HOST) + "/"
     elsif line =~ /replicator.backup.agent.pg_dump.port/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
       "replicator.backup.agent.pg_dump.port=" + service_config.getProperty(REPL_DBPORT)
     elsif line =~ /replicator.backup.agent.pg_dump.user/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
@@ -55,14 +58,14 @@ module ConfigureDeploymentStepPostgresql
 		end
 	end
 	
-	def get_replication_dataservice_template
-    "#{get_deployment_basedir()}/tungsten-replicator/conf/sample.static.properties.postgresql"
+	def get_replication_dataservice_template(service_config)
+    "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.static.properties.postgresql"
 	end
   
   def write_replication_service_properties
     # Generate the services.properties file.
     transformer = Transformer.new(
-      "#{get_deployment_basedir()}/tungsten-replicator/conf/sample.services.properties",
+      "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
       "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties", "#")
 
     transformer.transform { |line|
@@ -73,22 +76,22 @@ module ConfigureDeploymentStepPostgresql
       elsif line =~ /replicator.global.db.password=/ then
         "replicator.global.db.password=" + @config.getProperty(REPL_DBPASSWORD)
       elsif line =~ /replicator.resourceJdbcUrl=/ then
-        "replicator.resourceJdbcUrl=jdbc:postgresql://" + @config.getProperty(GLOBAL_HOST) + ":" +
+        "replicator.resourceJdbcUrl=jdbc:postgresql://" + @config.getProperty(HOST) + ":" +
         @config.getProperty(REPL_DBPORT) + "/${DBNAME}"
       elsif line =~ /replicator.resourceDataServerHost/ then
-        "replicator.resourceDataServerHost=" + @config.getProperty(GLOBAL_HOST)
+        "replicator.resourceDataServerHost=" + @config.getProperty(HOST)
       elsif line =~ /replicator.resourceJdbcDriver/ then
         "replicator.resourceJdbcDriver=org.postgresql.Driver"
       elsif line =~ /replicator.resourcePort/ then
         "replicator.resourcePort=" + @config.getProperty(REPL_DBPORT)
       elsif line =~ /replicator.source_id/ then
-        "replicator.source_id=" + @config.getProperty(GLOBAL_HOST)
+        "replicator.source_id=" + @config.getProperty(HOST)
       elsif line =~ /replicator.resourceVendor/ then
-        "replicator.resourceVendor=" + @config.getProperty(GLOBAL_DBMS_TYPE)
+        "replicator.resourceVendor=" + @config.getProperty(DBMS_TYPE)
       elsif line =~ /cluster.name=/ then
-        "cluster.name=" + @config.getPropertyOr(GLOBAL_CLUSTERNAME, "")
+        "cluster.name=" + @config.getPropertyOr(CLUSTERNAME, "")
       elsif line =~ /replicator.host=/ then
-        "replicator.host=" + @config.getProperty(GLOBAL_HOST)
+        "replicator.host=" + @config.getProperty(HOST)
       elsif line =~ /replicator.rmi_port=/ then
         "replicator.rmi_port=" + @config.getProperty(REPL_RMI_PORT)
       else
@@ -99,7 +102,7 @@ module ConfigureDeploymentStepPostgresql
   
   def write_wal_shipping_properties
     transformer = Transformer.new(
-        "#{get_deployment_basedir()}/tungsten-replicator/conf/sample.postgresql-wal.properties",
+        "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.postgresql-wal.properties",
         "#{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties", "# ")
     
     transformer.transform { |line|
@@ -120,7 +123,7 @@ module ConfigureDeploymentStepPostgresql
         if pg_standby
           "postgresql.pg_standby=" + pg_standby
         else
-           raise RemoteError, "Unable to locate pg_standby; please ensure it is defined correctly in tungsten-replicator/conf/sample.postgresql-wal.properties" 
+           raise RemoteError, "Unable to locate pg_standby; please ensure it is defined correctly in tungsten-replicator/conf/postgresql-wal.properties" 
         end
       elsif line =~ /^\s*postgresql.pg_archivecleanup=\s*(\S*)\s*$/ then
         pg_archivecleanup = which $1
@@ -130,7 +133,7 @@ module ConfigureDeploymentStepPostgresql
         if pg_archivecleanup
           "postgresql.pg_archivecleanup=" + pg_archivecleanup
         elsif @config.getProperty(REPL_PG_STREAMING) == "true"
-           raise RemoteError, "Unable to locate pg_archivecleanup; please ensure it is defined correctly in tungsten-replicator/conf/sample.postgresql-wal.properties" 
+           raise RemoteError, "Unable to locate pg_archivecleanup; please ensure it is defined correctly in tungsten-replicator/conf/postgresql-wal.properties" 
         end
       elsif line =~ /postgresql.archive_timeout/ then
         "postgresql.archive_timeout=" + @config.getProperty(REPL_PG_ARCHIVE_TIMEOUT)
@@ -142,15 +145,8 @@ module ConfigureDeploymentStepPostgresql
         else
           "postgresql.role=slave"
         end
-      elsif line =~ /postgresql.master.host/ then
-        master_host=""
-        ClusterConfigureModule.each_service(@config) {
-          |parent_name,service_name,service_properties|
-          
-          master_host = service_properties[REPL_MASTERHOST]
-        }
-
-        "postgresql.master.host=" + master_host
+      elsif line =~ /postgresql.master.host/ && service_properties[REPL_ROLE] == REPL_ROLE_M then
+        "postgresql.master.host=" + service_properties[REPL_MASTERHOST]
       elsif line =~ /postgresql.master.user/ then
         "postgresql.master.user=" + @config.getProperty(REPL_DBLOGIN)
       elsif line =~ /postgresql.master.password/ then
@@ -191,13 +187,13 @@ module ConfigureDeploymentStepPostgresql
     
     transformer.transform { |line|
       if line =~ /serverName=/
-          "serverName=" + @config.getProperty(GLOBAL_HOST)
+          "serverName=" + @config.getProperty(HOST)
       elsif line =~ /url=/ 
-          "url=jdbc:postgresql://" + @config.getProperty(GLOBAL_HOST) + ':' + @config.getProperty(REPL_DBPORT) + "/" + user
+          "url=jdbc:postgresql://" + @config.getProperty(HOST) + ':' + @config.getProperty(REPL_DBPORT) + "/" + user
       elsif line =~ /frequency=/
           "frequency=" + @config.getProperty(REPL_MONITOR_INTERVAL)
       elsif line =~ /host=/
-          "host=" + @config.getProperty(GLOBAL_HOST)
+          "host=" + @config.getProperty(HOST)
       elsif line =~ /username=/
           "username=" + user
       elsif line =~ /password=/
@@ -218,9 +214,9 @@ module ConfigureDeploymentStepPostgresql
     info("Running procedure to configure warm standby...")
     cmd1 = "#{get_deployment_basedir()}/tungsten-replicator/bin/pg-wal-plugin -o uninstall -c #{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties"
     cmd2 = "#{get_deployment_basedir()}/tungsten-replicator/bin/pg-wal-plugin -o install -c #{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties"
-    info("############ RESTART=#{@config.getProperty(GLOBAL_SVC_START)} ##################")
+    info("############ RESTART=#{@config.getProperty(SVC_START)} ##################")
     
-    if (@config.getProperty(GLOBAL_SVC_START) == "false")
+    if (@config.getProperty(SVC_START) == "false")
       cmd2 = cmd2 + " -s"
     end
     

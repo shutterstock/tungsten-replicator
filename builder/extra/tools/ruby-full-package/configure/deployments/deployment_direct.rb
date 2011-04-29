@@ -1,21 +1,14 @@
+DIRECT_DEPLOYMENT_NAME = "regular"
+DIRECT_DEPLOYMENT_HOST_ALIAS = "local"
 class DirectDeployment < ConfigureDeployment
   def get_name
-    "direct"
+    DIRECT_DEPLOYMENT_NAME
   end
   
   def get_deployment_configurations()
-    config_objs = []
-    
-    config_obj = Properties.new
-    config_obj.props = @config.props.dup
-    config_obj.setProperty(DSNAME, config_obj.getProperty(GLOBAL_DSNAME))
-    config_objs.push(config_obj)
+    config_objs = [@config.dup()]
     
     config_objs
-  end
-  
-  def get_deployment_basedir
-    Configurator.instance.get_base_path()
   end
   
   def get_deployment_object_modules
@@ -23,14 +16,14 @@ class DirectDeployment < ConfigureDeployment
       ConfigureDeploymentStepDirect
       ]
       
-    case @config.getProperty(GLOBAL_DBMS_TYPE)
+    modules << ConfigureDeploymentStepReplicationDataservice
+    case @config.getProperty(DBMS_TYPE)
     when "mysql"
       modules << ConfigureDeploymentStepMySQL
-      modules << ConfigureDeploymentStepReplicationDataservice
     when "postgresql"
       modules << ConfigureDeploymentStepPostgresql
     else
-      raise "Invalid value for #{GLOBAL_DBMS_TYPE}"
+      raise "Invalid value for #{DBMS_TYPE}"
     end
     
     modules << ConfigureDeploymentStepServices
@@ -41,6 +34,8 @@ class DirectDeployment < ConfigureDeployment
   def include_deployment_for_package?(package)
     if package.is_a?(ConfigurePackageCluster)
       true
+    elsif package.is_a?(ReplicatorInstallPackage)
+      true
     else
       false
     end
@@ -48,5 +43,9 @@ class DirectDeployment < ConfigureDeployment
   
   def get_default_config_filename
     Configurator.instance().get_base_path() + "/" + Configurator::HOST_CONFIG
+  end
+  
+  def require_deployment_host
+    true
   end
 end

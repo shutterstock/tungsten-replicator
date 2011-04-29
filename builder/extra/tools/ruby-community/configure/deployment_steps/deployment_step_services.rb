@@ -12,7 +12,7 @@ module ConfigureDeploymentStepServices
 
     config_wrapper()
     
-    if @config.getProperty(GLOBAL_SVC_INSTALL) == "true" then
+    if @config.getProperty(SVC_INSTALL) == "true" then
       write_deployall()
       write_undeployall()
       write_startallsvcs()
@@ -26,7 +26,7 @@ module ConfigureDeploymentStepServices
       write_stopall()
     end
     
-    if @config.getProperty(GLOBAL_SVC_START) == "true"
+    if @config.getProperty(SVC_START) == "true"
       info("Starting services")
       started = cmd_result("#{get_deployment_basedir()}/cluster-home/bin/startall")
       info(started)

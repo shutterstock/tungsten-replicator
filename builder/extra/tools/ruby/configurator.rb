@@ -37,11 +37,15 @@ system_require 'configure/configure_package'
 system_require 'configure/configure_prompt_handler'
 system_require 'configure/configure_prompt_interface'
 system_require 'configure/configure_prompt'
-system_require 'configure/multiple_value_configure_prompt'
+system_require 'configure/group_configure_prompt'
 system_require 'configure/configure_validation_handler'
+system_require 'configure/validation_check_interface'
 system_require 'configure/configure_validation_check'
+system_require 'configure/group_validation_check'
 system_require 'configure/configure_deployment_handler'
 system_require 'configure/configure_deployment'
+
+DEFAULTS = "__defaults__"
 
 DBMS_MYSQL = "mysql"
 DBMS_POSTGRESQL = "postgresql"
@@ -60,11 +64,21 @@ OS_ARCH_32 = "32-bit"
 OS_ARCH_64 = "64-bit"
 OS_ARCH_UNKNOWN = "unknown"
 
+Dir[File.dirname(__FILE__) + '/configure/packages/*.rb'].each do |file| 
+  require File.dirname(file) + '/' + File.basename(file, File.extname(file))
+end
+Dir[File.dirname(__FILE__) + '/configure/modules/*.rb'].each do |file| 
+  require File.dirname(file) + '/' + File.basename(file, File.extname(file))
+end
+Dir[File.dirname(__FILE__) + '/configure/deployments/*.rb'].each do |file| 
+  require File.dirname(file) + '/' + File.basename(file, File.extname(file))
+end
+
 # Manages top-level configuration.
 class Configurator
   include Singleton
   
-  attr_reader :modules, :deployments
+  attr_reader :package
   
   TUNGSTEN_COMMUNITY = "Community"
   TUNGSTEN_ENTERPRISE = "Enterprise"
@@ -80,14 +94,11 @@ class Configurator
   # Initialize configuration arguments.
   def initialize()
     # Set instance variables.
-    @arguments = ARGV
-    @stdin = STDIN
-    @modules = []
-    @deployments = []
     @remote_messages = []
+    @package = ConfigurePackageCluster.new(@config)
     
     # This is the configuration object that will be stored
-    @stored_config = Properties.new
+    @config = Properties.new
 
     # Set command line argument defaults.
     @options = OpenStruct.new
@@ -96,7 +107,8 @@ class Configurator
     @options.interactive = true
     @options.advanced = false
     @options.stream_output = false
-    @options.package = "ConfigurePackageCluster"
+    @options.display_help = false
+    @options.validate_only = false
 
     # Check for the tungsten.cfg in the unified configs directory
     if File.exist?("#{ENV['HOME']}/configs/#{CLUSTER_CONFIG}")
@@ -112,25 +124,16 @@ class Configurator
         @options.config = "#{get_base_path()}/#{HOST_CONFIG}"
       end
     end
-    
-    Dir[File.dirname(__FILE__) + '/configure/packages/*.rb'].each do |file| 
-      require File.dirname(file) + '/' + File.basename(file, File.extname(file))
-    end
-    
-    unless parsed_options? && arguments_valid?
-      output_usage()
-      exit
-    end
-    
-    # Load the current configuration values
-    if File.exist?(@options.config)
-      @stored_config.load(@options.config)
-    end
   end
 
   # The standard process, collect prompt values, validate on each host
   # then deploy on each host
   def run
+    unless parsed_options?(ARGV)
+      output_usage()
+      exit
+    end
+    
     unless use_streaming_ssh()
       warning("It is recommended that you install the net-ssh rubygem")
     end
@@ -138,24 +141,24 @@ class Configurator
     write_header "Tungsten #{tungsten_version()} Configuration Procedure"
     display_help()
     
-    # Load each file in the modules or deployments directory and register them
-    # with this Configurator object
-    initialize_modules()
-    initialize_deployments()
-    
-    prompt_handler = ConfigurePromptHandler.new(@stored_config)
+    prompt_handler = ConfigurePromptHandler.new(@config)
     
     # If not running in batch mode, collect responses for configuration prompts
     if @options.interactive
       # Collect responses to the configuration prompts
       begin
-        prompt_handler.run()
+        unless prompt_handler.run()
+          write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
+          prompt_handler.print_errors()
+          exit 1
+        end
+        
         save_prompts()
         
         value = ""
         while value.to_s == ""
-          puts ""
-          puts "Tungsten has all values needed to configure itself properly.  
+          puts "
+Tungsten has all values needed to configure itself properly.  
 Do you want to continue with the configuration (Y) or quit (Q)?"
           value = STDIN.gets
           value.strip!
@@ -191,157 +194,182 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       end
     end
     
-    # Execute the validation of each configuration object for the deployment
+    @package.post_prompt_handler_run()
+    
     deployment_method = get_deployment()
-    deployment_method.set_config(@stored_config)
-    unless deployment_method.validate()
-      write_header("The validation failed", Logger::ERROR)
-      deployment_method.get_validation_handler().output_errors()
+    unless @options.force
+      unless deployment_method.validate()
+        write_header("Validation failed", Logger::ERROR)
+        deployment_method.get_validation_handler().output_errors()
         
-      exit 1
-    end
-    
-    # Execute the deployment of each configuration object for the deployment
-    unless deployment_method.deploy()
-      write_header("The deployment failed", Logger::ERROR)
-      deployment_method.get_deployment_handler().output_errors()
+        exit 1
+      end
       
-      exit 1
+      info("")
+      info("Validation finished")
     end
     
-    info("")
-    info("Deployment finished")
+    unless @options.validate_only
+      # Execute the deployment of each configuration object for the deployment
+      unless deployment_method.deploy()
+        write_header("Deployment failed", Logger::ERROR)
+        deployment_method.get_deployment_handler().output_errors()
+      
+        exit 1
+      end
+    
+      info("")
+      info("Deployment finished")
+    end
   end
   
   # Handle the remote side of the validation_handler->run function
   def validate
-    # Load each file in the modules or deployments directory and register them
-    # with this Configurator object
-    initialize_modules()
-    initialize_deployments()
+    unless parsed_options?(ARGV)
+      output_usage()
+      exit
+    end
     
     # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
       info("")
-      write_header "Validate #{@stored_config.getProperty(GLOBAL_HOST)}:#{@stored_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+      write_header "Validate #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
     end
     
     # Run the validation checks for a single configuration object
-    deployment_method = get_deployment()
-    result = deployment_method.validate_config(@stored_config)
+    result = get_deployment().validate_config(@config)
     if Configurator.instance.has_tty?() && @options.stream_output == false
       result.output()
     else
       result.messages = @remote_messages
       
       # Remove the config object so that the dump/load process is faster
-      @stored_config = nil
+      @config = nil
       puts Marshal.dump(result)
     end
   end
   
   # Handle the remote side of the deployment_handler->run function
   def deploy
-    # Load each file in the modules or deployments directory and register them
-    # with this Configurator object
-    initialize_modules()
-    initialize_deployments()
+    unless parsed_options?(ARGV)
+      output_usage()
+      exit
+    end
     
     # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
       info("")
-      write_header "Deploy #{@stored_config.getProperty(GLOBAL_HOST)}:#{@stored_config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+      write_header "Deploy #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
     end
     
     # Run the deploy steps for a single configuration object
-    deployment_method = get_deployment()
-    result = deployment_method.deploy_config(@stored_config)
+    result = get_deployment().deploy_config(@config)
     if has_tty?() && @options.stream_output == false
       result.output()
     else
       result.messages = @remote_messages
       
       # Remove the config object so that the dump/load process is faster
-      @stored_config = nil
+      @config = nil
       puts Marshal.dump(result)
     end
   end
   
-  # Locate and initialize modules in the configure/modules directory
-  def initialize_modules
-    Dir[File.dirname(__FILE__) + '/configure/modules/*.rb'].each do |file| 
-      require File.dirname(file) + '/' + File.basename(file, File.extname(file))
-    end
-    
-    @modules = []
-    package = Module.const_get(@options.package).new()
-    ConfigureModule.subclasses().each {
-      |module_class|
-      module_obj = module_class.new()
-      module_obj.set_config(@stored_config)
-      
-      if module_obj.include_module_for_package?(package)
-        @modules.push(module_obj)
-      end
-    }
-    @modules = @modules.sort{|a,b| a.get_weight() <=> b.get_weight()}
-  end
-  
   # Locate and initialize deployments in the configure/deployments directory
   def initialize_deployments
-    Dir[File.dirname(__FILE__) + '/configure/deployments/*.rb'].each do |file| 
-      require File.dirname(file) + '/' + File.basename(file, File.extname(file))
-    end
-    
     @deployments = []
-    package = Module.const_get(@options.package).new()
     ConfigureDeployment.subclasses().each {
       |deployment_class|
-      deployment_obj = deployment_class.new()
-      deployment_obj.set_config(@stored_config)
-      
-      if deployment_obj.include_deployment_for_package?(package)
-        @deployments.push(deployment_obj)
-      end
+      deployment = deployment_class.new()
+      deployment.set_config(@config)
+      @deployments << deployment
     }
     @deployments = @deployments.sort{|a,b| a.get_weight <=> b.get_weight}
   end
   
-  def get_deployment()
-    Configurator.instance.deployments.each{
+  def get_deployment
+    get_deployments().each{
       |deployment|
-      if deployment.get_name() == @stored_config.getProperty(GLOBAL_DEPLOYMENT_TYPE)
-        return deployment
+      if deployment.include_deployment_for_package?(@package)
+        if deployment.get_name() == @config.getProperty(DEPLOYMENT_TYPE)
+          return deployment
+        end
       end
     }
     
     raise "Unable to find a matching deployment method"
   end
   
-  def advanced_mode?
-    @options.advanced == true
+  def get_deployments
+    unless @deployments.is_a?(Array)
+      initialize_deployments()
+    end
+
+    @deployments
   end
   
   # Parse command line arguments.
-  def parsed_options?
+  def parsed_options?(arguments)
     opts=OptionParser.new
+    
+    # Needed again so that an exception isn't thrown
+    opts.on("-p", "--package String") {|klass|
+      begin
+        unless defined?(klass)
+          raise "Unable to find the #{klass} package"
+        end
+        
+        @package = Module.const_get(klass).new(@config)
+        
+        unless @package.is_a?(ConfigurePackage)
+          raise "Package '#{klass}' does not extend ConfigurePackage"
+        end
+      rescue => e
+        error("Unable to instantiate package: #{e.to_s()}")
+        return false
+      end
+    }
+    
     opts.on("-a", "--advanced")       {|val| @options.advanced = true}
     opts.on("-b", "--batch")          {|val| @options.interactive = false}
     opts.on("-c", "--config String")  {|val| @options.config = val }
-    opts.on("-f", "--force")          {|val| @options.force = true }
-    opts.on("-p", "--package String")        {|val| @options.package = val }
-    opts.on("-h", "--help")           {|val| output_help; exit 0}
+    opts.on("-h", "--help")           {|val| @options.display_help = true }
     opts.on("-q", "--quiet")          {@options.output_threshold = Logger::ERROR}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
+    opts.on("--no-validation")        {|val| @options.force = true }
+    opts.on("--validate-only")        {@options.validate_only = true}
+    
+    # Argument used by the validation and deployment handlers
     opts.on("--stream")               {@options.stream_output = true }
 
     begin
-      opts.parse!(@arguments)
-    rescue
-      error("Argument parsing failed")
+      opts.order!(arguments)
+    rescue OptionParser::InvalidOption => io
+      # Prepend the invalid option onto the arguments array
+      arguments = io.recover(arguments)
+    rescue => e
+      error("Argument parsing failed: #{e.to_s()}")
       return false
     end
 
+    unless arguments_valid?()
+      return false
+    end
+    
+    begin
+      unless @package.parsed_options?(arguments)
+        return false
+      end
+    rescue => e
+      error(e.to_s())
+      return false
+    end
+    
+    if @options.display_help
+      output_help
+      exit 0
+    end
+    
     true
   end
 
@@ -362,22 +390,25 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       end
     else
       # For batch mode, options file must be readable.
-      if ! File.readable?(@options.config)
-        write "Config file does not exist or is not readable: #{@options.config}", Logger::ERROR
+      if ! File.readable?(@options.config) && File.exist?(@options.config)
+        write "Config file is not readable: #{@options.config}", Logger::ERROR
         return false
       end
     end
     
-    unless defined?(@options.package)
-      error("Unable to find the #{@options.package} package")
-      return false
+    # Load the current configuration values
+    if File.exist?(@options.config)
+      @config.load(@options.config)
     end
     
     true
   end
   
   def save_prompts
-    @stored_config.store(@options.config)
+    if @package.store_config_file?
+      temp = @package.prepare_saved_config(@config)
+      temp.store(@options.config)
+    end
   end
 
   def output_help
@@ -386,15 +417,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   end
 
   def output_usage
-    puts "Usage: configure [options]"
-    puts "-h, --help         Displays help message"
-    puts "-a, --advanced     Enable advanced options"
-    puts "-b, --batch        Batch execution from existing config file"
-    puts "-c, --config file  Sets name of config file (default: tungsten.cfg)"
-    puts "-f, --force        Skip validation checks"
-    puts "-p, --package      Class name for the configuration package"
-    puts "-q, --quiet        Quiet output"
-    puts "-v, --verbose      Verbose output"
+    @package.output_usage()
   end
 
   def output_version
@@ -499,7 +522,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     if hostname == nil
-      hostname = @stored_config.getProperty(GLOBAL_HOST)
+      hostname = @config.getProperty(HOST)
     end
     
     if hostname == nil
@@ -605,6 +628,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   def get_release_name
     release_details = get_release_details()
     release_details["name"]
+  end
+  
+  def advanced_mode?
+    @options.advanced == true
   end
   
   def is_interactive?

@@ -1,17 +1,22 @@
 class PostgreSQLValidationCheck < ConfigureValidationCheck
+  include GroupValidationCheckMember
+  
   # Execute mysql command and return result to client. 
-  def psql(command, user = nil, password = nil, hostname = nil)
+  def psql(command, user = nil, password = nil, hostname = nil, port = nil)
     if user == nil
-      user = @config.getProperty(REPL_DBLOGIN)
+      user = @config.getProperty(get_member_key(REPL_DBLOGIN))
     end
     if password == nil
-      password = @config.getProperty(REPL_DBPASSWORD)
+      password = @config.getProperty(get_member_key(REPL_DBPASSWORD))
     end
     if hostname == nil
-      hostname = @config.getProperty(GLOBAL_HOST)
+      hostname = @config.getProperty(get_member_key(REPL_DBHOST))
+    end
+    if port == nil
+      port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "5432")
     end
 
-    cmd_result("psql -U#{user} -h#{hostname} -t -c \"#{command}\"")
+    cmd_result("psql -U#{user} -h#{hostname} --port=#{port} -t -c \"#{command}\"")
   end
   
   def get_variable(name)
@@ -19,7 +24,7 @@ class PostgreSQLValidationCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    (@config.getProperty(GLOBAL_DBMS_TYPE) == "postgresql")
+    (@config.getProperty(DBMS_TYPE) == "postgresql")
   end
 end
 
@@ -37,12 +42,12 @@ class PostgreSQLSystemUserCheck < PostgreSQLValidationCheck
         current user is: #{login}.  We recommend you do not use this user.")
     end
     
-    if @config.getProperty(GLOBAL_USERID) != "postgres" and 
-        @config.getProperty(GLOBAL_USERID) != "enterprisedb" then
+    if @config.getProperty(USERID) != "postgres" and 
+        @config.getProperty(USERID) != "enterprisedb" then
       error("You must run Tungsten with 
         the database system user.  This is usually 'postgres' for PostgreSQL 
         and 'enterprisedb' for EnterpriseDB.  You have specified 
-        #{@config.getProperty(GLOBAL_USERID)}.  We recommend you do not use this user.")
+        #{@config.getProperty(USERID)}.  We recommend you do not use this user.")
     end
   end
 end
@@ -73,19 +78,12 @@ class PostgreSQLLoginCheck < PostgreSQLValidationCheck
   end
   
   def validate
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
-
-      service_properties[REPL_HOSTS].split(",").each{
-        |repl_host|
-        login_output = psql("select 'ALIVE' as \\\"Return Value\\\"", nil, nil, repl_host)
-        if login_output =~ /ALIVE/
-          info("PostgreSQL server and login to #{repl_host} is OK")
-        else
-          error("PostgreSQL server on #{repl_host} is unavailable or login does not work")
-        end
-      }
-    }
+    login_output = psql("select 'ALIVE' as \\\"Return Value\\\"", nil, nil, repl_host)
+    if login_output =~ /ALIVE/
+      info("PostgreSQL server and login to #{@config.getProperty(get_member_key(REPL_DBHOST))} is OK")
+    else
+      error("PostgreSQL server on #{@config.getProperty(get_member_key(REPL_DBHOST))} is unavailable or login does not work")
+    end
   end
 end
 
@@ -114,38 +112,38 @@ class PostgreSQLPermissionsCheck < PostgreSQLValidationCheck
   
   def validate
     # Home
-    unless File.readable?(@config.getProperty(REPL_PG_ROOT))
-      error("Unable to read the Postgres root directory at #{@config.getProperty(REPL_PG_ROOT)}")
+    unless File.readable?(@config.getProperty(get_member_key(REPL_PG_ROOT)))
+      error("Unable to read the Postgres root directory at #{@config.getProperty(get_member_key(REPL_PG_ROOT))}")
     else
-      info("#{@config.getProperty(REPL_PG_ROOT)} is readable")
+      info("#{@config.getProperty(get_member_key(REPL_PG_ROOT))} is readable")
     end
     
     # Data
-    unless File.readable?(@config.getProperty(REPL_PG_HOME))
-      error("Unable to read the Postgres data directory at #{@config.getProperty(REPL_PG_HOME)}")
+    unless File.readable?(@config.getProperty(get_member_key(REPL_PG_HOME)))
+      error("Unable to read the Postgres data directory at #{@config.getProperty(get_member_key(REPL_PG_HOME))}")
     else
-      info("#{@config.getProperty(REPL_PG_HOME)} is readable")
+      info("#{@config.getProperty(get_member_key(REPL_PG_HOME))} is readable")
     end
     
     # Archive
-    unless File.writable?(@config.getProperty(REPL_PG_ARCHIVE))
-      error("Unable to read the Postgres archive directory at #{@config.getProperty(REPL_PG_ARCHIVE)}")
+    unless File.writable?(@config.getProperty(get_member_key(REPL_PG_ARCHIVE)))
+      error("Unable to read the Postgres archive directory at #{@config.getProperty(get_member_key(REPL_PG_ARCHIVE))}")
     else
-      info("#{@config.getProperty(REPL_PG_ARCHIVE)} is writable")
+      info("#{@config.getProperty(get_member_key(REPL_PG_ARCHIVE))} is writable")
     end
     
     # postgresql.conf
-    unless File.writable?(@config.getProperty(REPL_PG_POSTGRESQL_CONF))
-      error("Unable to write the postgresql.conf file at #{@config.getProperty(REPL_PG_POSTGRESQL_CONF)}")
+    unless File.writable?(@config.getProperty(get_member_key(REPL_PG_POSTGRESQL_CONF)))
+      error("Unable to write the postgresql.conf file at #{@config.getProperty(get_member_key(REPL_PG_POSTGRESQL_CONF))}")
     else
-      info("#{@config.getProperty(REPL_PG_POSTGRESQL_CONF)} is writable")
+      info("#{@config.getProperty(get_member_key(REPL_PG_POSTGRESQL_CONF))} is writable")
     end
     
     # init script
-    unless File.executable?(@config.getProperty(REPL_BOOT_SCRIPT))
-      error("Unable to execute the Postgres init script at #{@config.getProperty(REPL_BOOT_SCRIPT)}")
+    unless File.executable?(@config.getProperty(get_member_key(REPL_BOOT_SCRIPT)))
+      error("Unable to execute the Postgres init script at #{@config.getProperty(get_member_key(REPL_BOOT_SCRIPT))}")
     else
-      info("#{@config.getProperty(REPL_BOOT_SCRIPT)} is executable")
+      info("#{@config.getProperty(get_member_key(REPL_BOOT_SCRIPT))} is executable")
     end
   end
 end
@@ -171,19 +169,12 @@ class ConnectorUserPostgreSQLCheck < PostgreSQLValidationCheck
   end
   
   def validate
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
-
-      service_properties[REPL_HOSTS].split(",").each{
-        |repl_host|
-        login_output = psql("select 'ALIVE' as \\\"Return Value\\\"", @config.getProperty(CONN_CLIENTLOGIN), @config.getProperty(CONN_CLIENTPASSWORD), repl_host)
-        if login_output =~ /ALIVE/
-          info("PostgreSQL server and connector login to #{repl_host} is OK")
-        else
-          error("PostgreSQL server on #{repl_host} is unavailable or connector login does not work")
-        end
-      }
-    }
+    login_output = psql("select 'ALIVE' as \\\"Return Value\\\"", @config.getProperty(CONN_CLIENTLOGIN), @config.getProperty(CONN_CLIENTPASSWORD), repl_host)
+    if login_output =~ /ALIVE/
+      info("PostgreSQL server and connector login to #{@config.getProperty(get_member_key(REPL_DBHOST))} is OK")
+    else
+      error("PostgreSQL server on #{get_member_key(REPL_DBHOST)} is unavailable or connector login does not work")
+    end
   end
   
   def enabled?

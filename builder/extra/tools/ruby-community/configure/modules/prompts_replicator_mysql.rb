@@ -1,6 +1,6 @@
 class MySQLConfigurePrompt < ConfigurePrompt
   def enabled?
-    @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    @config.getProperty(DBMS_TYPE) == "mysql"
   end
   
   def get_default_value
@@ -21,7 +21,7 @@ class MySQLConfigurePrompt < ConfigurePrompt
     password = @config.getProperty(REPL_DBPASSWORD)
     port = @config.getProperty(REPL_DBPORT)
     if hostname == nil
-      hosts = @config.getProperty(GLOBAL_HOSTS).split(",")
+      hosts = @config.getProperty(HOSTS).split(",")
       hostname = hosts[0]
     end
 
@@ -49,11 +49,13 @@ end
 
 class MySQLAdvancedPrompt < AdvancedPrompt
   def enabled?
-    super() && @config.getProperty(GLOBAL_DBMS_TYPE) == "mysql"
+    super() && @config.getProperty(DBMS_TYPE) == "mysql"
   end
 end
 
 class MySQLBinlogPattern < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_MYSQL_BINLOGPATTERN, "MySQL binlog pattern", PV_ANY, "mysql-bin")
   end
@@ -72,60 +74,49 @@ class MySQLBinlogPattern < MySQLConfigurePrompt
 end
 
 class MySQLBinlogDirectory < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_MYSQL_BINLOGDIR, "MySQL binlog directory", 
       PV_FILENAME, "/var/lib/mysql/")
   end
 end
 
-class THLStorageType < MySQLConfigurePrompt
+class MySQLReplicationUseRelayLogs < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
-    super(REPL_LOG_TYPE, "Replicator event log storage (dbms|disk)",
-      PV_LOGTYPE, "disk")
+    super(REPL_EXTRACTOR_USE_RELAY_LOGS, "Configure the extractor to access the binlog via local relay-logs?",
+      PV_BOOLEAN, "false")
   end
   
   def enabled?
-    super() && Configurator.instance.advanced_mode?()
-  end
-  
-  def get_disabled_value
-    "disk"
-  end
-end
-
-class THLStorageDirectory < MySQLConfigurePrompt
-  def initialize
-    super(REPL_LOG_DIR, "Replicator log directory", PV_FILENAME)
-  end
-  
-  def enabled?
-    super() && @config.getProperty(REPL_LOG_TYPE) == "disk"
-  end
-  
-  def get_default_value
-    if @config.getProperty(GLOBAL_HOME_DIRECTORY)
-      @config.getProperty(GLOBAL_HOME_DIRECTORY) + "/thl-logs"
-    else
-      ""
-    end
+    super() && @config.getProperty(DBMS_TYPE) == "mysql"
   end
 end
 
 class MySQLRelayLogDirectory < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_RELAY_LOG_DIR, "Enter the local-disk directory into which the relay-logs will be stored",
 		  PV_FILENAME)
   end
   
   def get_default_value
-    if @config.getProperty(GLOBAL_HOME_DIRECTORY)
-      @config.getProperty(GLOBAL_HOME_DIRECTORY) + "/relay-logs"
+    if @config.getProperty(get_member_key(HOME_DIRECTORY))
+      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/relay-logs"
     else
       ""
     end
   end
+end
+
+class ReplicationServiceUseDrizzle < MySQLAdvancedPrompt
+  include GroupConfigurePromptMember
   
-  def enabled?
-    super() && @config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
+  def initialize
+    super(REPL_USE_DRIZZLE, "Use the Drizzle MySQL driver", 
+      PV_BOOLEAN, "true")
   end
 end

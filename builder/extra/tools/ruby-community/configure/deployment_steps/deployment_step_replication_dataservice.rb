@@ -1,20 +1,18 @@
 module ConfigureDeploymentStepReplicationDataservice
-  # The deploy_replicator method is defined in ConfigureDeploymentStepReplicator
   def get_deployment_methods
     [
-      ConfigureDeploymentMethod.new("deploy_replication_dataservices", 50)
     ]
   end
   module_function :get_deployment_methods
   
   def deploy_replication_dataservices
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
+    @config.getPropertyOr(REPL_SERVICES, {}).each{
+      |service_alias,service_properties|
       
       service_config = Properties.new()
-      service_config.props = service_properties
+      service_config.props = @config.props.merge(service_properties)
       
-      deploy_replication_dataservice(service_name, service_config)
+      deploy_replication_dataservice(service_properties[DEPLOYMENT_SERVICE], service_config)
     }
   end
   
@@ -27,7 +25,7 @@ module ConfigureDeploymentStepReplicationDataservice
     
     # Configure replicator.properties.service.template
 		transformer = Transformer.new(
-		  get_replication_dataservice_template(),
+		  get_replication_dataservice_template(service_config),
 			service_config.getProperty(REPL_SVC_CONFIG_FILE), "#")
 
 		transformer.transform { |line|
@@ -38,26 +36,38 @@ module ConfigureDeploymentStepReplicationDataservice
   def transform_replication_dataservice_line(line, service_name, service_config)
     if line =~ /replicator.role=/ then
       "replicator.role=" + service_config.getProperty(REPL_ROLE)
-	  elsif line =~ /replicator.global.db.host=/ then
-      "replicator.global.db.host=" + service_config.getProperty(GLOBAL_HOST)
-    elsif line =~ /replicator.service.type=/ then
+	  elsif line =~ /replicator.service.type=/ then
       "replicator.service.type=" + service_config.getProperty(REPL_SVC_SERVICE_TYPE)
+    elsif line =~ /replicator.global.db.host=/ then
+      "replicator.global.db.host=" + service_config.getProperty(REPL_DBHOST)
     elsif line =~ /replicator.global.db.port=/ then
       "replicator.global.db.port=" + service_config.getProperty(REPL_DBPORT)
 		elsif line =~ /replicator.global.db.user=/ then
 			"replicator.global.db.user=" + service_config.getProperty(REPL_DBLOGIN)
 		elsif line =~ /replicator.global.db.password=/ then
 			"replicator.global.db.password=" + service_config.getProperty(REPL_DBPASSWORD)
+		elsif line =~ /replicator.global.extract.db.host=/ &&
+        service_config.getProperty(REPL_EXTRACTOR_DBHOST) then
+      "replicator.global.extract.db.host=" + service_config.getProperty(REPL_EXTRACTOR_DBHOST)
+    elsif line =~ /replicator.global.extract.db.port=/ &&
+        service_config.getProperty(REPL_EXTRACTOR_DBPORT) then
+      "replicator.global.extract.db.port=" + service_config.getProperty(REPL_EXTRACTOR_DBPORT)
+		elsif line =~ /replicator.global.extract.db.user=/ &&
+        service_config.getProperty(REPL_EXTRACTOR_DBLOGIN) then
+			"replicator.global.extract.db.user=" + service_config.getProperty(REPL_EXTRACTOR_DBLOGIN)
+		elsif line =~ /replicator.global.extract.db.password=/ &&
+        service_config.getProperty(REPL_EXTRACTOR_DBPASSWORD) then
+			"replicator.global.extract.db.password=" + service_config.getProperty(REPL_EXTRACTOR_DBPASSWORD)
 		elsif line =~ /replicator.auto_enable/ then
 			"replicator.auto_enable=" + service_config.getProperty(REPL_AUTOENABLE)
 		elsif line =~ /replicator.source_id/ then
-			"replicator.source_id=" + service_config.getProperty(GLOBAL_HOST)
+			"replicator.source_id=" + service_config.getProperty(REPL_DBHOST)
 		elsif line =~ /cluster.name=/ then
-			"cluster.name=" + @config.getPropertyOr(GLOBAL_CLUSTERNAME, "")
+			"cluster.name=" + @config.getProperty(CLUSTERNAME)
 		elsif line =~ /^service.name=/ then
 			"service.name=" + service_name
 		elsif line =~ /^local.service.name=/ then
-			"local.service.name=" + @config.getPropertyOr(GLOBAL_DSNAME, "")
+			"local.service.name=" + service_config.getProperty(DSNAME)
 		elsif line =~ /replicator.service.type=/ then
       "replicator.service.type=local"
 		elsif line =~ /replicator.global.buffer.size=/ then
@@ -81,26 +91,27 @@ module ConfigureDeploymentStepReplicationDataservice
 				"#" + line
 			end
 		elsif line =~ /replicator.master.listen.uri=/ then
-			"replicator.master.listen.uri=thl://" + service_config.getProperty(GLOBAL_HOST) + "/"
+			"replicator.master.listen.uri=thl://" + service_config.getProperty(HOST) + ":" + 
+			  service_config.getProperty(REPL_SVC_THL_PORT) + "/"
 		elsif line =~ /replicator.resourceJdbcUrl/
-			line = line.sub("@HOSTNAME@", service_config.getProperty(GLOBAL_HOST) + ":" +
-							service_config.getProperty(REPL_DBPORT))
+			line = line.sub("@HOSTNAME@", service_config.getProperty(REPL_DBHOST) + ":" +
+				service_config.getProperty(REPL_DBPORT))
 		elsif line =~ /replicator.backup.agents/
 			if service_config.getProperty(REPL_BACKUP_METHOD) == "none"
 				"replicator.backup.agents="
 			else
-				"replicator.backup.agents=" + service_config.getProperty(REPL_BACKUP_METHOD)
+				"replicator.backup.agents=" + service_config.getPropertyOr(REPL_BACKUP_METHOD, "")
 			end
 		elsif line =~ /replicator.backup.default/
 			if service_config.getProperty(REPL_BACKUP_METHOD) == "none"
 				"replicator.backup.default="
 			else
-				"replicator.backup.default=" + service_config.getProperty(REPL_BACKUP_METHOD)
+				"replicator.backup.default=" + service_config.getPropertyOr(REPL_BACKUP_METHOD, "")
 			end
 		elsif line =~ /replicator.backup.agent.lvm.port/
 			"replicator.backup.agent.lvm.port=" + service_config.getProperty(REPL_DBPORT)
 		elsif line =~ /replicator.backup.agent.lvm.host/
-			"replicator.backup.agent.lvm.host=" + service_config.getProperty(GLOBAL_HOST)
+			"replicator.backup.agent.lvm.host=" + service_config.getProperty(REPL_DBHOST)
 		elsif line =~ /replicator.backup.agent.lvm.dumpDir/ && service_config.getProperty(REPL_BACKUP_METHOD) != "none"
 			"replicator.backup.agent.lvm.dumpDir=" + service_config.getProperty(REPL_BACKUP_DUMP_DIR)
 		elsif line =~ /replicator.backup.agent.lvm.dataDir/
@@ -135,13 +146,14 @@ module ConfigureDeploymentStepReplicationDataservice
       "replicator.store.thl.logConnectionTimeout=#{service_config.getProperty(REPL_THL_LOG_CONNECTION_TIMEOUT)}"
     elsif line =~ /replicator.store.thl.log_file_size/
       "replicator.store.thl.log_file_size=#{service_config.getProperty(REPL_THL_LOG_FILE_SIZE)}"
-    elsif line =~ /replicator.master.connect.uri=/ then
+    elsif line =~ /replicator.master.connect.uri=/  && 
+        service_config.getProperty(REPL_ROLE) == REPL_ROLE_S then
       "replicator.master.connect.uri=thl://" + 
         service_config.getProperty(REPL_MASTERHOST) + ":" + 
-        service_config.getProperty(REPL_SVC_THL_PORT) + "/"
+        service_config.getProperty(REPL_MASTERPORT) + "/"
     elsif line =~ /replicator.master.listen.uri=/ then
       "replicator.master.listen.uri=thl://" + 
-        service_config.getProperty(GLOBAL_HOST) + ":" + 
+        service_config.getProperty(HOST) + ":" + 
         service_config.getProperty(REPL_SVC_THL_PORT) + "/"
     elsif line =~ /replicator.store.thl.storageListenerUri=/ then
       "replicator.store.thl.storageListenerUri=thl://0.0.0.0:" + 
@@ -154,6 +166,8 @@ module ConfigureDeploymentStepReplicationDataservice
       "replicator.filter.bidiSlave.allowBidiUnsafe=" + service_config.getProperty(REPL_SVC_ALLOW_BIDI_UNSAFE)
     elsif line =~ /replicator.filter.bidiSlave.allowAnyRemoteService=/
       "replicator.filter.bidiSlave.allowAnyRemoteService=" + service_config.getProperty(REPL_SVC_ALLOW_ANY_SERVICE)
+    elsif line =~ /replicator.rmi_port=/ then
+      "replicator.rmi_port=" + service_config.getProperty(REPL_RMI_PORT)
 		else
 		  line
 		end

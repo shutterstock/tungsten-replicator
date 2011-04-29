@@ -1,6 +1,6 @@
 class PostgresConfigurePrompt < ConfigurePrompt
   def enabled?
-    @config.getProperty(GLOBAL_DBMS_TYPE) == "postgresql"
+    @config.getProperty(DBMS_TYPE) == "postgresql"
   end
   
   def get_default_value
@@ -21,7 +21,7 @@ class PostgresConfigurePrompt < ConfigurePrompt
     password = @config.getProperty(REPL_DBPASSWORD)
     port = @config.getProperty(REPL_DBPORT)
     if hostname == nil
-      hosts = @config.getProperty(GLOBAL_HOSTS).split(",")
+      hosts = @config.getProperty(HOSTS).split(",")
       hostname = hosts[0]
     end
 
@@ -29,13 +29,24 @@ class PostgresConfigurePrompt < ConfigurePrompt
   end
 end
 
+class PostgresStreamingReplication < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_PG_STREAMING, "Use streaming replication (available from PostgreSQL 9)",
+      PV_BOOLEAN, "false")
+  end
+end
+
 class PostgresRootDirectory < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_ROOT, "Root directory for postgresql installation", PV_FILENAME)
   end
   
   def get_default_value
-    @default = @config.getProperty(GLOBAL_HOME_DIRECTORY)
+    @default = @config.getProperty(HOME_DIRECTORY)
     super()
   end
   
@@ -50,6 +61,8 @@ class PostgresRootDirectory < PostgresConfigurePrompt
 end
 
 class PostgresDataDirectory < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_HOME, "PostgreSQL data directory", PV_FILENAME)
   end
@@ -59,7 +72,7 @@ class PostgresDataDirectory < PostgresConfigurePrompt
   end
   
   def get_default_value
-    @default = @config.getProperty(GLOBAL_HOME_DIRECTORY)
+    @default = @config.getProperty(HOME_DIRECTORY)
     super()
   end
   
@@ -74,22 +87,26 @@ class PostgresDataDirectory < PostgresConfigurePrompt
 end
 
 class PostgresArchiveDirectory < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_ARCHIVE, "PostgreSQL archive location", PV_FILENAME)
   end
   
   def get_default_value
-    @config.getProperty(REPL_PG_ROOT) + "/archive"
+    @config.getProperty(get_member_key(REPL_PG_ROOT)) + "/archive"
   end
 end
 
 class PostgresConfFile < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_POSTGRESQL_CONF, "Location of postgresql.conf", PV_FILENAME)
   end
   
   def get_default_value
-    @default = @config.getProperty(REPL_PG_ROOT) + "/data/postgresql.conf"
+    @default = @config.getProperty(get_member_key(REPL_PG_ROOT)) + "/data/postgresql.conf"
   end
   
   def get_pgsql_default_value
@@ -103,6 +120,8 @@ class PostgresConfFile < PostgresConfigurePrompt
 end
 
 class PostgresArchiveTimeout < PostgresConfigurePrompt
+  include GroupConfigurePromptMember
+  
   def initialize
     super(REPL_PG_ARCHIVE_TIMEOUT, "Timeout for sending unfilled WAL buffers (data loss window)", 
       PV_INTEGER, 60)

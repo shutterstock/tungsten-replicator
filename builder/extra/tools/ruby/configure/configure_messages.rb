@@ -10,7 +10,7 @@ module ConfigureMessages
   end
   
   def is_valid?()
-    (@errors.length() == 0)
+    (@errors == nil || @errors.length() == 0)
   end
   
   def info(message)

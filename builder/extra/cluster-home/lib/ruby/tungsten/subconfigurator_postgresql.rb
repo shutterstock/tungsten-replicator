@@ -238,7 +238,7 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
     replicator_properties = "tungsten-replicator/conf/static-" + 
         @configurator.config.props[GLOBAL_DSNAME] + ".properties"
     transformer = Transformer.new(
-        "tungsten-replicator/conf/sample.static.properties.postgresql",
+        "tungsten-replicator/samples/conf/sample.static.properties.postgresql",
         replicator_properties, "# ")
 
     transformer.transform { |line|
@@ -325,7 +325,7 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
     
     # Generate the services.properties file.
     transformer = Transformer.new(
-    "tungsten-replicator/conf/sample.services.properties",
+    "tungsten-replicator/samples/conf/sample.services.properties",
     "tungsten-replicator/conf/services.properties", "#")
 
     transformer.transform { |line|
@@ -360,7 +360,7 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
     # Configure properties for replication control script.
     if @configurator.config.props[REPL_PG_REPLICATOR] == "wal"
       transformer = Transformer.new(
-      "tungsten-replicator/conf/sample.postgresql-wal.properties",
+      "tungsten-replicator/samples/conf/sample.postgresql-wal.properties",
       "tungsten-replicator/conf/postgresql-wal.properties", "# ")
 
       transformer.transform { |line|
@@ -383,7 +383,7 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
           if pg_standby
             "postgresql.pg_standby=" + pg_standby
           else
-            raise SystemError, "Unable to locate pg_standby; please ensure it is defined correctly in tungsten-replicator/conf/sample.postgresql-wal.properties"
+            raise SystemError, "Unable to locate pg_standby; please ensure it is defined correctly in tungsten-replicator/samples/conf/sample.postgresql-wal.properties"
           end
         elsif line =~ /^\s*postgresql.pg_archivecleanup=\s*(\S*)\s*$/ then
           pg_archivecleanup = which $1
@@ -393,7 +393,7 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
           if pg_archivecleanup
             "postgresql.pg_archivecleanup=" + pg_archivecleanup
           elsif @configurator.config.props[REPL_PG_STREAMING] == "true"
-            raise SystemError, "Unable to locate pg_archivecleanup; please ensure it is defined correctly in tungsten-replicator/conf/sample.postgresql-wal.properties"
+            raise SystemError, "Unable to locate pg_archivecleanup; please ensure it is defined correctly in tungsten-replicator/samples/conf/sample.postgresql-wal.properties"
           end
         elsif line =~ /postgresql.archive_timeout/ then
           "postgresql.archive_timeout=" + @configurator.config.props[REPL_PG_ARCHIVE_TIMEOUT]
@@ -422,7 +422,7 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
     elsif @configurator.config.props[REPL_PG_REPLICATOR] == "londiste"
       # Define Londiste ini file.
       transformer = Transformer.new(
-      "tungsten-replicator/conf/sample.postgresql-londiste.ini",
+      "tungsten-replicator/samples/conf/sample.postgresql-londiste.ini",
       "tungsten-replicator/conf/postgresql-londiste.ini", "# ")
 
       transformer.transform { |line|

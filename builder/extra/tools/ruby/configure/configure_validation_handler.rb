@@ -2,11 +2,11 @@ class ConfigureValidationHandler
   include ConfigureMessages
   attr_reader :deployment_checks, :local_checks
   
-  def initialize(config)
+  def initialize()
     super()
     @deployment_checks = []
     @local_checks = []
-    @config = config
+    @config = Properties.new()
     initialize_validation_checks()
   end
   
@@ -14,10 +14,8 @@ class ConfigureValidationHandler
   def initialize_validation_checks
     @local_checks = []
     @deployment_checks = []
-    Configurator.instance.modules.each{
-      |configure_module| 
-      configure_module.register_validation_checks(self)
-    }
+    
+    register_checks(Configurator.instance.package.get_validation_checks())
   end
   
   def register_checks(check_objs)
@@ -26,9 +24,9 @@ class ConfigureValidationHandler
   
   # Validate the prompt object and add it to the queue
   def register_check(check_obj)    
-    unless check_obj.is_a?(ConfigureValidationCheck)
+    unless check_obj.is_a?(ValidationCheckInterface)
       raise "Attempt to register invalid check #{check_obj.class} failed " +
-        "because it does not extend ConfigureValidationCheck"
+        "because it does not extend ValidationCheckInterface"
     end
     
     check_obj.set_config(@config)
@@ -48,8 +46,7 @@ class ConfigureValidationHandler
     
     configs.each{
       |config|
-      @config.props = config.props
-      prevalidate()
+      prevalidate(config)
     }
     
     unless is_valid?()
@@ -58,17 +55,18 @@ class ConfigureValidationHandler
     
     configs.each{
       |config|
-      @config.props = config.props
-      validate()
+      validate(config)
     }
     
     is_valid?()
   end
   
   # The preliminary checks look for ssh access, ruby and java
-  def prevalidate
+  def prevalidate(config)
+    @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+    
     Configurator.instance.write ""
-    Configurator.instance.write_header "Preliminary checks for #{@config.getProperty(GLOBAL_HOST)}:#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+    Configurator.instance.write_header "Preliminary checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
     
     # Preliminary checks to ensure connectivity and transfer validation code
     @local_checks.each{
@@ -87,70 +85,57 @@ class ConfigureValidationHandler
         @errors.push(ve)
       rescue Exception => e
         Configurator.instance.exception(e)
-        @errors.push(ValidationError.new(e.to_s(), @config.getProperty(GLOBAL_HOST), check))
+        @errors.push(ValidationError.new(e.to_s(), @config.getProperty(HOST), check))
       end
     }
   end
   
   # These checks are more in-depth
-  def validate
+  def validate(config)
+    @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+    
     Configurator.instance.write ""
-    Configurator.instance.write_header "Validation checks for #{@config.getProperty(GLOBAL_HOST)}:#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}"
+    Configurator.instance.write_header "Validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
     
     begin
-      # Invoke ValidationChecks on the remote server
-      extra_options = ""
-      if Configurator.instance.enable_log_level(Logger::DEBUG)
-        extra_options = "-v"
-      end
-      unless Configurator.instance.enable_log_level(Logger::INFO)
-        extra_options = "-q"
-      end
-      
-      if @config.getProperty(GLOBAL_HOST) == Configurator.instance.hostname()
-        config_tempfile = Tempfile.new("tcfg")
-        config_tempfile.close()
-        @config.store(config_tempfile.path())
-
-        debug("Local validation checks for #{@config.getProperty(GLOBAL_HOME_DIRECTORY)}")
-        command = "cd #{Configurator.instance.get_base_path()}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/validate.rb -c #{config_tempfile.path()} #{extra_options} --stream"
-        result_dump = ""
-
-        val_proc = IO.popen(command)
-        while (data = val_proc.gets())
-          unless data =~ /RemoteResult/ || result_dump != ""
-        		puts data
-          else
-            result_dump += data
-          end
-        end
-        val_proc.close()
+      if @config.getProperty(HOST) == Configurator.instance.hostname()
+        debug("Local validation checks for #{@config.getProperty(HOME_DIRECTORY)}")
+        result = validate_config(@config)
       else
+        # Invoke ValidationChecks on the remote server
+        extra_options = ""
+        if Configurator.instance.enable_log_level(Logger::DEBUG)
+          extra_options = "-v"
+        end
+        unless Configurator.instance.enable_log_level(Logger::INFO)
+          extra_options = "-q"
+        end
+        
         # Transfer validation code
-        validation_temp_directory = "#{@config.getProperty(GLOBAL_TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
-        debug("Transfer configuration code to #{@config.getProperty(GLOBAL_HOST)}")
+        validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
+        debug("Transfer configuration code to #{@config.getProperty(HOST)}")
         ssh_result("mkdir -p #{validation_temp_directory}")
-        cmd_result("rsync -Caze ssh --delete #{Configurator.instance.get_base_path()}/ #{@config.getProperty(GLOBAL_USERID)}@#{@config.getProperty(GLOBAL_HOST)}:#{validation_temp_directory}")
+        cmd_result("rsync -Caze ssh --delete #{Configurator.instance.get_base_path()}/ #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
 
         if @config.getProperty(REPL_MYSQL_CONNECTOR_PATH) != nil
-          debug("Transfer Connector/J to #{@config.getProperty(GLOBAL_HOST)}")
-          cmd_result("scp #{@config.getProperty(REPL_MYSQL_CONNECTOR_PATH)} #{@config.getProperty(GLOBAL_USERID)}@#{@config.getProperty(GLOBAL_HOST)}:#{validation_temp_directory}")
+          debug("Transfer Connector/J to #{@config.getProperty(HOST)}")
+          cmd_result("scp #{@config.getProperty(REPL_MYSQL_CONNECTOR_PATH)} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
           @config.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{validation_temp_directory}/#{File.basename(@config.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
         end
         
-        debug("Transfer host configuration file to #{@config.getProperty(GLOBAL_HOST)}")
+        debug("Transfer host configuration file to #{@config.getProperty(HOST)}")
         config_tempfile = Tempfile.new("tcfg")
         config_tempfile.close()
-        @config.store(config_tempfile.path())
-        cmd_result("scp #{config_tempfile.path()} #{@config.getProperty(GLOBAL_USERID)}@#{@config.getProperty(GLOBAL_HOST)}:#{validation_temp_directory}/#{Configurator::TEMP_DEPLOY_HOST_CONFIG}")
+        config.store(config_tempfile.path())
+        cmd_result("scp #{config_tempfile.path()} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}/#{Configurator::TEMP_DEPLOY_HOST_CONFIG}")
         File.unlink(config_tempfile.path())
         
-        debug("Remote validation checks for #{@config.getProperty(GLOBAL_HOST)}:#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}")
+        debug("Remote validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}")
         command = "cd #{validation_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/validate.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options}"
         
         if Configurator.instance.use_streaming_ssh()
           result_dump = ""
-          ssh = Net::SSH.start(@config.getProperty(GLOBAL_HOST), @config.getProperty(GLOBAL_USERID))
+          ssh = Net::SSH.start(@config.getProperty(HOST), @config.getProperty(USERID))
           ssh.exec!(". /etc/profile; #{command} --stream") do
             |ch, stream, data|
             unless data =~ /RemoteResult/ || result_dump != ""
@@ -161,8 +146,8 @@ class ConfigureValidationHandler
           end
           ssh.close()
         else
-          user = @config.getProperty(GLOBAL_USERID)
-          host = @config.getProperty(GLOBAL_HOST)
+          user = @config.getProperty(USERID)
+          host = @config.getProperty(HOST)
           Configurator.instance.debug("Execute `#{command}` on #{host}")
           result_dump = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; #{command}\" 2>/dev/null`.chomp
           rc = $?
@@ -173,30 +158,33 @@ class ConfigureValidationHandler
             Configurator.instance.debug("RC: #{rc}, Result: #{result_dump}")
           end
         end
+        
+        begin
+          result = Marshal.load(result_dump)
+        rescue ArgumentError => ae
+          raise "Unable to load validation result: #{result_dump}"
+        end
       end
       
-      begin
-        result = Marshal.load(result_dump)
-      rescue ArgumentError => ae
-        raise "Unable to load validation result: #{result_dump}"
-      end
       @errors = @errors + result.errors
       result.messages.each{
         |message|
         puts message
       }
       
-      Configurator.instance.write "Finish: Remote validation checks for #{@config.getProperty(GLOBAL_HOST)}:#{@config.getProperty(GLOBAL_HOME_DIRECTORY)}", Logger::DEBUG
+      Configurator.instance.write "Finish: Remote validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}", Logger::DEBUG
     rescue => e
       Configurator.instance.exception(e)
-      @errors.push(RemoteError.new(@config.getProperty(GLOBAL_HOST), e.to_s()))
+      @errors.push(RemoteError.new(@config.getProperty(HOST), e.to_s()))
     end
     
     is_valid?()
   end
   
   # Handle the remote side of the validate function
-  def validate_config
+  def validate_config(config)
+    @config.props = config.props
+    
     begin
       @deployment_checks.each{
         |check|
@@ -214,7 +202,7 @@ class ConfigureValidationHandler
       @errors.push(ve)
     rescue Exception => e  
       Configurator.instance.exception(e)
-      @errors.push(RemoteError.new(e.to_s(), @config.getProperty(GLOBAL_HOST)))
+      @errors.push(RemoteError.new(e.to_s(), @config.getProperty(HOST)))
     end
     
     # Prepare the return object
@@ -298,10 +286,10 @@ class ConfigureValidationHandler
   
   def ssh_result(command, ignore_fail = false, host = nil, user = nil)
     if (user == nil)
-      user = @config.getProperty(GLOBAL_USERID)
+      user = @config.getProperty(USERID)
     end
     if (host == nil)
-      host = @config.getProperty(GLOBAL_HOST)
+      host = @config.getProperty(HOST)
     end
     
     debug("Execute `#{command}` on #{host}")
@@ -318,7 +306,7 @@ class ConfigureValidationHandler
   end
   
   def get_message_hostname
-    @config.getProperty(GLOBAL_HOST)
+    @config.getProperty(HOST)
   end
   
   # Read the prompt response from the command line.

@@ -42,7 +42,7 @@ module ConfigureDeploymentCore
   end
   
   def get_deployment_basedir
-    @config.getProperty(GLOBAL_BASEDIR)
+    @config.getProperty(BASEDIR)
   end
   
   # Create a directory if it is absent. 
@@ -60,7 +60,7 @@ module ConfigureDeploymentCore
   end
   
   def get_root_prefix()
-    prefix = @config.getProperty(GLOBAL_ROOT_PREFIX)
+    prefix = @config.getProperty(ROOT_PREFIX)
     if prefix == "true" or prefix == "sudo"
       return "sudo"
     else
@@ -78,7 +78,7 @@ module ConfigureDeploymentCore
     transformer.transform { |line|
       if line =~ /RUN_AS_USER=/ && ! already_set then
         already_set = true
-        "RUN_AS_USER=" + @config.getProperty(GLOBAL_USERID)
+        "RUN_AS_USER=" + @config.getProperty(USERID)
       else
         line
       end
@@ -96,7 +96,7 @@ module ConfigureDeploymentCore
   
   # Generate a cluster service properties file for a system service.
   def write_svc_properties(name, boot_script)
-    cluster = @config.getProperty(GLOBAL_DSNAME)
+    cluster = @config.getProperty(CLUSTERNAME)
     props_name = name + ".properties"
     svc_properties_dir = "#{get_deployment_basedir()}/cluster-home/conf/cluster/" + cluster + "/service/"
     svc_properties = svc_properties_dir + "/" + props_name
@@ -155,7 +155,7 @@ module ConfigureDeploymentCore
   end
   
   def get_message_hostname
-    @config.getProperty(GLOBAL_HOST)
+    @config.getProperty(DEPLOYMENT_HOST)
   end
   
   def is_connector?

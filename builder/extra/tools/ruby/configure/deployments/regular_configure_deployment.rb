@@ -1,10 +1,13 @@
+DISTRIBUTED_DEPLOYMENT_NAME = "distributed"
+
 class RegularConfigureDeployment < ConfigureDeployment
   def get_name
-    "regular"
+    DISTRIBUTED_DEPLOYMENT_NAME
   end
   
   def get_deployment_configurations()
     config_objs = []
+    hosts = []
     
     if @config.getProperty(DEPLOY_PACKAGE_URI)
       uri = URI::parse(@config.getProperty(DEPLOY_PACKAGE_URI))
@@ -13,19 +16,17 @@ class RegularConfigureDeployment < ConfigureDeployment
       uri = nil
     end
     
-    @config.getProperty(GLOBAL_HOSTS).split(",").each{
-      |deployment_host|
-      config_obj = Properties.new
-      config_obj.props = @config.props.dup
-      config_obj.setProperty(DSNAME, config_obj.getProperty(GLOBAL_DSNAME))
-      config_obj.setProperty(GLOBAL_HOST, deployment_host)
-      config_obj.setProperty(GLOBAL_IP_ADDRESS, Resolv.getaddress(deployment_host))
+    @config.getProperty(HOSTS).each{
+      |host_alias, host_props|
+
+      config_obj = @config.dup()
+      config_obj.setProperty(DEPLOYMENT_HOST, host_alias)
       
       if uri && uri.scheme == "file" && (uri.host == nil || uri.host == "localhost")
         config_obj.setProperty(GLOBAL_DEPLOY_PACKAGE_URI, @config.getProperty(DEPLOY_PACKAGE_URI))
-        config_obj.setProperty(DEPLOY_PACKAGE_URI, "file://localhost#{config_obj.getProperty(GLOBAL_TEMP_DIRECTORY)}/#{package_basename}")
+        config_obj.setProperty(DEPLOY_PACKAGE_URI, "file://localhost#{config_obj.getProperty(TEMP_DIRECTORY)}/#{package_basename}")
       end
-      
+    
       config_objs.push(config_obj)
     }
     
@@ -38,13 +39,13 @@ class RegularConfigureDeployment < ConfigureDeployment
       ]
     
     modules << ConfigureDeploymentStepReplicationDataservice
-    case @config.getProperty(GLOBAL_DBMS_TYPE)
+    case @config.getProperty(DBMS_TYPE)
     when "mysql"
       modules << ConfigureDeploymentStepMySQL
     when "postgresql"
       modules << ConfigureDeploymentStepPostgresql
     else
-      raise "Invalid value for #{GLOBAL_DBMS_TYPE}"
+      raise "Invalid value for #{DBMS_TYPE}"
     end
     
     modules << ConfigureDeploymentStepServices
@@ -55,8 +56,14 @@ class RegularConfigureDeployment < ConfigureDeployment
   def include_deployment_for_package?(package)
     if package.is_a?(ConfigurePackageCluster)
       true
+    elsif package.is_a?(ReplicatorInstallPackage)
+      true
     else
       false
     end
+  end
+  
+  def require_package_uri
+    true
   end
 end

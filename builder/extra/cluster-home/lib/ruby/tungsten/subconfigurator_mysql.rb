@@ -457,11 +457,11 @@ MEMSIZE
     # J/Connect driver. 
     if (@configurator.config.props[GLOBAL_USE_MYSQL_CONNECTOR] == "false")
       transformer = Transformer.new(
-        "tungsten-replicator/conf/replicator.properties.mysql-with-drizzle-driver",
+        "tungsten-replicator/samples/conf/replicator.properties.mysql-with-drizzle-driver",
         "tungsten-replicator/conf/replicator.properties.service.template", "#")
     else
       transformer = Transformer.new(
-        "tungsten-replicator/conf/replicator.properties.mysql",
+        "tungsten-replicator/samples/conf/replicator.properties.mysql",
         "tungsten-replicator/conf/replicator.properties.service.template", "#")
     end
 
@@ -595,7 +595,7 @@ MEMSIZE
 
     # Generate the services.properties file.
     transformer = Transformer.new(
-    "tungsten-replicator/conf/sample.services.properties",
+    "tungsten-replicator/samples/conf/sample.services.properties",
     "tungsten-replicator/conf/services.properties", "#")
 
     transformer.transform { |line|

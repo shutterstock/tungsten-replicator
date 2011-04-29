@@ -11,19 +11,26 @@ class ConfigurePromptHandler
   # Tell each ConfigureModule to register their prompts
   def initialize_prompts
     @prompts = []
-    Configurator.instance.modules.each{
-      |configure_module| 
-      configure_module.register_prompts(self)
+    Configurator.instance.package.get_prompts().each{
+      |prompt_obj| 
+      register_prompt(prompt_obj, @prompts)
     }
     @prompts = @prompts.sort{|a,b| a.get_weight <=> b.get_weight}
+    
+    @non_interactive_prompts = []
+    Configurator.instance.package.get_non_interactive_prompts().each{
+      |prompt_obj| 
+      register_prompt(prompt_obj, @non_interactive_prompts)
+    }
+    @non_interactive_prompts = @non_interactive_prompts.sort{|a,b| a.get_weight <=> b.get_weight}
   end
   
   def register_prompts(prompt_objs)
-    prompt_objs.each{|prompt_obj| register_prompt(prompt_obj)}
+    prompt_objs.each{|prompt_obj| register_prompt(prompt_obj, @prompts)}
   end
   
   # Validate the prompt object and add it to the queue
-  def register_prompt(prompt_obj)    
+  def register_prompt(prompt_obj, container)    
     unless prompt_obj.is_a?(ConfigurePromptInterface)
       raise "Attempt to register invalid prompt #{prompt_obj.class} failed " +
         "because it does not extend ConfigurePromptInterface"
@@ -31,10 +38,10 @@ class ConfigurePromptHandler
     
     prompt_obj.set_config(@config)
     unless prompt_obj.is_initialized?()
-      raise "#{class_name} cannot be used because it has not been properly initialized"
+      raise "#{prompt_obj.class().name()} cannot be used because it has not been properly initialized"
     end
     
-    @prompts.push(prompt_obj)
+    container.push(prompt_obj)
   end
   
   # Loop over each ConfigurePrompt object and collect the response
@@ -47,7 +54,9 @@ class ConfigurePromptHandler
     # Go through each prompt in the system and collect a value for it
     while i < @prompts.length
       begin
+        Configurator.instance.debug("Start prompt #{@prompts[i].class().name()}:#{@prompts[i].get_name()}")
         @prompts[i].run()
+        Configurator.instance.debug("Finish prompt #{@prompts[i].class().name()}:#{@prompts[i].get_name()}")
         if @prompts[i].allow_previous?()
           previous_prompts.push(i)
         end
@@ -104,9 +113,9 @@ class ConfigurePromptHandler
               # Ensure that the value is valid 
               @prompts[i].is_valid?
               i += 1
-            rescue ConfigurePromptErrorSet => s
+            rescue ConfigurePromptError => e
               fix_default_value.call()
-            rescue PropertyValidatorException => e
+            rescue ConfigurePromptErrorSet => s
               fix_default_value.call()
             end
           end
@@ -120,22 +129,37 @@ class ConfigurePromptHandler
         end
       end
     end
+    
+    unless is_valid?()
+      return false
+    end
+    
+    true
   end
   
   def is_valid?
+    validate_prompts(@non_interactive_prompts + @prompts)
+  end
+    
+  def validate_prompts(prompts)
     prompt_keys = []
     @errors = []
 
     # Test each ConfigurePrompt to ensure the config value passes the validation rule
-    @prompts.each{
+    prompts.each{
       |prompt|
       begin
+        if prompt.enabled?()
+          prompt.save_current_value()
+        else
+          prompt.save_disabled_value()
+        end
         prompt_keys = prompt_keys + prompt.get_keys()
         prompt.is_valid?()
+      rescue ConfigurePromptError => e
+        @errors << e
       rescue ConfigurePromptErrorSet => s
         @errors = @errors + s.errors
-      rescue PropertyValidatorException => e
-        @errors.push(ConfigurePromptError.new(prompt, e.to_s(), @config.getProperty(prompt.get_name())))
       end
     }
     
@@ -193,7 +217,7 @@ class ConfigurePromptHandler
   end
 end
 
-class ConfigurePromptError
+class ConfigurePromptError < StandardError
   attr_reader :prompt, :message, :current_value
   
   def initialize(prompt, message, current_value = nil)

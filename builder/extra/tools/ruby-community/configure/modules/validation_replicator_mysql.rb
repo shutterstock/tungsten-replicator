@@ -1,17 +1,28 @@
 class MySQLValidationCheck < ConfigureValidationCheck
+  include GroupValidationCheckMember
+  
   # Execute mysql command and return result to client. 
-  def mysql(command, user = nil, password = nil, hostname = nil)
+  def mysql(command, user = nil, password = nil, hostname = nil, port = nil)
     if user == nil
-      user = @config.getProperty(REPL_DBLOGIN)
+      user = @config.getProperty(get_member_key(REPL_DBLOGIN))
     end
+    
     if password == nil
-      password = @config.getProperty(REPL_DBPASSWORD)
+      password = @config.getProperty(get_member_key(REPL_DBPASSWORD))
     end
+    if password.to_s() != ""
+      password = "-p" + password
+    end
+    
     if hostname == nil
-      hostname = @config.getProperty(GLOBAL_HOST)
+      hostname = @config.getProperty(get_member_key(REPL_DBHOST))
+    end
+    
+    if port == nil
+      port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "3306")
     end
 
-    cmd_result("mysql -u#{user} -p#{password} -h#{hostname} -e \"#{command}\"", true)
+    cmd_result("mysql -u#{user} #{password} -h#{hostname} --port=#{port} -e \"#{command}\"", true)
   end
   
   def get_value(command, column)
@@ -33,7 +44,7 @@ class MySQLValidationCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    (@config.getProperty(GLOBAL_DBMS_TYPE) == "mysql")
+    (@config.getProperty(DBMS_TYPE) == "mysql")
   end
 end
 
@@ -60,28 +71,16 @@ end
 class MySQLLoginCheck < MySQLValidationCheck
   def set_vars
     @title = "Replication credentials login check"
-    @failed_hosts = []
   end
   
   def validate
-    ClusterConfigureModule.each_service(@config) {
-      |parent_name,service_name,service_properties|
-      
-      service_hosts = service_properties[REPL_HOSTS].split(",")
-      if service_hosts.include?(@config.getProperty(GLOBAL_HOST))
-        service_hosts.each{
-          |repl_host|
-          
-          login_output = mysql("select 'ALIVE' as 'Return Value'", nil, nil, repl_host)
-          if login_output =~ /ALIVE/
-            info("MySQL server and login to #{repl_host} is OK")
-          else
-            help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(REPL_DBLOGIN)}'@'#{@config.getProperty(GLOBAL_HOST)}' IDENTIFIED BY '#{@config.getProperty(REPL_DBPASSWORD)}' WITH GRANT OPTION\" on #{repl_host}")
-            error("MySQL server on #{repl_host} is unavailable or login does not work")
-          end
-        }
-      end
-    }
+    login_output = mysql("select 'ALIVE' as 'Return Value'")
+    if login_output =~ /ALIVE/
+      info("MySQL server and login to #{@config.getProperty(get_member_key(REPL_DBHOST))} is OK")
+    else
+      help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'@'#{@config.getProperty(get_member_key(HOST))}' IDENTIFIED BY '#{@config.getProperty(get_member_key(REPL_DBPASSWORD))}' WITH GRANT OPTION\" on #{@config.getProperty(get_member_key(REPL_DBHOST))}")
+      error("MySQL server on #{@config.getProperty(get_member_key(REPL_DBHOST))} is unavailable or login does not work")
+    end
   end
 end
 
@@ -93,7 +92,12 @@ class MySQLPermissionsCheck < MySQLValidationCheck
   def validate
     has_missing_priv = false
     
-    response = mysql("select * from mysql.user where User = '#{@config.getProperty(REPL_DBLOGIN)}'\\\\G")
+    response = mysql("select * from mysql.user where User = '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'\\\\G")
+    unless $? == 0
+      error("Unable to retrieve user permissions")
+      help("The #{@config.getProperty(get_member_key(REPL_DBLOGIN))} user must have SUPER,REPLICATION CLIENT permissions")
+    end
+    
     response.split("\n").each{ | response_line |
       parts = response_line.chomp.split(":")
       if (parts.length != 2)
@@ -109,12 +113,12 @@ class MySQLPermissionsCheck < MySQLValidationCheck
       
       if parts[0] =~ /priv/ && parts[1] != "Y"
         has_missing_priv = true
-        error("Missing #{parts[0]} for #{@config.getProperty(REPL_DBLOGIN)}")
+        error("Missing #{parts[0]} for #{@config.getProperty(get_member_key(REPL_DBLOGIN))}")
       end
     }
     
     if has_missing_priv
-      error("The database user is missing some privileges. Run 'mysql -u#{@config.getProperty(REPL_DBLOGIN)} -p#{@config.getProperty(REPL_DBPASSWORD)} -h#{@config.getProperty(GLOBAL_HOST)} -e\"GRANT ALL ON *.* to '#{@config.getProperty(REPL_DBLOGIN)}'@'#{@config.getProperty(GLOBAL_HOST)}' WITH GRANT OPTION\"' on #{@config.getProperty(GLOBAL_HOST)}")
+      error("The database user is missing some privileges. Run 'mysql -u#{@config.getProperty(get_member_key(REPL_DBLOGIN))} -p#{@config.getProperty(get_member_key(REPL_DBPASSWORD))} -h#{@config.getProperty(get_member_key(HOST))} -e\"GRANT ALL ON *.* to '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'@'#{@config.getProperty(get_member_key(HOST))}' WITH GRANT OPTION\"' on #{@config.getProperty(get_member_key(HOST))}")
     else
       info("All privileges configured correctly")
     end
@@ -134,13 +138,17 @@ class MySQLReadableLogsCheck < MySQLValidationCheck
       raise "Unable to determine current binlog file."
     end
     
-    info("Check readability of #{@config.getProperty(REPL_MYSQL_BINLOGDIR)}/#{master_file}")
-    file_info = cmd_result("file #{@config.getProperty(REPL_MYSQL_BINLOGDIR)}/#{master_file}")
+    info("Check readability of #{@config.getProperty(get_member_key(REPL_MYSQL_BINLOGDIR))}/#{master_file}")
+    file_info = cmd_result("file #{@config.getProperty(get_member_key(REPL_MYSQL_BINLOGDIR))}/#{master_file}")
     if file_info =~ /no read permission|cannot open/
-      error("Unable to read current binlog file.  Check that this system user can read #{@config.getProperty(REPL_MYSQL_BINLOGDIR)}/#{master_file}.")
+      error("Unable to read current binlog file.  Check that this system user can read #{@config.getProperty(get_member_key(REPL_MYSQL_BINLOGDIR))}/#{master_file}.")
     else
       info("The system user is able to read binary logs")
     end
+  end
+  
+  def enabled?
+    super() && (@config.getProperty(get_member_key(REPL_DBHOST)) == @config.getProperty(DEPLOYMENT_HOST))
   end
 end
 
@@ -151,24 +159,10 @@ class MySQLSettingsCheck < MySQLValidationCheck
   end
   
   def validate
-    info("Running SHOW MASTER STATUS to see if replication is enabled")
-    show_master = mysql("show master status\\\\G")
-    unless show_master =~ /File:/
-      error("MySQL binary logs are not configured.")
-      help("Add \"log-bin=mysql-bin\" to the MySQL configuration file.")
-    end
-
-    info("Checking server_id")
-    server_id = get_value("show variables like 'server_id'", "Value")
-    if server_id == nil || server_id == ""
-      error("Unable to determine the current server_id")
-      help("Add a \"server_id\" value to the MySQL configuration file")
-    end
-    
     info("Checking sync_binlog setting")
     sync_binlog = get_value("show variables like 'sync_binlog'", "Value")
     if sync_binlog == nil || sync_binlog != "0"
-      error("The value of sync_binlog is wrong")
+      warn("The value of sync_binlog is wrong")
       help("Add \"sync_binlog=0\" to the MySQL configuration file to increase MySQL performance")
     end
     
@@ -182,8 +176,8 @@ class MySQLSettingsCheck < MySQLValidationCheck
     info("Checking max_allowed_packet")
     max_allowed_packet = get_value("show variables like 'max_allowed_packet'", "Value")
     if max_allowed_packet == nil || max_allowed_packet.to_i() < (48*1024*1024)
-      error("The value of max_allowed_packet is to small")
-      help("Add \"max_allowed_packet=48m\" to the MySQL configuration file")
+      error("The value of max_allowed_packet is too small")
+      help("Add \"max_allowed_packet=52m\" to the MySQL configuration file")
     end
     
     info("Check for datadir")
@@ -197,7 +191,7 @@ class MySQLSettingsCheck < MySQLValidationCheck
     server_id = cmd_result("my_print_defaults mysqld | grep server[-_]id | wc -l")
     unless server_id.to_i() > 0
       error("The server_id setting is not specified")
-      help("Specicy a value for server_id in your my.cnf file")
+      help("Specify a value for server_id in your my.cnf file")
     end
   end
 end
@@ -214,7 +208,7 @@ class ConnectorUserMySQLCheck < MySQLValidationCheck
       if login_output =~ /ALIVE/
         info("MySQL server and connector login to #{repl_host} is OK")
       else
-        help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(CONN_CLIENTLOGIN)}'@'#{@config.getProperty(GLOBAL_HOST)}' IDENTIFIED BY '#{@config.getProperty(CONN_CLIENTPASSWORD)}'\" on #{repl_host}")
+        help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(CONN_CLIENTLOGIN)}'@'#{@config.getProperty(HOST)}' IDENTIFIED BY '#{@config.getProperty(CONN_CLIENTPASSWORD)}'\" on #{repl_host}")
         error("MySQL server on #{repl_host} is unavailable or connector login does not work")
       end
     }

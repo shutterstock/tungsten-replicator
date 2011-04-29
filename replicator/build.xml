@@ -238,7 +238,7 @@
                 <filter token="VERSION" value="${version}"/>
             </filterset>
         </copy>
-        <copy todir="${dist.dir}/conf" file="${project.commons}/conf/sample.jmx.properties" />
+        <copy todir="${dist.dir}/samples/conf" file="${project.commons}/conf/sample.jmx.properties" />
         <mkdir dir="${dist.dir}/doc/licenses"/>
         <copy todir="${dist.dir}/doc/licenses">
             <fileset dir="doc/licenses"/>
