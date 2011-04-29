@@ -370,7 +370,7 @@ class THLStorageDirectory < ConfigurePrompt
     if @config.getProperty(get_member_key(HOME_DIRECTORY))
       @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/thl-logs"
     else
-      ""
+      "/opt/continuent/thl"
     end
   end
 end

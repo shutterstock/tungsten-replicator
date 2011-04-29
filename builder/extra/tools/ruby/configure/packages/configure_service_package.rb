@@ -4,7 +4,7 @@ class ConfigureServicePackage < ConfigurePackage
   SERVICE_UPDATE = "update_service"
   
   def parsed_options?(arguments)
-    @config.setProperty(DEPLOYMENT_TYPE, SERVICE_CREATE)
+    @config.setProperty(DEPLOYMENT_TYPE, nil)
     @config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
     @config.setProperty(DEPLOY_PACKAGE_URI, nil)
     
@@ -38,6 +38,10 @@ class ConfigureServicePackage < ConfigurePackage
     begin
       service_name = opts.order!(arguments)
       
+      unless @config.getProperty(DEPLOYMENT_TYPE)
+        error("You must specify -C, -D or -U")
+      end
+      
       case service_name.size()
       when 0
         raise "No service_name specified"
@@ -51,11 +55,11 @@ class ConfigureServicePackage < ConfigurePackage
       return false
     end
     
-    true
+    is_valid?()
   end
   
   def output_usage
-    puts "Usage: configure-service {-C|-D|-U} [options] service-name"
+    puts "Usage: configure-service [general-options] {-C|-D|-U} [service-options] service-name"
     output_general_usage()
     Configurator.instance.write_divider()
     puts "Service options"

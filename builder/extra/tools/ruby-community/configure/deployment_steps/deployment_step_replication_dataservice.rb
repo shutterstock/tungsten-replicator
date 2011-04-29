@@ -147,7 +147,7 @@ module ConfigureDeploymentStepReplicationDataservice
     elsif line =~ /replicator.store.thl.log_file_size/
       "replicator.store.thl.log_file_size=#{service_config.getProperty(REPL_THL_LOG_FILE_SIZE)}"
     elsif line =~ /replicator.master.connect.uri=/  && 
-        service_config.getProperty(REPL_ROLE) != REPL_ROLE_DI then
+        service_config.getProperty(REPL_ROLE) == REPL_ROLE_S then
       "replicator.master.connect.uri=thl://" + 
         service_config.getProperty(REPL_MASTERHOST) + ":" + 
         service_config.getProperty(REPL_MASTERPORT) + "/"
@@ -166,6 +166,8 @@ module ConfigureDeploymentStepReplicationDataservice
       "replicator.filter.bidiSlave.allowBidiUnsafe=" + service_config.getProperty(REPL_SVC_ALLOW_BIDI_UNSAFE)
     elsif line =~ /replicator.filter.bidiSlave.allowAnyRemoteService=/
       "replicator.filter.bidiSlave.allowAnyRemoteService=" + service_config.getProperty(REPL_SVC_ALLOW_ANY_SERVICE)
+    elsif line =~ /replicator.rmi_port=/ then
+      "replicator.rmi_port=" + service_config.getProperty(REPL_RMI_PORT)
 		else
 		  line
 		end

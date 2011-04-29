@@ -90,13 +90,11 @@ class ConfigurePrompt
   # Save the current value back to the config object or the default 
   # value if none is set
   def save_current_value
-    Configurator.instance.debug("Save current value for #{get_name()}:#{get_value()}")
-     @config.setProperty(get_name(), get_value())
+    @config.setProperty(get_name(), get_value())
   end
 
   # Save the disabled value back to the config object
   def save_disabled_value
-    Configurator.instance.debug("Save disabled value for #{get_name()}:#{get_disabled_value()}")
     @config.setProperty(get_name(), get_disabled_value())
   end
   

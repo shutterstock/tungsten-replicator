@@ -34,7 +34,7 @@ class DataserverLogin < ConfigurePrompt
   
   def initialize
     super(REPL_DBLOGIN, "Database login for Tungsten", 
-      PV_IDENTIFIER, "tungsten")
+      PV_IDENTIFIER, Configurator.instance.whoami())
   end
 end
 
@@ -43,7 +43,7 @@ class DataserverPassword < ConfigurePrompt
   
   def initialize
     super(REPL_DBPASSWORD, "Database password", 
-      PV_ANY, "secret")
+      PV_ANY, "")
   end
 end
 
@@ -71,7 +71,7 @@ class DatabaseHost < ConfigurePrompt
   end
   
   def get_default_value
-    @config.getPropertyOr(HOST, "")
+    @config.getPropertyOr(HOST, Configurator.instance.hostname())
   end
 end
 

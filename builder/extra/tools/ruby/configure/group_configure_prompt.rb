@@ -130,10 +130,8 @@ class GroupConfigurePrompt
       |member, prompt|
       
       if prompt.enabled?
-        debug("Save current value for #{prompt.get_name()}")
         prompt.save_current_value()
       else
-        debug("Save disabled value for #{prompt.get_name()}")
         prompt.save_disabled_value()
       end
     }
@@ -155,7 +153,6 @@ class GroupConfigurePrompt
       |member, prompt|
       
       begin
-        debug("Validate #{prompt.get_name()}")
         prompt.is_valid?()
       rescue ConfigurePromptError => e
         errors << e

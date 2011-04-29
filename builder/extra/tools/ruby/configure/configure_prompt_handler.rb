@@ -130,7 +130,6 @@ class ConfigurePromptHandler
       end
     end
     
-    Configurator.instance.debug("Validate non-interactive prompts")
     unless is_valid?()
       return false
     end
@@ -155,9 +154,7 @@ class ConfigurePromptHandler
         else
           prompt.save_disabled_value()
         end
-        Configurator.instance.debug("Get keys for #{prompt.get_name()}")
         prompt_keys = prompt_keys + prompt.get_keys()
-        Configurator.instance.debug("Validate #{prompt.get_name()}")
         prompt.is_valid?()
       rescue ConfigurePromptError => e
         @errors << e

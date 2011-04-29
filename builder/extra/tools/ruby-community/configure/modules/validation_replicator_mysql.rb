@@ -6,17 +6,23 @@ class MySQLValidationCheck < ConfigureValidationCheck
     if user == nil
       user = @config.getProperty(get_member_key(REPL_DBLOGIN))
     end
+    
     if password == nil
       password = @config.getProperty(get_member_key(REPL_DBPASSWORD))
     end
+    if password.to_s() != ""
+      password = "-p" + password
+    end
+    
     if hostname == nil
       hostname = @config.getProperty(get_member_key(REPL_DBHOST))
     end
+    
     if port == nil
       port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "3306")
     end
 
-    cmd_result("mysql -u#{user} -p#{password} -h#{hostname} --port=#{port} -e \"#{command}\"", true)
+    cmd_result("mysql -u#{user} #{password} -h#{hostname} --port=#{port} -e \"#{command}\"", true)
   end
   
   def get_value(command, column)
