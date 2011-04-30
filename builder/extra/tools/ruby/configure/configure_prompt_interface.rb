@@ -48,6 +48,10 @@ module ConfigurePromptInterface
     true
   end
   
+  def enabled_for_config?
+    enabled?()
+  end
+  
   def allow_previous?
     enabled?()
   end

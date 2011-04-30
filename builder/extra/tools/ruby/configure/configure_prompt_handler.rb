@@ -97,13 +97,17 @@ class ConfigurePromptHandler
         # Store the default value for this and all remaining prompts
         Configurator.instance.write "Accepting the default value for all remaining prompts"
         while i < @prompts.length do
-          unless @prompts[i].enabled?
+          unless @prompts[i].enabled_for_config?
             # Clear the config value because the prompt is disabled
             @prompts[i].save_disabled_value()
-            i += 1
           else
             # Save the default value into the config
             @prompts[i].save_current_value()
+          end
+          
+          unless @prompts[i].enabled?
+            i += 1
+          else
             begin
               # Trigger the prompt to be run because the user requested it
               if force_default_prompt
@@ -149,7 +153,7 @@ class ConfigurePromptHandler
     prompts.each{
       |prompt|
       begin
-        if prompt.enabled?()
+        if prompt.enabled_for_config?()
           prompt.save_current_value()
         else
           prompt.save_disabled_value()

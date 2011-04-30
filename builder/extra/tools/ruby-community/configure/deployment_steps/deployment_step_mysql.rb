@@ -61,6 +61,22 @@ module ConfigureDeploymentStepMySQL
 		elsif line =~ /replicator.extractor.mysql.relayLogRetention/ && 
 		    service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
 			"replicator.extractor.mysql.relayLogRetention=3"
+		elsif line =~ /^replicator.backup.agent.xtrabackup.options/ && service_config.getPropertyOr(REPL_BACKUP_METHOD) == "xtrabackup"
+      directory = service_config.getProperty(REPL_BACKUP_DUMP_DIR) + "/innobackup"
+      unless mkdir_if_absent(directory)
+        raise "Unable to create directory #{directory} for storing temporary Xtrabackup files"
+      end
+      
+      archive = service_config.getProperty(REPL_BACKUP_DUMP_DIR) + "/innobackup.tar"
+            
+      "replicator.backup.agent.xtrabackup.options=" +
+      "user=${replicator.global.db.user}&" +
+      "password=${replicator.global.db.password}" + 
+      "&host=#{service_config.getProperty(REPL_DBHOST)}" +
+      "&port=#{service_config.getProperty(REPL_DBPORT)}" + 
+      "&directory=#{directory}&archive=#{archive}" +
+      "&mysqldatadir=#{service_config.getProperty(REPL_MYSQL_BINLOGDIR)}" +
+      "&mysql_service_command=#{service_config.getProperty(REPL_BOOT_SCRIPT)}"
 		else
 		  super(line, service_name, service_config)
 		end

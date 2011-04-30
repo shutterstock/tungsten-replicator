@@ -83,7 +83,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       "slave-thl-directory" => "/opt/continuent/thl",
       "slave-relay-directory" => "/opt/continuent/relay",
       "slave-thl-port" => "2112",
-      "rmi-port" => 10001
+      "rmi-port" => "10000"
     }
     
     opts = OptionParser.new
@@ -190,7 +190,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       "thl-directory" => "/opt/continuent/thl",
       "thl-port" => "2112",
       "relay-directory" => "/opt/continuent/relay",
-      "rmi-port" => 10001
+      "rmi-port" => "10000"
     }
     
     opts = OptionParser.new

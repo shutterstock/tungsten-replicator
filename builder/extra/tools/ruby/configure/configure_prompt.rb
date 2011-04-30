@@ -25,8 +25,11 @@ class ConfigurePrompt
   # Collect the value from the command line
   def run
     # Skip this prompt and remove the config value if this prompt isn't needed
-    unless enabled?()
+    unless enabled_for_config?()
       save_disabled_value()
+    end
+    
+    unless enabled?
       return
     end
     
@@ -112,7 +115,7 @@ class ConfigurePrompt
   def is_valid?
     value = get_value(false)
     
-    if enabled?
+    if enabled_for_config?
       if value == nil && required?()
         # The prompt is enabled, the value should not be missing
         raise ConfigurePromptError.new(
@@ -170,6 +173,10 @@ end
 module AdvancedPromptModule
   def enabled?
     super() && Configurator.instance.advanced_mode?()
+  end
+  
+  def enabled_for_config?
+    true
   end
   
   def get_disabled_value
@@ -230,6 +237,10 @@ class AdvancedInterfaceMessage < InterfaceMessage
   def enabled?
     Configurator.instance.advanced_mode?()
   end
+  
+  def enabled_for_config?
+    super()
+  end
 end
 
 class TemporaryPrompt < ConfigurePrompt
@@ -250,7 +261,6 @@ class TemporaryPrompt < ConfigurePrompt
   def run
     # Skip this prompt and remove the config value if this prompt isn't needed
     unless enabled?()
-      save_disabled_value()
       return
     end
     
@@ -267,5 +277,16 @@ class TemporaryPrompt < ConfigurePrompt
   
   def get_name
     ""
+  end
+  
+  def get_keys
+    []
+  end
+  
+  def save_current_value
+  end
+
+  # Save the disabled value back to the config object
+  def save_disabled_value
   end
 end

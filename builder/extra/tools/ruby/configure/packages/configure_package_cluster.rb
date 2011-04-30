@@ -1,5 +1,8 @@
 class ConfigurePackageCluster < ConfigurePackage
   def get_prompts
+    repl_services = ReplicationServices.new()
+    repl_services.extend(AdvancedPromptModule)
+    
     [
       DBMSTypePrompt.new(),
       DeploymentTypePrompt.new(),
@@ -9,7 +12,8 @@ class ConfigurePackageCluster < ConfigurePackage
         PV_IDENTIFIER, "default"),
       ClusterHosts.new(),
       DeploymentHost.new(),
-      DataServers.new()
+      DataServers.new(),
+      repl_services
     ]
   end
   

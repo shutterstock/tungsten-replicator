@@ -21,8 +21,6 @@ class GroupConfigurePrompt
     @prompt_pairs = nil
     @previous_prompts = []
     @last_run_prompt_pair_i = 0
-    
-    add_prompt(DeleteGroupMemberPrompt.new())
   end
   
   # The config object must be set down on each of the prompts so that they
@@ -41,8 +39,11 @@ class GroupConfigurePrompt
   
   def run
     # Skip this prompt and remove the config value if this prompt isn't needed
-    unless enabled?()
+    unless enabled_for_config?()
       save_disabled_value()
+    end
+    
+    unless enabled?
       return
     end
     
@@ -67,8 +68,10 @@ class GroupConfigurePrompt
       #  @prompt_pairs << [DEFAULTS, prompt]
       #}
     
+      delete_prompt = prepare_prompt(DeleteGroupMemberPrompt.new())
       each_member{
         |member|
+        @prompt_pairs << [member, delete_prompt]
         each_prompt{
           |prompt|
           @prompt_pairs << [member, prompt]
@@ -137,18 +140,18 @@ class GroupConfigurePrompt
       i = @last_run_prompt_pair_i
       begin
         member = @prompt_pairs[i][0]
-        prompt = @prompt_pairs[i][1]
+        curr_prompt = @prompt_pairs[i][1]
         if prev_i == nil || (@prompt_pairs[prev_i][0] != member)
           puts ""
           puts @prompt.sub('@value', member)
         end
         prev_i = i
         
-        Configurator.instance.debug("Start prompt #{prompt.class().name()}:#{prompt.get_name()}")
-        prompt.set_member(member)
-        prompt.run()
-        Configurator.instance.debug("Finish prompt #{prompt.class().name()}:#{prompt.get_name()}")
-        if prompt.allow_previous?()
+        Configurator.instance.debug("Start prompt #{curr_prompt.class().name()}:#{curr_prompt.get_name()}")
+        curr_prompt.set_member(member)
+        curr_prompt.run()
+        Configurator.instance.debug("Finish prompt #{curr_prompt.class().name()}:#{curr_prompt.get_name()}")
+        if curr_prompt.allow_previous?()
           @previous_prompts.push(i)
         end
         
@@ -227,7 +230,7 @@ class GroupConfigurePrompt
     each_member_prompt{
       |member, prompt|
       
-      if prompt.enabled?() || (prompt.get_disabled_value() != nil)
+      if prompt.enabled_for_config?() || (prompt.get_disabled_value() != nil)
         keys << prompt.get_name()
       end
     }
@@ -245,8 +248,18 @@ class GroupConfigurePrompt
       raise "Unable to add #{new_prompt.class().name()}:#{new_prompt.get_name()} because it does not extend ConfigurePrompt"
     end
     
-    new_prompt.set_group(self)
+    new_prompt = prepare_prompt(new_prompt)
     @group_prompts << new_prompt
+  end
+  
+  def prepare_prompt(prompt)
+    prompt.set_group(self)
+    
+    if @config != nil
+      prompt.set_config(@config)
+    end
+    
+    prompt
   end
   
   # Add a list of prompts to this group
