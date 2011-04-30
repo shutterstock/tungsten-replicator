@@ -17,10 +17,11 @@ properties=
 
 user=root
 password=
+host=localhost
+port=3306
 directory=/tmp/innobackup
 archive=/tmp/innobackup.tar.gz
-
-service=mysql
+mysql_service_command="/etc/init.d/mysql"
 mysqldatadir=/var/lib/mysql
 mysqluser=mysql
 mysqlgroup=mysql
@@ -53,6 +54,12 @@ do
   eval $parts=${parts[1]}
 done
 
+if [ ! -f "$mysql_service_command" ];
+then
+  echo "Unable to determine the service command to start/stop mysql"
+  exit 1
+fi
+
 # Handle operation. 
 if [ "$operation" = "backup" ]; then
   # Echo backup file to properties. 
@@ -63,8 +70,8 @@ if [ "$operation" = "backup" ]; then
   rm -f $archive
 
   # Copy the database files and apply any pending log entries
-  innobackupex-1.5.1 --user=$user --password=$password --no-timestamp $directory
-  innobackupex-1.5.1 --apply-log --user=$user --password=$password $directory
+  innobackupex-1.5.1 --user=$user --password=$password --host=$host --port=$port --no-timestamp $directory
+  innobackupex-1.5.1 --apply-log --user=$user --password=$password --host=$host --port=$port $directory
 
   # Package up the files and remove the staging directory
   cd $directory
@@ -85,12 +92,12 @@ elif [ "$operation" = "restore" ]; then
   tar -xzf $file
 
   # Stop mysql and clear the mysql data directory
-  /sbin/service $service stop 1>&2
+  $mysql_service_command stop 1>&2
 
   # We are expecting the exit code to be 3 so we have to turn off the 
   # error trapping
   set +e
-  /sbin/service $service status 1>&2
+  $mysql_service_command status 1>&2
   if [ $? -ne 3 ]; then
     echo "Unable to properly shutdown the MySQL service"
     exit 1
@@ -104,7 +111,7 @@ elif [ "$operation" = "restore" ]; then
 
   # Fix the permissions and restart the service
   chown -R $mysqluser:$mysqlgroup $mysqldatadir
-  /sbin/service $service start 1>&2
+  $mysql_service_command start 1>&2
 
   # Remove the staging directory
   rm -rf $directory
