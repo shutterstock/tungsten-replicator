@@ -65,8 +65,9 @@ public abstract class LogEvent
 
         try
         {
-            when = new Timestamp(1000 * LittleEndianConversion
-                    .convert4BytesToLong(buffer, 0));
+            when = new Timestamp(
+                    1000 * LittleEndianConversion
+                            .convert4BytesToLong(buffer, 0));
             serverId = (int) LittleEndianConversion.convert4BytesToLong(buffer,
                     MysqlBinlog.SERVER_ID_OFFSET);
             if (descriptionEvent.binlogVersion == 1)
@@ -309,14 +310,14 @@ public abstract class LogEvent
             boolean parseStatements, boolean useBytesForString,
             boolean prefetchSchemaNameLDI) throws MySQLExtractException
     {
-        DataInputStream dis = position.getDis();
+        DataInputStream dis = position.getDataInputStream();
         int eventLength = 0;
         byte[] header = new byte[descriptionEvent.commonHeaderLength];
 
         try
         {
             // read the header part
-            // timeout is set to 2 minutes. 
+            // timeout is set to 2 minutes.
             readDataFromBinlog(runtime, dis, header, 0, header.length, 120,
                     ReplicatorMonitor.REAL_EXTHEAD);
 
@@ -335,24 +336,25 @@ public abstract class LogEvent
 
             System.arraycopy(header, 0, fullEvent, 0, header.length);
 
-            LogEvent event = readLogEvent(parseStatements, fullEvent, fullEvent.length,
-                    descriptionEvent, useBytesForString);
-            
+            LogEvent event = readLogEvent(parseStatements, fullEvent,
+                    fullEvent.length, descriptionEvent, useBytesForString);
+
+            // Update the position
+            position.setPosition(position.getPosition() + fullEvent.length);
+
             // If schema name has to be prefetched, check if it is a BEGIN LOAD
             // EVENT
             if (prefetchSchemaNameLDI
                     && event instanceof BeginLoadQueryLogEvent)
             {
                 if (logger.isDebugEnabled())
-                    logger
-                            .debug("Got Begin Load Query Event - Looking for corresponding Execute Event");
+                    logger.debug("Got Begin Load Query Event - Looking for corresponding Execute Event");
 
                 BeginLoadQueryLogEvent beginLoadEvent = (BeginLoadQueryLogEvent) event;
                 // Spawn a new data input stream
                 BinlogPosition tempPosition = position.clone();
                 tempPosition.setEventID(position.getEventID() + 1);
-                tempPosition.setPosition((int) position.getFis().getChannel()
-                        .position());
+                tempPosition.setPosition(position.getPosition());
                 tempPosition.openFile();
 
                 if (logger.isDebugEnabled())
@@ -362,8 +364,9 @@ public abstract class LogEvent
 
                 while (!found)
                 {
-                    readDataFromBinlog(runtime, tempPosition.getDis(),
-                            tmpHeader, 0, tmpHeader.length, 60,
+                    readDataFromBinlog(runtime,
+                            tempPosition.getDataInputStream(), tmpHeader, 0,
+                            tmpHeader.length, 60,
                             ReplicatorMonitor.REAL_EXTHEAD);
 
                     // Extract event length
@@ -375,8 +378,9 @@ public abstract class LogEvent
                     if (tmpHeader[MysqlBinlog.EVENT_TYPE_OFFSET] == MysqlBinlog.EXECUTE_LOAD_QUERY_EVENT)
                     {
                         fullEvent = new byte[tmpHeader.length + eventLength];
-                        readDataFromBinlog(runtime, tempPosition.getDis(),
-                                fullEvent, tmpHeader.length, eventLength, 120,
+                        readDataFromBinlog(runtime,
+                                tempPosition.getDataInputStream(), fullEvent,
+                                tmpHeader.length, eventLength, 120,
                                 ReplicatorMonitor.REAL_EXTBODY);
 
                         System.arraycopy(tmpHeader, 0, fullEvent, 0,
@@ -394,10 +398,8 @@ public abstract class LogEvent
                             {
                                 if (logger.isDebugEnabled())
 
-                                    logger
-                                            .debug("Found corresponding Execute Load Query Event - Schema is "
-                                                    + execLoadQueryEvent
-                                                            .getDefaultDb());
+                                    logger.debug("Found corresponding Execute Load Query Event - Schema is "
+                                            + execLoadQueryEvent.getDefaultDb());
                                 beginLoadEvent.setSchemaName(execLoadQueryEvent
                                         .getDefaultDb());
                                 found = true;
@@ -410,7 +412,7 @@ public abstract class LogEvent
                         long skip = 0;
                         while (skip != eventLength)
                         {
-                            skip += tempPosition.getDis().skip(
+                            skip += tempPosition.getDataInputStream().skip(
                                     eventLength - skip);
                         }
                     }
@@ -418,7 +420,7 @@ public abstract class LogEvent
                 // Release the file handler
                 tempPosition.reset();
             }
-            
+
             return event;
         }
         catch (EOFException e)
@@ -463,10 +465,9 @@ public abstract class LogEvent
         {
             if (!alreadyLogged)
             {
-                logger
-                        .warn("Trying to read more bytes ("
-                                + length
-                                + ") than available in the file... waiting for data to be available");
+                logger.warn("Trying to read more bytes ("
+                        + length
+                        + ") than available in the file... waiting for data to be available");
                 alreadyLogged = true;
             }
 
@@ -480,9 +481,8 @@ public abstract class LogEvent
                 else
                     throw new MySQLExtractException(
                             "Timeout while waiting for data : spent more than "
-                                    + timeout
-                                    + " seconds while waiting for " + length
-                                    + " bytes to be available");
+                                    + timeout + " seconds while waiting for "
+                                    + length + " bytes to be available");
             }
             catch (InterruptedException e)
             {
@@ -499,7 +499,7 @@ public abstract class LogEvent
         return type;
     }
 
-    protected String hexdump(byte[] buffer, int offset)
+    protected static String hexdump(byte[] buffer, int offset)
     {
         StringBuffer dump = new StringBuffer();
         if ((buffer.length - offset) > 0)
@@ -528,6 +528,12 @@ public abstract class LogEvent
             }
         }
         return dump.toString();
+    }
+
+    public static String hexdump(byte[] buffer)
+    {
+        // TODO Auto-generated method stub
+        return hexdump(buffer, 0);
     }
 
 }

@@ -30,6 +30,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 
@@ -53,8 +54,8 @@ import com.continuent.tungsten.replicator.dbms.RowIdData;
 import com.continuent.tungsten.replicator.dbms.StatementData;
 import com.continuent.tungsten.replicator.event.DBMSEmptyEvent;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
-import com.continuent.tungsten.replicator.event.ReplOptionParams;
 import com.continuent.tungsten.replicator.event.ReplOption;
+import com.continuent.tungsten.replicator.event.ReplOptionParams;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
 import com.continuent.tungsten.replicator.extractor.RawExtractor;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndianConversion;
@@ -127,6 +128,8 @@ public class MySQLExtractor implements RawExtractor
 
     private String                          jdbcHeader;
 
+    private int                             bufferSize              = 32768;
+    
     public String getHost()
     {
         return host;
@@ -287,6 +290,11 @@ public class MySQLExtractor implements RawExtractor
         this.binlogMode = binlogMode;
     }
 
+    public void setBufferSize(int size)
+    {
+        bufferSize = size;
+    }
+    
     /*
      * Read binlog file header and verify it.
      */
@@ -302,11 +310,12 @@ public class MySQLExtractor implements RawExtractor
                 3);
         try
         {
-            if (position.getFis().read(header) != header.length)
+            if (position.getFileInputStream().read(header) != header.length)
             {
                 logger.error("Failed reading header;  Probably an empty file");
                 throw new MySQLExtractException("could not read binlog header");
             }
+            tmp_pos = header.length;
         }
         catch (IOException e1)
         {
@@ -314,9 +323,10 @@ public class MySQLExtractor implements RawExtractor
             e1.printStackTrace();
         }
 
-        if (!java.util.Arrays.equals(header, MysqlBinlog.BINLOG_MAGIC))
+        if (!Arrays.equals(header, MysqlBinlog.BINLOG_MAGIC))
         {
-            logger.error("File is not a binary log file");
+            logger.error("File is not a binary log file - found : " + LogEvent.hexdump(header)
+                    + " / expected : " + LogEvent.hexdump(MysqlBinlog.BINLOG_MAGIC));
             throw new MySQLExtractException("binlog file header mismatch");
         }
 
@@ -336,14 +346,12 @@ public class MySQLExtractor implements RawExtractor
         {
             try
             {
-                /* should be 4 the first time */
-                tmp_pos = position.getFis().getChannel().position();
-
                 /* mark a savepoint for further reset call */
-                position.getFis().mark(2048);
+                position.getFileInputStream().mark(2048);
 
-                position.getDis().readFully(buf);
-
+                position.getDataInputStream().readFully(buf);
+                tmp_pos += buf.length;
+                
                 logger.debug("buf[4]=" + buf[4]);
                 long start_position = 0;
                 /* always test for a Start_v3, even if no --start-position */
@@ -364,7 +372,7 @@ public class MySQLExtractor implements RawExtractor
                 {
                     /* This is 5.0 */
                     FormatDescriptionLogEvent new_description_event;
-                    position.getFis().reset(); /* seek back to event's start */
+                    position.getFileInputStream().reset(); /* seek back to event's start */
                     new_description_event = (FormatDescriptionLogEvent) LogEvent
                             .readLogEvent(runtime, position, description_event,
                                     parseStatements, useBytesForStrings,
@@ -385,7 +393,7 @@ public class MySQLExtractor implements RawExtractor
                 else if (buf[4] == MysqlBinlog.ROTATE_EVENT)
                 {
                     LogEvent ev;
-                    position.getFis().reset(); /* seek back to event's start */
+                    position.getFileInputStream().reset(); /* seek back to event's start */
                     ev = LogEvent.readLogEvent(runtime, position,
                             description_event, parseStatements,
                             useBytesForStrings, prefetchSchemaNameLDI);
@@ -429,7 +437,14 @@ public class MySQLExtractor implements RawExtractor
                 throw new MySQLExtractException("binlog read error" + e);
             }
         }
-        // position.getFis().reset(); /* seek back to event's start */
+        try
+        {
+            position.getFileInputStream().reset();
+        }
+        catch (IOException e)
+        {
+            throw new MySQLExtractException("Error while resetting stream", e);
+        } /* seek back to event's start */
     }
 
     private LogEvent processFile(BinlogPosition position)
@@ -437,17 +452,19 @@ public class MySQLExtractor implements RawExtractor
     {
         try
         {
-            if (position.getFis() == null)
+            if (position.getFileInputStream() == null)
             {
                 position.openFile();
             }
-            logger.debug("extracting from pos, file: " + position.getFileName()
-                    + " pos: " + position.getPosition());
-            if (position.getFis() != null)
+            if (logger.isDebugEnabled())
+                logger.debug("extracting from pos, file: "
+                        + position.getFileName() + " pos: "
+                        + position.getPosition());
+            if (position.getFileInputStream() != null)
             {
                 long indexCheckStart = System.currentTimeMillis();
                 // read from the ready stream
-                while (position.getDis().available() == 0)
+                while (position.getDataInputStream().available() == 0)
                 {
                     // TREP-301 - If we are waiting at the end of the file we
                     // must check that we are not reading a log file that is
@@ -491,7 +508,8 @@ public class MySQLExtractor implements RawExtractor
                     position.setPosition(0);
                     position.openFile();
                     byte[] buf = new byte[MysqlBinlog.BIN_LOG_HEADER_SIZE];
-                    position.getDis().readFully(buf);
+                    position.getDataInputStream().readFully(buf);
+                    position.setPosition(MysqlBinlog.BIN_LOG_HEADER_SIZE);
                 }
 
                 LogEvent event = LogEvent.readLogEvent(runtime, position,
@@ -499,9 +517,6 @@ public class MySQLExtractor implements RawExtractor
                         prefetchSchemaNameLDI);
                 position.setEventID(position.getEventID() + 1);
 
-                /* update binlog position up to where we read */
-                position.setPosition((int) position.getFis().getChannel()
-                        .position());
                 return event;
 
             }
@@ -514,7 +529,7 @@ public class MySQLExtractor implements RawExtractor
         catch (IOException e)
         {
             logger.error("binlog file read error");
-            throw new MySQLExtractException("binlog file read error");
+            throw new MySQLExtractException("binlog file read error", e);
         }
     }
 
@@ -576,7 +591,7 @@ public class MySQLExtractor implements RawExtractor
             logger.info("Starting from position: " + binlogFile + ":"
                     + binlogOffset);
             return new BinlogPosition(binlogOffset, binlogFile, binlogDir,
-                    binlogFilePattern);
+                    binlogFilePattern, bufferSize);
         }
         catch (SQLException e)
         {
@@ -619,7 +634,7 @@ public class MySQLExtractor implements RawExtractor
             logger.info("Starting from position: " + binlogFile + ":"
                     + binlogOffset);
             return new BinlogPosition(binlogOffset, binlogFile, binlogDir,
-                    binlogFilePattern);
+                    binlogFilePattern, bufferSize);
         }
         catch (SQLException e)
         {
@@ -1212,7 +1227,7 @@ public class MySQLExtractor implements RawExtractor
 
             // Set the binlog position.
             binlogPosition = new BinlogPosition(binlogOffset, binlogFile,
-                    binlogDir, binlogFilePattern);
+                    binlogDir, binlogFilePattern, bufferSize);
         }
         else
         {

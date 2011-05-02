@@ -22,6 +22,7 @@
 
 package com.continuent.tungsten.replicator.extractor.mysql;
 
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.File;
@@ -29,6 +30,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.apache.log4j.Logger;
 
@@ -40,38 +42,45 @@ import org.apache.log4j.Logger;
  */
 public class BinlogPosition implements FilenameFilter, Cloneable
 {
-    static Logger           logger = Logger.getLogger(MySQLExtractor.class);
+    static Logger               logger = Logger.getLogger(MySQLExtractor.class);
 
     /* if binlog file is open, we have this stream to read from */
-    private FileInputStream fis;
-    private DataInputStream dis;
+    private BufferedInputStream bIS;
+    private FileInputStream     fIS;
+    private DataInputStream     dIS;
 
     /* binlog file's name and directory */
-    private String          fileName;
-    private String          directory;
+    private String              fileName;
+    private String              directory;
 
     /* position in file */
-    private long            position;
+    private long                position;
 
     /* id of last event read */
-    private int             eventID;
+    private int                 eventID;
 
     /* binlog file's base name */
-    private String          baseName;
+    private String              baseName;
+
+    private int                 bufferSize;
 
     /*
      * @brief defines only binlog directory and binlog files' base name
      * @param directory directory path where binlog files should reside
      * @param baseName file name pattern for binlog files: basenName001.bin
      */
-    public BinlogPosition(String directory, String baseName)
+    public BinlogPosition(String directory, String baseName, int bufferSize)
     {
-        setFis(null);
+        fIS = null;
+        dIS = null;
+        bIS = null;
+
         setPosition(0);
         this.eventID = 0;
         setFileName(null);
         setDirectory(directory);
         setBaseName(baseName);
+        this.bufferSize = bufferSize;
     }
 
     /*
@@ -82,23 +91,25 @@ public class BinlogPosition implements FilenameFilter, Cloneable
      * @param baseName file name pattern for binlog files: basenName001.bin
      */
     public BinlogPosition(long position, String fileName, String directory,
-            String baseName) throws MySQLExtractException
+            String baseName, int bufferSize) throws MySQLExtractException
     {
-        setFis(null);
+        fIS = null;
+        dIS = null;
+        bIS = null;
+
         setPosition(position);
         this.eventID = 0;
         setFileName(fileName);
         setDirectory(directory);
         setBaseName(baseName);
-
+        this.bufferSize = bufferSize;
         openFile();
     }
 
     public BinlogPosition clone()
     {
-        BinlogPosition cloned = new BinlogPosition(directory, baseName);
-        cloned.setFis(null);
-        cloned.setDis(null);
+        BinlogPosition cloned = new BinlogPosition(directory, baseName,
+                bufferSize);
 
         /* binlog file's name and directory */
         cloned.setFileName(fileName);
@@ -119,16 +130,19 @@ public class BinlogPosition implements FilenameFilter, Cloneable
     {
         try
         {
-            getFis().close();
-            getDis().close();
+            dIS.close();
+            bIS.close();
+            fIS.close();
         }
         catch (IOException e)
         {
             throw new MySQLExtractException(
                     "Failed to close file input streams", e);
         }
-        setFis(null);
-        setDis(null);
+        dIS = null;
+        bIS = null;
+        fIS = null;
+
         setPosition(0);
         setEventID(0);
         setFileName(null);
@@ -146,8 +160,7 @@ public class BinlogPosition implements FilenameFilter, Cloneable
 
             // Hack to avoid crashing during log rotate. MySQL seems to write
             // log rotate event in the old file before creating new file. We
-            // wait
-            // for a second, polling file every 10 msecs.
+            // wait for a second, polling file every 10 msecs.
             File file = new File(getDirectory() + File.separator
                     + getFileName());
             int tryCnt = 0;
@@ -156,9 +169,13 @@ public class BinlogPosition implements FilenameFilter, Cloneable
                 Thread.sleep(10);
             }
 
-            FileInputStream fis = new FileInputStream(file);
-            setFis(fis);
-            setDis(new DataInputStream(getFis()));
+            if (logger.isDebugEnabled())
+                logger.debug("Opening file " + file.getName()
+                        + " with buffer = " + bufferSize);
+
+            fIS = new FileInputStream(file);
+            bIS = new BufferedInputStream(fIS, bufferSize);
+            dIS = new DataInputStream(bIS);
 
             /*
              * if we have predefined position to start from, let's skip until
@@ -167,7 +184,7 @@ public class BinlogPosition implements FilenameFilter, Cloneable
              */
             if (getPosition() > 0)
             {
-                fis.skip(getPosition());
+                bIS.skip(getPosition());
             }
         }
         catch (FileNotFoundException e)
@@ -197,7 +214,7 @@ public class BinlogPosition implements FilenameFilter, Cloneable
             int readLen = 0;
             try
             {
-                readLen = getDis().read(buf, pos, remaining);
+                readLen = getDataInputStream().read(buf, pos, remaining);
             }
             catch (EOFException e)
             {
@@ -280,24 +297,14 @@ public class BinlogPosition implements FilenameFilter, Cloneable
         this.baseName = baseName;
     }
 
-    public FileInputStream getFis()
+    public InputStream getFileInputStream()
     {
-        return fis;
+        return bIS;
     }
 
-    public void setFis(FileInputStream fis)
+    public DataInputStream getDataInputStream()
     {
-        this.fis = fis;
-    }
-
-    public DataInputStream getDis()
-    {
-        return dis;
-    }
-
-    public void setDis(DataInputStream dis)
-    {
-        this.dis = dis;
+        return dIS;
     }
 
     public int getEventID()
