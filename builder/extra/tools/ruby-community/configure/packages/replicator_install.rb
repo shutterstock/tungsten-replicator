@@ -133,6 +133,10 @@ class ReplicatorInstallPackage < ConfigurePackage
       error("You must specify a value for --slave-host")
     end
     
+    unless options.getProperty("service-name")
+      error("You must specify a value for --service-name")
+    end
+    
     unless is_valid?
       raise "There are issues with the command options"
     end

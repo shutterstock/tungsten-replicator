@@ -28,12 +28,22 @@ class GroupValidationCheck
   end
   
   def validate
-    each_member_check{
-      |member, check|
+    each_member{
+      |member|
       
-      check.set_member(member)
-      check.run()
-      @errors = @errors + check.errors
+      each_check{
+        |check|
+        
+        check.set_member(member)
+        check.run()
+        @errors = @errors + check.errors
+
+        unless check.is_valid?()
+          if check.fatal_on_error?()
+            break
+          end
+        end
+      }
     }
   end
   

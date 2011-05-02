@@ -99,8 +99,9 @@ class ConfigureValidationHandler
     
     begin
       if @config.getProperty(HOST) == Configurator.instance.hostname()
-        debug("Local validation checks for #{@config.getProperty(HOME_DIRECTORY)}")
+        debug("Start:  Local validation checks for #{@config.getProperty(HOME_DIRECTORY)}")
         result = validate_config(@config)
+        debug("Finish: Local validation checks for #{@config.getProperty(HOME_DIRECTORY)}")
       else
         # Invoke ValidationChecks on the remote server
         extra_options = ""
@@ -161,18 +162,18 @@ class ConfigureValidationHandler
         
         begin
           result = Marshal.load(result_dump)
+          
+          @errors = @errors + result.errors
+          result.messages.each{
+            |message|
+            puts message
+          }
+          
+          Configurator.instance.write "Finish: Remote validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}", Logger::DEBUG
         rescue ArgumentError => ae
           raise "Unable to load validation result: #{result_dump}"
         end
       end
-      
-      @errors = @errors + result.errors
-      result.messages.each{
-        |message|
-        puts message
-      }
-      
-      Configurator.instance.write "Finish: Remote validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}", Logger::DEBUG
     rescue => e
       Configurator.instance.exception(e)
       @errors.push(RemoteError.new(@config.getProperty(HOST), e.to_s()))

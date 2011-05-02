@@ -10,9 +10,6 @@ class MySQLValidationCheck < ConfigureValidationCheck
     if password == nil
       password = @config.getProperty(get_member_key(REPL_DBPASSWORD))
     end
-    if password.to_s() != ""
-      password = "-p" + password
-    end
     
     if hostname == nil
       hostname = @config.getProperty(get_member_key(REPL_DBHOST))
@@ -22,7 +19,7 @@ class MySQLValidationCheck < ConfigureValidationCheck
       port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "3306")
     end
 
-    cmd_result("mysql -u#{user} #{password} -h#{hostname} --port=#{port} -e \"#{command}\"", true)
+    cmd_result("mysql -u#{user} --password=\"#{password}\" -h#{hostname} --port=#{port} -e \"#{command}\"", true)
   end
   
   def get_value(command, column)
@@ -41,6 +38,30 @@ class MySQLValidationCheck < ConfigureValidationCheck
     }
     
     return nil
+  end
+  
+  def get_connection_summary(user = nil, password = nil, hostname = nil, port = nil)
+    if user == nil
+      user = @config.getProperty(get_member_key(REPL_DBLOGIN))
+    end
+    
+    if password == false
+      password = ""
+    elsif password.to_s() == ""
+      password = " (NO PASSWORD)"
+    else
+      password = " (WITH PASSWORD)"
+    end
+    
+    if hostname == nil
+      hostname = @config.getProperty(get_member_key(REPL_DBHOST))
+    end
+    
+    if port == nil
+      port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "3306")
+    end
+    
+    "#{@config.getProperty(get_member_key(REPL_DBLOGIN))}@#{@config.getProperty(get_member_key(REPL_DBHOST))}:#{@config.getProperty(get_member_key(REPL_DBPORT))}#{password}"
   end
   
   def enabled?
@@ -71,15 +92,19 @@ end
 class MySQLLoginCheck < MySQLValidationCheck
   def set_vars
     @title = "Replication credentials login check"
+    @fatal_on_error = true
   end
   
   def validate
     login_output = mysql("select 'ALIVE' as 'Return Value'")
     if login_output =~ /ALIVE/
-      info("MySQL server and login to #{@config.getProperty(get_member_key(REPL_DBHOST))} is OK")
+      info("MySQL server and login to '#{@config.getProperty(get_member_key(REPL_DBHOST))}' as '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}' is OK")
     else
-      help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'@'#{@config.getProperty(get_member_key(HOST))}' IDENTIFIED BY '#{@config.getProperty(get_member_key(REPL_DBPASSWORD))}' WITH GRANT OPTION\" on #{@config.getProperty(get_member_key(REPL_DBHOST))}")
-      error("MySQL server on #{@config.getProperty(get_member_key(REPL_DBHOST))} is unavailable or login does not work")
+      error("Unable to connect to the MySQL server using #{get_connection_summary()}")
+      
+      if @config.getProperty(get_member_key(REPL_DBPASSWORD)).to_s() == ""
+        help("Try specifying a password for #{get_connection_summary(nil, false)}")
+      end
     end
   end
 end
