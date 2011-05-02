@@ -1,3 +1,5 @@
+TEMP_DEPLOYMENT_SERVICE = "temp"
+
 class ConfigureServicePackage < ConfigurePackage
   SERVICE_CREATE = "create_service"
   SERVICE_DELETE = "delete_service"
@@ -7,13 +9,14 @@ class ConfigureServicePackage < ConfigurePackage
     @config.setProperty(DEPLOYMENT_TYPE, nil)
     @config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
     @config.setProperty(DEPLOY_PACKAGE_URI, nil)
+    @config.setProperty(REPL_SERVICES, {})
     
     opts=OptionParser.new
     
     opts.on("-C", "--create")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_CREATE) }
     opts.on("-D", "--delete")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_DELETE) }
     opts.on("-U", "--update")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_UPDATE) }
-    opts.on("--start")          { @config.setProperty(REPL_SVC_START, "true") }
+    opts.on("--start")          { @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, REPL_SVC_START], "true") }
     
     {
       "--local-service-name" => DSNAME,
@@ -32,7 +35,7 @@ class ConfigureServicePackage < ConfigurePackage
       "--service-type" => REPL_SVC_SERVICE_TYPE
     }.each{
       |arg, prop_key|
-      opts.on("#{arg} String")  {|val|  @config.setProperty(prop_key, val) }
+      opts.on("#{arg} String")  {|val|  @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, prop_key], val) }
     }
     
     begin
@@ -46,7 +49,7 @@ class ConfigureServicePackage < ConfigurePackage
       when 0
         raise "No service_name specified"
       when 1
-        @config.setProperty(DEPLOYMENT_SERVICE, service_name[0])
+        @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, DEPLOYMENT_SERVICE], service_name[0])
       else
         raise "Ambiguous service names specified: #{service_name.join(', ')}"
       end
@@ -75,33 +78,22 @@ class ConfigureServicePackage < ConfigurePackage
     output_usage_line("--master-host host_name", "Replicator remote master host name")
     output_usage_line("--master-port #", "Replicator remote master THL port")
     output_usage_line("--role [master|slave|direct]", "Replicator role", "slave")
+    output_usage_line("--datasource alias", "Configuration alias of the datasource to use when applying events")
     output_usage_line("--service-type [local|remote]", "Replicator service type", "local")
     output_usage_line("--shard-default-db [stringent|relaxed]", "Use default db for shard ID", "stringent")
   end
   
   def get_prompts
     [
-      LocalReplicationServiceName.new(),
-      ReplicationServiceName.new(),
-      ReplicationServiceType.new(),
-      ReplicationServiceRole.new(),
-      ReplicationServiceMaster.new(),
-      ReplicationServiceMasterTHLPort.new(),
-      ReplicationServiceExtractor.new(),
-      ReplicationServiceDataserver.new(),
-      ReplicationServiceTHLPort.new(),
-      ReplicationServiceAutoEnable.new(),
-      ReplicationServiceChannels.new(),
-      ReplicationServiceBufferSize.new(),
-      ReplicationShardIDMode.new(),
-      ReplicationAllowUnsafeSQL.new(),
-      ReplicationAllowAllSQL.new(),
-      ReplicationServiceStart.new()
+      ReplicationServices.new()
     ]
   end
   
   def get_non_interactive_prompts
-    ConfigurePackageCluster.new(@config).get_prompts()
+    cluster_prompts = ConfigurePackageCluster.new(@config).get_prompts()
+    cluster_prompts.delete_if{ |prompt| prompt.is_a?(ReplicationServices)}
+    
+    cluster_prompts
   end
   
   def get_validation_checks

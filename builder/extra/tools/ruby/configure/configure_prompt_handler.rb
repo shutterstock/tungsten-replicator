@@ -160,10 +160,12 @@ class ConfigurePromptHandler
         end
         prompt_keys = prompt_keys + prompt.get_keys()
         prompt.is_valid?()
-      rescue ConfigurePromptError => e
-        @errors << e
+      rescue ConfigurePromptError => cpe
+        @errors << cpe
       rescue ConfigurePromptErrorSet => s
         @errors = @errors + s.errors
+      rescue => e
+        @errors << ConfigurePromptError.new(prompt, e.message, prompt.get_value())
       end
     }
     
@@ -206,7 +208,7 @@ class ConfigurePromptHandler
       Configurator.instance.write_divider(Logger::ERROR)
       Configurator.instance.error error.prompt.get_prompt()
       Configurator.instance.error "> Message: #{error.message}"
-      Configurator.instance.error "> Config Key: #{error.prompt.get_name()}"
+      #Configurator.instance.error "> Config Key: #{error.prompt.get_name()}"
       
       if error.current_value.to_s() != ""
         Configurator.instance.error "> Current Value: #{error.current_value}"

@@ -34,6 +34,7 @@ class ConfigurePackageCluster < ConfigurePackage
       THLStorageCheck.new(),
       DataserversChecks.new(),
       BackupMethodAvailableCheck.new(),
+      ReplicationServiceChecks.new()
     ]
   end
   

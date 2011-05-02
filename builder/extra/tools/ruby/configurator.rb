@@ -110,7 +110,11 @@ class Configurator
     @options.display_help = false
     @options.validate_only = false
 
-    configs_path = File.expand_path(get_base_path() + "/../configs/")
+    if is_full_tungsten_package?()
+      configs_path = File.expand_path(ENV['PWD'] + "/../configs/")
+    else
+      configs_path = File.expand_path(ENV['PWD'] + "/configs/")
+    end
     # Check for the tungsten.cfg in the unified configs directory
     if File.exist?("#{configs_path}/#{CLUSTER_CONFIG}")
       @options.config = "#{configs_path}/#{CLUSTER_CONFIG}"
@@ -337,9 +341,11 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     
     opts.on("-a", "--advanced")       {|val| @options.advanced = true}
     opts.on("-b", "--batch")          {|val| @options.interactive = false}
+    opts.on("-i", "--interactive")    {|val| @options.interactive = true}
     opts.on("-c", "--config String")  {|val| @options.config = val }
     opts.on("-h", "--help")           {|val| @options.display_help = true }
     opts.on("-q", "--quiet")          {@options.output_threshold = Logger::ERROR}
+    opts.on("-n", "--info")           {@options.output_threshold = Logger::INFO}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
     opts.on("--no-validation")        {|val| @options.force = true }
     opts.on("--validate-only")        {@options.validate_only = true}
@@ -567,9 +573,9 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   def get_base_path
     if is_full_tungsten_package?()
-      File.expand_path(ENV['PWD'] + "/../")
+      File.expand_path(File.dirname(__FILE__) + "/../../")
     else
-      File.expand_path(ENV['PWD'])
+      File.expand_path(File.dirname(__FILE__) + "/../")
     end
   end
   

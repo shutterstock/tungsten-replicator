@@ -135,3 +135,71 @@ class DataserversChecks < GroupValidationCheck
     @title = "Dataserver checks"
   end
 end
+
+class ReplicationServiceChecks < GroupValidationCheck
+  def initialize
+    super(REPL_SERVICES, "replication service", "replication services")
+    
+    add_checks(
+      ServiceNameCheck.new(),
+      DifferentMasterSlaveCheck.new()
+    )
+  end
+  
+  def set_vars
+    @title = "Replication service checks"
+  end
+end
+
+class ServiceNameCheck < ConfigureValidationCheck
+  include GroupValidationCheckMember
+  
+  def set_vars
+    @title = "Service name check"
+  end
+  
+  def validate
+    service_name = @config.getProperty(get_member_key(DEPLOYMENT_SERVICE))
+    
+    case @config.getProperty(DEPLOYMENT_TYPE)
+    when ConfigureServicePackage::SERVICE_UPDATE, ConfigureServicePackage::SERVICE_DELETE
+      unless current_services().include?(service_name)
+        error("Service '#{service_name}' is not defined on this host")
+      end
+    when ConfigureServicePackage::SERVICE_CREATE
+      if current_services().include?(service_name)
+        error("Service '#{service_name}' is already defined on this host")
+      end
+    else
+      # Do nothing here for now
+    end
+  end
+  
+  def current_services
+    current_services = []
+    Dir[@config.getProperty(BASEDIR) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
+      service_name = cmd_result("grep ^service.name= #{file} | awk -F = '{print $2}'")
+      if service_name != ""
+        current_services << service_name
+      end
+    end
+    
+    current_services
+  end
+end
+
+class DifferentMasterSlaveCheck < ConfigureValidationCheck
+  include GroupValidationCheckMember
+  
+  def set_vars
+    @title = "Different master/slave datasource check"
+  end
+  
+  def validate
+    if (extractor = @config.getProperty(get_member_key(REPL_EXTRACTOR_DATASERVER)))
+      if extractor == @config.getProperty(get_member_key(REPL_DATASERVER))
+        error("Service '#{@config.getProperty(get_member_key(DEPLOYMENT_SERVICE))}' uses the same datasource for extracting and applying events")
+      end
+    end
+  end
+end
