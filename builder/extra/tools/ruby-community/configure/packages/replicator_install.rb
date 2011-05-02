@@ -294,7 +294,7 @@ class ReplicatorInstallPackage < ConfigurePackage
         @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "master")
       else
         @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "slave")
-        @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], options.getProperty("master-host").tr(".", "_"))
+        @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], options.getProperty("master-host"))
         @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERPORT], options.getProperty("thl-port"))
       end
     }

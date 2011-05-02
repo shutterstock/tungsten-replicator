@@ -110,15 +110,20 @@ class Configurator
     @options.display_help = false
     @options.validate_only = false
 
+    configs_path = File.expand_path(get_base_path() + "/../configs/")
     # Check for the tungsten.cfg in the unified configs directory
-    if File.exist?("#{ENV['HOME']}/configs/#{CLUSTER_CONFIG}")
+    if File.exist?("#{configs_path}/#{CLUSTER_CONFIG}")
+      @options.config = "#{configs_path}/#{CLUSTER_CONFIG}"
+    elsif File.exist?("#{ENV['HOME']}/configs/#{CLUSTER_CONFIG}")
       @options.config = "#{ENV['HOME']}/configs/#{CLUSTER_CONFIG}"
     else
       @options.config = "#{get_base_path()}/#{CLUSTER_CONFIG}"
     end
     
     if is_full_tungsten_package?() && !File.exist?(@options.config)
-      if File.exist?("#{ENV['HOME']}/configs/#{HOST_CONFIG}")
+      if File.exist?("#{configs_path}/#{HOST_CONFIG}")
+        @options.config = "#{configs_path}/#{HOST_CONFIG}"
+      elsif File.exist?("#{ENV['HOME']}/configs/#{HOST_CONFIG}")
         @options.config = "#{ENV['HOME']}/configs/#{HOST_CONFIG}"
       elsif File.exist?("#{get_base_path()}/#{HOST_CONFIG}")
         @options.config = "#{get_base_path()}/#{HOST_CONFIG}"
@@ -562,9 +567,9 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   def get_base_path
     if is_full_tungsten_package?()
-      File.expand_path(File.dirname(__FILE__) + "/../../")
+      File.expand_path(ENV['PWD'] + "/../")
     else
-      File.expand_path(File.dirname(__FILE__) + "/../")
+      File.expand_path(ENV['PWD'])
     end
   end
   
