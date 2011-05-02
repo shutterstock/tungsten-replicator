@@ -303,7 +303,7 @@ class ReplicatorInstallPackage < ConfigurePackage
   def output_usage
     puts "Usage: tungsten-installer [general-options] {--direct|--master-slave} [install-options]"
     output_general_usage()
-    Configurator.instance.write_divider()
+    Configurator.instance.write_divider(Logger::ERROR)
     puts "Install options: --direct"
     output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
     output_usage_line("--master-alias")
@@ -325,7 +325,7 @@ class ReplicatorInstallPackage < ConfigurePackage
     output_usage_line("--channels", "Number of channels for parallel apply", "1")
     output_usage_line("--rmi-port", "", "10001")
     output_usage_line("--service-name")
-    Configurator.instance.write_divider()
+    Configurator.instance.write_divider(Logger::ERROR)
     puts "Install options: --master-slave"
     output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
     output_usage_line("--cluster-hosts")

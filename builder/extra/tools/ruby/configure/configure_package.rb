@@ -39,7 +39,7 @@ class ConfigurePackage
   end
   
   def output_general_usage
-    Configurator.instance.write_divider
+    Configurator.instance.write_divider(Logger::ERROR)
     puts "General options:"
     puts "-a, --advanced      Enable advanced options"
     puts "-b, --batch         Execute the configuration without interactive prompts"

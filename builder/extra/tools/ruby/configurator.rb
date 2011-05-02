@@ -348,8 +348,18 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       # Prepend the invalid option onto the arguments array
       arguments = io.recover(arguments)
     rescue => e
+      if @options.display_help
+        output_help
+        exit 0
+      end
+      
       error("Argument parsing failed: #{e.to_s()}")
       return false
+    end
+    
+    if @options.display_help
+      output_help
+      exit 0
     end
 
     unless arguments_valid?()
@@ -363,11 +373,6 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     rescue => e
       error(e.to_s())
       return false
-    end
-    
-    if @options.display_help
-      output_help
-      exit 0
     end
     
     true
