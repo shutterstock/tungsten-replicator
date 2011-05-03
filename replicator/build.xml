@@ -162,7 +162,7 @@
 	        <include name="*txn*"/>
 	    </fileset>
         </copy>
-        <copy file="conf/replicator.properties.mysql"
+        <copy file="samples/conf/replicator.properties.mysql"
               toFile="${test.work}/replicator.properties"/>
 
         <junit printsummary="yes" haltonfailure="no" fork="yes"
