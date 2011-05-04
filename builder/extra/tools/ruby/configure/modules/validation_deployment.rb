@@ -33,30 +33,38 @@ class WriteableTempDirectoryCheck < ConfigureValidationCheck
   end
   
   def validate
-    debug "Checking #{@config.getProperty(TEMP_DIRECTORY)}"
+    validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
+    debug "Checking #{validation_temp_directory}"
     
-    create_dir = ssh_result("mkdir -p #{@config.getProperty(TEMP_DIRECTORY)}")
-    unless create_dir
-      error("There was an issue creating #{@config.getProperty(TEMP_DIRECTORY)}")
+    begin
+      ssh_result("mkdir -p #{validation_temp_directory}")
+    rescue RemoteCommandError => rce
+      error("Unable to create the temporary directory '#{validation_temp_directory}':#{rce.result}")
+      
+      # Do not process the other parts of this check
+      return
     end
     
     # The -D flag will tell us if it is a directory
-    writeable = ssh_result("if [ -d #{@config.getProperty(TEMP_DIRECTORY)} ]; then echo 0; else echo 1; fi")
-    
-    unless writeable == "0"
-      error "#{@config.getProperty(TEMP_DIRECTORY)} is not a directory"
+    is_directory = ssh_result("if [ -d #{validation_temp_directory} ]; then echo 0; else echo 1; fi")
+    unless is_directory == "0"
+      error "#{validation_temp_directory} is not a directory"
     else
-      debug "#{@config.getProperty(TEMP_DIRECTORY)} is adirectory"
+      debug "#{validation_temp_directory} is a directory"
     end
     
     # The -w flag will tell us if it is writeable
-    writeable = ssh_result("if [ -w #{@config.getProperty(TEMP_DIRECTORY)} ]; then echo 0; else echo 1; fi")
+    writeable = ssh_result("if [ -w #{validation_temp_directory} ]; then echo 0; else echo 1; fi")
     
     unless writeable == "0"
-      error "#{@config.getProperty(TEMP_DIRECTORY)} is not writeable"
+      error "#{validation_temp_directory} is not writeable"
     else
-      debug "#{@config.getProperty(TEMP_DIRECTORY)} is writeable"
+      debug "#{validation_temp_directory} is writeable"
     end
+  end
+  
+  def enabled?
+    (@config.getProperty(HOST) != Configurator.instance.hostname())
   end
 end
 

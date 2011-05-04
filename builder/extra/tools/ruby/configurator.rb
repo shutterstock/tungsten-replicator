@@ -475,8 +475,8 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
   end
   
-  def write(content="", level=Logger::INFO, hostname = nil)
-    unless enable_log_level(level)
+  def write(content="", level=Logger::INFO, hostname = nil, force = false)
+    if !enable_log_level(level) && force == false
       return
     end
     
@@ -751,6 +751,20 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   end
 end
 
+def cmd_result(command, ignore_fail = false)
+  Configurator.instance.debug("Execute `#{command}`")
+  result = `#{command} 2>&1`.chomp
+  rc = $?
+  
+  if rc != 0 && ! ignore_fail
+    raise CommandError.new(command, rc, result)
+  else
+    Configurator.instance.debug("RC: #{rc}, Result: #{result}")
+  end
+  
+  return result
+end
+
 # The user has requested to save all current configuration values and exit
 class ConfigureSaveConfigAndExit < StandardError
 end
@@ -762,4 +776,34 @@ end
 
 # The user has requested to return the previous prompt
 class ConfigurePreviousPrompt < StandardError
+end
+
+class CommandError < StandardError
+  attr_reader :command, :rc, :result
+  
+  def initialize(command, rc, result)
+    @command = command
+    @rc = rc
+    @result = result
+    
+    super(build_message())
+  end
+  
+  def build_message
+    "Failed: #{command}, RC: #{rc}, Result: #{result}"
+  end
+end
+
+class RemoteCommandError < CommandError
+  attr_reader :user, :host
+  
+  def initialize(user, host, command, rc, result)
+    @user = user
+    @host = host
+    super(command, rc, result)
+  end
+  
+  def build_message
+    "Failed: #{command}, RC: #{rc}, Result: #{result}"
+  end
 end

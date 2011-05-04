@@ -67,6 +67,12 @@ class THLStorageCheck < ConfigureValidationCheck
   end
   
   def validate
+    if @config.getProperty(REPL_LOG_DIR)
+      if File.exists?(@config.getProperty(REPL_LOG_DIR)) && !File.directory?(@config.getProperty(REPL_LOG_DIR))
+        error("Replication log directory #{@config.getProperty(REPL_LOG_DIR)} already exists as a file")
+      end
+    end
+    
     @config.getPropertyOr(REPL_SERVICES).each{
       |service_alias,service_properties|
       
@@ -76,6 +82,35 @@ class THLStorageCheck < ConfigureValidationCheck
             dir_file_count = cmd_result("ls #{service_properties[REPL_LOG_DIR]} | wc -l")
             if dir_file_count.to_i() > 0
               error("Replication log directory #{service_properties[REPL_LOG_DIR]} already contains log files")
+            end
+          end
+        end  
+      end
+    }
+  end
+end
+
+class TransferredLogStorageCheck < ConfigureValidationCheck
+  def set_vars
+    @title = "Transferred log storage check"
+  end
+  
+  def validate
+    if @config.getProperty(REPL_RELAY_LOG_DIR)
+      if File.exists?(@config.getProperty(REPL_RELAY_LOG_DIR)) && !File.directory?(@config.getProperty(REPL_RELAY_LOG_DIR))
+        error("Transferred log directory #{@config.getProperty(REPL_RELAY_LOG_DIR)} already exists as a file")
+      end
+    end
+    
+    @config.getPropertyOr(REPL_SERVICES).each{
+      |service_alias,service_properties|
+      
+      if service_properties[REPL_RELAY_LOG_DIR]
+        unless File.exists?(service_properties[REPL_SVC_CONFIG_FILE])
+          if File.exists?(service_properties[REPL_RELAY_LOG_DIR])
+            dir_file_count = cmd_result("ls #{service_properties[REPL_RELAY_LOG_DIR]} | wc -l")
+            if dir_file_count.to_i() > 0
+              error("Transferred log directory #{service_properties[REPL_RELAY_LOG_DIR]} already contains log files")
             end
           end
         end  

@@ -32,6 +32,7 @@ class ConfigurePackageCluster < ConfigurePackage
       HostnameCheck.new(),
       PackageDownloadCheck.new(),
       THLStorageCheck.new(),
+      TransferredLogStorageCheck.new(),
       DataserversChecks.new(),
       BackupMethodAvailableCheck.new(),
       ReplicationServiceChecks.new()

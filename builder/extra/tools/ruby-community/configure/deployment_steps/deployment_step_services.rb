@@ -31,6 +31,12 @@ module ConfigureDeploymentStepServices
       started = cmd_result("#{get_deployment_basedir()}/cluster-home/bin/startall")
       info(started)
     end
+    
+    if @config.getProperty(SVC_REPORT) == "true"
+      output("Getting services list")
+      services = cmd_result("#{get_deployment_basedir()}/tungsten-replicator/bin/trepctl -port #{@config.getProperty(REPL_RMI_PORT)} services")
+      output(services)
+    end
   end
   
   def config_wrapper

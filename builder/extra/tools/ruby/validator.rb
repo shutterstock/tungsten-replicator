@@ -44,11 +44,16 @@ class FilePropertyValidator
     elsif @ftype == "directory" && ! File.exists?(value)
       if @create
         if confirm "Directory #{value} does not exist, ok to create it?", "yes"
-          Dir.mkdir(value)
-          if File.exists?(value)
-            return value
+          retvalue = `mkdir -p #{value}`.strip
+          unless $? == 0
+            ok = false
+            puts "There was an error creating the directory: #{retvalue}"
           else
-            puts "Unable to create directory!"
+            if File.exists?(value)
+              return value
+            else
+              puts "Unable to create directory!"
+            end
           end
         end
       end

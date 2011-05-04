@@ -18,8 +18,8 @@ module ConfigureDeploymentCore
         |deployment_method|
         self.send(deployment_method.method_name)
       }
-    rescue Exception => e
-      error("#{e.to_s()}:#{e.backtrace.join("\n")}")
+    rescue => e
+      error(e.to_s())
     end
     
     result = RemoteResult.new()
@@ -52,10 +52,14 @@ module ConfigureDeploymentCore
     end
     
     if File.exists?(dirname)
-      debug("Found directory, no need to create: #{dirname}")
+      if File.directory?(dirname)
+        debug("Found directory, no need to create: #{dirname}")
+      else
+        raise "Directory already exists as a file: #{dirname}"
+      end
     else
       debug("Creating missing directory: #{dirname}")
-      Dir.mkdir(dirname)
+      cmd_result("mkdir -p #{dirname}")
     end
   end
   
@@ -103,7 +107,7 @@ module ConfigureDeploymentCore
     svc_command = get_svc_command(boot_script)
 
     # Ensure services properties directory exists.
-    cmd_result("mkdir -p #{svc_properties_dir}")
+    mkdir_if_absent(svc_properties_dir)
 
     # Create service properties file.
     out = File.open(svc_properties, "w")
@@ -122,20 +126,6 @@ module ConfigureDeploymentCore
   # Add an OS service that needs to be started and/or deployed.
   def add_service(start_script)
     @services.insert(-1, start_script)
-  end
-  
-  def cmd_result(command, ignore_fail = false)
-    debug("Execute `#{command}`")
-    result = `#{command} 2>&1`.chomp
-    rc = $?
-    
-    if rc != 0 && ! ignore_fail
-      raise "Failed: #{command}, RC: #{rc}, Result: #{result}"
-    else
-      debug("RC: #{rc}, Result: #{result}")
-    end
-    
-    return result
   end
   
   # Find out the full executable path or return nil

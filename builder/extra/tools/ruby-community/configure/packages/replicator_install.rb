@@ -83,12 +83,18 @@ class ReplicatorInstallPackage < ConfigurePackage
       "slave-thl-directory" => "/opt/continuent/thl",
       "slave-relay-directory" => "/opt/continuent/relay",
       "slave-thl-port" => "2112",
-      "rmi-port" => "10000"
+      "rmi-port" => "10000",
+      "svc-start" => "false",
+      "report-services" => "false"
     }
     
     opts = OptionParser.new
-    opts.on("--start")      {options.setProperty(REPL_SVC_START, "true")}
-
+    opts.on("--start")      {options.setProperty("svc-start", "true")}
+    opts.on("--start-and-report")      {
+      options.setProperty("svc-start", "true")
+      options.setProperty("svc-report", "true")
+    }
+    
     [
       "dbms-type",
       "master-alias",
@@ -109,7 +115,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       "buffer-size",
       "channels",
       "service-name",
-      "rmi-port"
+      "rmi-port",
     ].each{
       |prop_key|
       opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
@@ -149,7 +155,8 @@ class ReplicatorInstallPackage < ConfigurePackage
     
     @config.setProperty(HOSTS, nil)
     @config.setProperty([HOSTS, DIRECT_DEPLOYMENT_HOST_ALIAS], {
-      SVC_START => "false",
+      SVC_START => options.getProperty('svc-start'),
+      SVC_REPORT => options.getProperty('svc-report'),
       HOST => Configurator.instance.hostname(),
       IP_ADDRESS => Resolv.getaddress(Configurator.instance.hostname()),
       REPL_LOG_DIR => options.getProperty("slave-thl-directory"),
@@ -194,11 +201,17 @@ class ReplicatorInstallPackage < ConfigurePackage
       "thl-directory" => "/opt/continuent/thl",
       "thl-port" => "2112",
       "relay-directory" => "/opt/continuent/relay",
-      "rmi-port" => "10000"
+      "rmi-port" => "10000",
+      "svc-start" => "false",
+      "svc-report" => "false"
     }
     
     opts = OptionParser.new
-    opts.on("--start")      {options.setProperty(REPL_SVC_START, "true")}
+    opts.on("--start")      {options.setProperty("svc-start", "true")}
+    opts.on("--start-and-report")      {
+      options.setProperty("svc-start", "true")
+      options.setProperty("svc-report", "true")
+    }
 
     [
       "dbms-type",
@@ -262,7 +275,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       |host|
       host_alias = host.tr('.', '_')
       @config.setProperty([HOSTS, host_alias], {
-        SVC_START => "false",
+        SVC_START => options.getProperty('svc-start'),
+        SVC_REPORT => options.getProperty('svc-report'),
         HOST => host,
         IP_ADDRESS => Resolv.getaddress(host),
         USERID => options.getProperty("user"),
@@ -329,6 +343,8 @@ class ReplicatorInstallPackage < ConfigurePackage
     output_usage_line("--channels", "Number of channels for parallel apply", "1")
     output_usage_line("--rmi-port", "", "10001")
     output_usage_line("--service-name")
+    output_usage_line("--start", "Start the replicator after configuration")
+    output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
     Configurator.instance.write_divider(Logger::ERROR)
     puts "Install options: --master-slave"
     output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
@@ -351,5 +367,7 @@ class ReplicatorInstallPackage < ConfigurePackage
     output_usage_line("--channels", "Number of channels for parallel apply", "1")
     output_usage_line("--rmi-port", "", "10001")
     output_usage_line("--service-name")
+    output_usage_line("--start", "Start the replicator after configuration")
+    output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
   end
 end

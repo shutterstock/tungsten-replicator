@@ -83,11 +83,4 @@ class ConfigureDeploymentHandler
   def get_message_hostname
     @config.getProperty(HOST)
   end
-  
-  def output_errors
-    @errors.each{
-      |error|
-      Configurator.instance.error(error.message)
-    }
-  end
 end

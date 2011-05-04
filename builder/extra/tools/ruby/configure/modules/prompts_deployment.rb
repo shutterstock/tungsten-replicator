@@ -15,6 +15,7 @@ class ClusterHosts < GroupConfigurePrompt
       RootCommandPrefixPrompt.new(),
       InstallServicesPrompt.new(),
       StartServicesPrompt.new(),
+      ReportServicesPrompt.new(),
         
       THLStorageType.new(),
       THLStorageDirectory.new(),
@@ -314,6 +315,15 @@ class StartServicesPrompt < ConfigurePrompt
     else
       "#{get_interface_text_directory()}/prompt_#{@name}_postgresql"
     end
+  end
+end
+
+class ReportServicesPrompt < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(SVC_REPORT, "Report services after configuration", 
+      PV_BOOLEAN, "false")
   end
 end
 

@@ -13,6 +13,10 @@ module ConfigureMessages
     (@errors == nil || @errors.length() == 0)
   end
   
+  def output(message, level = Logger::INFO)
+    Configurator.instance.write(message, level, get_message_hostname(), true)
+  end
+  
   def info(message)
     Configurator.instance.info(message, get_message_hostname())
   end
@@ -53,6 +57,49 @@ module ConfigureMessages
   
   def get_message_hostname
     nil
+  end
+  
+  def output_errors
+    host_errors = Hash.new()
+    generic_errors = []
+    
+    @errors.each{
+      |error|
+      
+      if (error.is_a?(ValidationError) || error.is_a?(RemoteError)) && error.host.to_s() != ""
+        unless host_errors.has_key?(error.host)
+          host_errors[error.host] = []
+        end
+        host_errors[error.host] << error
+      else  
+        generic_errors << error
+      end
+    }
+    
+    host_errors.each_key{
+      |host|
+      
+      $i = 0
+
+      Configurator.instance.write_header("Errors for #{host}", Logger::ERROR)
+      until $i >= host_errors[host].length() do
+        $host_error = host_errors[host][$i]
+        $i+=1
+        $next_host_error = host_errors[host][$i]
+        
+        Configurator.instance.error($host_error.message, host)
+      end
+    }
+    
+    unless generic_errors.empty?()
+      previous_help = nil
+      
+      Configurator.instance.write_header('Errors for the cluster', Logger::ERROR)
+      generic_errors.each{
+        |generic_error|
+        Configurator.instance.error(generic_error.message)
+      }
+    end
   end
 end
 

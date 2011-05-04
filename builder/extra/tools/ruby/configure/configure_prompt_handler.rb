@@ -208,7 +208,7 @@ class ConfigurePromptHandler
       Configurator.instance.write_divider(Logger::ERROR)
       Configurator.instance.error error.prompt.get_prompt()
       Configurator.instance.error "> Message: #{error.message}"
-      #Configurator.instance.error "> Config Key: #{error.prompt.get_name()}"
+      Configurator.instance.error "> Config Key: #{error.prompt.get_name()}"
       
       if error.current_value.to_s() != ""
         Configurator.instance.error "> Current Value: #{error.current_value}"

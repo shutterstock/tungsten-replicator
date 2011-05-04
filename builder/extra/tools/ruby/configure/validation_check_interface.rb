@@ -73,20 +73,6 @@ module ValidationCheckInterface
     end
   end
   
-  def cmd_result(command, ignore_fail = false)
-    debug("Execute `#{command}`")
-    result = `#{command} 2>&1`.chomp
-    rc = $?
-    
-    if rc != 0 && ! ignore_fail
-      raise "Failed: #{command}, RC: #{rc}, Result: #{result}"
-    else
-      debug("RC: #{rc}, Result: #{result}")
-    end
-    
-    return result
-  end
-  
   def get_userid
     @config.getProperty(USERID)
   end
@@ -108,7 +94,7 @@ module ValidationCheckInterface
     rc = $?
     
     if rc != 0 && ! ignore_fail
-      raise "Failed: #{command}, RC: #{rc}, Result: #{result}"
+      raise RemoteCommandError.new(user, host, command, rc, result)
     else
       debug("RC: #{rc}, Result: #{result}")
     end

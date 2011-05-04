@@ -112,12 +112,13 @@ class ConfigureValidationHandler
           extra_options = "-q"
         end
         
-        # Transfer validation code
         validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
+        
+        # Transfer validation code
         debug("Transfer configuration code to #{@config.getProperty(HOST)}")
-        ssh_result("mkdir -p #{validation_temp_directory}")
         cmd_result("rsync -Caze ssh --delete #{Configurator.instance.get_base_path()}/ #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
 
+        # Transfer the MySQL/J file if it is being used
         if @config.getProperty(REPL_MYSQL_CONNECTOR_PATH) != nil
           debug("Transfer Connector/J to #{@config.getProperty(HOST)}")
           cmd_result("scp #{@config.getProperty(REPL_MYSQL_CONNECTOR_PATH)} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
@@ -154,7 +155,7 @@ class ConfigureValidationHandler
           rc = $?
 
           if rc != 0
-            raise "Failed: #{command}, RC: #{rc}, Result: #{result_dump}"
+            raise RemoteCommandError(user, host, command, rc, result_dump)
           else
             Configurator.instance.debug("RC: #{rc}, Result: #{result_dump}")
           end
@@ -175,8 +176,7 @@ class ConfigureValidationHandler
         end
       end
     rescue => e
-      Configurator.instance.exception(e)
-      @errors.push(RemoteError.new(@config.getProperty(HOST), e.to_s()))
+      error(e.to_s())
     end
     
     is_valid?()
@@ -212,79 +212,6 @@ class ConfigureValidationHandler
     result
   end
   
-  def output_errors
-    host_errors = Hash.new()
-    generic_errors = []
-    
-    @errors.each{
-      |error|
-      
-      if error.host == nil || !error.is_a?(ValidationError)
-        generic_errors << error
-      else
-        unless host_errors.has_key?(error.host)
-          host_errors[error.host] = []
-        end
-        host_errors[error.host] << error
-      end
-    }
-    
-    host_errors.each_key{
-      |host|
-      
-      $i = 0
-
-      Configurator.instance.write_header("Errors for #{host}", Logger::ERROR)
-      until $i >= host_errors[host].length() do
-        $host_error = host_errors[host][$i]
-        $i+=1
-        $next_host_error = host_errors[host][$i]
-        
-        Configurator.instance.error($host_error.message, host)
-        
-        if $next_host_error == nil || $host_error.check != $next_host_error.check
-          help = $host_error.get_help()
-          unless help == nil || help.empty?()
-            puts help.join("\n")
-          end
-          
-          # Disable this section for now
-          if $host_error.check.support_remote_fix && Configurator.instance.is_interactive?() && false
-            execute_fix = input_value("Do you want the script to automatically fix this?", "false")
-          end
-          
-          unless help == nil || help.empty?()
-            Configurator.instance.write_divider(Logger::ERROR)
-          end
-        end
-      end
-    }
-    
-    unless generic_errors.empty?()
-      previous_help = nil
-      
-      Configurator.instance.write_header('Errors for the cluster', Logger::ERROR)
-      generic_errors.each{
-        |generic_error|
-        Configurator.instance.error(generic_error.message)
-      }
-    end
-  end
-  
-  def cmd_result(command, ignore_fail = false)
-    debug("Execute `#{command}`")
-    result = `#{command} 2>&1`.chomp
-    rc = $?
-    
-    if rc != 0 && ! ignore_fail
-      raise "Failed: #{command}, RC: #{rc}, Result: #{result}"
-    else
-      debug("RC: #{rc}, Result: #{result}")
-    end
-    
-    return result
-  end
-  
   def ssh_result(command, ignore_fail = false, host = nil, user = nil)
     if (user == nil)
       user = @config.getProperty(USERID)
@@ -298,7 +225,7 @@ class ConfigureValidationHandler
     rc = $?
     
     if rc != 0 && ! ignore_fail
-      raise "Failed: #{command}, RC: #{rc}, Result: #{result}"
+      raise RemoteCommandError.new(user, host, command, rc, result)
     else
       debug("RC: #{rc}, Result: #{result}")
     end

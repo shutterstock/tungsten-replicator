@@ -30,6 +30,7 @@ OPTION_MONITOR_INTERNAL = "internal_monitor"
 # Operating system service parameters.
 SVC_INSTALL = "install_svc_scripts"
 SVC_START = "start_svc_scripts"
+SVC_REPORT = "report_services"
 ROOT_PREFIX = "root_command_prefix"
 
 # Network control parameters.

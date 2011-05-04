@@ -112,8 +112,10 @@ class ReplicationServiceDataserver < ConfigurePrompt
   def is_valid?
     super()
     
-    unless @config.getProperty(DATASERVERS).has_key?(get_value())
-      raise ConfigurePromptError.new(self, "Datasource #{get_value()} does not exist in the configuration file", get_value())
+    if enabled?
+      unless @config.getProperty(DATASERVERS).has_key?(get_value())
+        raise ConfigurePromptError.new(self, "Datasource #{get_value()} does not exist in the configuration file", get_value())
+      end
     end
   end
 end

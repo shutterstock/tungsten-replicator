@@ -154,20 +154,6 @@ module ConfigurePromptInterface
     return description
   end
   
-  def cmd_result(command, ignore_fail = false)
-    debug("Execute `#{command}`")
-    result = `#{command} 2>&1`.chomp
-    rc = $?
-    
-    if rc != 0 && ! ignore_fail
-      raise "Failed: #{command}, RC: #{rc}, Result: #{result}"
-    else
-      debug("RC: #{rc}, Result: #{result}")
-    end
-    
-    return result
-  end
-  
   def ssh_result(command, ignore_fail = false, host = nil, user = nil)
     if (user == nil)
       user = @config.getProperty(USERID)
@@ -181,7 +167,7 @@ module ConfigurePromptInterface
     rc = $?
     
     if rc != 0 && ! ignore_fail
-      raise "Failed: #{command}, RC: #{rc}, Result: #{result}"
+      raise RemoteCommandError.new(user, host, command, rc, result)
     else
       debug("RC: #{rc}, Result: #{result}")
     end
