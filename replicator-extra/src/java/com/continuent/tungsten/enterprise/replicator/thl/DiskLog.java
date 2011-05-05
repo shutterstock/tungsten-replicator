@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,7 @@ package com.continuent.tungsten.enterprise.replicator.thl;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
@@ -86,11 +87,32 @@ public class DiskLog
      */
     protected int               logConnectionTimeoutMillis = 28800000;
 
+    /**
+     * I/O buffer size for log file access. Larger is better.
+     */
+    protected int               bufferSize                 = 65536;
+
     /** Write lock to prevent log file corruption by concurrent access. */
     protected WriteLock         writeLock;
 
     /** Indicates whether access should be read only or not */
     protected boolean           readOnly                   = true;
+
+    /**
+     * Flush data after this many milliseconds. 0 flushes after every write.
+     */
+    private long                flushIntervalMillis        = 0;
+
+    /** 
+     * If true, fsync when flushing. 
+     */
+    private boolean             fsyncOnFlush               = false;
+
+    /**
+     * Log flush task; enabled if asynchronous flush interval is greater than 0.
+     */
+    private LogFlushTask        logSyncTask;
+    private Thread              logSyncThread;
 
     /**
      * Creates a new log instance.
@@ -170,8 +192,33 @@ public class DiskLog
         this.timeoutMillis = timeoutMillis;
     }
 
-    // Administrative API calls.
+    /**
+     * Sets the log buffer size.
+     */
+    public void setBufferSize(int bufferSize)
+    {
+        this.bufferSize = bufferSize;
+    }
 
+    /**
+     * Set write flush interval in milliseconds. 0 means flush on every write.
+     * This lowers latency.
+     */
+    public void setFlushIntervalMillis(long flushIntervalMillis)
+    {
+        this.flushIntervalMillis = flushIntervalMillis;
+    }
+
+    /**
+     * If set to true, perform an fsync with every flush. Warning: fsync is very
+     * slow, so you want a long flush interval in this case.
+     */
+    public synchronized void setFsyncOnFlush(boolean fsyncOnFlush)
+    {
+        this.fsyncOnFlush = fsyncOnFlush;
+    }
+
+    // Administrative API calls.
     public void setReadOnly(boolean readOnly)
     {
         this.readOnly = readOnly;
@@ -272,7 +319,7 @@ public class DiskLog
 
         // If the log does not have any files, initialize the first log file
         // now.
-        if (LogFile.listLogFiles(logDir, DATA_FILENAME_PREFIX).length == 0)
+        if (listLogFiles(logDir, DATA_FILENAME_PREFIX).length == 0)
         {
             if (readOnly)
             {
@@ -284,17 +331,20 @@ public class DiskLog
             {
                 String logFileName = getDataFileName(fileIndex);
                 LogFile logFile = new LogFile(logDir, logFileName);
+                logFile.setBufferSize(bufferSize);
                 logger.info("Initializing logs: logDir="
                         + logDir.getAbsolutePath() + " file="
                         + logFile.getFile().getName());
-                logFile.prepareWrite(-1);
+                logFile.create(-1);
+                logFile.close();
             }
         }
 
         // Create an index on the log.
         if (logger.isDebugEnabled())
             logger.debug("Preparing index");
-        index = new LogIndex(logDir, DATA_FILENAME_PREFIX, logFileRetainMillis);
+        index = new LogIndex(logDir, DATA_FILENAME_PREFIX, logFileRetainMillis,
+                bufferSize);
 
         // Open the last index file and parse the name to get the index of the
         // next file to be created. This ensures new files will be properly
@@ -352,7 +402,7 @@ public class DiskLog
                     // to start writing.
                     logger.info("Last log file ends on rotate log event: "
                             + logFile.getFile().getName());
-                    logFile.release();
+                    logFile.close();
                     if (!readOnly)
                         logFile = this.startNewLogFile(maxSeqno + 1);
                     break;
@@ -425,7 +475,15 @@ public class DiskLog
         finally
         {
             if (logFile != null)
-                logFile.release();
+                logFile.close();
+        }
+
+        // If this log is writable, compute the write flush interval.
+        logger.info("Setting up log flush policy: fsyncIntervalMillis="
+                + flushIntervalMillis + " fsyncOnFlush=" + this.fsyncOnFlush);
+        if (!this.readOnly)
+        {
+            startLogSyncTask();
         }
 
         // Open up the connection manager for business.
@@ -438,13 +496,57 @@ public class DiskLog
     }
 
     /**
-     * Releases the log resources. This should be called after use.
+     * Releases the log resources. This should be called after use to ensure log
+     * sync task termination.
      */
     public void release() throws ReplicatorException, InterruptedException
     {
+        // Release all connections. This fsyncs pending writes.
+        connectionManager.release();
+
+        // Free lock on log file.
         if (!readOnly)
             writeLock.release();
-        connectionManager.release();
+
+        // Terminate the fsync thread.
+        stopLogSyncTask();
+    }
+
+    // Start log sync task.
+    private void startLogSyncTask()
+    {
+        if (flushIntervalMillis > 0)
+        {
+            logSyncTask = new LogFlushTask(flushIntervalMillis);
+            logSyncThread = new Thread(logSyncTask, "log-sync-"
+                    + logDir.getName());
+            logSyncThread.start();
+            logger.info("Started deferred log sync thread: "
+                    + logSyncThread.getName());
+        }
+    }
+
+    // Stop log sync task.
+    private void stopLogSyncTask() throws InterruptedException
+    {
+        if (logSyncThread != null)
+        {
+            logger.info("Stopping deferred log sync thread: "
+                    + logSyncThread.getName());
+            logSyncTask.cancel();
+            logSyncThread.interrupt();
+            try
+            {
+                logSyncThread.join(5000);
+            }
+            finally
+            {
+                if (logSyncThread.isAlive())
+                    logger.warn("Unable to terminate log sync thread: "
+                            + logSyncThread.getName());
+                logSyncThread = null;
+            }
+        }
     }
 
     /**
@@ -512,6 +614,13 @@ public class DiskLog
         {
             throw new THLException("Attempt to write to read-only log: seqno="
                     + event.getSeqno() + " fragno=" + event.getFragno());
+        }
+
+        // Ensure that sync thread is healthy. If not, restart it.
+        if (flushIntervalMillis > 0 && logSyncTask.isFinished())
+        {
+            stopLogSyncTask();
+            startLogSyncTask();
         }
 
         // If the log does not have any files, initialize the first log file
@@ -584,8 +693,7 @@ public class DiskLog
                 // If it is time to commit, make it happen!
                 if (syncCommitSeqno)
                 {
-                    // TODO: Ensure that DBMS pointer is updated.
-                    // dataFile.fsync();
+                    dataFile.flush();
                 }
             }
             catch (IOException e)
@@ -647,7 +755,8 @@ public class DiskLog
                                 + " seqno="
                                 + seqno + " logFile=" + newFileName);
                 LogFile data1 = new LogFile(logDir, newFileName);
-                data1.prepareRead();
+                data1.setBufferSize(bufferSize);
+                data1.openRead();
                 logConnection = connectionManager.createAndGetLogConnection(
                         data1, seqno);
             }
@@ -720,7 +829,8 @@ public class DiskLog
                         // Use this to allocate the next LogFile and create a
                         // connection for it so we can continue reading.
                         data = new LogFile(logDir, newFileName);
-                        data.prepareRead();
+                        data.setBufferSize(bufferSize);
+                        data.openRead();
                         logConnection = connectionManager
                                 .createAndGetLogConnection(data, seqno);
                     }
@@ -838,6 +948,14 @@ public class DiskLog
         LogFile logFile = null;
         try
         {
+            // This operation is going to invalidate the current log file
+            // connection,
+            // if any, as we are going to truncate the file. If there is a
+            // current log
+            // file connection, close it.
+            connectionManager.releaseConnection();
+
+            // Open a new log file and get to work.
             logFile = openFile(entry.fileName, false);
             long offset = logFile.getOffset();
             LogRecord currentRecord = logFile.readRecord(0);
@@ -891,7 +1009,7 @@ public class DiskLog
         finally
         {
             if (logFile != null)
-                logFile.release();
+                logFile.close();
         }
     }
 
@@ -920,8 +1038,16 @@ public class DiskLog
     private LogFile openFile(String logFileName, boolean readOnly)
             throws ReplicatorException
     {
-        // Get the file reference.
+        // Open a LogFile instance. Set log sync task if we are writing and
+        // deferred sync is enabled.
         LogFile data = new LogFile(logDir, logFileName);
+        if (!readOnly)
+        {
+            data.setLogSyncTask(logSyncTask);
+            data.setFlushIntervalMillis(flushIntervalMillis);
+            data.setFsyncOnFlush(readOnly);
+        }
+        data.setBufferSize(bufferSize);
 
         // Ensure the file exists.
         if (!data.getFile().exists())
@@ -939,9 +1065,9 @@ public class DiskLog
                     + data.getFile().getAbsolutePath());
 
         if (readOnly)
-            data.prepareRead();
+            data.openRead();
         else
-            data.prepareWrite(-1);
+            data.openWrite();
 
         return data;
     }
@@ -998,12 +1124,13 @@ public class DiskLog
         // Open new log file and update index. TODO: did this get updated?
         String logFileName = getDataFileName(fileIndex);
         LogFile dataFile = new LogFile(logDir, logFileName);
+        dataFile.setBufferSize(bufferSize);
         if (dataFile.getFile().exists())
         {
             throw new THLException("New log file exists already: "
                     + dataFile.getFile().getName());
         }
-        dataFile.prepareWrite(seqno);
+        dataFile.create(seqno);
 
         // Add the file to the volatile index.
         index.addNewFile(seqno, logFileName);
@@ -1033,7 +1160,8 @@ public class DiskLog
     public LogFile setFile(String file) throws ReplicatorException
     {
         LogFile data = new LogFile(logDir, file);
-        data.prepareRead();
+        data.setBufferSize(bufferSize);
+        data.openRead();
         return data;
     }
 
@@ -1086,5 +1214,27 @@ public class DiskLog
     public String getIndex()
     {
         return index.toString();
+    }
+
+    /**
+     * Returns a sorted list of log files.
+     * 
+     * @param logDir Directory containing logs
+     * @param logFilePrefix Prefix for log file names
+     * @return Array of logfiles (zero-length if log is not initialized)
+     */
+    public static File[] listLogFiles(File logDir, String logFilePrefix)
+    {
+        // Find the log files and sort into file name order.
+        ArrayList<File> logFiles = new ArrayList<File>();
+        for (File f : logDir.listFiles())
+        {
+            if (!f.isDirectory() && f.getName().startsWith(logFilePrefix))
+            {
+                logFiles.add(f);
+            }
+        }
+        File[] logFileArray = new File[logFiles.size()];
+        return logFiles.toArray(logFileArray);
     }
 }

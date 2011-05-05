@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -85,7 +85,7 @@ public class LogConnection
      */
     public void release()
     {
-        logFile.release();
+        logFile.close();
         logFile = null;
     }
 }

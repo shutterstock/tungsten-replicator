@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -50,7 +50,8 @@ import com.continuent.tungsten.replicator.thl.THLStorage;
  */
 public class DiskTHLStorage implements THLStorage
 {
-    static Logger           logger               = Logger.getLogger(DiskTHLStorage.class);
+    static Logger           logger               = Logger
+                                                         .getLogger(DiskTHLStorage.class);
 
     // Statistical information.
 
@@ -82,6 +83,17 @@ public class DiskTHLStorage implements THLStorage
     /** Idle log Connection timeout in seconds. */
     protected int           logConnectionTimeout = 28800;
 
+    /** I/O buffer size in bytes. */
+    protected int           bufferSize           = 131072;
+
+    /**
+     * Flush data after this many milliseconds. 0 flushes after every write.
+     */
+    private long                flushIntervalMillis        = 0;
+
+    /** If true, fsync when flushing. */
+    private boolean             fsyncOnFlush               = false;
+
     private boolean         readOnly             = true;
 
     /**
@@ -111,6 +123,9 @@ public class DiskTHLStorage implements THLStorage
         diskLog.setLogFileSize(logFileSize);
         diskLog.setLogFileRetainMillis(logFileRetainMillis);
         diskLog.setLogConnectionTimeoutMillis(logConnectionTimeout * 1000);
+        diskLog.setBufferSize(bufferSize);
+        diskLog.setFlushIntervalMillis(flushIntervalMillis);
+        diskLog.setFsyncOnFlush(fsyncOnFlush);
         diskLog.setReadOnly(readOnly);
         diskLog.prepare();
 
@@ -230,9 +245,29 @@ public class DiskTHLStorage implements THLStorage
         this.eventSerializerClass = eventSerializer;
     }
 
+    /**
+     * Sets log file retention from an interval string. 
+     */
     public void setLogFileRetention(String retention)
     {
         this.logFileRetainMillis = new Interval(retention).longValue();
+    }
+
+    /**
+     * Sets the interval between flush calls. 
+     */
+    public void setFlushIntervalMillis(long flushIntervalMillis)
+    {
+        this.flushIntervalMillis = flushIntervalMillis;
+    }
+    
+    /**
+     * If set to true, perform an fsync with every flush. Warning: fsync is very
+     * slow, so you want a long flush interval in this case.
+     */
+    public synchronized void setFsyncOnFlush(boolean fsyncOnFlush)
+    {
+        this.fsyncOnFlush = fsyncOnFlush;
     }
 
     /**
@@ -244,9 +279,10 @@ public class DiskTHLStorage implements THLStorage
     {
         this.logConnectionTimeout = logConnectionTimeout;
     }
-    
+
     /**
-     * Set the read only flag. This indicates whether the log should be opened for read or write access.
+     * Set the read only flag. This indicates whether the log should be opened
+     * for read or write access.
      * 
      * @param readOnly
      */
@@ -256,16 +292,24 @@ public class DiskTHLStorage implements THLStorage
     }
 
     /**
+     * Sets the log buffer size.
+     */
+    public void setBufferSize(int bufferSize)
+    {
+        this.bufferSize = bufferSize;
+    }
+
+    /**
      * {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#store(com.continuent.tungsten.replicator.thl.THLEvent,
      *      boolean)
      */
-    public void store(THLEvent event, boolean syncCommitSeqno)
+    public void store(THLEvent event, boolean doCommit, boolean syncTHL)
             throws THLException, InterruptedException
     {
-        diskLog.store(event, syncCommitSeqno);
-        if (syncCommitSeqno && database != null)
+        diskLog.store(event, doCommit);
+        if (doCommit && syncTHL && database != null)
         {
             try
             {

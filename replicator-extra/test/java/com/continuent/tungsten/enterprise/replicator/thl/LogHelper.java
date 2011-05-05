@@ -1,12 +1,23 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
- * Contact: tungsten@continuent.com
+ * Copyright (C) 2010-11 Continuent Inc.
+ * Contact: tungsten@continuent.org
  *
- * This program is property of Continuent.  All rights reserved. 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): 
  */
 
 package com.continuent.tungsten.enterprise.replicator.thl;
@@ -30,7 +41,7 @@ public class LogHelper
         File logfile = new File(name);
         logfile.delete();
         LogFile tf = new LogFile(logfile);
-        tf.prepareWrite(seqno);
+        tf.create(seqno);
         return tf;
     }
 
@@ -41,7 +52,7 @@ public class LogHelper
     {
         File logfile = new File(name);
         LogFile tf = new LogFile(logfile);
-        tf.prepareRead();
+        tf.openRead();
         return tf;
     }
 
@@ -52,10 +63,7 @@ public class LogHelper
     {
         File logfile = new File(name);
         LogFile tf = new LogFile(logfile);
-        if (tf.prepareWrite(-1))
-            throw new Exception(
-                    "Unexpectedly created a supposedly existin file: "
-                            + tf.getFile().getName());
+        tf.openWrite();
         return tf;
     }
 }

@@ -1,12 +1,23 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
- * Contact: tungsten@continuent.com
+ * Copyright (C) 2010-11 Continuent Inc.
+ * Contact: tungsten@continuent.org
  *
- * This program is property of Continuent.  All rights reserved. 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): 
  */
 
 package com.continuent.tungsten.enterprise.replicator.thl;
@@ -14,7 +25,6 @@ package com.continuent.tungsten.enterprise.replicator.thl;
 import java.io.File;
 import java.io.FileWriter;
 import java.sql.Timestamp;
-import java.util.HashMap;
 
 import junit.framework.TestCase;
 
@@ -95,7 +105,7 @@ public class DiskLogTest extends TestCase
     }
 
     /**
-     * Confirm that read-only log preparation fails if the log goes not exist.
+     * Confirm that read-only log preparation fails if the log does not exist.
      */
     public void testLogReadonlyPrepFailure() throws Exception
     {
@@ -347,7 +357,7 @@ public class DiskLogTest extends TestCase
         File logDir = prepareLogDir("testStutteringLogReadback");
         DiskLog log = openLog(logDir, false);
         log.release();
-        DiskLog logR = openLog(logDir, true, 1000000, 1000, 0);
+        DiskLog logR = openLog(logDir, true, 1000000, 1000, 0, 0);
 
         // Ensure that we don't find anything when the number is less than what
         // is in the log.
@@ -375,7 +385,7 @@ public class DiskLogTest extends TestCase
         log = openLog(logDir, false);
         writeEventsToLog(log, 50);
         log.release();
-        logR = openLog(logDir, false, 1000000, 1000, 0);
+        logR = openLog(logDir, false, 1000000, 1000, 0, 0);
 
         // Ensure that we don't find anything when the number is less than what
         // is in the log.
@@ -652,49 +662,49 @@ public class DiskLogTest extends TestCase
     }
 
     /**
-     * Confirm that we can handle multiple readers accessing the log at
-     * different locations while simultaneously writing. We need to make the
-     * logs small enough to pick off problems with log rotate events not
-     * appearing in time.
-     * <p>
-     * NOTE: We cannot really test concurrent read and write because reads do
-     * not wait until sequence numbers become available.
+     * Confirm that records written to the log do not appear to clients until
+     * commit.
      */
-    public void testConcurrentAccess() throws Exception
+    public void testCommit() throws Exception
     {
-        // Create the log and write multiple events.
-        File logDir = prepareLogDir("testConcurrentAccess");
-        DiskLog log = openLog(logDir, false, 1000000);
+        // Create the log and write multiple events. For this test s we need an
+        // infinite log timeout or the read thread will timeout during debugging
+        // sessions.  We also need to set fsync delay to 0, which will suppress 
+        // automatic fsync operations. 
+        File logDir = prepareLogDir("testCommit");
+        DiskLog log = new DiskLog();
+        log.setLogDir(logDir.getAbsolutePath());
+        log.setReadOnly(false);
+        log.setLogFileSize(1000000);
+        log.setTimeoutMillis(Integer.MAX_VALUE);
+        log.setFlushIntervalMillis(10000);
+        log.prepare();
 
-        // Write a bunch of events to the log.
-        writeEventsToLog(log, 10000);
+        // Create and start a reader. It will read one event and exit.
+        SimpleLogReader reader = new SimpleLogReader(log, 0, 2);
+        Thread thread = new Thread(reader);
+        thread.start();
 
-        // Create and start readers.
-        HashMap<Thread, SimpleLogReader> tasks = new HashMap<Thread, SimpleLogReader>();
-        for (int i = 0; i < 10; i++)
+        // Write but do not commit to the log. Confirm that reader does not see
+        // it after 5 seconds.
+        logger.info("Writting uncommitted message");
+        THLEvent e = this.createTHLEvent(0);
+        log.store(e, false);
+        thread.join(1000);
+        assertEquals("Reader does not see", 0, reader.eventsRead);
+
+        // Write but do commit. Confirm that reader now sees both events.
+        logger.info("Writting committed message");
+        e = this.createTHLEvent(1);
+        log.store(e, true);
+        thread.join(5000);
+        assertEquals("Reader does see", 2, reader.eventsRead);
+
+        // Wait for reader to finish and validate no errors occurred.
+        if (reader.error != null)
         {
-            SimpleLogReader reader = new SimpleLogReader(log, 0, 10000);
-            Thread thread = new Thread(reader);
-            tasks.put(thread, reader);
-            thread.start();
-        }
-
-        // Wait for readers to finish. 30 seconds should be sufficient.
-        {
-            for (Thread thread : tasks.keySet())
-            {
-                thread.join(30000);
-
-                SimpleLogReader reader = tasks.get(thread);
-                if (reader.error != null)
-                {
-                    throw new Exception(
-                            "Reader thread failed with exception after "
-                                    + reader.eventsRead + " events",
-                            reader.error);
-                }
-                assertEquals("Checking events read", 10000, reader.eventsRead);
-            }
+            throw new Exception("Reader thread failed with exception after "
+                    + reader.eventsRead + " events", reader.error);
         }
 
         // Release the log.
@@ -710,7 +720,14 @@ public class DiskLogTest extends TestCase
     {
         // Create the log with with 5K log files and a 5 second retention.
         File logDir = prepareLogDir("testLogRetention");
-        DiskLog log = openLog(logDir, false, 3000, 10000, 5000);
+        DiskLog log = new DiskLog();
+        log.setLogDir(logDir.getAbsolutePath());
+        log.setReadOnly(false);
+        log.setLogFileSize(3000);
+        log.setTimeoutMillis(10000);
+        log.setLogFileRetainMillis(5000);
+
+        log.prepare();
         writeEventsToLog(log, 200);
 
         // Collect the log file count and ensure it is greater than two.
@@ -757,7 +774,7 @@ public class DiskLogTest extends TestCase
 
     // Open a new or existing log.
     private DiskLog openLog(File logDir, boolean readonly, int fileSize,
-            int timeoutMillis, int logFileRetainMillis)
+            int timeoutMillis, int logFileRetainMillis, int flushIntervalMillis)
             throws ReplicatorException, InterruptedException
     {
         // Create the log directory if this is a new log.
@@ -769,6 +786,7 @@ public class DiskLogTest extends TestCase
         log.setLogFileSize(fileSize);
         log.setTimeoutMillis(timeoutMillis);
         log.setLogFileRetainMillis(logFileRetainMillis);
+        log.setFlushIntervalMillis(flushIntervalMillis);
         log.prepare();
 
         return log;
@@ -778,7 +796,7 @@ public class DiskLogTest extends TestCase
     private DiskLog openLog(File logDir, boolean readonly, int fileSize)
             throws ReplicatorException, InterruptedException
     {
-        return openLog(logDir, readonly, fileSize, 10000, 0);
+        return openLog(logDir, readonly, fileSize, 10000, 0, 0);
     }
 
     // Open new or existing with default size of 1M bytes.
@@ -796,20 +814,24 @@ public class DiskLogTest extends TestCase
     }
 
     // Write a prescribed number of events to the log starting at a
-    // specified sequence number.
+    // specified sequence number. Last event will be committed.
     private void writeEventsToLog(DiskLog log, long seqno, int howMany)
             throws THLException, InterruptedException
     {
+        // Should match incremented seqno on the final iteration.
+        long lastSeqno = seqno + howMany;
+
         // Write a series of events to the log.
         for (int i = 0; i < howMany; i++)
         {
             THLEvent e = this.createTHLEvent(seqno++);
-            log.store(e, false);
+            log.store(e, (seqno == lastSeqno));
             if (i > 0 && i % 1000 == 0)
                 logger.info("Writing events to disk: seqno=" + i);
         }
         assertEquals("Should have stored requested events", (seqno - 1), log
                 .getMaxSeqno());
+        logger.info("Final seqno: " + (seqno - 1));
     }
 
     // Read back a prescribed number of events.

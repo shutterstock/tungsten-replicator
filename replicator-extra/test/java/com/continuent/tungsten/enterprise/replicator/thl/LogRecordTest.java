@@ -1,12 +1,23 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
- * Contact: tungsten@continuent.com
+ * Copyright (C) 2010-11 Continuent Inc.
+ * Contact: tungsten@continuent.org
  *
- * This program is property of Continuent.  All rights reserved. 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): 
  */
 
 package com.continuent.tungsten.enterprise.replicator.thl;
@@ -72,7 +83,7 @@ public class LogRecordTest extends TestCase
                 serializer, true);
         LogRecord logRec = writer.write();
         tfrw.writeRecord(logRec, 10000);
-        tfrw.release();
+        tfrw.close();
 
         // Read the same THL event back.
         LogFile tfro = LogHelper
@@ -101,7 +112,7 @@ public class LogRecordTest extends TestCase
         assertEquals("Event seqno", inputEvent.getSeqno(), outputEvent
                 .getSeqno());
 
-        tfro.release();
+        tfro.close();
     }
 
     /**
@@ -116,20 +127,19 @@ public class LogRecordTest extends TestCase
         LogEventRotateWriter writer = new LogEventRotateWriter(45, true);
         LogRecord logRec = writer.write();
         tfrw.writeRecord(logRec, 10000);
-        tfrw.release();
+        tfrw.close();
 
-        // Read the rotation event back. 
-        LogFile tfro = LogHelper.openExistingFileForRead("testRotationEvents.dat");
+        // Read the rotation event back.
+        LogFile tfro = LogHelper
+                .openExistingFileForRead("testRotationEvents.dat");
         LogRecord logRec2 = tfro.readRecord(0);
-        LogEventRotateReader reader = new LogEventRotateReader(logRec2,
-                true);
+        LogEventRotateReader reader = new LogEventRotateReader(logRec2, true);
 
         // Check header fields.
         assertEquals("Checking recordType", LogRecord.EVENT_ROTATE, reader
                 .getRecordType());
         assertEquals("Checking index", 45, reader.getIndex());
 
-        tfro.release();
+        tfro.close();
     }
 }
-

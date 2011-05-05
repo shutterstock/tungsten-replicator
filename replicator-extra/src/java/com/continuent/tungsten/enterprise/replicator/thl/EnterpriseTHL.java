@@ -43,6 +43,9 @@ public class EnterpriseTHL extends THL
     private String  eventSerializer        = ProtobufSerializer.class.getName();
     private String  logFileRetention       = "0";
     private int     logConnectionTimeout   = 600;
+    private int     bufferSize             = 131072;
+    private long    flushIntervalMillis    = 0;
+    private boolean fsyncOnFlush           = false;
 
     // Set this to false for disk storage.
     private boolean useMultiStorageHandler = true;
@@ -73,6 +76,9 @@ public class EnterpriseTHL extends THL
                 handler.setEventSerializer(this.eventSerializer);
                 handler.setLogFileRetention(this.logFileRetention);
                 handler.setLogConnectionTimeout(this.logConnectionTimeout);
+                handler.setBufferSize(this.bufferSize);
+                handler.setFlushIntervalMillis(flushIntervalMillis);
+                handler.setFsyncOnFlush(fsyncOnFlush);
                 // THL always require a write connection to the log
                 handler.setReadOnly(false);
             }
@@ -138,6 +144,31 @@ public class EnterpriseTHL extends THL
     public void setLogConnectionTimeout(int logConnectionTimeout)
     {
         this.logConnectionTimeout = logConnectionTimeout;
+    }
+
+    /**
+     * Sets the log buffer size.
+     */
+    public void setBufferSize(int bufferSize)
+    {
+        this.bufferSize = bufferSize;
+    }
+
+    /**
+     * Sets the interval between flush calls. 
+     */
+    public void setFlushIntervalMillis(long flushIntervalMillis)
+    {
+        this.flushIntervalMillis = flushIntervalMillis;
+    }
+    
+    /**
+     * If set to true, perform an fsync with every flush. Warning: fsync is very
+     * slow, so you want a long flush interval in this case.
+     */
+    public synchronized void setFsyncOnFlush(boolean fsyncOnFlush)
+    {
+        this.fsyncOnFlush = fsyncOnFlush;
     }
 
     @Override

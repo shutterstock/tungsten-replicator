@@ -52,6 +52,7 @@ public class LogIndex
     private File                     logDir;
     private String                   filePrefix;
     private long                     retentionMillis;
+    private int                      bufferSize;
 
     /**
      * Creates a new in-memory instance on all log files in a particular
@@ -61,16 +62,18 @@ public class LogIndex
      * @param filePrefix Prefix for log files
      * @param retentionMillis Amount of time to retain log files before
      *            auto-deleting
+     * @param bufferSize Buffer size for reading log files
      * @throws ReplicatorException Thrown in the event of an error constructing
      *             the index
      */
-    public LogIndex(File logDir, String filePrefix, long retentionMillis)
-            throws ReplicatorException, InterruptedException
+    public LogIndex(File logDir, String filePrefix, long retentionMillis,
+            int bufferSize) throws ReplicatorException, InterruptedException
     {
         index = new ArrayList<LogIndexEntry>();
         this.logDir = logDir;
         this.filePrefix = filePrefix;
         this.retentionMillis = retentionMillis;
+        this.bufferSize = bufferSize;
         build();
     }
 
@@ -104,7 +107,8 @@ public class LogIndex
             if (logger.isDebugEnabled())
                 logger.debug("Checking " + file.getName());
             LogFile lf = new LogFile(file);
-            lf.prepareRead();
+            lf.setBufferSize(bufferSize);
+            lf.openRead();
             long seqno = lf.getBaseSeqno();
 
             // If we get -1 it means we have the first file in the
@@ -159,7 +163,7 @@ public class LogIndex
 
             // Remember this entry and release the log file.
             lastEntry = ie;
-            lf.release();
+            lf.close();
         }
         Collections.sort(index);
         logger.info("Constructed index; total log files added=" + index.size());
@@ -230,6 +234,7 @@ public class LogIndex
 
     /**
      * Returns the maximum sequence number this index knows about.
+     * 
      * @return -1 if index is empty, otherwise, return the max value
      */
     public synchronized long getMaxIndexedSeqno()

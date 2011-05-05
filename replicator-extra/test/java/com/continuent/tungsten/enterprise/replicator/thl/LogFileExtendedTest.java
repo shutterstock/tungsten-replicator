@@ -1,12 +1,23 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
- * Contact: tungsten@continuent.com
+ * Copyright (C) 2010-11 Continuent Inc.
+ * Contact: tungsten@continuent.org
  *
- * This program is property of Continuent.  All rights reserved. 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): 
  */
 
 package com.continuent.tungsten.enterprise.replicator.thl;
@@ -62,7 +73,7 @@ public class LogFileExtendedTest extends TestCase
         // Open up file and put in header.
         LogFile tf = LogHelper.createLogFile(
                 "testConcurrentReadWriteMulti.dat", -1);
-        tf.release();
+        tf.close();
 
         // Start read thread.
         SimpleLogFileReader[] readers = new SimpleLogFileReader[10];
@@ -82,7 +93,7 @@ public class LogFileExtendedTest extends TestCase
         long bytesWritten = 0;
         long recordsWritten = 0;
 
-        for(int i=0; i < maxRecords;i++)
+        for (int i = 0; i < maxRecords; i++)
         {
             byte[] data = new byte[100];
             for (int j = 0; j < 100; j++)
@@ -94,7 +105,7 @@ public class LogFileExtendedTest extends TestCase
             if (recordsWritten % 10000 == 0)
                 logger.info("Records written: " + recordsWritten);
         }
-        tfwr.release();
+        tfwr.close();
 
         // Wait for the reader to get done.
         for (Thread t : threads)

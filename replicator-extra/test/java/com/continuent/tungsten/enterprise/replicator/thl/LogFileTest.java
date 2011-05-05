@@ -1,12 +1,23 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
- * Contact: tungsten@continuent.com
+ * Copyright (C) 2010-11 Continuent Inc.
+ * Contact: tungsten@continuent.org
  *
- * This program is property of Continuent.  All rights reserved. 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): 
  */
 
 package com.continuent.tungsten.enterprise.replicator.thl;
@@ -63,15 +74,15 @@ public class LogFileTest extends TestCase
 
         // Create new file.
         LogFile tfrw = new LogFile(logfile);
-        assertTrue("Expect to create a new file", tfrw.prepareWrite(2));
-        tfrw.release();
+        tfrw.create(2);
+        tfrw.close();
 
         // Reopen the file to ensure it really exists.
         LogFile tfro = new LogFile(logfile);
-        tfro.prepareRead();
+        tfro.openRead();
         long seqno = tfro.getBaseSeqno();
         assertEquals("Sequence number should be 2", 2, seqno);
-        tfro.release();
+        tfro.close();
     }
 
     /**
@@ -81,7 +92,7 @@ public class LogFileTest extends TestCase
     public void testReadEmpty1() throws Exception
     {
         LogFile tf = LogHelper.createLogFile("testReadEmpty1.dat", 3);
-        tf.release();
+        tf.close();
         LogFile tfro = LogHelper.openExistingFileForRead("testReadEmpty1.dat");
 
         // Read with no wait returns empty record immediately.
@@ -100,7 +111,7 @@ public class LogFileTest extends TestCase
         {
         }
 
-        tfro.release();
+        tfro.close();
     }
 
     /**
@@ -110,7 +121,6 @@ public class LogFileTest extends TestCase
     {
         // Create file.
         LogFile tf = LogHelper.createLogFile("testReadWrite.dat", 5);
-        tf.setFsyncIntervalMillis(0);
 
         // Write byte-encoded string as a record.
         String testData1 = "Test characters";
@@ -121,6 +131,7 @@ public class LogFileTest extends TestCase
         tf.writeRecord(record1, 100);
         long lastPos = tf.getOffset();
         assertTrue("Position advanced after write", firstPos < lastPos);
+        tf.flush();
 
         // Reopen file read only, reread, and compare.
         LogFile tf2 = LogHelper.openExistingFileForRead("TestReadWrite.dat");
@@ -133,8 +144,8 @@ public class LogFileTest extends TestCase
         assertEquals("Record contents match", record1, record2);
 
         // Release resources
-        tf.release();
-        tf.release();
+        tf.close();
+        tf2.close();
     }
 
     /**
@@ -146,7 +157,6 @@ public class LogFileTest extends TestCase
         // Create file.
         LogFile tf = LogHelper.createLogFile("testFileTruncationAndRepair.dat",
                 5);
-        tf.setFsyncIntervalMillis(0);
 
         // Populate file with a few records.
         byte[] testBytes = "test bytes".getBytes();
@@ -176,29 +186,29 @@ public class LogFileTest extends TestCase
 
         // Truncate the last record within the byte array. (I.e., over 4 bytes
         // after the start.) Confirm it reads back as a truncated record.
-        tf.seekOffset(lastRecordOffset);
         tf.setLength(lastRecordOffset + 8);
+        tf.seekOffset(lastRecordOffset);
         lastRecord = tf.readRecord(0);
         assertTrue("Record truncated in the middle of byte array", lastRecord
                 .isTruncated());
 
         // Truncate record within length field. Confirm it reads back as
         // truncated record.
-        tf.seekOffset(lastRecordOffset);
         tf.setLength(lastRecordOffset + 2);
+        tf.seekOffset(lastRecordOffset);
         lastRecord = tf.readRecord(0);
         assertTrue("Record truncated in the middle of length", lastRecord
                 .isTruncated());
 
         // Truncate record cleanly at record offset. Confirm it reads back as
         // empty record.
-        tf.seekOffset(lastRecordOffset);
         tf.setLength(lastRecordOffset);
+        tf.seekOffset(lastRecordOffset);
         lastRecord = tf.readRecord(0);
         assertTrue("Record is empty", lastRecord.isEmpty());
 
         // Release resources
-        tf.release();
+        tf.close();
     }
 
     /**
@@ -223,7 +233,7 @@ public class LogFileTest extends TestCase
                         + rec.toString());
             }
         }
-        tf.release();
+        tf.close();
 
         // Read records and ensure checksums are the same.
         LogFile tfro = LogHelper.openExistingFileForRead("testCheckSum.dat");
@@ -249,7 +259,7 @@ public class LogFileTest extends TestCase
         }
 
         // Release resources
-        tf.release();
+        tf.close();
     }
 
     /**
@@ -259,7 +269,7 @@ public class LogFileTest extends TestCase
     {
         // Open up file and put in header.
         LogFile tf = LogHelper.createLogFile("testConcurrentReadWrite.dat", -1);
-        tf.release();
+        tf.close();
 
         // Open read and write files.
         LogFile tfwr = LogHelper
@@ -289,7 +299,7 @@ public class LogFileTest extends TestCase
             if (i % 10000 == 0)
                 logger.info("Records written: " + i);
         }
-        tfwr.release();
+        tfwr.close();
 
         // Wait for the reader to get done.
         try

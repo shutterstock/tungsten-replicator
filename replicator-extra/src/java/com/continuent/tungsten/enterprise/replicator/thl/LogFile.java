@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,10 +23,7 @@
 package com.continuent.tungsten.enterprise.replicator.thl;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
@@ -37,44 +34,78 @@ import com.continuent.tungsten.replicator.thl.THLException;
  * write from the underlying file.
  * 
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
+ * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class LogFile
 {
-    static Logger              logger              = Logger
-                                                           .getLogger(LogFile.class);
+    static Logger              logger             = Logger
+                                                          .getLogger(LogFile.class);
 
-    private static final int   MAGIC_NUMBER        = 0xC001CAFE;
-    private static final short MAJOR_VERSION       = 0x0001;
-    private static final short MINOR_VERSION       = 0x0001;
-    private static final int   RECORD_LENGTH_SIZE  = 4;
+    // Header fields.
+    private static final int   MAGIC_NUMBER       = 0xC001CAFE;
+    private static final short MAJOR_VERSION      = 0x0001;
+    private static final short MINOR_VERSION      = 0x0001;
+    private static final int   RECORD_LENGTH_SIZE = 4;
 
     /**
      * Maximum value of a single record. Larger values indicate file corruption.
      */
-    private static final int   MAX_RECORD_LENGTH   = 1000000000;
+    private static final int   MAX_RECORD_LENGTH  = 1000000000;
 
     /** Return immediately from write when there are no data. */
-    public static final int    NO_WAIT             = 0;
+    public static final int    NO_WAIT            = 0;
 
-    private File               file;
-    private RandomAccessFile   randomFile;
-    private boolean            writable;
-    /** Fsync after this many milliseconds. 0 fsyncs after every write. */
-    private long               fsyncIntervalMillis = 3000;
-    private long               nextfsyncMillis     = 0;
-    private long               baseSeqno;
+    /** Current mode of file, namely read or write. */
+    private enum AccessMode
+    {
+        write, read
+    };
+
+    // Log file parameters.
+
+    /** Log file name. */
+    private final File             file;
+    /** Buffer size used for I/O operations. */
+    private int                    bufferSize          = 65536;
+    /**
+     * Flush (or fsync) after this many milliseconds. Higher values defer flush
+     */
+    private long                   flushIntervalMillis = 0;
+    /** If true, fsync when flushing. */
+    private boolean                fsyncOnFlush        = false;
+
+    // Log sync task.
+    private LogFlushTask           logFlushTask        = null;
+
+    // Current access mode.
+    private AccessMode             mode                = null;
+
+    // Input control data.
+    private BufferedFileDataInput  dataInput;
+
+    // Output parameters.
+    private BufferedFileDataOutput dataOutput;
+    private long                   nextFlushMillis     = 0;
+    private long                   baseSeqno;
+    private boolean                needsFlush;
 
     /**
-     * Creates a file from a parent directory and child filename.
+     * Creates a file from a parent directory and child filename. The file must
+     * exist.
+     * 
+     * @param parentDirectory Log file directory
+     * @param fileName Log file name
      */
     public LogFile(File parentDirectory, String fileName)
     {
-        this.file = new File(parentDirectory, fileName);
+        this(new File(parentDirectory, fileName));
     }
 
     /**
-     * Creates a log file from a simple file.
+     * Creates a log file from a simple file. The file must exist.
+     * 
+     * @param file Log file specification
      */
     public LogFile(File file)
     {
@@ -84,214 +115,217 @@ public class LogFile
     /**
      * Returns the log file.
      */
-    public File getFile()
+    public synchronized File getFile()
     {
         return file;
     }
 
+    /** Returns the current log flush task, if any. */
+    public synchronized LogFlushTask getLogFlushTask()
+    {
+        return logFlushTask;
+    }
+
     /**
-     * Returns the number of milliseconds after which to fsync. 0 means fsync
-     * after every record written.
+     * Sets the log flush task. This enables delayed flush/fsync using
+     * flushIntervalMillis.
      */
-    public long getFsyncIntervalMillis()
+    public synchronized void setLogSyncTask(LogFlushTask logFlushTask)
     {
-        return fsyncIntervalMillis;
+        this.logFlushTask = logFlushTask;
     }
 
-    public void setFsyncIntervalMillis(long fsyncIntervalMillis)
+    public synchronized long getFlushIntervalMillis()
     {
-        this.fsyncIntervalMillis = fsyncIntervalMillis;
+        return flushIntervalMillis;
     }
+
+    public synchronized void setFlushIntervalMillis(long flushIntervalMillis)
+    {
+        this.flushIntervalMillis = flushIntervalMillis;
+    }
+
+    public synchronized boolean isFsyncOnFlush()
+    {
+        return fsyncOnFlush;
+    }
+
+    public synchronized void setFsyncOnFlush(boolean fsyncOnFlush)
+    {
+        this.fsyncOnFlush = fsyncOnFlush;
+    }
+
+    public synchronized int getBufferSize()
+    {
+        return bufferSize;
+    }
+
+    public synchronized void setBufferSize(int bufferSize)
+    {
+        this.bufferSize = bufferSize;
+    }
+
+    // API Calls for opening and closing log files.
 
     /**
-     * Returns a nicely formatting description of the file.
-     */
-    public String toString()
-    {
-        StringBuffer sb = new StringBuffer();
-        sb.append(this.getClass().getSimpleName()).append(": ");
-        sb.append("name=").append(file.getName());
-        if (randomFile == null)
-        {
-            sb.append(" open=n");
-        }
-        else
-        {
-            try
-            {
-                sb.append(" open=y available=").append(randomFile.length());
-                sb.append(" offset=").append(randomFile.getFilePointer());
-            }
-            catch (IOException e)
-            {
-                sb.append(" [unable to get available/offset due to i/o error]");
-            }
-        }
-        return sb.toString();
-    }
-
-    /**
-     * Returns a sorted list of log files.
+     * Open the log file for reading. The log cannot be written.
      * 
-     * @param logDir Directory containing logs
-     * @param logFilePrefix Prefix for log file names
-     * @return Array of logfiles (zero-length if log is not initialized)
+     * @throws THLException Thrown if file cannot be opened
      */
-    public static File[] listLogFiles(File logDir, String logFilePrefix)
+    public synchronized void openRead() throws THLException
     {
-        // Find the log files and sort into file name order.
-        ArrayList<File> logFiles = new ArrayList<File>();
-        for (File f : logDir.listFiles())
+        // Confirm that file exists.
+        if (!file.exists())
         {
-            if (!f.isDirectory() && f.getName().startsWith(logFilePrefix))
-            {
-                logFiles.add(f);
-            }
+            throw new THLException(
+                    "Cannot open log file for reading; file does not exist: "
+                            + file.getName());
         }
-        File[] logFileArray = new File[logFiles.size()];
-        return logFiles.toArray(logFileArray);
-    }
 
-    /**
-     * Prepare the log file for reading. The file must exist.
-     */
-    public void prepareRead() throws THLException
-    {
-        // Set mode to readonly and open.
-        writable = false;
+        // Open and read the file header so we are correctly positioned in the
+        // file to begin reading.
         try
         {
-            randomFile = new RandomAccessFile(file, "r");
+            dataInput = new BufferedFileDataInput(file, bufferSize);
         }
-        catch (FileNotFoundException e)
+        catch (IOException e)
         {
             throw new THLException("Unable to open file for reading: "
                     + file.getName(), e);
         }
-
-        // Read the file header so we are correctly positioned in the file.
-        this.checkFileHeader();
+        mode = AccessMode.read;
+        checkFileHeader(dataInput);
     }
 
     /**
-     * Prepare the log file for writing. If the file does not exist we must
-     * write a header with a base sequence number. NOTE: The file offset is
-     * positioned after the header. A write will move it automatically to the
-     * end. This allows start-up activities where we scan logs then optionally
-     * write at the end, e.g., to repair a corrupt file.
+     * Prepare the log file for writing. The write offset is automatically set
+     * to the end of the file.
      * 
-     * @param seqno Base sequence number of this file (written to header)
-     * @return True if the file was created
+     * @throws THLException Thrown if file cannot be opened
      */
-    public boolean prepareWrite(long seqno) throws THLException
+    public synchronized void openWrite() throws THLException
     {
-        // Open the file, optionally creating same.
-        boolean create = !file.exists();
-        writable = true;
+        // Confirm file exists.
+        if (!file.exists())
+        {
+            throw new THLException(
+                    "Cannot open log file for writing; file does not exist: "
+                            + file.getName());
+        }
+
+        // Validate the file header, then open for write.
         try
         {
-            randomFile = new RandomAccessFile(file, "rw");
+            BufferedFileDataInput bfdi = new BufferedFileDataInput(file,
+                    bufferSize);
+            checkFileHeader(bfdi);
+            bfdi.close();
+
+            dataOutput = new BufferedFileDataOutput(file, bufferSize);
         }
-        catch (FileNotFoundException e)
+        catch (IOException e)
         {
-            throw new THLException("Failed to open file for writing: "
+            throw new THLException("Failed to open existing file for writing: "
                     + file.getName(), e);
         }
 
-        // If the file was created, write the header. Otherwise just read
-        // the existing header.
-        if (create)
+        // Set access mode.
+        mode = AccessMode.write;
+
+        // Register with log sync task.
+        if (logFlushTask != null)
+            logFlushTask.addLogFile(this);
+    }
+
+    /**
+     * Create a new log file. We must write a header with a base sequence
+     * number. NOTE: The file offset is positioned after the header.
+     * 
+     * @param seqno Base sequence number of this file (written to header)
+     */
+    public synchronized void create(long seqno) throws THLException
+    {
+        // Confirm file does not already exist.
+        if (file.exists())
         {
-            baseSeqno = seqno;
-            writeHeader(baseSeqno);
-        }
-        else
-        {
-            checkFileHeader();
+            throw new THLException(
+                    "Cannot create new log file; file already exists: "
+                            + file.getName());
         }
 
-        return create;
+        // Open new file and write header.
+        try
+        {
+            dataOutput = new BufferedFileDataOutput(file, bufferSize);
+        }
+        catch (IOException e)
+        {
+            throw new THLException("Failed to open new file for writing: "
+                    + file.getName(), e);
+        }
+
+        // Write the header.
+        mode = AccessMode.write;
+        try
+        {
+            write(MAGIC_NUMBER);
+            write(MAJOR_VERSION);
+            write(MINOR_VERSION);
+            write(seqno);
+            flush();
+        }
+        catch (IOException e)
+        {
+            throw new THLException("Unable to write file header: "
+                    + file.getName(), e);
+        }
+
+        // Set base sequence number.
+        baseSeqno = seqno;
+
+        // Register with log sync task.
+        if (logFlushTask != null)
+            logFlushTask.addLogFile(this);
     }
 
     /**
      * Flush and close file. It should be called after all other methods as part
      * of a clean shutdown.
      */
-    public void release()
+    public synchronized void close()
     {
-        // Do not try to sync twice when releasing
-        if (file != null)
-            try
-            {
-                fsync();
-                randomFile.close();
-                randomFile = null;
-                file = null;
-            }
-            catch (IOException e)
-            {
-                logger.warn(
-                        "Unexpected I/O exception while closing log file: name="
-                                + file.getName(), e);
-            }
-    }
-
-    /**
-     * Returns the base sequence number from the file header.
-     */
-    public long getBaseSeqno()
-    {
-        return baseSeqno;
-    }
-
-    /**
-     * Returns the current position in the log file.
-     */
-    public long getOffset()
-    {
-        try
+        // Release only once.
+        if (mode != null)
         {
-            return randomFile.getFilePointer();
+            if (mode == AccessMode.read)
+            {
+                if (dataInput != null)
+                {
+                    dataInput.close();
+                    dataInput = null;
+                }
+
+            }
+            else if (mode == AccessMode.write)
+            {
+                if (dataOutput != null)
+                {
+                    if (logFlushTask != null)
+                        logFlushTask.removeLogFile(this);
+                    dataOutput.close();
+                    dataOutput = null;
+                }
+            }
+            mode = null;
         }
-        catch (IOException e)
-        {
-            logger.warn("Unable to determine log file offset: name="
-                    + this.file.getAbsolutePath(), e);
-            return -1;
-        }
-    }
-
-    /**
-     * Returns the length of the file.
-     */
-    public long getLength() throws IOException
-    {
-        return randomFile.length();
-    }
-
-    /**
-     * Truncate the file to the provided length. Performs an automatic fsync.
-     */
-    public void setLength(long length) throws IOException
-    {
-        randomFile.setLength(length);
-        fsync();
-    }
-
-    /**
-     * Returns the bytes remaining to be read in this file from the current
-     * position.
-     */
-    public long available() throws IOException
-    {
-        return randomFile.length() - randomFile.getFilePointer();
     }
 
     /**
      * Read the file header and return the log sequence number stored in the
      * file header.
      */
-    private long checkFileHeader() throws THLException
+    private long checkFileHeader(BufferedFileDataInput bfdi)
+            throws THLException
     {
         int magic = 0;
         short major = 0;
@@ -299,10 +333,10 @@ public class LogFile
 
         try
         {
-            magic = this.readInt();
-            major = this.readShort();
-            minor = this.readShort();
-            baseSeqno = this.readLong();
+            magic = bfdi.readInt();
+            major = bfdi.readShort();
+            minor = bfdi.readShort();
+            baseSeqno = bfdi.readLong();
         }
         catch (IOException e)
         {
@@ -324,24 +358,108 @@ public class LogFile
         return baseSeqno;
     }
 
-    /**
-     * Write the new file header.
-     * 
-     * @param seqno Log sequence number of previous file (or -1).
-     */
-    public void writeHeader(long seqno) throws THLException
+    // File access management functions
+
+    /** Returns only if log file is in read or write mode. */
+    protected void assertAnyMode() throws THLException
     {
+        if (mode == null)
+            throw new THLException("Log file not initialized for access: file="
+                    + file.getName());
+    }
+
+    /**
+     * Returns only if log file is in write mode. If we are in read mode, this
+     * will switch over to write mode and position at the end of the file.
+     */
+    protected void assertWriteMode() throws THLException
+    {
+        if (mode != AccessMode.write)
+        {
+            // Close and re-open in write mode.
+            close();
+            openWrite();
+        }
+    }
+
+    /** Returns only if log file is in read mode. */
+    protected void assertReadMode() throws THLException
+    {
+        if (mode != AccessMode.read)
+        {
+            // Close and re-open in read mode.
+            close();
+            openRead();
+        }
+
+    }
+
+    // Generic operations to return file contents, position, and length.
+
+    /**
+     * Returns the base sequence number from the file header.
+     */
+    public synchronized long getBaseSeqno()
+    {
+        return baseSeqno;
+    }
+
+    /**
+     * Returns the length of the file, including any unbuffered writes.
+     */
+    public synchronized long getLength() throws THLException
+    {
+        assertAnyMode();
         try
         {
-            write(MAGIC_NUMBER);
-            write(MAJOR_VERSION);
-            write(MINOR_VERSION);
-            write(seqno);
+            if (mode == AccessMode.read)
+                return file.length();
+            else
+                return dataOutput.getOffset();
         }
         catch (IOException e)
         {
-            throw new THLException("Unable to write file header: "
-                    + file.getName(), e);
+            throw new THLException("Unable to determine log file length: name="
+                    + this.file.getAbsolutePath(), e);
+        }
+    }
+
+    /**
+     * Returns the current position in the log file.
+     */
+    public synchronized long getOffset() throws THLException
+    {
+        assertAnyMode();
+        try
+        {
+            if (mode == AccessMode.read)
+                return dataInput.getOffset();
+            else
+                return dataOutput.getOffset();
+        }
+        catch (IOException e)
+        {
+            throw new THLException("Unable to determine log file offset: name="
+                    + this.file.getAbsolutePath(), e);
+        }
+    }
+
+    // Read mode operations.
+
+    /**
+     * Seeks to a particular offset in the file.
+     * 
+     * @throws IOException If positioning results in an error.
+     */
+    public synchronized void seekOffset(long offset) throws IOException,
+            THLException
+    {
+        assertReadMode();
+        dataInput.seek(offset);
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Skipping to position " + offset + " into file "
+                    + this.file.getName());
         }
     }
 
@@ -352,106 +470,165 @@ public class LogFile
      * problem.
      * 
      * @param waitMillis Number of milliseconds to wait for data to be
-     *            available. 0 (NO_WAIT) means do not wait.
+     *            available. 0 means do not wait.
      * @returns A log record if we can read one before timing out
      * @throws IOException Thrown if there is an I/O error
      * @throws InterruptedException Thrown if we are interrupted
      * @throws LogTimeoutException Thrown if we timeout while waiting for data
      *             to appear
      */
-    public LogRecord readRecord(int waitMillis) throws IOException,
-            InterruptedException, LogTimeoutException
+    public synchronized LogRecord readRecord(int waitMillis)
+            throws IOException, InterruptedException, LogTimeoutException,
+            THLException
     {
-        // See where we are and how much data is available.
-        long offset = randomFile.getFilePointer();
+        assertReadMode();
+        long offset = dataInput.getOffset();
         if (logger.isDebugEnabled())
-            logger.debug("Reading log file position=" + offset + " available="
-                    + available());
+            logger.debug("Reading log file position=" + offset);
 
-        // If there is nothing to read at this point and we don't want to
-        // block, just return an empty record.
-        if (waitMillis == NO_WAIT && available() == 0)
+        // Mark position so we can reset on failure.
+        dataInput.mark(65636);
+
+        // Read record length.
+        long startIntervalMillis = System.currentTimeMillis();
+        long available = dataInput
+                .waitAvailable(RECORD_LENGTH_SIZE, waitMillis);
+        if (available < RECORD_LENGTH_SIZE)
         {
-            if (logger.isDebugEnabled())
-                logger.debug("Read empty record");
-            return new LogRecord(offset, false);
+            // Reset input.
+            dataInput.reset();
+
+            // TODO: Reduce the number of cases.
+            if (waitMillis > 0)
+            {
+                // If we were waiting for data, timeout.
+                throw new LogTimeoutException("Log read timeout: waitMillis="
+                        + waitMillis + " file=" + file.getName() + " offset="
+                        + offset);
+            }
+            else if (available == 0)
+            {
+                // If there is nothing to read at this point, just return an
+                // empty record.
+                if (logger.isDebugEnabled())
+                    logger.debug("Read empty record");
+                return new LogRecord(offset, false);
+            }
+            else if (available < RECORD_LENGTH_SIZE)
+            {
+                // If there is not enough to read the length, and we don't want
+                // to
+                // wait, this is a truncated record.
+                if (logger.isDebugEnabled())
+                    logger.debug("Length is truncated; returning immediately");
+                return new LogRecord(offset, true);
+            }
         }
-
-        // If there is not enough to read the length, and we don't want to wait,
-        // this is a truncated record.
-        if (waitMillis == NO_WAIT && available() < RECORD_LENGTH_SIZE)
-        {
-            if (logger.isDebugEnabled())
-                logger.debug("Length is truncated; returning immediately");
-            return new LogRecord(offset, true);
-        }
-
-        // Set timeout. The waitMillis value is an integer so we assume
-        // overflow is impossible.
-        long timeoutMillis = System.currentTimeMillis() + waitMillis;
-
-        // Wait until we see enough data to do a read or timeout.
-        waitForData(RECORD_LENGTH_SIZE, timeoutMillis, offset);
 
         // Read the length. Check for corrupt data.
-        int recordLength = randomFile.readInt();
+        int recordLength = dataInput.readInt();
         if (recordLength < LogRecord.NON_DATA_BYTES
                 || recordLength > MAX_RECORD_LENGTH)
         {
             logger.warn("Record length is invalid, log may be corrupt: offset="
                     + offset + " record length=" + recordLength);
+            dataInput.reset();
             return new LogRecord(offset, true);
         }
-
         if (logger.isDebugEnabled())
             logger.debug("Record length=" + recordLength);
 
-        // If there is not enough to read and we don't want to wait, reset
-        // the file pointer and return a truncated record.
+        // See if there is enough data to read the rest of the record.
+        waitMillis = waitMillis
+                + (int) (startIntervalMillis - System.currentTimeMillis());
         int remainingRecordLength = recordLength - RECORD_LENGTH_SIZE;
-        if (waitMillis == NO_WAIT && available() < remainingRecordLength)
-        {
-            seekOffset(offset);
-            return new LogRecord(offset, true);
-        }
+        available = dataInput.waitAvailable(remainingRecordLength, waitMillis);
 
-        // Wait until we get a full record or timeout.
-        waitForData(remainingRecordLength, timeoutMillis, offset);
+        if (available < remainingRecordLength)
+        {
+            // Reset input.
+            dataInput.reset();
+
+            if (waitMillis > 0)
+            {
+                // If we were waiting for data, timeout.
+                throw new LogTimeoutException("Log read timeout: waitMillis="
+                        + waitMillis + " file=" + file.getName() + " offset="
+                        + offset);
+            }
+            else
+            {
+                // Not enough data, so return a partial record.
+                return new LogRecord(offset, true);
+            }
+        }
 
         // Finally, there's enough to read a record, so get it.
         byte[] bytesToRead = new byte[recordLength - LogRecord.NON_DATA_BYTES];
-        randomFile.readFully(bytesToRead);
-        byte crcType = randomFile.readByte();
-        long crc = randomFile.readLong();
+        dataInput.readFully(bytesToRead);
+        byte crcType = dataInput.readByte();
+        long crc = dataInput.readLong();
         return new LogRecord(offset, bytesToRead, crcType, crc);
     }
 
-    // Wait until we have enough data to read or we timeout.
-    private void waitForData(long recordLength, long timeoutMillis,
-            long restoreOffset) throws IOException, InterruptedException,
-            LogTimeoutException
+    /** Reads a single short. */
+    protected short readShort() throws IOException, THLException
     {
-        // Wait until we see enough data to do a read or exceed the
-        // timeout.
-        while (available() < recordLength
-                && System.currentTimeMillis() < timeoutMillis)
-        {
-            Thread.sleep(500);
-            if (logger.isDebugEnabled())
-                logger.debug("Sleeping for 500 ms");
-        }
+        assertReadMode();
+        return dataInput.readShort();
+    }
 
-        // Check for timeout. If so, we need to restore the offset
-        // and return.
-        long available = available();
-        if (available < RECORD_LENGTH_SIZE)
+    /** Read a single integer. */
+    protected int readInt() throws IOException, THLException
+    {
+        assertReadMode();
+        return dataInput.readInt();
+    }
+
+    /** Reads a single long. */
+    protected long readLong() throws IOException, THLException
+    {
+        assertReadMode();
+        return dataInput.readLong();
+    }
+
+    // Write-mode operations.
+
+    /**
+     * Truncate the file to the provided length. Performs an automatic fsync.
+     * 
+     * @param length New file length
+     */
+    public synchronized void setLength(long length) throws THLException
+    {
+        assertWriteMode();
+        try
         {
-            if (logger.isDebugEnabled())
-                logger.debug("Timed out waiting for length to appear");
-            seekOffset(restoreOffset);
-            throw new LogTimeoutException("Log read timeout: file="
-                    + file.getName() + " offset=" + restoreOffset);
+            dataOutput.setLength(length);
         }
+        catch (IOException e)
+        {
+            throw new THLException("Unable to set log file length: "
+                    + file.getName(), e);
+        }
+    }
+
+    protected void write(int myInt) throws IOException, THLException
+    {
+        assertWriteMode();
+        dataOutput.writeInt(myInt);
+    }
+
+    protected void write(long seqno) throws IOException, THLException
+    {
+        assertWriteMode();
+        dataOutput.writeLong(seqno);
+    }
+
+    protected void write(short myShort) throws IOException, THLException
+    {
+        assertWriteMode();
+        dataOutput.writeShort(myShort);
     }
 
     /**
@@ -462,132 +639,102 @@ public class LogFile
      * @param logFileSize Maximum log file size
      * @return true if log file size exceeded
      */
-    public boolean writeRecord(LogRecord record, int logFileSize)
-            throws IOException, InterruptedException
+    public synchronized boolean writeRecord(LogRecord record, int logFileSize)
+            throws IOException, InterruptedException, THLException
     {
         // Write the length followed by the code.
-        assertWritable();
-        randomFile.writeInt((int) record.getRecordLength());
-        randomFile.write(record.getData());
-        randomFile.writeByte(record.getCrcType());
-        randomFile.writeLong(record.getCrc());
+        assertWriteMode();
+        dataOutput.writeInt((int) record.getRecordLength());
+        dataOutput.write(record.getData());
+        dataOutput.writeByte(record.getCrcType());
+        dataOutput.writeLong(record.getCrc());
 
-        // Fsync if we have exceeded the fsync interval.
-        if (System.currentTimeMillis() >= nextfsyncMillis)
-        {
-            fsync();
-            nextfsyncMillis = System.currentTimeMillis()
-                    + this.fsyncIntervalMillis;
-        }
+        // Record that we need a flush. 
+        needsFlush = true;
 
-        // Size of log files is now a number of bytes
-        if (logFileSize > 0 && randomFile.length() > logFileSize)
+        // See if we have exceeded the maximum number of bytes per log file.
+        if (logFileSize > 0 && dataOutput.getOffset() > logFileSize)
             return true;
         else
             return false;
     }
 
-    /** Read a single integer. */
-    protected int readInt() throws IOException
-    {
-        if (available() < 4)
-            throw new IOException(
-                    "Unable to read an integer from the file : expecting 4 bytes, but only "
-                            + available() + "byte(s) available");
-        return randomFile.readInt();
-    }
-
-    /** Reads a single short. */
-    protected short readShort() throws IOException
-    {
-        if (available() < 2)
-            throw new IOException(
-                    "Unable to read an integer from the file : expecting 2 bytes, but only "
-                            + available() + "byte(s) available");
-        return randomFile.readShort();
-    }
-
-    /** Reads a single long. */
-    protected long readLong() throws IOException
-    {
-        if (available() < 8)
-            throw new IOException(
-                    "Unable to read a long from the file : expecting 8 bytes, but only "
-                            + available() + "byte(s) available");
-        return randomFile.readLong();
-    }
-
-    protected void write(int myInt) throws IOException
-    {
-        assertWritable();
-        randomFile.writeInt(myInt);
-    }
-
-    protected void write(long seqno) throws IOException
-    {
-        assertWritable();
-        randomFile.writeLong(seqno);
-    }
-
-    protected void write(short myShort) throws IOException
-    {
-        assertWritable();
-        randomFile.writeShort(myShort);
-    }
-
     /**
-     * Synchronizes file contents to disk using fsync (or Java equivalent). You
-     * must call this method to commit data.
+     * Synchronizes file writes using flush with optional fsync. You must call
+     * this method to commit data.
      */
-    public void fsync() throws IOException
+    public synchronized void flush() throws IOException, THLException
     {
-        if (logger.isDebugEnabled())
+        // Only proceed if we need flush.
+        if (!needsFlush)
         {
-            logger.debug("Issuing log file fsync");
+            return;
         }
-        randomFile.getFD().sync();
-    }
 
-    /**
-     * Seeks to a particular offset in the file.
-     * 
-     * @throws IOException If positioning results in an error.
-     */
-    public void seekOffset(long offset) throws IOException
-    {
-        randomFile.seek(offset);
-        if (logger.isDebugEnabled())
+        // Perform fsync checks.
+        assertWriteMode();
+        if (flushIntervalMillis == 0)
         {
-            logger.debug("Skipping to position " + offset + " into file "
-                    + this.file.getName());
+            // Issue flush now.
+            flushPrivate();
+        }
+        else if (flushIntervalMillis == 0)
+        {
+            // Delayed fsync enabled but timer has never been set.
+            // Initialize but do not fsync. (Ensures consistent
+            // delayed fsync after first write to log file.)
+            nextFlushMillis = System.currentTimeMillis()
+                    + this.flushIntervalMillis;
+        }
+        else if (System.currentTimeMillis() >= nextFlushMillis)
+        {
+            // Timer is expired. Issue fsync call.
+            flushPrivate();
         }
     }
 
-    /**
-     * Seeks to the end of the file.
-     * 
-     * @throws IOException If positioning results in an error.
-     */
-    public void seekToEnd() throws IOException
+    // Perform actual flush/fsync call.
+    private void flushPrivate() throws IOException
     {
-        long end = randomFile.length();
-        randomFile.seek(end);
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Skipping to end offset " + end + " into file "
-                    + this.file.getName());
-        }
+        if (fsyncOnFlush)
+            dataOutput.fsync();
+        else
+            dataOutput.flush();
+
+        nextFlushMillis = System.currentTimeMillis() + this.flushIntervalMillis;
+        needsFlush = false;
     }
 
-    // Provide routine to ensure current file able to write. This seeks to the
-    // end
-    // of the file in preparation for writing.
-    private void assertWritable() throws IOException
+    /**
+     * Returns a nicely formatting description of the file.
+     */
+    public synchronized String toString()
     {
-        if (!writable)
-            throw new IOException("Attempt to update non-writable file: name="
-                    + file.getAbsolutePath() + " offset="
-                    + randomFile.getFilePointer());
-        seekToEnd();
+        StringBuffer sb = new StringBuffer();
+        sb.append(this.getClass().getSimpleName()).append(": ");
+        sb.append("name=").append(file.getName());
+        sb.append(" mode=").append(mode);
+        if (dataInput != null)
+        {
+            sb.append(" open=y size=").append(file.length());
+            sb.append(" offset=").append(dataInput.getOffset());
+        }
+        else if (dataOutput != null)
+        {
+            sb.append(" open=y size=").append(file.length());
+            try
+            {
+                sb.append(" offset=").append(dataOutput.getOffset());
+            }
+            catch (IOException e)
+            {
+                sb.append(" [unable to get offset due to i/o error]");
+            }
+        }
+        else
+        {
+            sb.append(" open=n");
+        }
+        return sb.toString();
     }
 }
