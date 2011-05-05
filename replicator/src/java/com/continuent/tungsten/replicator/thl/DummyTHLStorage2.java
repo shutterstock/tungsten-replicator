@@ -189,31 +189,33 @@ public class DummyTHLStorage2 implements THLStorage
 
     /**
      * {@inheritDoc}
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#setPassword(java.lang.String)
      */
     public void setPassword(String password)
     {
-        // Ignored. 
+        // Ignored.
     }
 
     /**
      * {@inheritDoc}
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#setUrl(java.lang.String)
      */
     public void setUrl(String url)
     {
-        // Ignored. 
+        // Ignored.
     }
 
     /**
      * {@inheritDoc}
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#setUser(java.lang.String)
      */
     public void setUser(String user)
     {
-        // Ignored. 
+        // Ignored.
     }
-
 
     public THLEvent find(long seqno) throws THLException
     {
@@ -299,7 +301,7 @@ public class DummyTHLStorage2 implements THLStorage
      * @see com.continuent.tungsten.replicator.thl.THLStorage#store(com.continuent.tungsten.replicator.thl.THLEvent,
      *      boolean)
      */
-    public void store(THLEvent event, boolean syncCommitSeqno)
+    public void store(THLEvent event, boolean doCommit, boolean syncTHL)
             throws THLException
     {
         synchronized (instances)
@@ -374,7 +376,8 @@ public class DummyTHLStorage2 implements THLStorage
      * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#find(long, short)
      */
-    public THLEvent find(long seqno, short fragno) throws THLException, InterruptedException
+    public THLEvent find(long seqno, short fragno) throws THLException,
+            InterruptedException
     {
         EventKey key = new EventKey(seqno, fragno);
         THLEvent event = null;
@@ -389,7 +392,7 @@ public class DummyTHLStorage2 implements THLStorage
             {
                 while ((event = eventMap.get(key)) == null)
                 {
-                    // Wait at most 5 seconds. 
+                    // Wait at most 5 seconds.
                     instances.wait(5000);
                 }
             }
@@ -480,6 +483,7 @@ public class DummyTHLStorage2 implements THLStorage
 
     /**
      * {@inheritDoc}
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#getLastAppliedEvent()
      */
     public ReplDBMSHeader getLastAppliedEvent()

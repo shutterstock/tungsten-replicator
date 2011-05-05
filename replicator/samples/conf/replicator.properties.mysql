@@ -248,6 +248,23 @@ replicator.store.thl.password=${replicator.global.db.password}
 replicator.store.thl.log_dir=${replicator.home.dir}/../cluster-home/logs/${service.name}
 replicator.store.thl.log_file_size=100000000
 
+# Change the following property to control the buffer size used for THL
+# I/O operations.  The default of 128k seems to work well. 
+replicator.store.thl.bufferSize=131072
+
+# The flush interval is the number of milliseconds that log writes may delay
+# before being forced to storage.  0 means that every flush call flushes 
+# immediately.  Larger values can help buffer writes but add latency to 
+# pipelines. 
+replicator.store.thl.flushIntervalMillis=0
+
+# Flush operations normally release writes to the OS but do 
+# not force them to storage.  You may request a full fsync on each flush by 
+# setting the following property to true.  This makes log updates more 
+# durable.  If you do this the flush interval should be relatively large to
+# to avoid impacting overall throughput. 
+replicator.store.thl.fsyncOnFlush=false
+
 # To drop log files after a certain period, set the retention to an interval
 # which is <number>{d|h|m|s}, where the letters stand for days, hours, minutes,
 # or seconds respectively.  If unset logs are retained indefinitely.

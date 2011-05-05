@@ -64,10 +64,11 @@ public interface THLStorage
      * Store THLEvent.
      * 
      * @param event THLEvent
-     * @param syncCommitSeqno If true, synchronize the commit sequence number
+     * @param doCommit If true, commit this and previous uncommitted events
+     * @param syncTHL If true, sync to THL table to track commits
      * @throws THLException
      */
-    public void store(THLEvent event, boolean syncCommitSeqno)
+    public void store(THLEvent event, boolean doCommit, boolean syncTHL)
             throws THLException, InterruptedException;
 
     /**
@@ -195,8 +196,9 @@ public interface THLStorage
      */
     public short getMaxFragno(long seqno) throws THLException;
 
-    public THLBinaryEvent findBinaryEvent(long seqno, short fragno) throws THLException;
-    
+    public THLBinaryEvent findBinaryEvent(long seqno, short fragno)
+            throws THLException;
+
     /**
      * Purge THL events in the given seqno interval.
      * 
@@ -205,13 +207,14 @@ public interface THLStorage
      * @param high Sequence number specifying the end of the range. Leave null
      *            to end at the very end of the table.
      * @return Number of deleted events
-     * @throws InterruptedException 
-     * @throws THLException 
+     * @throws InterruptedException
+     * @throws THLException
      */
-    public int delete(Long low, Long high, String before) throws THLException, InterruptedException;
-    
+    public int delete(Long low, Long high, String before) throws THLException,
+            InterruptedException;
+
     /**
-     * Get the last applied event as found in the CommitSeqnoTable 
+     * Get the last applied event as found in the CommitSeqnoTable
      * 
      * @return An event header, or null if nothing found in the database
      * @throws THLException

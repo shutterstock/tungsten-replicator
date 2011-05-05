@@ -35,13 +35,14 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
  * This class defines a MySQLTHLStorage
- *
+ * 
  * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
  * @version 1.0
  */
 public class JdbcTHLStorage implements THLStorage
 {
-    private static Logger       logger            = Logger.getLogger(JdbcTHLStorage.class);
+    private static Logger       logger            = Logger
+                                                          .getLogger(JdbcTHLStorage.class);
     private ReplicatorRuntime   runtime           = null;
     protected String            driver            = null;
     protected String            vendor            = null;
@@ -57,7 +58,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#setPassword(java.lang.String)
      */
     public void setPassword(String password)
@@ -67,7 +68,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#setUrl(java.lang.String)
      */
     public void setUrl(String url)
@@ -77,7 +78,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#setUser(java.lang.String)
      */
     public void setUser(String user)
@@ -87,7 +88,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#find(long)
      */
     public THLEvent find(long seqno) throws THLException
@@ -97,7 +98,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#find(long, short)
      */
     public THLEvent find(long seqno, short fragno) throws THLException
@@ -107,7 +108,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#getEventId(long)
      */
     public String getEventId(long seqno) throws THLException
@@ -117,7 +118,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#getMaxEventId(String)
      */
     public String getMaxEventId(String sourceId) throws THLException
@@ -127,7 +128,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#getMaxSeqno()
      */
     public long getMaxSeqno() throws THLException
@@ -137,7 +138,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#getMaxCompletedSeqno()
      */
     public long getMaxCompletedSeqno() throws THLException
@@ -147,7 +148,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#getMinSeqno()
      */
     public long getMinSeqno() throws THLException
@@ -157,7 +158,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#getMinMaxSeqno()
      */
     public long[] getMinMaxSeqno() throws THLException
@@ -167,19 +168,19 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#store(com.continuent.tungsten.replicator.thl.THLEvent,
      *      boolean)
      */
-    public void store(THLEvent event, boolean syncCommitSeqno)
-            throws THLException
+    public void store(THLEvent event, boolean doCommit, boolean syncTHL)
+            throws THLException, InterruptedException
     {
-        database.store(event, syncCommitSeqno);
+        database.store(event, doCommit && syncTHL);
     }
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#setStatus(long,
      *      short, short, java.lang.String)
      */
@@ -191,7 +192,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * Prepare the THL storage for use.
-     *
+     * 
      * @param context Plugin context for THL to which this instance connects
      */
     public void prepare(PluginContext context) throws ReplicatorException
@@ -225,7 +226,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(PluginContext)
      */
     public void release() throws ReplicatorException
@@ -251,7 +252,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#getMaxFragno(long)
      */
     public short getMaxFragno(long seqno) throws THLException
@@ -267,7 +268,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#delete(Long, Long,
      *      String)
      */
@@ -279,7 +280,7 @@ public class JdbcTHLStorage implements THLStorage
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.thl.THLStorage#getLastAppliedEvent()
      */
     public ReplDBMSHeader getLastAppliedEvent() throws THLException

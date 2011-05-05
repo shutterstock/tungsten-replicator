@@ -408,6 +408,7 @@ public class THL implements Store
      *
      * @param replEvent Event to store
      * @param doCommit If true, commit this and previous uncommitted events
+     * @param syncTHL If true, sync to THL table to track commits
      * @throws ReplicatorException Thrown if there is a storage error
      * @throws InterruptedException Thrown if we are cancelled during operation
      */
@@ -423,7 +424,7 @@ public class THL implements Store
         THLEvent thlEvent = new THLEvent(replEvent.getEventId(), replEvent);
         try
         {
-            getStorageHandler().store(thlEvent, doCommit && syncTHL);
+            getStorageHandler().store(thlEvent, doCommit, syncTHL);
             logger.debug("Stored event " + replEvent.getSeqno());
         }
         catch (THLException e)
