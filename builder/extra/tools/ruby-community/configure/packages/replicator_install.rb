@@ -19,10 +19,12 @@ class ReplicatorInstallPackage < ConfigurePackage
     reset_errors()
     @config.props = {}
     @config.setProperty(DEPLOY_CURRENT_PACKAGE, "true")
+    @config.setProperty(DEPLOYMENT_TYPE, DISTRIBUTED_DEPLOYMENT_NAME)
     
+    method = nil
     opts=OptionParser.new
-    opts.on("--direct")         { @config.setProperty(DEPLOYMENT_TYPE, DIRECT_DEPLOYMENT_NAME) }
-    opts.on("--master-slave")   { @config.setProperty(DEPLOYMENT_TYPE, DISTRIBUTED_DEPLOYMENT_NAME) }
+    opts.on("--direct")         { method = "direct" }
+    opts.on("--master-slave")   { method = "master-slave" }
     
     begin
       opts.order!(arguments)
@@ -42,8 +44,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       raise "There are issues with the command options"
     end
 
-    case @config.getProperty(DEPLOYMENT_TYPE)
-    when DIRECT_DEPLOYMENT_NAME
+    case method
+    when "direct"
       options = parse_direct_arguments(arguments)
       unless is_valid?
         return false
@@ -53,7 +55,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       unless is_valid?
         return false
       end
-    when DISTRIBUTED_DEPLOYMENT_NAME
+    when "master-slave"
       options = parse_master_slave_arguments(arguments)
       unless is_valid?
         return false
@@ -75,17 +77,17 @@ class ReplicatorInstallPackage < ConfigurePackage
   def parse_direct_arguments(arguments)
     options = Properties.new()
     options.props = {
+      "host" => Configurator.instance.hostname(),
       "master-port" => "3306",
       "master-user" => Configurator.instance.whoami(),
       "slave-port" => "3306",
       "slave-user" => Configurator.instance.whoami(),
       "slave-thl-mode" => "disk",
-      "slave-thl-directory" => "/opt/continuent/thl",
-      "slave-relay-directory" => "/opt/continuent/relay",
       "slave-thl-port" => "2112",
       "rmi-port" => "10000",
       "svc-start" => "false",
-      "report-services" => "false"
+      "report-services" => "false",
+      "home-directory" => Configurator.instance.get_base_path()
     }
     
     opts = OptionParser.new
@@ -97,11 +99,15 @@ class ReplicatorInstallPackage < ConfigurePackage
     
     [
       "dbms-type",
+      "home-directory",
+      "host",
       "master-alias",
       "master-host",
       "master-port",
       "master-user",
       "master-password",
+      "master-log-directory",
+      "master-log-pattern",
       "master-log-file",
       "master-log-pos",
       "slave-alias",
@@ -116,6 +122,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       "channels",
       "service-name",
       "rmi-port",
+      "user",
     ].each{
       |prop_key|
       opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
@@ -150,6 +157,11 @@ class ReplicatorInstallPackage < ConfigurePackage
     master_alias = options.getPropertyOr("master-alias", options.getProperty("master-host").tr(".", "_")) + "_" + options.getPropertyOr("master-port", "3306")
     slave_alias = options.getPropertyOr("slave-alias", options.getProperty("slave-host").tr(".", "_")) + "_" + options.getPropertyOr("slave-port", "3306")
     
+    if options.getProperty("home-directory") == Configurator.instance.get_base_path()
+      options.setProperty("home-directory", Configurator.instance.get_base_path())
+      options.setProperty("current-release-directory", Configurator.instance.get_base_path())
+    end
+    
     @config.setProperty(DBMS_TYPE, options.getProperty("dbms-type"))
     @config.setProperty(DEPLOYMENT_HOST, DIRECT_DEPLOYMENT_HOST_ALIAS)
     
@@ -157,10 +169,12 @@ class ReplicatorInstallPackage < ConfigurePackage
     @config.setProperty([HOSTS, DIRECT_DEPLOYMENT_HOST_ALIAS], {
       SVC_START => options.getProperty('svc-start'),
       SVC_REPORT => options.getProperty('svc-report'),
-      HOST => Configurator.instance.hostname(),
-      IP_ADDRESS => Resolv.getaddress(Configurator.instance.hostname()),
-      REPL_LOG_DIR => options.getProperty("slave-thl-directory"),
-      REPL_RELAY_LOG_DIR => options.getProperty("slave-relay-directory"),
+      HOST => options.getProperty("host"),
+      USERID => options.getProperty("user"),
+      HOME_DIRECTORY => options.getProperty("home-directory"),
+      CURRENT_RELEASE_DIRECTORY => options.getProperty("current-release-directory"),
+      REPL_LOG_DIR => options.getPropertyOr("slave-thl-directory", options.getProperty("home-directory") + "/thl"),
+      REPL_RELAY_LOG_DIR => options.getPropertyOr("slave-relay-directory", options.getProperty("home-directory") + "/relay"),
       REPL_RMI_PORT => options.getProperty("rmi-port")
     })
     
@@ -170,6 +184,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_DBPORT => options.getProperty("master-port"),
       REPL_DBLOGIN => options.getProperty("master-user"),
       REPL_DBPASSWORD => options.getProperty("master-password"),
+      REPL_MYSQL_BINLOGDIR => options.getProperty("master-log-directory"),
+      REPL_MYSQL_BINLOGPATTERN => options.getProperty("master-log-pattern")
     })
     @config.setProperty([DATASERVERS, slave_alias], {
       REPL_DBHOST => options.getProperty("slave-host"),
@@ -197,13 +213,11 @@ class ReplicatorInstallPackage < ConfigurePackage
     options.props = {
       "datasource-port" => "3306",
       "datasource-user" => Configurator.instance.whoami(),
-      "home-directory" => "/opt/continuent",
-      "thl-directory" => "/opt/continuent/thl",
       "thl-port" => "2112",
-      "relay-directory" => "/opt/continuent/relay",
       "rmi-port" => "10000",
       "svc-start" => "false",
-      "svc-report" => "false"
+      "svc-report" => "false",
+      "home-directory" => Configurator.instance.get_base_path()
     }
     
     opts = OptionParser.new
@@ -265,6 +279,11 @@ class ReplicatorInstallPackage < ConfigurePackage
       raise "There are issues with the command options"
     end
     
+    if options.getProperty("home-directory") == Configurator.instance.get_base_path()
+      options.setProperty("home-directory", Configurator.instance.get_base_path())
+      options.setProperty("current-release-directory", Configurator.instance.get_base_path())
+    end
+    
     @config.setProperty(DBMS_TYPE, options.getProperty("dbms-type"))
     
     @config.setProperty(HOSTS, nil)
@@ -278,9 +297,9 @@ class ReplicatorInstallPackage < ConfigurePackage
         SVC_START => options.getProperty('svc-start'),
         SVC_REPORT => options.getProperty('svc-report'),
         HOST => host,
-        IP_ADDRESS => Resolv.getaddress(host),
         USERID => options.getProperty("user"),
         HOME_DIRECTORY => options.getProperty("home-directory"),
+        CURRENT_RELEASE_DIRECTORY => options.getProperty("current-release-directory"),
         REPL_LOG_DIR => options.getProperty("thl-directory"),
         REPL_RELAY_LOG_DIR => options.getProperty("relay-directory"),
         REPL_RMI_PORT => options.getProperty("rmi-port")
@@ -324,11 +343,14 @@ class ReplicatorInstallPackage < ConfigurePackage
     Configurator.instance.write_divider(Logger::ERROR)
     puts "Install options: --direct"
     output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
+    output_usage_line("--home-directory")
     output_usage_line("--master-alias")
     output_usage_line("--master-host")
     output_usage_line("--master-port", "", "3306")
     output_usage_line("--master-user", "", Configurator.instance.whoami())
     output_usage_line("--master-password")
+    output_usage_line("--master-log-directory", "", "/var/lib/mysql")
+    output_usage_line("--master-log-pattern", "", "mysql-bin")
     output_usage_line("--master-log-file", "PENDING")
     output_usage_line("--master-log-pos", "PENDING")
     output_usage_line("--slave-alias")
@@ -336,9 +358,9 @@ class ReplicatorInstallPackage < ConfigurePackage
     output_usage_line("--slave-port", "", "3306")
     output_usage_line("--slave-user", "", Configurator.instance.whoami())
     output_usage_line("--slave-password")
-    output_usage_line("--slave-thl-directory", "", "/opt/continuent/thl")
+    output_usage_line("--slave-thl-directory", "", Configurator.instance.get_base_path() + "/thl")
     output_usage_line("--slave-thl-port", "", "2112")
-    output_usage_line("--slave-relay-directory", "", "/opt/continuent/relay")
+    output_usage_line("--slave-relay-directory", "", Configurator.instance.get_base_path() + "/relay")
     output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
     output_usage_line("--channels", "Number of channels for parallel apply", "1")
     output_usage_line("--rmi-port", "", "10001")
@@ -351,7 +373,7 @@ class ReplicatorInstallPackage < ConfigurePackage
     output_usage_line("--cluster-hosts")
     output_usage_line("--master-host")
     output_usage_line("--user")
-    output_usage_line("--home-directory", "", "/opt/continuent")
+    output_usage_line("--home-directory", "", Configurator.instance.get_base_path())
     output_usage_line("--datasource-port", "", "3306")
     output_usage_line("--datasource-user", "", Configurator.instance.whoami())
     output_usage_line("--datasource-password")
@@ -360,14 +382,18 @@ class ReplicatorInstallPackage < ConfigurePackage
     output_usage_line("--master-log-file", "PENDING")
     output_usage_line("--master-log-pos", "PENDING")
     output_usage_line("--datasource-transfer-logs")
-    output_usage_line("--thl-directory", "", "/opt/continuent/thl")
+    output_usage_line("--thl-directory", "", Configurator.instance.get_base_path() + "/thl")
     output_usage_line("--thl-port", "", "2112")
-    output_usage_line("--relay-directory", "", "/opt/continuent/relay")
+    output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
     output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
     output_usage_line("--channels", "Number of channels for parallel apply", "1")
     output_usage_line("--rmi-port", "", "10001")
     output_usage_line("--service-name")
     output_usage_line("--start", "Start the replicator after configuration")
     output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
+  end
+  
+  def store_config_file?
+    false
   end
 end

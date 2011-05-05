@@ -16,7 +16,7 @@ module DeploymentStepCreateService
     
     if service_config.getProperty(REPL_SVC_START) == "true"
       info("Start the replication service")
-      cmd_result("#{get_deployment_basedir()}/tungsten-replicator/bin/trepctl -service #{service_config.getProperty(DEPLOYMENT_SERVICE)} start")
+      cmd_result("#{get_deployment_basedir()}/tungsten-replicator/bin/trepctl -port #{@config.getProperty(REPL_RMI_PORT)} -service #{service_config.getProperty(DEPLOYMENT_SERVICE)} start")
     else
       info("Do not start the replication service")
     end

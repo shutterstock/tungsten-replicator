@@ -76,29 +76,35 @@ class WriteableHomeDirectoryCheck < ConfigureValidationCheck
   end
   
   def validate
-    debug "Checking #{@config.getProperty(HOME_DIRECTORY)}"
+    debug "Checking #{@config.getProperty(HOME_DIRECTORY)} can be created"
     
-    create_dir = ssh_result("mkdir -p #{@config.getProperty(HOME_DIRECTORY)}")
-    unless create_dir
-      error("There was an issue creating #{@config.getProperty(HOME_DIRECTORY)}")
+    if @config.getProperty(HOME_DIRECTORY) == @config.getProperty(CURRENT_RELEASE_DIRECTORY)
+      dir = File.dirname(@config.getProperty(HOME_DIRECTORY))
+    else
+      dir = @config.getProperty(HOME_DIRECTORY)
     end
     
-    # The -D flag will tell us if it is a directory
-    writeable = ssh_result("if [ -d #{@config.getProperty(HOME_DIRECTORY)} ]; then echo 0; else echo 1; fi")
+    create_dir = ssh_result("mkdir -p #{dir}")
+    unless create_dir
+      error("There was an issue creating #{dir}")
+    end
     
-    unless writeable == "0"
-      error "#{@config.getProperty(HOME_DIRECTORY)} is not a directory"
+    # The -d flag will tell us if it is a directory
+    is_directory = ssh_result("if [ -d #{dir} ]; then echo 0; else echo 1; fi")
+    
+    unless is_directory == "0"
+      error "#{dir} is not a directory"
     else
-      debug "#{@config.getProperty(HOME_DIRECTORY)} is adirectory"
+      debug "#{dir} is a directory"
     end
     
     # The -w flag will tell us if it is writeable
-    writeable = ssh_result("if [ -w #{@config.getProperty(HOME_DIRECTORY)} ]; then echo 0; else echo 1; fi")
+    writeable = ssh_result("if [ -w #{dir} ]; then echo 0; else echo 1; fi")
     
     unless writeable == "0"
-      error "#{@config.getProperty(HOME_DIRECTORY)} is not writeable"
+      error "#{dir} is not writeable"
     else
-      debug "#{@config.getProperty(HOME_DIRECTORY)} is writeable"
+      debug "#{dir} is writeable"
     end
   end
   

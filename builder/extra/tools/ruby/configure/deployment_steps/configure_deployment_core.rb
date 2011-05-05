@@ -1,11 +1,17 @@
 module ConfigureDeploymentCore
   include ConfigureMessages
   
-  def initialize(config)
+  def initialize(config, stored_config = nil)
     super()
     @config = config
     @services = []
     @deployment_methods = []
+    
+    if stored_config
+      @stored_config = stored_config
+    else
+      @stored_config = config
+    end
   end
   
   def set_deployment_methods(deployment_methods)
@@ -42,7 +48,7 @@ module ConfigureDeploymentCore
   end
   
   def get_deployment_basedir
-    @config.getProperty(BASEDIR)
+    @config.getProperty(CURRENT_RELEASE_DIRECTORY)
   end
   
   # Create a directory if it is absent. 

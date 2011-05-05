@@ -1,4 +1,4 @@
-DIRECT_DEPLOYMENT_NAME = "regular"
+DIRECT_DEPLOYMENT_NAME = "direct"
 DIRECT_DEPLOYMENT_HOST_ALIAS = "local"
 class DirectDeployment < ConfigureDeployment
   def get_name
@@ -33,9 +33,9 @@ class DirectDeployment < ConfigureDeployment
   
   def include_deployment_for_package?(package)
     if package.is_a?(ConfigurePackageCluster)
-      true
+      false
     elsif package.is_a?(ReplicatorInstallPackage)
-      true
+      false
     else
       false
     end

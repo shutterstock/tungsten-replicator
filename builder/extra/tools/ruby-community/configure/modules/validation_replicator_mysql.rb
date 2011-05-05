@@ -194,14 +194,14 @@ class MySQLSettingsCheck < MySQLValidationCheck
     info("Checking innodb_flush_log_at_trx_commit")
     innodb_flush_log_at_trx_commit = get_value("show variables like 'innodb_flush_log_at_trx_commit'", "Value")
     if innodb_flush_log_at_trx_commit == nil || innodb_flush_log_at_trx_commit != "2"
-      error("The value of innodb_flush_log_at_trx_commit is wrong")
+      warning("The value of innodb_flush_log_at_trx_commit is wrong")
       help("Add \"innodb_flush_log_at_trx_commit=2\" to the MySQL configuration file")
     end
     
     info("Checking max_allowed_packet")
     max_allowed_packet = get_value("show variables like 'max_allowed_packet'", "Value")
     if max_allowed_packet == nil || max_allowed_packet.to_i() < (48*1024*1024)
-      error("The value of max_allowed_packet is too small")
+      warning("The value of max_allowed_packet is too small")
       help("Add \"max_allowed_packet=52m\" to the MySQL configuration file")
     end
     

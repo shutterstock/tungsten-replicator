@@ -61,6 +61,8 @@ module ConfigureDeploymentStepMySQL
 		elsif line =~ /replicator.extractor.mysql.relayLogRetention/ && 
 		    service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
 			"replicator.extractor.mysql.relayLogRetention=3"
+		elsif line =~ /replicator.backup.agent.lvm.dataDir/ && service_config.getPropertyOr(REPL_BACKUP_METHOD) == "lvm"
+			"replicator.backup.agent.lvm.dataDir=" + service_config.getProperty(REPL_MYSQL_DATADIR)
 		elsif line =~ /^replicator.backup.agent.xtrabackup.options/ && service_config.getPropertyOr(REPL_BACKUP_METHOD) == "xtrabackup"
       directory = service_config.getProperty(REPL_BACKUP_DUMP_DIR) + "/innobackup"
       unless mkdir_if_absent(directory)
@@ -75,7 +77,7 @@ module ConfigureDeploymentStepMySQL
       "&host=#{service_config.getProperty(REPL_DBHOST)}" +
       "&port=#{service_config.getProperty(REPL_DBPORT)}" + 
       "&directory=#{directory}&archive=#{archive}" +
-      "&mysqldatadir=#{service_config.getProperty(REPL_MYSQL_BINLOGDIR)}" +
+      "&mysqldatadir=#{service_config.getProperty(REPL_MYSQL_DATADIR)}" +
       "&mysql_service_command=#{service_config.getProperty(REPL_BOOT_SCRIPT)}"
 		else
 		  super(line, service_name, service_config)
@@ -83,7 +85,40 @@ module ConfigureDeploymentStepMySQL
 	end
 	
 	def write_replication_service_properties
-	  default_ds = @config.getProperty(DEFAULT_DATASERVER)
+	  hostname = Configurator.instance.hostname()
+    unless @config.getProperty(DEFAULT_DATASERVER)
+      default_ds = nil
+      @config.getPropertyOr(DATASERVERS, {}).each{
+        |ds_alias, ds_props|
+        
+        if ds_props[REPL_DBHOST] == hostname
+          default_ds = ds_alias
+          break
+        end
+      }
+      
+      unless default_ds
+        @config.getPropertyOr(REPL_SERVICES, {}).each{
+          |rs_alias, rs_props|
+          
+          @config.getPropertyOr(DATASERVERS, {}).each{
+            |ds_alias, ds_props|
+
+            if ds_alias == rs_props[REPL_DATASERVER]
+              default_ds = ds_alias
+              break 2
+            end
+          }
+        }
+      end
+      
+      unless default_ds
+        raise "Unable to determine the default dataserver"
+      end
+    else
+      default_ds = @config.getProperty(DEFAULT_DATASERVER)
+    end
+    
 	  # Generate the services.properties file.
     transformer = Transformer.new(
       "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",

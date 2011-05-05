@@ -135,11 +135,12 @@ class BaseDirectoryPrompt < AdvancedPrompt
   include GroupConfigurePromptMember
   
   def initialize
-    super(BASEDIR, "Directory for the latest release", PV_FILENAME)
+    super(CURRENT_RELEASE_DIRECTORY, "Directory for the latest release", PV_FILENAME)
   end
   
   def get_default_value
-    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
+    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME || 
+        Configurator.instance.get_base_path() == @config.getProperty(get_member_key(HOME_DIRECTORY))
       @config.getProperty(get_member_key(HOME_DIRECTORY))
     else
       "#{@config.getProperty(get_member_key(HOME_DIRECTORY))}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
@@ -183,7 +184,7 @@ class GlobalIPAddressPrompt < ConfigurePrompt
     
     if hostname.to_s() != ""
       begin
-        Resolv.getaddress(hostname)
+        return Resolv.getaddress(hostname)
       rescue
       end
       
@@ -241,9 +242,9 @@ class DeploymentTypePrompt < ConfigurePrompt
       "Value must be #{deployment_types.join(',')}")
     
     if Configurator.instance.is_full_tungsten_package?
-      default = DIRECT_DEPLOYMENT_NAME
+      default = DISTRIBUTED_DEPLOYMENT_NAME
     else
-      default = "distributed"
+      default = DISTRIBUTED_DEPLOYMENT_NAME
     end
       
     super(DEPLOYMENT_TYPE, "Deployment type (#{deployment_types.join(',')})", 
@@ -383,7 +384,7 @@ class THLStorageDirectory < ConfigurePrompt
   
   def get_default_value
     if @config.getProperty(get_member_key(HOME_DIRECTORY))
-      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/thl-logs"
+      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/thl"
     else
       "/opt/continuent/thl"
     end

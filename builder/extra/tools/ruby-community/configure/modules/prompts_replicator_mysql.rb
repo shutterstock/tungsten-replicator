@@ -73,12 +73,25 @@ class MySQLBinlogPattern < MySQLConfigurePrompt
   end
 end
 
+class MySQLDataDirectory < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_MYSQL_DATADIR, "MySQL data directory", 
+      PV_FILENAME, "/var/lib/mysql/")
+  end
+end
+
 class MySQLBinlogDirectory < MySQLConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
     super(REPL_MYSQL_BINLOGDIR, "MySQL binlog directory", 
-      PV_FILENAME, "/var/lib/mysql/")
+      PV_FILENAME)
+  end
+  
+  def get_default_value
+    @config.getPropertyOr(get_member_key(REPL_MYSQL_DATADIR), "/var/lib/mysql")
   end
 end
 
@@ -105,7 +118,7 @@ class MySQLRelayLogDirectory < MySQLConfigurePrompt
   
   def get_default_value
     if @config.getProperty(get_member_key(HOME_DIRECTORY))
-      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/relay-logs"
+      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/relay"
     else
       ""
     end

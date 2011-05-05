@@ -12,6 +12,7 @@ class DataServers < GroupConfigurePrompt
       DatabasePort.new(),
       DataserverLogin.new(),
       DataserverPassword.new(),
+      MySQLDataDirectory.new(),
       MySQLBinlogDirectory.new(),
       MySQLBinlogPattern.new(),
       MySQLReplicationUseRelayLogs.new(),
@@ -103,7 +104,7 @@ class BackupMethod < ConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
-    super(REPL_BACKUP_METHOD, "Database backup method")
+    super(REPL_BACKUP_METHOD, "Database backup method", nil, "none")
   end
   
   def get_prompt
@@ -122,14 +123,6 @@ class BackupMethod < ConfigurePrompt
     end
     
     super(raw_value)
-  end
-  
-  def get_default_value
-    if @config.getProperty(DBMS_TYPE) == "mysql"
-      "mysqldump"
-    else
-      "pg_dump"
-    end
   end
 end
 

@@ -1,4 +1,4 @@
-DISTRIBUTED_DEPLOYMENT_NAME = "distributed"
+DISTRIBUTED_DEPLOYMENT_NAME = "regular"
 
 class RegularConfigureDeployment < ConfigureDeployment
   def get_name

@@ -111,24 +111,20 @@ class Configurator
     @options.validate_only = false
 
     if is_full_tungsten_package?()
-      configs_path = File.expand_path(ENV['PWD'] + "/../configs/")
+      configs_path = File.expand_path(ENV['PWD'] + "/../../configs/")
     else
-      configs_path = File.expand_path(ENV['PWD'] + "/configs/")
+      configs_path = false
     end
     # Check for the tungsten.cfg in the unified configs directory
-    if File.exist?("#{configs_path}/#{CLUSTER_CONFIG}")
+    if configs_path && File.exist?("#{configs_path}/#{CLUSTER_CONFIG}")
       @options.config = "#{configs_path}/#{CLUSTER_CONFIG}"
-    elsif File.exist?("#{ENV['HOME']}/configs/#{CLUSTER_CONFIG}")
-      @options.config = "#{ENV['HOME']}/configs/#{CLUSTER_CONFIG}"
     else
       @options.config = "#{get_base_path()}/#{CLUSTER_CONFIG}"
     end
     
     if is_full_tungsten_package?() && !File.exist?(@options.config)
-      if File.exist?("#{configs_path}/#{HOST_CONFIG}")
+      if configs_path && File.exist?("#{configs_path}/#{HOST_CONFIG}")
         @options.config = "#{configs_path}/#{HOST_CONFIG}"
-      elsif File.exist?("#{ENV['HOME']}/configs/#{HOST_CONFIG}")
-        @options.config = "#{ENV['HOME']}/configs/#{HOST_CONFIG}"
       elsif File.exist?("#{get_base_path()}/#{HOST_CONFIG}")
         @options.config = "#{get_base_path()}/#{HOST_CONFIG}"
       end
@@ -206,6 +202,17 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     @package.post_prompt_handler_run()
     
     deployment_method = get_deployment()
+    
+    # Make sure that basic connectivity to the hosts works
+    unless deployment_method.prevalidate()
+      exit 1
+    end
+    
+    # Copy over configuration script code and the host configuration file
+    unless deployment_method.prepare()
+      exit 1
+    end
+    
     unless @options.force
       unless deployment_method.validate()
         write_header("Validation failed", Logger::ERROR)
@@ -344,7 +351,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("-i", "--interactive")    {|val| @options.interactive = true}
     opts.on("-c", "--config String")  {|val| @options.config = val }
     opts.on("-h", "--help")           {|val| @options.display_help = true }
-    opts.on("-q", "--quiet")          {@options.output_threshold = Logger::ERROR}
+    opts.on("-q", "--quiet")          {@options.output_threshold = Logger::WARN}
     opts.on("-n", "--info")           {@options.output_threshold = Logger::INFO}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
     opts.on("--no-validation")        {|val| @options.force = true }

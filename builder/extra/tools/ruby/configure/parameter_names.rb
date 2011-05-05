@@ -18,7 +18,7 @@ CLUSTERNAME = "cluster_name"
 USERID = "userid"
 DBMS_TYPE = "dbms_type"
 HOME_DIRECTORY = "home_directory"
-BASEDIR = 'basedir'
+CURRENT_RELEASE_DIRECTORY = 'current_release_directory'
 TEMP_DIRECTORY = "temp_directory"
 SANDBOX_COUNT = "sandbox_instance_count"
 DEPLOY_CURRENT_PACKAGE = "deploy_current_package"
@@ -99,6 +99,7 @@ REPL_USE_DRIZZLE = "repl_use_drizzle"
 
 # MySQL-specific parameters
 REPL_MYSQL_CONNECTOR_PATH = "mysql_connector_path"
+REPL_MYSQL_DATADIR = "repl_mysql_data_dir"
 REPL_MYSQL_BINLOGDIR = "repl_mysql_binlog_dir"
 REPL_MYSQL_MYCNF = "repl_mysql_mycnf"
 REPL_MYSQL_BINLOGPATTERN = "repl_mysql_binlog_pattern"

@@ -20,7 +20,7 @@ class Properties
   
   def initialize_copy(source)
     super(source)
-    @props = @props.dup
+    @props = Marshal::load(Marshal::dump(@props))
   end
   
   # Read properties from a file. 

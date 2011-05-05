@@ -7,27 +7,62 @@ class ConfigureDeploymentHandler
     @config = Properties.new()
   end
   
-  def run(configs)
+  def prepare(configs)
     reset_errors()
     configs.each{
       |config|
-      result = run_config(config)
-      @errors = @errors + result.errors
       
-      result.output()
+      prepare_config(config)
     }
     
     is_valid?()
   end
   
-  def run_config(config)
+  def prepare_config(config)
+    @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+    
+    unless @config.getProperty(HOST) == Configurator.instance.hostname()
+      validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
+      
+      # Transfer validation code
+      debug("Transfer configuration code to #{@config.getProperty(HOST)}")
+      cmd_result("rsync -Caze ssh --delete #{Configurator.instance.get_base_path()}/ #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
+
+      # Transfer the MySQL/J file if it is being used
+      if @config.getProperty(REPL_MYSQL_CONNECTOR_PATH) != nil
+        debug("Transfer Connector/J to #{@config.getProperty(HOST)}")
+        cmd_result("scp #{@config.getProperty(REPL_MYSQL_CONNECTOR_PATH)} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
+        @config.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{validation_temp_directory}/#{File.basename(@config.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
+      end
+
+      debug("Transfer host configuration file to #{@config.getProperty(HOST)}")
+      config_tempfile = Tempfile.new("tcfg")
+      config_tempfile.close()
+      config.store(config_tempfile.path())
+      cmd_result("scp #{config_tempfile.path()} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}/#{Configurator::TEMP_DEPLOY_HOST_CONFIG}")
+      File.unlink(config_tempfile.path())
+    end
+  end
+  
+  def deploy(configs)
+    reset_errors()
+    configs.each{
+      |config|
+      
+      deploy_config(config)
+    }
+    
+    is_valid?()
+  end
+  
+  def deploy_config(config)
     @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
     
     if @config.getProperty(HOST) == Configurator.instance.hostname()
       Configurator.instance.write ""
       Configurator.instance.write_header "Local deploy #{@config.getProperty(HOME_DIRECTORY)}"
       
-      result = @deployment_method.deploy_config(@config)
+      result = @deployment_method.deploy_config(config)
     else
       extra_options = ""
       if Configurator.instance.enable_log_level(Logger::DEBUG)
@@ -72,12 +107,13 @@ class ConfigureDeploymentHandler
       
       begin
         result = Marshal.load(result_dump)
+        
+        @errors = @errors + result.errors
+        result.output()
       rescue ArgumentError => ae
         raise "Unable to load deployment result: #{result_dump}"
       end
     end
-    
-    result
   end
   
   def get_message_hostname

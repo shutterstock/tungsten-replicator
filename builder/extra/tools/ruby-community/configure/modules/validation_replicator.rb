@@ -128,7 +128,7 @@ class NoHiddenServicesCheck < ConfigureValidationCheck
     config_services = ConfigurePackageCluster.services_list(@config)
     
     current_services = []
-    Dir[@config.getProperty(BASEDIR) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
+    Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
       service_name = cmd_result("grep ^service.name= #{file} | awk -F = '{print $2}'")
       if service_name != ""
         current_services << service_name
@@ -212,7 +212,7 @@ class ServiceNameCheck < ConfigureValidationCheck
   
   def current_services
     current_services = []
-    Dir[@config.getProperty(BASEDIR) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
+    Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
       service_name = cmd_result("grep ^service.name= #{file} | awk -F = '{print $2}'")
       if service_name != ""
         current_services << service_name
