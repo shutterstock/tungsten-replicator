@@ -134,10 +134,7 @@ class Configurator
   # The standard process, collect prompt values, validate on each host
   # then deploy on each host
   def run
-    unless parsed_options?(ARGV)
-      output_usage()
-      exit
-    end
+    parsed_options?(ARGV)
     
     unless use_streaming_ssh()
       warning("It is recommended that you install the net-ssh rubygem")
@@ -241,10 +238,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   # Handle the remote side of the validation_handler->run function
   def validate
-    unless parsed_options?(ARGV)
-      output_usage()
-      exit
-    end
+    parsed_options?(ARGV)
     
     # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
@@ -267,10 +261,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   # Handle the remote side of the deployment_handler->run function
   def deploy
-    unless parsed_options?(ARGV)
-      output_usage()
-      exit
-    end
+    parsed_options?(ARGV)
     
     # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
@@ -350,7 +341,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("-b", "--batch")          {|val| @options.interactive = false}
     opts.on("-i", "--interactive")    {|val| @options.interactive = true}
     opts.on("-c", "--config String")  {|val| @options.config = val }
-    opts.on("-h", "--help")           {|val| @options.display_help = true }
+    opts.on("-h", "--help")           {|val| p "help here"; @options.display_help = true }
     opts.on("-q", "--quiet")          {@options.output_threshold = Logger::WARN}
     opts.on("-n", "--info")           {@options.output_threshold = Logger::INFO}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
@@ -360,20 +351,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     # Argument used by the validation and deployment handlers
     opts.on("--stream")               {@options.stream_output = true }
 
-    begin
-      opts.order!(arguments)
-    rescue OptionParser::InvalidOption => io
-      # Prepend the invalid option onto the arguments array
-      arguments = io.recover(arguments)
-    rescue => e
-      if @options.display_help
-        output_help
-        exit 0
-      end
-      
-      error("Argument parsing failed: #{e.to_s()}")
-      return false
-    end
+    remainder = run_option_parser(opts, arguments)
     
     if @options.display_help
       output_help
@@ -381,16 +359,19 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
 
     unless arguments_valid?()
-      return false
+      output_usage()
+      exit 1
     end
     
     begin
-      unless @package.parsed_options?(arguments)
-        return false
+      unless @package.parsed_options?(remainder)
+        output_usage()
+        exit 1
       end
     rescue => e
       error(e.to_s())
-      return false
+      output_usage()
+      exit 1
     end
     
     true
@@ -425,6 +406,48 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     true
+  end
+  
+  def run_option_parser(opts, arguments, allow_invalid_options = true, invalid_option_prefix = nil)
+    remaining_arguments = []
+    while arguments.size() > 0
+      begin
+        arguments = opts.order!(arguments)
+        
+        # The next argument does not have a dash so the OptionParser
+        # ignores it, we will add it to the stack and continue
+        if arguments.size() > 0 && (arguments[0] =~ /-.*/) == nil
+          remaining_arguments << arguments.shift()
+        end
+      rescue OptionParser::InvalidOption => io
+        if allow_invalid_options
+          # Prepend the invalid option onto the arguments array
+          remaining_arguments = remaining_arguments + io.recover([])
+        
+          # The next argument does not have a dash so the OptionParser
+          # ignores it, we will add it to the stack and continue
+          if arguments.size() > 0 && (arguments[0] =~ /-.*/) == nil
+            remaining_arguments << arguments.shift()
+          end
+        else
+          if invalid_option_prefix != nil
+            io.reason = invalid_option_prefix
+          end
+          raise io
+        end
+      rescue => e
+        if @options.display_help
+          output_help
+          exit 0
+        end
+      
+        error("Argument parsing failed: #{e.to_s()}")
+        output_usage()
+        exit 1
+      end
+    end
+    
+    remaining_arguments
   end
   
   def save_prompts

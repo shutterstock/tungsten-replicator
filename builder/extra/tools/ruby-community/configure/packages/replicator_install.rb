@@ -26,15 +26,7 @@ class ReplicatorInstallPackage < ConfigurePackage
     opts.on("--direct")         { method = "direct" }
     opts.on("--master-slave")   { method = "master-slave" }
     
-    begin
-      opts.order!(arguments)
-    rescue OptionParser::InvalidOption => io
-      # Prepend the invalid option onto the arguments array
-      arguments = io.recover(arguments)
-    rescue => e
-      error("Argument parsing failed: #{e.to_s()}")
-      return false
-    end
+    remainder = Configurator.instance.run_option_parser(opts, arguments)
     
     unless @config.getProperty(DEPLOYMENT_TYPE)
       error("You must specify either --direct or --master-slave")
@@ -46,7 +38,7 @@ class ReplicatorInstallPackage < ConfigurePackage
 
     case method
     when "direct"
-      options = parse_direct_arguments(arguments)
+      options = parse_direct_arguments(remainder)
       unless is_valid?
         return false
       end
@@ -56,7 +48,7 @@ class ReplicatorInstallPackage < ConfigurePackage
         return false
       end
     when "master-slave"
-      options = parse_master_slave_arguments(arguments)
+      options = parse_master_slave_arguments(remainder)
       unless is_valid?
         return false
       end
@@ -128,11 +120,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
     }
     
-    begin
-      opts.order!(arguments)
-    rescue => e
-      error("Argument parsing failed: #{e.to_s()}")
-    end
+    remainder = Configurator.instance.run_option_parser(opts, arguments, false, "invalid option for --direct")
     
     options
   end
@@ -253,11 +241,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
     }
     
-    begin
-      opts.order!(arguments)
-    rescue => e
-      error("Argument parsing failed: #{e.to_s()}")
-    end
+    remainder = Configurator.instance.run_option_parser(opts, arguments, false, "invalid option for --master-slave")
     
     options
   end

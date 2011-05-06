@@ -38,20 +38,21 @@ class ConfigureServicePackage < ConfigurePackage
       opts.on("#{arg} String")  {|val|  @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, prop_key], val) }
     }
     
+    
     begin
-      service_name = opts.order!(arguments)
+      remainder = Configurator.instance.run_option_parser(opts, arguments)
       
       unless @config.getProperty(DEPLOYMENT_TYPE)
         error("You must specify -C, -D or -U")
       end
       
-      case service_name.size()
+      case remainder.size()
       when 0
         raise "No service_name specified"
       when 1
-        @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, DEPLOYMENT_SERVICE], service_name[0])
+        @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, DEPLOYMENT_SERVICE], remainder[0])
       else
-        raise "Ambiguous service names specified: #{service_name.join(', ')}"
+        raise "Ambiguous service names specified: #{remainder.join(', ')}"
       end
     rescue => e
       error("Argument parsing failed: #{e.to_s()}")
