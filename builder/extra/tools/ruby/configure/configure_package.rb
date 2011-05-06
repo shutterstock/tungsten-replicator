@@ -65,13 +65,16 @@ class ConfigurePackage
       
       words = msg.split(' ')
       
+      force_add_word = true
       line = format("%-29s", " ")
       while words.length() > 0
-        if line.length() + words[0].length() > max_line
+        if !force_add_word && line.length() + words[0].length() > max_line
           puts line
           line = format("%-29s", " ")
+          force_add_word = true
         else
           line += " " + words.shift()
+          force_add_word = false
         end
       end
       puts line
