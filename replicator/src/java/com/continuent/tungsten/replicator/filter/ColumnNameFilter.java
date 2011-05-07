@@ -271,6 +271,14 @@ public class ColumnNameFilter implements Filter
             index++;
         }
         
+        index = 0;
+        for (Iterator<ColumnSpec> iterator = orc.getKeySpec().iterator(); iterator
+                .hasNext();)
+        {
+            ColumnSpec type = (ColumnSpec) iterator.next();
+            type.setName(columns.get(index).getName());
+            index++;
+        }
         // We could retrieve primary keys at this point
     }
 
