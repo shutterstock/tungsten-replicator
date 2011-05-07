@@ -89,6 +89,10 @@ module ValidationCheckInterface
       host = get_hostname()
     end
     
+    if host == Configurator.instance.hostname() && user == Configurator.instance.whoami()
+      return cmd_result(command, ignore_fail)
+    end
+    
     debug("Execute `#{command}` on #{host}")
     result = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; #{command}\" 2>&1`.chomp
     rc = $?

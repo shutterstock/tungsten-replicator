@@ -78,6 +78,11 @@ class WriteableHomeDirectoryCheck < ConfigureValidationCheck
   def validate
     debug "Checking #{@config.getProperty(HOME_DIRECTORY)} can be created"
     
+    if @config.getProperty(HOME_DIRECTORY) =~ /^#{Configurator.instance.get_base_path()}[\/]?.*/ &&
+        !(@config.getProperty(HOME_DIRECTORY) =~ /^#{Configurator.instance.get_base_path()}[\/]?$/)
+      error("Unable to create the home directory as a sub-directory of the current package")
+    end
+    
     if @config.getProperty(HOME_DIRECTORY) == @config.getProperty(CURRENT_RELEASE_DIRECTORY)
       dir = File.dirname(@config.getProperty(HOME_DIRECTORY))
     else

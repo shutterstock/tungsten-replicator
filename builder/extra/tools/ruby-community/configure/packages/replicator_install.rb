@@ -74,8 +74,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "master-user" => Configurator.instance.whoami(),
       "slave-port" => "3306",
       "slave-user" => Configurator.instance.whoami(),
-      "slave-thl-mode" => "disk",
-      "slave-thl-port" => "2112",
+      "thl-mode" => "disk",
+      "thl-port" => "2112",
       "rmi-port" => "10000",
       "svc-start" => "false",
       "report-services" => "false",
@@ -107,9 +107,9 @@ class ReplicatorInstallPackage < ConfigurePackage
       "slave-port",
       "slave-user",
       "slave-password",
-      "slave-thl-directory",
-      "slave-thl-port",
-      "slave-relay-directory",
+      "thl-directory",
+      "thl-port",
+      "relay-directory",
       "buffer-size",
       "channels",
       "service-name",
@@ -161,8 +161,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       USERID => options.getProperty("user"),
       HOME_DIRECTORY => options.getProperty("home-directory"),
       CURRENT_RELEASE_DIRECTORY => options.getProperty("current-release-directory"),
-      REPL_LOG_DIR => options.getPropertyOr("slave-thl-directory", options.getProperty("home-directory") + "/thl"),
-      REPL_RELAY_LOG_DIR => options.getPropertyOr("slave-relay-directory", options.getProperty("home-directory") + "/relay"),
+      REPL_LOG_DIR => options.getPropertyOr("thl-directory", options.getProperty("home-directory") + "/thl"),
+      REPL_RELAY_LOG_DIR => options.getPropertyOr("relay-directory", options.getProperty("home-directory") + "/relay"),
       REPL_RMI_PORT => options.getProperty("rmi-port")
     })
     
@@ -192,7 +192,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_DATASERVER => slave_alias,
       REPL_BUFFER_SIZE => options.getProperty("buffer-size"),
       REPL_SVC_CHANNELS => options.getProperty("channels"),
-      REPL_SVC_THL_PORT => options.getProperty("slave-thl-port")
+      REPL_SVC_THL_PORT => options.getProperty("thl-port")
     })
   end
   
@@ -342,9 +342,9 @@ class ReplicatorInstallPackage < ConfigurePackage
     output_usage_line("--slave-port", "", "3306")
     output_usage_line("--slave-user", "", Configurator.instance.whoami())
     output_usage_line("--slave-password")
-    output_usage_line("--slave-thl-directory", "", Configurator.instance.get_base_path() + "/thl")
-    output_usage_line("--slave-thl-port", "", "2112")
-    output_usage_line("--slave-relay-directory", "", Configurator.instance.get_base_path() + "/relay")
+    output_usage_line("--thl-directory", "", Configurator.instance.get_base_path() + "/thl")
+    output_usage_line("--thl-port", "", "2112")
+    output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
     output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
     output_usage_line("--channels", "Number of channels for parallel apply", "1")
     output_usage_line("--rmi-port", "", "10001")

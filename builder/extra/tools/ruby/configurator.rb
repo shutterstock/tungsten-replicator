@@ -341,7 +341,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("-b", "--batch")          {|val| @options.interactive = false}
     opts.on("-i", "--interactive")    {|val| @options.interactive = true}
     opts.on("-c", "--config String")  {|val| @options.config = val }
-    opts.on("-h", "--help")           {|val| p "help here"; @options.display_help = true }
+    opts.on("-h", "--help")           {|val| @options.display_help = true }
     opts.on("-q", "--quiet")          {@options.output_threshold = Logger::WARN}
     opts.on("-n", "--info")           {@options.output_threshold = Logger::INFO}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
