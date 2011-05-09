@@ -162,6 +162,10 @@ module ConfigurePromptInterface
       host = @config.getProperty(HOST)
     end
     
+    if Configurator.instance.is_localhost?(host) && user == Configurator.instance.whoami()
+      return cmd_result(command, ignore_fail)
+    end
+    
     debug("Execute `#{command}` on #{host}")
     result = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; #{command}\" 2>&1`.chomp
     rc = $?

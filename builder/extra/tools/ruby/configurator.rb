@@ -18,6 +18,8 @@ system_require 'logger'
 system_require 'tempfile'
 system_require 'uri'
 system_require 'resolv'
+system_require 'ifconfig'
+system_require 'pp'
 
 # This isn't required, but it makes the output update more often with SSH results
 begin
@@ -599,6 +601,38 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   def hostname
     `hostname`.chomp
+  end
+  
+  def is_localhost?(hostname)
+    debug("Is '#{hostname}' the current host?")
+    if hostname == hostname()
+      return true
+    end
+    
+    begin
+      ip_addresses = Resolv.getaddresses(hostname)
+    rescue
+      raise "Unable to determine the IP addresses for '#{hostname}"
+    end
+    
+    debug("Search ifconfig for #{ip_addresses.join(', ')}")
+    ifconfig = IfconfigWrapper.new().parse()
+    ifconfig.each{
+      |iface|
+      
+      ip_addresses.each{
+        |ip_address|
+        
+        begin
+          if iface.has_addr?(ip_address)
+            return true
+          end
+        rescue ArgumentError
+        end
+      }
+    }
+  
+    false
   end
   
   def get_base_path

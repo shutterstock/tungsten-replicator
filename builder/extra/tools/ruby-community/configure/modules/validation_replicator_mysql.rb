@@ -205,18 +205,20 @@ class MySQLSettingsCheck < MySQLValidationCheck
       help("Add \"max_allowed_packet=52m\" to the MySQL configuration file")
     end
     
-    info("Check for datadir")
-    datadir_lines = cmd_result("my_print_defaults mysqld | grep '\\-\\-datadir' | wc -l")
-    unless datadir_lines.to_i() > 0
-      error("The datadir setting is not specified")
-      help("Specify a value for datadir in your my.cnf file to ensure that all utilities work properly")
-    end
+    if Configurator.instance.is_localhost?(@config.getProperty(HOST))
+      info("Check for datadir")
+      datadir_lines = cmd_result("my_print_defaults mysqld | grep '\\-\\-datadir' | wc -l")
+      unless datadir_lines.to_i() > 0
+        warning("The datadir setting is not specified")
+        help("Specify a value for datadir in your my.cnf file to ensure that all utilities work properly")
+      end
     
-    info("Check for server_id")
-    server_id = cmd_result("my_print_defaults mysqld | grep server[-_]id | wc -l")
-    unless server_id.to_i() > 0
-      error("The server_id setting is not specified")
-      help("Specify a value for server_id in your my.cnf file")
+      info("Check for server_id")
+      server_id = cmd_result("my_print_defaults mysqld | grep server[-_]id | wc -l")
+      unless server_id.to_i() > 0
+        warning("The server_id setting is not specified")
+        help("Specify a value for server_id in your my.cnf file")
+      end
     end
   end
 end

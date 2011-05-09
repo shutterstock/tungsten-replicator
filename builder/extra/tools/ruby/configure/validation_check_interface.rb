@@ -89,7 +89,7 @@ module ValidationCheckInterface
       host = get_hostname()
     end
     
-    if host == Configurator.instance.hostname() && user == Configurator.instance.whoami()
+    if Configurator.instance.is_localhost?(host) && user == Configurator.instance.whoami()
       return cmd_result(command, ignore_fail)
     end
     

@@ -21,7 +21,7 @@ class ConfigureDeploymentHandler
   def prepare_config(config)
     @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
     
-    unless @config.getProperty(HOST) == Configurator.instance.hostname()
+    unless Configurator.instance.is_localhost?(@config.getProperty(HOST))
       validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
       
       # Transfer validation code
@@ -58,7 +58,7 @@ class ConfigureDeploymentHandler
   def deploy_config(config)
     @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
     
-    if @config.getProperty(HOST) == Configurator.instance.hostname()
+    if Configurator.instance.is_localhost?(@config.getProperty(HOST))
       Configurator.instance.write ""
       Configurator.instance.write_header "Local deploy #{@config.getProperty(HOME_DIRECTORY)}"
       

@@ -5,7 +5,6 @@ class ClusterHosts < GroupConfigurePrompt
       
     self.add_prompts(
       GlobalHostPrompt.new(),
-      GlobalIPAddressPrompt.new(),
       UserIDPrompt.new(),
       HomeDirectoryPrompt.new(),
       BaseDirectoryPrompt.new(),
@@ -164,33 +163,6 @@ class GlobalHostPrompt < ConfigurePrompt
       Configurator.instance.hostname()
     else
       get_member()
-    end
-  end
-  
-  def allow_group_default
-    false
-  end
-end
-
-class GlobalIPAddressPrompt < ConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(IP_ADDRESS, "IP address", PV_HOSTNAME)
-  end
-  
-  def get_default_value
-    hostname = @config.getProperty(get_member_key(HOST))
-    
-    if hostname.to_s() != ""
-      begin
-        return Resolv.getaddress(hostname)
-      rescue
-      end
-      
-      @default
-    else
-      @default
     end
   end
   

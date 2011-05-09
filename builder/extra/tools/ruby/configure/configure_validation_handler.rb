@@ -95,7 +95,7 @@ class ConfigureValidationHandler
       Configurator.instance.write_header "Validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
 
       begin
-        if @config.getProperty(HOST) == Configurator.instance.hostname()
+        if Configurator.instance.is_localhost?(@config.getProperty(HOST))
           debug("Start:  Local validation checks for #{@config.getProperty(HOME_DIRECTORY)}")
           validate_config(@config)
           debug("Finish: Local validation checks for #{@config.getProperty(HOME_DIRECTORY)}")
@@ -195,6 +195,10 @@ class ConfigureValidationHandler
     end
     if (host == nil)
       host = @config.getProperty(HOST)
+    end
+    
+    if Configurator.instance.is_localhost?(host) && user == Configurator.instance.whoami()
+      return cmd_result(command, ignore_fail)
     end
     
     debug("Execute `#{command}` on #{host}")
