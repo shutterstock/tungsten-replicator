@@ -64,22 +64,22 @@ class ConfigureDeploymentHandler
       
       result = @deployment_method.deploy_config(config)
     else
-      extra_options = ""
+      extra_options = ["--package #{Configurator.instance.package.class.name}"]
       if Configurator.instance.enable_log_level(Logger::DEBUG)
-        extra_options = "-v"
+        extra_options << "-v"
       end
       unless Configurator.instance.enable_log_level(Logger::INFO)
-        extra_options = "-q"
+        extra_options << "-q"
       end
       
       Configurator.instance.write ""
       Configurator.instance.write_header "Remote deploy #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
       
       deployment_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}"
-      command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options}"
+      command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options.join(' ')}"
+      debug(command)
       
       if Configurator.instance.use_streaming_ssh()
-        Configurator.instance.debug("Execute `#{command}` on #{@config.getProperty(HOST)}")
         result_dump = ""
         ssh = Net::SSH.start(@config.getProperty(HOST), @config.getProperty(USERID))
         ssh.exec!(". /etc/profile; #{command} --stream") do
@@ -94,7 +94,6 @@ class ConfigureDeploymentHandler
       else
         user = @config.getProperty(USERID)
         host = @config.getProperty(HOST)
-        Configurator.instance.debug("Execute `#{command}` on #{host}")
         result_dump = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; #{command}\" 2>/dev/null`.chomp
         rc = $?
 

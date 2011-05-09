@@ -101,18 +101,19 @@ class ConfigureValidationHandler
           debug("Finish: Local validation checks for #{@config.getProperty(HOME_DIRECTORY)}")
         else
           # Invoke ValidationChecks on the remote server
-          extra_options = ""
+          extra_options = ["--package #{Configurator.instance.package.class.name}"]
           if Configurator.instance.enable_log_level(Logger::DEBUG)
-            extra_options = "-v"
+            extra_options << "-v"
           end
           unless Configurator.instance.enable_log_level(Logger::INFO)
-            extra_options = "-q"
+            extra_options << "-q"
           end
 
           validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
 
           debug("Remote validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}")
-          command = "cd #{validation_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/validate.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options}"
+          command = "cd #{validation_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/validate.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options.join(' ')}"
+          debug(command)
 
           if Configurator.instance.use_streaming_ssh()
             result_dump = ""

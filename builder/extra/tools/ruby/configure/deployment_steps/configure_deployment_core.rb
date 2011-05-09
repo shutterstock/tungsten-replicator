@@ -22,7 +22,7 @@ module ConfigureDeploymentCore
     begin
       @deployment_methods.each{
         |deployment_method|
-        self.send(deployment_method.method_name)
+        self.send(alter_deployment_method_name(deployment_method.method_name))
       }
     rescue => e
       error(e.to_s())
@@ -49,6 +49,10 @@ module ConfigureDeploymentCore
   
   def get_deployment_basedir
     @config.getProperty(CURRENT_RELEASE_DIRECTORY)
+  end
+  
+  def alter_deployment_method_name(method_name)
+    method_name
   end
   
   # Create a directory if it is absent. 
