@@ -45,6 +45,10 @@ class MySQLValidationCheck < ConfigureValidationCheck
       user = @config.getProperty(get_member_key(REPL_DBLOGIN))
     end
     
+    if password == nil
+      password = @config.getProperty(get_member_key(REPL_DBPASSWORD))
+    end
+    
     if password == false
       password = ""
     elsif password.to_s() == ""
@@ -98,7 +102,7 @@ class MySQLLoginCheck < MySQLValidationCheck
   def validate
     login_output = mysql("select 'ALIVE' as 'Return Value'")
     if login_output =~ /ALIVE/
-      info("MySQL server and login to '#{@config.getProperty(get_member_key(REPL_DBHOST))}' as '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}' is OK")
+      info("MySQL server and login is OK for #{get_connection_summary()}")
     else
       error("Unable to connect to the MySQL server using #{get_connection_summary()}")
       
@@ -187,37 +191,30 @@ class MySQLSettingsCheck < MySQLValidationCheck
     info("Checking sync_binlog setting")
     sync_binlog = get_value("show variables like 'sync_binlog'", "Value")
     if sync_binlog == nil || sync_binlog != "0"
-      warn("The value of sync_binlog is wrong")
-      help("Add \"sync_binlog=0\" to the MySQL configuration file to increase MySQL performance")
+      warning("The value of sync_binlog is wrong for #{get_connection_summary()}")
+      help("Add \"sync_binlog=0\" to the MySQL configuration file to increase MySQL performance for #{get_connection_summary()}")
     end
     
     info("Checking innodb_flush_log_at_trx_commit")
     innodb_flush_log_at_trx_commit = get_value("show variables like 'innodb_flush_log_at_trx_commit'", "Value")
     if innodb_flush_log_at_trx_commit == nil || innodb_flush_log_at_trx_commit != "2"
-      warning("The value of innodb_flush_log_at_trx_commit is wrong")
-      help("Add \"innodb_flush_log_at_trx_commit=2\" to the MySQL configuration file")
+      warning("The value of innodb_flush_log_at_trx_commit is wrong for #{get_connection_summary()}")
+      help("Add \"innodb_flush_log_at_trx_commit=2\" to the MySQL configuration file for #{get_connection_summary()}")
     end
     
     info("Checking max_allowed_packet")
     max_allowed_packet = get_value("show variables like 'max_allowed_packet'", "Value")
     if max_allowed_packet == nil || max_allowed_packet.to_i() < (48*1024*1024)
-      warning("The value of max_allowed_packet is too small")
-      help("Add \"max_allowed_packet=52m\" to the MySQL configuration file")
+      warning("The value of max_allowed_packet is too small for #{get_connection_summary()}")
+      help("Add \"max_allowed_packet=52m\" to the MySQL configuration file for #{get_connection_summary()}")
     end
     
     if Configurator.instance.is_localhost?(@config.getProperty(HOST))
       info("Check for datadir")
-      datadir_lines = cmd_result("my_print_defaults mysqld | grep '\\-\\-datadir' | wc -l")
-      unless datadir_lines.to_i() > 0
-        warning("The datadir setting is not specified")
-        help("Specify a value for datadir in your my.cnf file to ensure that all utilities work properly")
-      end
-    
-      info("Check for server_id")
-      server_id = cmd_result("my_print_defaults mysqld | grep server[-_]id | wc -l")
-      unless server_id.to_i() > 0
-        warning("The server_id setting is not specified")
-        help("Specify a value for server_id in your my.cnf file")
+      datadir = get_value("show variables like 'datadir'", "Value")
+      unless File.readable?(datadir)
+        warning("The datadir setting is not readable for #{get_connection_summary()}")
+        help("Specify a readable directory for datadir in your my.cnf file to ensure that all utilities work properly for #{get_connection_summary()}")
       end
     end
   end
@@ -233,10 +230,10 @@ class ConnectorUserMySQLCheck < MySQLValidationCheck
       |repl_host|
       login_output = mysql("select 'ALIVE' as 'Return Value'", @config.getProperty(CONN_CLIENTLOGIN), @config.getProperty(CONN_CLIENTPASSWORD), repl_host)
       if login_output =~ /ALIVE/
-        info("MySQL server and connector login to #{repl_host} is OK")
+        info("MySQL server and connector login for #{get_connection_summary()} is OK")
       else
         help("Run \"GRANT ALL ON *.* TO '#{@config.getProperty(CONN_CLIENTLOGIN)}'@'#{@config.getProperty(HOST)}' IDENTIFIED BY '#{@config.getProperty(CONN_CLIENTPASSWORD)}'\" on #{repl_host}")
-        error("MySQL server on #{repl_host} is unavailable or connector login does not work")
+        error("MySQL server for #{get_connection_summary()} is unavailable or connector login does not work")
       end
     }
   end

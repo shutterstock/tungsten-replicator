@@ -88,6 +88,24 @@ module ConfigureMessages
         $next_host_error = host_errors[host][$i]
         
         Configurator.instance.error($host_error.message, host)
+        
+        if $next_host_error == nil || $host_error.check != $next_host_error.check
+          if $host_error.is_a?(ValidationError)
+            help = $host_error.get_help()
+            unless help == nil || help.empty?()
+              puts help.join("\n")
+            end
+        
+            # Disable this section for now
+            if $host_error.check.support_remote_fix && Configurator.instance.is_interactive?() && false
+              execute_fix = input_value("Do you want the script to automatically fix this?", "false")
+            end
+        
+            unless help == nil || help.empty?()
+              Configurator.instance.write_divider(Logger::ERROR)
+            end
+          end
+        end
       end
     }
     
