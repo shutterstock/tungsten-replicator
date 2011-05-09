@@ -85,86 +85,10 @@ module ConfigureDeploymentStepMySQL
 	end
 	
 	def write_replication_service_properties
-	  hostname = Configurator.instance.hostname()
-    unless @config.getProperty(DEFAULT_DATASERVER)
-      default_ds = nil
-      @config.getPropertyOr(DATASERVERS, {}).each{
-        |ds_alias, ds_props|
-        
-        if ds_props[REPL_DBHOST] == hostname
-          default_ds = ds_alias
-          break
-        end
-      }
-      
-      unless default_ds
-        @config.getPropertyOr(REPL_SERVICES, {}).each{
-          |rs_alias, rs_props|
-          
-          @config.getPropertyOr(DATASERVERS, {}).each{
-            |ds_alias, ds_props|
-
-            if ds_alias == rs_props[REPL_DATASERVER]
-              default_ds = ds_alias
-              break 2
-            end
-          }
-        }
-      end
-      
-      unless default_ds
-        raise "Unable to determine the default dataserver"
-      end
-    else
-      default_ds = @config.getProperty(DEFAULT_DATASERVER)
-    end
-    
-	  # Generate the services.properties file.
-    transformer = Transformer.new(
+	  # This file must be in place for now
+	  FileUtils.cp(
       "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
-      "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties", "#")
-
-    transformer.transform { |line|
-      if line =~ /replicator.services/
-        repl_services = []
-        @config.getPropertyOr(REPL_SERVICES, {}).each{
-          |service_alias,service_properties|
-          repl_services << service_properties[DEPLOYMENT_SERVICE]
-        }
-        "replicator.services=" + repl_services.join(',')
-      elsif line =~ /replicator.global.db.user=/ then
-        "replicator.global.db.user=" + @config.getProperty([DATASERVERS, default_ds, REPL_DBLOGIN])
-      elsif line =~ /replicator.global.db.password=/ then
-        "replicator.global.db.password=" + @config.getProperty([DATASERVERS, default_ds, REPL_DBPASSWORD])
-      elsif line =~ /replicator.resourceLogDir/ then
-        "replicator.resourceLogDir=" + @config.getProperty([DATASERVERS, default_ds, REPL_MYSQL_BINLOGDIR])
-      elsif line =~ /replicator.resourceLogPattern/ then
-        "replicator.resourceLogPattern=" + @config.getProperty([DATASERVERS, default_ds, REPL_MYSQL_BINLOGPATTERN])
-      elsif line =~ /replicator.resourceJdbcUrl/
-        line = line.sub("$serviceFacet.name$", @config.getProperty([DATASERVERS, default_ds, REPL_DBHOST]) + 
-          ":" + @config.getProperty([DATASERVERS, default_ds, REPL_DBPORT]))
-      elsif line =~ /replicator.resourceDataServerHost/ then
-        "replicator.resourceDataServerHost=" + @config.getProperty([DATASERVERS, default_ds, REPL_DBHOST])
-      elsif line =~ /replicator.resourceJdbcDriver/ then
-        "replicator.resourceJdbcDriver=com.mysql.jdbc.Driver"
-      elsif line =~ /replicator.resourcePort/ then
-        "replicator.resourcePort=" + @config.getProperty([DATASERVERS, default_ds, REPL_DBPORT])
-      elsif line =~ /replicator.resourceDiskLogDir/ then
-        "replicator.resourceDiskLogDir=" + @config.getProperty(REPL_LOG_DIR)
-      elsif line =~ /replicator.source_id/ then
-        "replicator.source_id=" + @config.getProperty(HOST)
-      elsif line =~ /replicator.resourceVendor/ then
-        "replicator.resourceVendor=" + @config.getProperty(DBMS_TYPE)
-      elsif line =~ /cluster.name=/ then
-        "cluster.name=" + @config.getPropertyOr(CLUSTERNAME, "")
-      elsif line =~ /replicator.host=/ then
-        "replicator.host=" + @config.getProperty(HOST)
-      elsif line =~ /replicator.rmi_port=/ then
-        "replicator.rmi_port=" + @config.getProperty(REPL_RMI_PORT)
-      else
-        line
-      end
-    }
+      "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties")
   end
   
   def write_replicator_thl

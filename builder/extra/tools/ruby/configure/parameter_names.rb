@@ -39,7 +39,6 @@ WITNESSES = "witnesses"
 DATASERVERS =  "dataservers"
 
 # Generic replication parameters.
-DEFAULT_DATASERVER = "default_dataserver"
 REPL_SERVICES = "repl_services"
 REPL_HOSTS = "repl_hosts"
 REPL_ROLE = "repl_role"

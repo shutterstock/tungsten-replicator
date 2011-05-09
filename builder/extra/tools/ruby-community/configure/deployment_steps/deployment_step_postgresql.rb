@@ -63,41 +63,10 @@ module ConfigureDeploymentStepPostgresql
 	end
   
   def write_replication_service_properties
-    # Generate the services.properties file.
-    transformer = Transformer.new(
+    # This file must be in place for now
+	  FileUtils.cp(
       "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
-      "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties", "#")
-
-    transformer.transform { |line|
-      if line =~ /replicator.services/
-        "replicator.services=" + @config.getProperty(REPL_SERVICES)
-      elsif line =~ /replicator.global.db.user=/ then
-        "replicator.global.db.user=" + @config.getProperty(REPL_DBLOGIN)
-      elsif line =~ /replicator.global.db.password=/ then
-        "replicator.global.db.password=" + @config.getProperty(REPL_DBPASSWORD)
-      elsif line =~ /replicator.resourceJdbcUrl=/ then
-        "replicator.resourceJdbcUrl=jdbc:postgresql://" + @config.getProperty(HOST) + ":" +
-        @config.getProperty(REPL_DBPORT) + "/${DBNAME}"
-      elsif line =~ /replicator.resourceDataServerHost/ then
-        "replicator.resourceDataServerHost=" + @config.getProperty(HOST)
-      elsif line =~ /replicator.resourceJdbcDriver/ then
-        "replicator.resourceJdbcDriver=org.postgresql.Driver"
-      elsif line =~ /replicator.resourcePort/ then
-        "replicator.resourcePort=" + @config.getProperty(REPL_DBPORT)
-      elsif line =~ /replicator.source_id/ then
-        "replicator.source_id=" + @config.getProperty(HOST)
-      elsif line =~ /replicator.resourceVendor/ then
-        "replicator.resourceVendor=" + @config.getProperty(DBMS_TYPE)
-      elsif line =~ /cluster.name=/ then
-        "cluster.name=" + @config.getPropertyOr(CLUSTERNAME, "")
-      elsif line =~ /replicator.host=/ then
-        "replicator.host=" + @config.getProperty(HOST)
-      elsif line =~ /replicator.rmi_port=/ then
-        "replicator.rmi_port=" + @config.getProperty(REPL_RMI_PORT)
-      else
-        line
-      end
-    }
+      "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties")
   end
   
   def write_wal_shipping_properties
