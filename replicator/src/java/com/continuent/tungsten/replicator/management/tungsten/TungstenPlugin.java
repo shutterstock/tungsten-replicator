@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Seppo Jaakola
- * Contributor(s): Teemu Ollakka, Robert Hodges, Alex Yurchenko, Linas Virbalas
+ * Contributor(s): Teemu Ollakka, Robert Hodges, Alex Yurchenko, Linas Virbalas,
+ * Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.management.tungsten;
@@ -49,6 +50,7 @@ import com.continuent.tungsten.commons.cluster.resource.physical.ReplicatorCapab
 import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.commons.config.WildcardPattern;
 import com.continuent.tungsten.replicator.ReplicatorException;
+import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.consistency.ConsistencyCheck;
@@ -74,7 +76,7 @@ import com.continuent.tungsten.replicator.storage.Store;
  * This class defines a ReplicatorManager, which is the starting class for a
  * Tungsten Replicator instance. The ReplicatorManager accepts the following
  * Java properties which may be set prior to startup.
- *
+ * 
  * @author <a href="mailto:seppo.jaakola@continuent.com">Seppo Jaakola</a>
  * @version 1.0
  */
@@ -92,7 +94,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
     /**
      * Set event dispatcher and instantiate the Tungsten monitor. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#prepare(OpenReplicatorContext)
      */
     public void prepare(OpenReplicatorContext context)
@@ -110,7 +112,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
     /**
      * Deallocate all resources.
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#release()
      */
     public void release() throws ReplicatorException
@@ -133,7 +135,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#consistencyCheck(java.lang.String,
      *      java.lang.String, java.lang.String, int, int)
      */
@@ -274,7 +276,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#configure(com.continuent.tungsten.commons.config.TungstenProperties)
      */
     public void configure(TungstenProperties properties)
@@ -433,6 +435,23 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                 pipeline.shutdownAfterTimestamp(ts);
             }
 
+            // Masters have extra work.
+            if (runtime.isMaster()
+                    && runtime.getReplicatorProperties().getBoolean(
+                            ReplicatorConf.MASTER_THL_CHECK,
+                            ReplicatorConf.MASTER_THL_CHECK_DEFAULT, false))
+            {
+                // Check if THL is in sync with trep_commit_seqno before going
+                // online, as otherwise, we could loose some updates
+                long maxCommittedSeqno = pipeline.getMaxCommittedSeqno();
+                long maxStoredSeqno = pipeline.getMaxStoredSeqno();
+                if (maxStoredSeqno > maxCommittedSeqno)
+                    throw new ReplicatorException("Database (@seqno "
+                            + maxCommittedSeqno
+                            + ") does not seem in sync with THL (@seqno "
+                            + maxStoredSeqno + ").");
+            }
+
             // Start the pipeline.
             pipeline.start(context.getEventDispatcher());
 
@@ -490,7 +509,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#offlineDeferred(com.continuent.tungsten.commons.config.TungstenProperties)
      */
     public void offlineDeferred(TungstenProperties params) throws Exception
@@ -569,7 +588,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
     /**
      * Starts a heartbeat event. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#heartbeat(com.continuent.tungsten.commons.config.TungstenProperties)
      */
     public boolean heartbeat(TungstenProperties params) throws Exception
@@ -605,7 +624,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
      * Implements a flush operation to synchronize the state of the database
      * with the replication log and return a comparable event ID that can be
      * used in a wait operation on a slave.
-     *
+     * 
      * @param timeout Number of seconds to wait. 0 is indefinite.
      * @return The event ID at which the log is synchronized
      */
@@ -640,7 +659,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
     /**
      * Wait for a particular event to be applied on the slave.
-     *
+     * 
      * @param event Event to wait for
      * @param timeout Number of seconds to wait. 0 is indefinite.
      * @return true if requested sequence number or greater applied, else false
@@ -780,7 +799,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#statusList(java.lang.String)
      */
     public List<TungstenProperties> statusList(String name) throws Exception
@@ -897,7 +916,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#setRole(java.lang.String,
      *      java.lang.String)
      */

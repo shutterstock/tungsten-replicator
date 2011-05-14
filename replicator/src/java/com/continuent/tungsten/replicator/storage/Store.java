@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,12 +17,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.storage;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
 
 /**
@@ -57,4 +58,6 @@ public interface Store extends ReplicatorPlugin
      * Returns status information as a set of named properties. 
      */
     public TungstenProperties status();
+
+    public long getMaxCommittedSeqno() throws ReplicatorException;
 }

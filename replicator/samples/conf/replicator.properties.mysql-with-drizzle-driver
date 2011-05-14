@@ -39,6 +39,11 @@ replicator.master.connect.uri=thl://masterhost:2112/
 # use this as their connect URI.
 replicator.master.listen.uri=thl://thishost:2112/
 
+# Force replicator to check if THL is in sync with database. 
+# This check is enabled by default. Set the following property 
+# to false in order to disable the check.
+# replicator.master.thl_check=true
+
 # Replicator auto-enable.  If true, replicator automatically goes online 
 # at start-up time. 
 replicator.auto_enable=true

@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.storage;
@@ -87,7 +87,7 @@ public class InMemoryQueueStore implements Store
      */
     public long getMaxStoredSeqno(boolean adminCommand)
     {
-        return 0;
+        return -1;
     }
 
     /**
@@ -194,5 +194,12 @@ public class InMemoryQueueStore implements Store
         props.setLong("maxSize", maxSize);
         props.setLong("eventCount", this.transactionCount);
         return props;
+    }
+
+    @Override
+    public long getMaxCommittedSeqno()
+    {
+        // No committed seqno into the queue store
+        return -1;
     }
 }

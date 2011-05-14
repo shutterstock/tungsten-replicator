@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s):  Robert Hodges
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.pipeline;
@@ -59,7 +59,7 @@ import com.continuent.tungsten.replicator.thl.THLException;
  * conditions for monitoring and status calls, which may call pipelines at
  * various stages of preparation and also following release. To release pipeline
  * resources, clients must drop references to the pipeline itself.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  */
 public class Pipeline implements ReplicatorPlugin
@@ -166,7 +166,7 @@ public class Pipeline implements ReplicatorPlugin
     /**
      * Configures pipeline data structures including stages and stores. All
      * pipeline information is accessible after this call.
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException,
@@ -194,7 +194,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void prepare(PluginContext context) throws ReplicatorException,
@@ -216,7 +216,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void release(PluginContext context)
@@ -274,7 +274,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Shuts down after a particular sequence number is applied.
-     *
+     * 
      * @param seqno Sequence number to watch for
      * @return Returns future to wait for pipeline shutdown
      */
@@ -295,7 +295,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Shuts down after a particular event ID is applied.
-     *
+     * 
      * @param eventId Event ID to watch for
      * @return Returns future to wait for pipeline shutdown
      */
@@ -316,7 +316,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Shuts down after a heartbeat event is seen.
-     *
+     * 
      * @return Returns future to wait for pipeline shutdown
      */
     public Future<Pipeline> shutdownAfterHeartbeat(String name)
@@ -337,7 +337,7 @@ public class Pipeline implements ReplicatorPlugin
     /**
      * Shuts down after the replication event timestamp meets or exceeds the
      * argument.
-     *
+     * 
      * @param timestamp Timestamp value to wait for
      * @return Returns future to wait for pipeline shutdown
      */
@@ -485,7 +485,7 @@ public class Pipeline implements ReplicatorPlugin
      * Sets the native event ID from which to start extracting. This overrides
      * the default value obtained from the applier at the end of the pipeline.
      * Must be called before start() to have an effect.
-     *
+     * 
      * @param eventId Event ID from which to start replication
      */
     public void setInitialEventId(String eventId)
@@ -504,7 +504,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular sequence number to be extracted.
-     *
+     * 
      * @param seqno Sequence number to watch for
      * @return Returns a watch on a corresponding event
      * @throws InterruptedException if cancelled
@@ -517,7 +517,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular event ID to be extracted.
-     *
+     * 
      * @param eventId Native event ID to watch for
      * @return Returns a watch on a corresponding event
      * @throws InterruptedException if cancelled
@@ -530,7 +530,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular sequence number to be applied.
-     *
+     * 
      * @param seqno Sequence number to watch for
      * @return Returns a future on the event that meets criterion
      * @throws InterruptedException if cancelled
@@ -543,7 +543,7 @@ public class Pipeline implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular event ID to be applied.
-     *
+     * 
      * @param eventId Native event ID to watch for
      * @return Returns a watch on a corresponding event
      * @throws InterruptedException if canceled
@@ -557,7 +557,7 @@ public class Pipeline implements ReplicatorPlugin
     /**
      * Find the current native event ID in the DBMS and wait until it reaches
      * the log.
-     *
+     * 
      * @return A Future on the ReplDBMSEvent that has this eventId or a greater
      *         one.
      * @throws InterruptedException
@@ -585,6 +585,25 @@ public class Pipeline implements ReplicatorPlugin
     {
         stages.getLast().setApplySkipEvents(seqnos);
     }
+
+    /**
+     * getMaxCommittedSeqno returns the max committed sequence number from all
+     * the stores.
+     * 
+     * @return the max committed seqno
+     * @throws ReplicatorException in case an error occurs
+     */
+    public long getMaxCommittedSeqno() throws ReplicatorException
+    {
+        long seqno = -1;
+        for (Store store : stores.values())
+        {
+            long maxCommittedSeqno = store.getMaxCommittedSeqno();
+            if (seqno < maxCommittedSeqno)
+                seqno = maxCommittedSeqno;
+        }
+        return seqno;
+    }
 }
 
 // Interruptible task to wait for stage tasks to read a watch point.
@@ -603,7 +622,7 @@ class DeferredShutdownTask implements Callable<Pipeline>
 
     /**
      * Returns when the pipeline is safely shut down. {@inheritDoc}
-     *
+     * 
      * @see java.util.concurrent.Callable#call()
      */
     public Pipeline call() throws Exception

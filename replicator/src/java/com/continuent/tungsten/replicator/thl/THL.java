@@ -712,4 +712,10 @@ public class THL implements Store
         props.setLong(Replicator.MAX_STORED_SEQNO, getMaxStoredSeqno(true));
         return props;
     }
+
+    @Override
+    public long getMaxCommittedSeqno() throws ReplicatorException
+    {
+        return getLastAppliedEvent().getSeqno();
+    }
 }

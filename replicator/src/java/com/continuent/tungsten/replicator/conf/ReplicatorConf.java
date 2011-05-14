@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -49,6 +49,13 @@ public class ReplicatorConf
 
     /** URI on which we listen. */
     static public final String   MASTER_LISTEN_URI                     = "replicator.master.listen.uri";
+
+    /**
+     * Should the master checks that its THL is in sync with its database before
+     * starting. By default, it is turned on
+     */
+    static public final String   MASTER_THL_CHECK                      = "replicator.master.thl_check";
+    static public final String   MASTER_THL_CHECK_DEFAULT              = "true";
 
     /** Whether to go online automatically at startup time. */
     static public final String   AUTO_ENABLE                           = "replicator.auto_enable";
