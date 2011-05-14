@@ -432,6 +432,11 @@ replicator.applier.parallel-q-applier.storeName=parallel-queue
 # Dummy applier.
 replicator.applier.dummy=com.continuent.tungsten.replicator.applier.DummyApplier
 
+# MongoDB applier.  You must specify a connection string for the server.  
+# This currently supports only a single server.  
+replicator.applier.mongodb=com.continuent.tungsten.replicator.applier.MongoApplier
+replicator.applier.mongodb.connectString=localhost:27017
+
 ###########
 # FILTERS # 
 ###########
@@ -494,6 +499,15 @@ replicator.filter.bidiSlave.allowAnyRemoteService=false
 replicator.filter.ignoreserver=com.continuent.tungsten.replicator.filter.JavaScriptFilter
 replicator.filter.ignoreserver.script=${replicator.home.dir}/samples/scripts/javascript-advanced/ignore_server_id.js
 replicator.filter.ignoreserver.server_ids=3,7
+
+# Primary key filter.  This filter is required for MySQL row replication to 
+# reduce the number of columns used in comparisons for updates and deletes. 
+replicator.filter.pkey=com.continuent.tungsten.enterprise.replicator.filter.PrimaryKeyFilter
+
+# Column name filter.  Adds column name metadata to row updates.  This is 
+# required for MySQL row replication if you have logic that requires column
+# names. 
+replicator.filter.colnames=com.continuent.tungsten.replicator.filter.ColumnNameFilter
 
 ################################
 # BACKUP/RESTORE CONFIGURATION #
