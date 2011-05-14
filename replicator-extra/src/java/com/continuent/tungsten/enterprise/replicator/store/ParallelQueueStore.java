@@ -541,4 +541,11 @@ public class ParallelQueueStore implements ParallelStore
         }
         return props;
     }
+
+    @Override
+    public long getMaxCommittedSeqno() throws ReplicatorException
+    {
+        // TODO Auto-generated method stub
+        return -1;
+    }
 }
