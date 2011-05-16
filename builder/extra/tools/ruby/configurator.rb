@@ -371,7 +371,6 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
 
     unless arguments_valid?()
       unless display_help?()
-        output_usage()
         exit 1
       end
     end
@@ -379,12 +378,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     if include_package
       begin
         unless @package.parsed_options?(remainder)
-          output_usage()
           exit 1
         end
       rescue => e
         error(e.to_s())
-        output_usage()
         exit 1
       end
     end
@@ -462,7 +459,6 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
         end
       
         error("Argument parsing failed: #{e.to_s()}")
-        output_usage()
         exit 1
       end
     end
