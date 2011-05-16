@@ -100,6 +100,15 @@ class DatabaseInitScript < ConfigurePrompt
   end
 end
 
+class ReplicationRMIPort < AdvancedPrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_RMI_PORT, "Replication RMI port", 
+      PV_INTEGER, 10000)
+  end
+end
+
 class BackupMethod < ConfigurePrompt
   include GroupConfigurePromptMember
   

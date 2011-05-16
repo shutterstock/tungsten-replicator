@@ -23,10 +23,24 @@ class ReplicatorInstallPackage < ConfigurePackage
     
     method = nil
     opts=OptionParser.new
-    opts.on("--direct")         { method = "direct" }
-    opts.on("--master-slave")   { method = "master-slave" }
+    opts.on("--direct")         { method = "direct"
+                                  @display_direct_help = true }
+    opts.on("--master-slave")   { method = "master-slave"
+                                  @display_ms_help = true }
+    opts.on("--help-direct")    { @display_direct_help = true
+                                  Configurator.instance.display_help?(true) }
+    opts.on("--help-master-slave")  { @display_ms_help = true
+                                  Configurator.instance.display_help?(true)}
+    opts.on("--help-all")       { @display_direct_help = true
+                                  @display_ms_help = true
+                                  Configurator.instance.display_help?(true) }
     
     remainder = Configurator.instance.run_option_parser(opts, arguments)
+    
+    if Configurator.instance.display_help?()
+      output_usage()
+      exit 0
+    end
     
     unless @config.getProperty(DEPLOYMENT_TYPE)
       error("You must specify either --direct or --master-slave")
@@ -38,6 +52,7 @@ class ReplicatorInstallPackage < ConfigurePackage
 
     case method
     when "direct"
+      @display_direct_help = true
       options = parse_direct_arguments(remainder)
       unless is_valid?
         return false
@@ -48,6 +63,7 @@ class ReplicatorInstallPackage < ConfigurePackage
         return false
       end
     when "master-slave"
+      @display_ms_help = true
       options = parse_master_slave_arguments(remainder)
       unless is_valid?
         return false
@@ -321,60 +337,66 @@ class ReplicatorInstallPackage < ConfigurePackage
     Configurator.instance.save_prompts()
   end
   
-  def output_usage
-    puts "Usage: tungsten-installer [general-options] {--direct|--master-slave} [install-options]"
+  def output_usage()
+    puts "Usage: tungsten-installer [general-options] {--direct|--master-slave} [--help-direct|--help-master-slave|--help-all] [install-options]"
     output_general_usage()
-    Configurator.instance.write_divider(Logger::ERROR)
-    puts "Install options: --direct"
-    output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
-    output_usage_line("--home-directory")
-    output_usage_line("--master-alias")
-    output_usage_line("--master-host")
-    output_usage_line("--master-port", "", "3306")
-    output_usage_line("--master-user", "", Configurator.instance.whoami())
-    output_usage_line("--master-password")
-    output_usage_line("--master-log-directory", "", "/var/lib/mysql")
-    output_usage_line("--master-log-pattern", "", "mysql-bin")
-    output_usage_line("--master-log-file", "PENDING")
-    output_usage_line("--master-log-pos", "PENDING")
-    output_usage_line("--slave-alias")
-    output_usage_line("--slave-host", "", Configurator.instance.hostname())
-    output_usage_line("--slave-port", "", "3306")
-    output_usage_line("--slave-user", "", Configurator.instance.whoami())
-    output_usage_line("--slave-password")
-    output_usage_line("--thl-directory", "", Configurator.instance.get_base_path() + "/thl")
-    output_usage_line("--thl-port", "", "2112")
-    output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
-    output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
-    output_usage_line("--channels", "Number of channels for parallel apply", "1")
-    output_usage_line("--rmi-port", "", "10001")
-    output_usage_line("--service-name")
-    output_usage_line("--start", "Start the replicator after configuration")
-    output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
-    Configurator.instance.write_divider(Logger::ERROR)
-    puts "Install options: --master-slave"
-    output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
-    output_usage_line("--cluster-hosts")
-    output_usage_line("--master-host")
-    output_usage_line("--user")
-    output_usage_line("--home-directory", "", Configurator.instance.get_base_path())
-    output_usage_line("--datasource-port", "", "3306")
-    output_usage_line("--datasource-user", "", Configurator.instance.whoami())
-    output_usage_line("--datasource-password")
-    output_usage_line("--datasource-log-directory", "", "/var/lib/mysql")
-    output_usage_line("--datasource-log-pattern", "", "mysql-bin")
-    output_usage_line("--master-log-file", "PENDING")
-    output_usage_line("--master-log-pos", "PENDING")
-    output_usage_line("--datasource-transfer-logs")
-    output_usage_line("--thl-directory", "", Configurator.instance.get_base_path() + "/thl")
-    output_usage_line("--thl-port", "", "2112")
-    output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
-    output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
-    output_usage_line("--channels", "Number of channels for parallel apply", "1")
-    output_usage_line("--rmi-port", "", "10001")
-    output_usage_line("--service-name")
-    output_usage_line("--start", "Start the replicator after configuration")
-    output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
+
+    if @display_direct_help
+      Configurator.instance.write_divider(Logger::ERROR)
+      puts "Install options: --direct"
+      output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
+      output_usage_line("--home-directory")
+      output_usage_line("--master-alias")
+      output_usage_line("--master-host")
+      output_usage_line("--master-port", "", "3306")
+      output_usage_line("--master-user", "", Configurator.instance.whoami())
+      output_usage_line("--master-password")
+      output_usage_line("--master-log-directory", "", "/var/lib/mysql")
+      output_usage_line("--master-log-pattern", "", "mysql-bin")
+      output_usage_line("--master-log-file", "PENDING")
+      output_usage_line("--master-log-pos", "PENDING")
+      output_usage_line("--slave-alias")
+      output_usage_line("--slave-host", "", Configurator.instance.hostname())
+      output_usage_line("--slave-port", "", "3306")
+      output_usage_line("--slave-user", "", Configurator.instance.whoami())
+      output_usage_line("--slave-password")
+      output_usage_line("--thl-directory", "", Configurator.instance.get_base_path() + "/thl")
+      output_usage_line("--thl-port", "", "2112")
+      output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
+      output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
+      output_usage_line("--channels", "Number of channels for parallel apply", "1")
+      output_usage_line("--rmi-port", "", "10001")
+      output_usage_line("--service-name")
+      output_usage_line("--start", "Start the replicator after configuration")
+      output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
+    end
+    
+    if @display_ms_help
+      Configurator.instance.write_divider(Logger::ERROR)
+      puts "Install options: --master-slave"
+      output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
+      output_usage_line("--cluster-hosts")
+      output_usage_line("--master-host")
+      output_usage_line("--user")
+      output_usage_line("--home-directory", "", Configurator.instance.get_base_path())
+      output_usage_line("--datasource-port", "", "3306")
+      output_usage_line("--datasource-user", "", Configurator.instance.whoami())
+      output_usage_line("--datasource-password")
+      output_usage_line("--datasource-log-directory", "", "/var/lib/mysql")
+      output_usage_line("--datasource-log-pattern", "", "mysql-bin")
+      output_usage_line("--master-log-file", "PENDING")
+      output_usage_line("--master-log-pos", "PENDING")
+      output_usage_line("--datasource-transfer-logs")
+      output_usage_line("--thl-directory", "", Configurator.instance.get_base_path() + "/thl")
+      output_usage_line("--thl-port", "", "2112")
+      output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
+      output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
+      output_usage_line("--channels", "Number of channels for parallel apply", "1")
+      output_usage_line("--rmi-port", "", "10001")
+      output_usage_line("--service-name")
+      output_usage_line("--start", "Start the replicator after configuration")
+      output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
+    end
   end
   
   def store_config_file?

@@ -25,7 +25,7 @@ module ConfigureDeploymentCore
         self.send(alter_deployment_method_name(deployment_method.method_name))
       }
     rescue => e
-      error(e.to_s())
+      error(e.to_s() + ":\n" + e.backtrace.join("\n"))
     end
     
     result = RemoteResult.new()
@@ -33,8 +33,13 @@ module ConfigureDeploymentCore
     return result
   end
   
-  def fill_ports_near_hosts(host_list, port_to_add)
-    host_list = host_list.split(",")
+  def fill_ports_near_hosts(host_hash, port_to_add)
+    host_list = host_list = []
+    host_hash.each{
+      |h_key,h_props|
+      host_list << h_props[HOST]
+    }
+    
     initial_hosts = nil
     host_list.each { |host|
       host_addr = host.strip + "[" + port_to_add + "]"

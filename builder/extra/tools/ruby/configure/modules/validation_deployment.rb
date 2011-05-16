@@ -133,7 +133,7 @@ class DeploymentPackageCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    @config.getProperty(GLOBAL_DEPLOY_PACKAGE_URI)
+    @config.getProperty(DEPLOY_PACKAGE_URI) && !(Configurator.instance.is_localhost?(@config.getProperty(HOST)))
   end
 end
 
@@ -279,9 +279,7 @@ class HostnameCheck < ConfigureValidationCheck
 
   # Check the host name. 
   def validate
-    # Check operating system.
-    hostname = cmd_result("hostname")
-    if hostname != @config.getProperty(HOST)
+    unless Configurator.instance.is_localhost?(@config.getProperty(HOST))
       error "Hostname must be #{@config.getProperty(HOST)}"
     else
       debug "Hostname is OK"

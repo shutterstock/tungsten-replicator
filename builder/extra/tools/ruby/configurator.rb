@@ -66,6 +66,10 @@ OS_ARCH_32 = "32-bit"
 OS_ARCH_64 = "64-bit"
 OS_ARCH_UNKNOWN = "unknown"
 
+DISTRIBUTED_DEPLOYMENT_NAME = "regular"
+DIRECT_DEPLOYMENT_NAME = "direct"
+DIRECT_DEPLOYMENT_HOST_ALIAS = "local"
+
 Dir[File.dirname(__FILE__) + '/configure/packages/*.rb'].each do |file| 
   require File.dirname(file) + '/' + File.basename(file, File.extname(file))
 end
@@ -240,7 +244,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   # Handle the remote side of the validation_handler->run function
   def validate
-    parsed_options?(ARGV)
+    parsed_options?(ARGV, false)
     
     # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
@@ -263,7 +267,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   # Handle the remote side of the deployment_handler->run function
   def deploy
-    parsed_options?(ARGV)
+    parsed_options?(ARGV, false)
     
     # Outputting directly will break the serialized return string
     if has_tty?() && @options.stream_output == false
@@ -292,6 +296,16 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       deployment = deployment_class.new()
       deployment.set_config(@config)
       @deployments << deployment
+      
+      if deployment_class.subclasses()
+        deployment_class.subclasses().each {
+          |sub_deployment_class|
+        
+          deployment = sub_deployment_class.new()
+          deployment.set_config(@config)
+          @deployments << deployment
+        }
+      end
     }
     @deployments = @deployments.sort{|a,b| a.get_weight <=> b.get_weight}
   end
@@ -318,7 +332,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   end
   
   # Parse command line arguments.
-  def parsed_options?(arguments)
+  def parsed_options?(arguments, include_package = true)
     opts=OptionParser.new
     
     # Needed again so that an exception isn't thrown
@@ -354,26 +368,30 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("--stream")               {@options.stream_output = true }
 
     remainder = run_option_parser(opts, arguments)
-    
-    if @options.display_help
-      output_help
-      exit 0
-    end
 
     unless arguments_valid?()
-      output_usage()
-      exit 1
-    end
-    
-    begin
-      unless @package.parsed_options?(remainder)
+      unless display_help?()
         output_usage()
         exit 1
       end
-    rescue => e
-      error(e.to_s())
-      output_usage()
-      exit 1
+    end
+    
+    if include_package
+      begin
+        unless @package.parsed_options?(remainder)
+          output_usage()
+          exit 1
+        end
+      rescue => e
+        error(e.to_s())
+        output_usage()
+        exit 1
+      end
+    end
+    
+    if display_help?()
+      output_help
+      exit 0
     end
     
     true
@@ -475,6 +493,14 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   def display_help
     filename = File.dirname(__FILE__) + "/configure/interface_text/configure_run"
     write_from_file(filename)
+  end
+  
+  def display_help?(enabled = nil)
+    if enabled != nil
+      @options.display_help = enabled
+    end
+    
+    return @options.display_help
   end
   
   # Write a header

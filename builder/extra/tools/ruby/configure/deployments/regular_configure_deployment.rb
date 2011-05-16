@@ -1,5 +1,3 @@
-DISTRIBUTED_DEPLOYMENT_NAME = "regular"
-
 class RegularConfigureDeployment < ConfigureDeployment
   def get_name
     DISTRIBUTED_DEPLOYMENT_NAME
@@ -22,9 +20,14 @@ class RegularConfigureDeployment < ConfigureDeployment
       config_obj = @config.dup()
       config_obj.setProperty(DEPLOYMENT_HOST, host_alias)
       
-      if uri && uri.scheme == "file" && (uri.host == nil || uri.host == "localhost")
+      if uri && uri.scheme == "file" && (uri.host == nil || uri.host == "localhost") && !(Configurator.instance.is_localhost?(@config.getProperty([HOSTS, host_alias, HOST])))
         config_obj.setProperty(GLOBAL_DEPLOY_PACKAGE_URI, @config.getProperty(DEPLOY_PACKAGE_URI))
-        config_obj.setProperty(DEPLOY_PACKAGE_URI, "file://localhost#{config_obj.getProperty(TEMP_DIRECTORY)}/#{package_basename}")
+        config_obj.setProperty(DEPLOY_PACKAGE_URI, "file://localhost#{config_obj.getProperty([HOSTS, host_alias, TEMP_DIRECTORY])}/#{package_basename}")
+      end
+      
+      if !(Configurator.instance.is_localhost?(@config.getProperty([HOSTS, host_alias, HOST]))) && @config.getProperty(REPL_MYSQL_CONNECTOR_PATH)
+        config_obj.setProperty(GLOBAL_REPL_MYSQL_CONNECTOR_PATH, config_obj.getProperty(REPL_MYSQL_CONNECTOR_PATH))
+        config_obj.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{@config.getProperty([HOSTS, host_alias, TEMP_DIRECTORY])}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/#{File.basename(config_obj.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
       end
     
       config_objs.push(config_obj)
@@ -33,13 +36,13 @@ class RegularConfigureDeployment < ConfigureDeployment
     config_objs
   end
   
-  def get_deployment_object_modules
+  def get_deployment_object_modules(config)
     modules = [
       ConfigureDeploymentStepDeployment
       ]
     
     modules << ConfigureDeploymentStepReplicationDataservice
-    case @config.getProperty(DBMS_TYPE)
+    case config.getProperty(DBMS_TYPE)
     when "mysql"
       modules << ConfigureDeploymentStepMySQL
     when "postgresql"
@@ -65,5 +68,14 @@ class RegularConfigureDeployment < ConfigureDeployment
   
   def require_package_uri
     true
+  end
+  
+  def self.inherited(subclass)
+    @subclasses ||= []
+    @subclasses << subclass
+  end
+
+  def self.subclasses
+    @subclasses
   end
 end

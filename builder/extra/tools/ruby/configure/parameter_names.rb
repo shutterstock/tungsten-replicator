@@ -42,7 +42,6 @@ DATASERVERS =  "dataservers"
 REPL_SERVICES = "repl_services"
 REPL_HOSTS = "repl_hosts"
 REPL_ROLE = "repl_role"
-REPL_REMOTE_HOSTS = "repl_remote_hosts"
 REPL_RMI_PORT = "repl_rmi_port"
 REPL_AUTOENABLE = "repl_auto_enable"
 REPL_DATASERVER = 'repl_dataserver'
@@ -97,6 +96,7 @@ REPL_SVC_CONFIG_FILE = "repl_svc_config_file"
 REPL_USE_DRIZZLE = "repl_use_drizzle"
 
 # MySQL-specific parameters
+GLOBAL_REPL_MYSQL_CONNECTOR_PATH = "global_mysql_connector_path"
 REPL_MYSQL_CONNECTOR_PATH = "mysql_connector_path"
 REPL_MYSQL_DATADIR = "repl_mysql_data_dir"
 REPL_MYSQL_BINLOGDIR = "repl_mysql_binlog_dir"

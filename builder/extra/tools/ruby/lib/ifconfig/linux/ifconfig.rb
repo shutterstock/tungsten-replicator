@@ -12,9 +12,12 @@ class Ifconfig
   # 
   def initialize(input=nil,netstat=nil,verbose=nil)
     if input.nil?
-      cmd = IO.popen('which ifconfig'){ |f| f.readlines[0] }
-      raise RuntimeError.new("ifconfig not in PATH") unless !cmd.nil?
-      @ifconfig = IO.popen("/sbin/ifconfig -a"){ |f| f.readlines.join }
+      cmd = IO.popen('which ifconfig 2>/dev/null'){ |f| f.readlines[0] }
+      if cmd.nil?
+        @ifconfig = IO.popen("/sbin/ifconfig -a"){ |f| f.readlines.join }
+      else
+        @ifconfig = IO.popen("#{cmd} -a"){ |f| f.readlines.join }
+      end
     else
       @ifconfig = input
     end

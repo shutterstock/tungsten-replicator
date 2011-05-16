@@ -4,7 +4,8 @@ class ClusterHosts < GroupConfigurePrompt
       "host", "hosts")
       
     self.add_prompts(
-      GlobalHostPrompt.new(),
+      HostPrompt.new(),
+      IPAddressPrompt.new(),
       UserIDPrompt.new(),
       HomeDirectoryPrompt.new(),
       BaseDirectoryPrompt.new(),
@@ -27,7 +28,7 @@ class ClusterHosts < GroupConfigurePrompt
       
       #ReplicationMonitorInterval.new(),
       JavaMemorySize.new(),
-      RMIPort.new(),
+      ReplicationRMIPort.new(),
       
       BackupMethod.new(),
       BackupStorageDirectory.new(),
@@ -58,6 +59,12 @@ class ClusterHosts < GroupConfigurePrompt
   end
 end
 
+module IsReplicatorPrompt
+  def enabled?
+    super()
+  end
+end
+
 class DBMSTypePrompt < ConfigurePrompt
   def initialize
     super(DBMS_TYPE, "Database type (mysql, or postgresql)", PV_DBMSTYPE)
@@ -77,6 +84,7 @@ end
 
 class ReplicationMonitorInterval < ConstantValuePrompt
   include GroupConfigurePromptMember
+  include IsReplicatorPrompt
   
   def initialize
     super(REPL_MONITOR_INTERVAL, "Replication monitor interval", 
@@ -90,15 +98,6 @@ class JavaMemorySize < AdvancedPrompt
   def initialize
     super(REPL_JAVA_MEM_SIZE, "Replicator Java heap memory size in Mb (min 128)",
       PV_JAVA_MEM_SIZE, 512)
-  end
-end
-
-class RMIPort < AdvancedPrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(REPL_RMI_PORT, "Replication RMI port", 
-      PV_INTEGER, 10000)
   end
 end
 
@@ -151,7 +150,7 @@ class BaseDirectoryPrompt < AdvancedPrompt
   end
 end
 
-class GlobalHostPrompt < ConfigurePrompt
+class HostPrompt < ConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
@@ -168,6 +167,18 @@ class GlobalHostPrompt < ConfigurePrompt
   
   def allow_group_default
     false
+  end
+end
+
+class IPAddressPrompt < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(IP_ADDRESS, "IP address for this host", PV_HOSTNAME)
+  end
+  
+  def get_default_value
+    Resolv.getaddress(@config.getProperty(get_member_key(HOST)))
   end
 end
 
@@ -345,13 +356,14 @@ end
 
 class THLStorageDirectory < ConfigurePrompt
   include GroupConfigurePromptMember
+  include IsReplicatorPrompt
   
   def initialize
     super(REPL_LOG_DIR, "Replicator log directory", PV_FILENAME)
   end
   
   def enabled?
-    @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
   end
   
   def get_default_value
@@ -365,6 +377,7 @@ end
 
 class THLStorageChecksum < AdvancedPrompt
   include GroupConfigurePromptMember
+  include IsReplicatorPrompt
   
   def initialize
     super(REPL_THL_DO_CHECKSUM, "Execute checksum operations on THL log files", 
@@ -378,6 +391,7 @@ end
 
 class THLStorageConnectionTimeout < AdvancedPrompt
   include GroupConfigurePromptMember
+  include IsReplicatorPrompt
   
   def initialize
     super(REPL_THL_LOG_CONNECTION_TIMEOUT, "Number of seconds to wait for a connection to the THL log", 
@@ -391,6 +405,7 @@ end
 
 class THLStorageRetention < AdvancedPrompt
   include GroupConfigurePromptMember
+  include IsReplicatorPrompt
   
   def initialize
     super(REPL_THL_LOG_RETENTION, "How long do you want to keep THL files?", 
@@ -404,6 +419,7 @@ end
 
 class THLStorageConsistency < AdvancedPrompt
   include GroupConfigurePromptMember
+  include IsReplicatorPrompt
   
   def initialize
     super(REPL_CONSISTENCY_POLICY, "Should the replicator stop or warn if a consistency check fails?", 
@@ -417,10 +433,11 @@ end
 
 class THLStorageFileSize < AdvancedPrompt
   include GroupConfigurePromptMember
+  include IsReplicatorPrompt
   
   def initialize
     super(REPL_THL_LOG_FILE_SIZE, "File size in bytes for THL disk logs", 
-      PV_INTEGER, 1000000000)
+      PV_INTEGER, 100000000)
   end
   
   def enabled?

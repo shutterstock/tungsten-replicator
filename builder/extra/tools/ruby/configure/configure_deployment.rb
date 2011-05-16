@@ -125,7 +125,7 @@ class ConfigureDeployment
     }.new(expanded_config, deployment_config)
 
     deployment_methods = []
-    get_deployment_object_modules().each{
+    get_deployment_object_modules(expanded_config).each{
       |module_name|
       obj.extend(module_name)
       begin
@@ -164,7 +164,7 @@ class ConfigureDeployment
     @deployment_handler
   end
   
-  def get_deployment_object_modules
+  def get_deployment_object_modules(config)
     []
   end
   

@@ -29,10 +29,9 @@ class ConfigureDeploymentHandler
       cmd_result("rsync -Caze ssh --delete #{Configurator.instance.get_base_path()}/ #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
 
       # Transfer the MySQL/J file if it is being used
-      if @config.getProperty(REPL_MYSQL_CONNECTOR_PATH) != nil
+      if @config.getProperty(GLOBAL_REPL_MYSQL_CONNECTOR_PATH) != nil
         debug("Transfer Connector/J to #{@config.getProperty(HOST)}")
-        cmd_result("scp #{@config.getProperty(REPL_MYSQL_CONNECTOR_PATH)} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
-        @config.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{validation_temp_directory}/#{File.basename(@config.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
+        cmd_result("scp #{@config.getProperty(GLOBAL_REPL_MYSQL_CONNECTOR_PATH)} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
       end
 
       debug("Transfer host configuration file to #{@config.getProperty(HOST)}")
@@ -109,8 +108,10 @@ class ConfigureDeploymentHandler
         
         @errors = @errors + result.errors
         result.output()
+      rescue TypeError => te
+        raise "Cannot read the deployment result: #{result_dump}"
       rescue ArgumentError => ae
-        raise "Unable to load deployment result: #{result_dump}"
+        raise "Unable to load the deployment result: #{result_dump}"
       end
     end
   end

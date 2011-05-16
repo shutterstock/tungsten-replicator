@@ -240,12 +240,12 @@ class GroupConfigurePrompt
 
   # Add a single prompt to this group
   def add_prompt(new_prompt)
-    unless new_prompt.is_a?(GroupConfigurePromptMember)
-      raise "Unable to add #{new_prompt.class().name()}:#{new_prompt.get_name()} because it does not extend GroupConfigurePromptMember"
-    end
-    
     unless new_prompt.is_a?(ConfigurePrompt)
       raise "Unable to add #{new_prompt.class().name()}:#{new_prompt.get_name()} because it does not extend ConfigurePrompt"
+    end
+    
+    unless new_prompt.is_a?(GroupConfigurePromptMember)
+      new_prompt.extend(GroupConfigurePromptMember)
     end
     
     new_prompt = prepare_prompt(new_prompt)

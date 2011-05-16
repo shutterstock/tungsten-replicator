@@ -1,5 +1,3 @@
-DIRECT_DEPLOYMENT_NAME = "direct"
-DIRECT_DEPLOYMENT_HOST_ALIAS = "local"
 class DirectDeployment < ConfigureDeployment
   def get_name
     DIRECT_DEPLOYMENT_NAME
@@ -11,13 +9,13 @@ class DirectDeployment < ConfigureDeployment
     config_objs
   end
   
-  def get_deployment_object_modules
+  def get_deployment_object_modules(config)
     modules = [
       ConfigureDeploymentStepDirect
       ]
       
     modules << ConfigureDeploymentStepReplicationDataservice
-    case @config.getProperty(DBMS_TYPE)
+    case config.getProperty(DBMS_TYPE)
     when "mysql"
       modules << ConfigureDeploymentStepMySQL
     when "postgresql"
@@ -47,5 +45,14 @@ class DirectDeployment < ConfigureDeployment
   
   def require_deployment_host
     true
+  end
+  
+  def self.inherited(subclass)
+    @subclasses ||= []
+    @subclasses << subclass
+  end
+
+  def self.subclasses
+    @subclasses
   end
 end
