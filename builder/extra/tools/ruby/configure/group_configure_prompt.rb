@@ -196,23 +196,12 @@ class GroupConfigurePrompt
   
   # Validate each of the prompts across all of the defined members
   def is_valid?
-    errors = []
-    
     each_member_prompt{
       |member, prompt|
-      
-      begin
-        prompt.is_valid?()
-      rescue ConfigurePromptError => e
-        errors << e
-      end
+      prompt.is_valid?()
     }
     
-    if errors.length > 0
-      raise ConfigurePromptErrorSet.new(errors)
-    else
-      true
-    end
+    true
   end
   
   def can_add_member
@@ -303,14 +292,34 @@ class GroupConfigurePrompt
   # Loop over each member-prompt combination to execute &block
   # This will exclude the defaults entry in the group
   def each_member_prompt(&block)
+    errors = []
+    
     each_member{
       |member|
       each_prompt{
         |prompt|
-        prompt.set_member(member)
-        block.call(member, prompt)
+        
+        begin
+          prompt.set_member(member)
+          block.call(member, prompt)
+        rescue ConfigurePromptError => cpe
+          errors << cpe
+        rescue => e
+          begin
+            val = prompt.get_value()
+          rescue
+            val = ""
+          end
+          errors << ConfigurePromptError.new(prompt.dup(), e.message, val)
+        end
       }
     }
+    
+    if errors.length > 0
+      raise ConfigurePromptErrorSet.new(errors)
+    else
+      true
+    end
   end
 end
 

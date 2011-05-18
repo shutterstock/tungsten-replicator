@@ -99,12 +99,8 @@ module ConfigureDeploymentStepMySQL
 	
 		transformer.transform { |line|
 			if line =~ /THL_CTRL=/
-				unless Configurator.instance.is_enterprise?()
-					"THL_CTRL=com.continuent.tungsten.replicator.thl.THLManagerCtrl"
-				else
-					"THL_CTRL=com.continuent.tungsten.enterprise.replicator.thl.EnterpriseTHLManagerCtrl"
-				end
-				else
+			    "THL_CTRL=com.continuent.tungsten.enterprise.replicator.thl.EnterpriseTHLManagerCtrl"
+			else
 				line
 			end
 		}

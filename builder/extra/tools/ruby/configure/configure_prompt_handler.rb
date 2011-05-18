@@ -165,7 +165,12 @@ class ConfigurePromptHandler
       rescue ConfigurePromptErrorSet => s
         @errors = @errors + s.errors
       rescue => e
-        @errors << ConfigurePromptError.new(prompt, e.message, prompt.get_value())
+        begin
+          val = prompt.get_value()
+        rescue
+          val = ""
+        end
+        @errors << ConfigurePromptError.new(prompt, e.message, val)
       end
     }
     
