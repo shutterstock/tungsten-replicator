@@ -111,9 +111,20 @@ class IntegerRangeValidator < PropertyValidator
   end
 end
 
+class ConfirmationValueValidator < PropertyValidator
+  def initialize
+    super('true|false|y|yes|n|no|q|quit', "Value must be Y or Q")
+  end
+  
+  def validate(value)
+    value = super(value.to_s().downcase())
+  end
+end
+
 # Define standard validators. 
 PV_INTEGER = PropertyValidator.new('^[0-9]+$', "Value must be an integer")
 PV_BOOLEAN = PropertyValidator.new('true|false', "Value must be true or false")
+PV_CONFIRMATION = ConfirmationValueValidator.new()
 PV_IDENTIFIER = PropertyValidator.new('[A-Za-z0-9_]+', 
   "Value must consist only of letters, digits, and underscore (_)")
 PV_FILENAME = PropertyValidator.new('/[A-Za-z0-9_\.\/]+',

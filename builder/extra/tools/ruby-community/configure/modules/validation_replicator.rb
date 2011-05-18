@@ -67,24 +67,23 @@ class THLStorageCheck < ConfigureValidationCheck
   end
   
   def validate
-    if @config.getProperty(REPL_LOG_DIR)
-      if File.exists?(@config.getProperty(REPL_LOG_DIR)) && !File.directory?(@config.getProperty(REPL_LOG_DIR))
-        error("Replication log directory #{@config.getProperty(REPL_LOG_DIR)} already exists as a file")
-      end
-    end
-    
-    @config.getPropertyOr(REPL_SERVICES).each{
-      |service_alias,service_properties|
+    @config.getPropertyOr(REPL_SERVICES, {}).keys().each{
+      |svc_alias|
       
-      if service_properties[REPL_LOG_DIR]
-        unless File.exists?(service_properties[REPL_SVC_CONFIG_FILE])
-          if File.exists?(service_properties[REPL_LOG_DIR])
-            dir_file_count = cmd_result("ls #{service_properties[REPL_LOG_DIR]} | wc -l")
-            if dir_file_count.to_i() > 0
-              error("Replication log directory #{service_properties[REPL_LOG_DIR]} already contains log files")
+      repl_log_dir = @config.getProperty([REPL_SERVICES, svc_alias, REPL_LOG_DIR])
+      if repl_log_dir
+        if File.exists?(repl_log_dir) && !File.directory?(repl_log_dir)
+          error("Replication log directory #{repl_log_dir} already exists as a file")
+        else
+          unless File.exists?(@config.getProperty([REPL_SERVICES, svc_alias, REPL_SVC_CONFIG_FILE]))
+            if File.exists?(repl_log_dir)
+              dir_file_count = cmd_result("ls #{repl_log_dir} | wc -l")
+              if dir_file_count.to_i() > 0
+                error("Replication log directory #{repl_log_dir} already contains log files but the service properties file is missing")
+              end
             end
           end
-        end  
+        end
       end
     }
   end

@@ -10,7 +10,14 @@ module ConfigureMessages
   end
   
   def is_valid?()
-    (@errors == nil || @errors.length() == 0)
+    @errors.each{
+      |error|
+      if error.is_fatal?
+        return false
+      end
+    }
+    
+    true
   end
   
   def output(message, level = Logger::INFO)
@@ -25,21 +32,28 @@ module ConfigureMessages
     Configurator.instance.warning(message, get_message_hostname())
   end
   
+  def confirm(message, c = nil)
+    warning(message)
+    
+    store_error_object(message, c || build_confirmation_object(message))
+  end
+  
+  def build_confirmation_object(message)
+    get_confirmation_object_class().new(message, get_message_hostname())
+  end
+  
+  def get_confirmation_object_class
+    RemoteConfirmation
+  end
+  
   def error(message, e = nil)
     Configurator.instance.error(message, get_message_hostname())
     
-    unless @errors
-      @errors = []
-    end
-    
-    store_error_object(message, e)
+    store_error_object(message, e || build_error_object(message))
   end
 
   def store_error_object(message, e = nil)
-    if e == nil
-      e = build_error_object(message)
-    end
-    
+    @errors ||= []
     @errors.push(e)
   end
   
@@ -131,6 +145,58 @@ class RemoteError < StandardError
     
     @message=message
     @host=host
+  end
+  
+  def is_fatal?
+    true
+  end
+end
+
+class RemoteConfirmation < RemoteError
+  def initialize(message, host = nil, validator = nil)
+    super(message, host)
+    
+    if validator == nil
+      validator = PV_CONFIRMATION
+    end
+      
+    @validator = validator
+  end
+  
+  def is_fatal?
+    case get_confirmation_value().to_s().downcase()
+    when "y", "yes"
+      return false
+    else
+      return true
+    end
+  end
+  
+  def get_confirmation_value
+    if @value
+      return @value
+    end
+    
+    unless Configurator.instance.has_tty?
+      return nil
+    end
+    
+    value = ""
+    while value.to_s == ""
+      puts "
+#{@host} >> #{@message}  
+Do you want to continue with the configuration (Y) or quit (Q)?"
+      value = STDIN.gets
+      
+      begin
+        value = @validator.validate(value.strip!)
+      rescue => e
+        puts e.message
+        value = nil
+      end
+    end
+    
+    @value = value
   end
 end
 
