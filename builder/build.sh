@@ -446,11 +446,7 @@ if [ "$SKIP_SOURCE" = 0 ]; then
   # Use the same manifest as for bin distrib
   cp $manifest $reldir_src/
 
-  if [ -z $BUILD_NUMBER ]; then
-    rel_src_tgz=${relname}-src.tar.gz
-  else
-    rel_src_tgz=${relname}-src-${BUILD_NUMBER}.tar.gz
-  fi
+  rel_src_tgz=${relname}-src.tar.gz
 
   echo "### generating source tar file: ${rel_src_tgz}"
   (cd ${reldir}/..; tar -czf ${rel_src_tgz} ${relname}-src/)
