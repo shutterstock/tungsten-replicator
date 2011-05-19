@@ -261,7 +261,11 @@ public class MySQLDrizzleApplier extends MySQLApplier
     protected void setObject(PreparedStatement prepStatement, int bindLoc,
             ColumnVal value, ColumnSpec columnSpec) throws SQLException
     {
-        if (columnSpec.getType() == Types.TIME)
+        if (value.getValue() == null)
+        {
+            super.setObject(prepStatement, bindLoc, value, columnSpec);
+        }
+        else if (columnSpec.getType() == Types.TIME)
         {
             Time t = (Time) value.getValue();
             prepStatement.setString(bindLoc, t.toString());
