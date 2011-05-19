@@ -641,17 +641,17 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     ifconfig = IfconfigWrapper.new().parse()
     ifconfig.each{
       |iface|
-      
-      ip_addresses.each{
-        |ip_address|
         
-        begin
-          if iface.has_addr?(ip_address)
+      begin
+        # Do a string comparison so that we only match the address portion
+        iface.addresses().each{
+          |a|
+          if ip_addresses.include?(a.to_s())
             return true
           end
-        rescue ArgumentError
-        end
-      }
+        }
+      rescue ArgumentError
+      end
     }
   
     false
