@@ -83,13 +83,6 @@ module ConfigureDeploymentStepMySQL
 		  super(line, service_name, service_config)
 		end
 	end
-	
-	def write_replication_service_properties
-	  # This file must be in place for now
-	  FileUtils.cp(
-      "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
-      "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties")
-  end
   
   def write_replicator_thl
 		# Fix up the THL utility class name.

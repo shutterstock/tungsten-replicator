@@ -17,6 +17,20 @@ module ConfigureDeploymentStepReplicator
     set_run_as_user("#{get_deployment_basedir()}/tungsten-replicator/bin/replicator")
   end
   
+  def write_replication_service_properties
+    transformer = Transformer.new(
+		  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
+			"#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties", "#")
+
+		transformer.transform { |line|
+		  if line =~ /replicator.rmi_port=/ then
+        "replicator.rmi_port=" + @config.getProperty(REPL_RMI_PORT)
+  		else
+  		  line
+  		end
+		}
+  end
+  
   def get_dynamic_properties_file()
     "#{get_deployment_basedir()}/tungsten-replicator/conf/dynamic.properties"
   end

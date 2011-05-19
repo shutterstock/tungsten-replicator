@@ -62,13 +62,6 @@ module ConfigureDeploymentStepPostgresql
     "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.static.properties.postgresql"
 	end
   
-  def write_replication_service_properties
-    # This file must be in place for now
-	  FileUtils.cp(
-      "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
-      "#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties")
-  end
-  
   def write_wal_shipping_properties
     transformer = Transformer.new(
         "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.postgresql-wal.properties",
