@@ -27,6 +27,7 @@ import java.io.FilenameFilter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +57,7 @@ import com.continuent.tungsten.replicator.database.DatabaseFactory;
 /**
  * This class implements the main() method for launching replicator process and
  * starting all services.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -79,7 +80,7 @@ public class ReplicationServiceManager
 
     /**
      * Creates a new <code>ReplicatorManager</code> object
-     *
+     * 
      * @throws Exception
      */
     public ReplicationServiceManager() throws Exception
@@ -180,7 +181,7 @@ public class ReplicationServiceManager
 
     /**
      * Main method for ReplicatorManager.
-     *
+     * 
      * @param argv
      */
     public static void main(String argv[])
@@ -241,7 +242,7 @@ public class ReplicationServiceManager
 
     /**
      * Returns a list of replicators, started or not. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.ReplicationServiceManagerMBean#services()
      */
     @MethodDesc(description = "List known replication services", usage = "services")
@@ -272,7 +273,7 @@ public class ReplicationServiceManager
 
     /**
      * Starts a service if it is defined. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.ReplicationServiceManagerMBean#startService(java.lang.String)
      */
     @MethodDesc(description = "Start individual replication service", usage = "startService name")
@@ -299,7 +300,7 @@ public class ReplicationServiceManager
 
     /**
      * Stops a service if it is started and defined. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.ReplicationServiceManagerMBean#stopService(java.lang.String)
      */
     @MethodDesc(description = "Stop individual replication service", usage = "stopService name")
@@ -326,7 +327,7 @@ public class ReplicationServiceManager
 
     /**
      * Resets a replication service. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.ReplicationServiceManagerMBean#resetService(java.lang.String)
      */
     @MethodDesc(description = "Reset individual replication service", usage = "resetService name")
@@ -391,7 +392,7 @@ public class ReplicationServiceManager
 
     /**
      * Stops all services and terminates the replicator process. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.ReplicationServiceManagerMBean#stop()
      */
     @MethodDesc(description = "Stop replication services cleanly and exit process", usage = "stop")
@@ -407,11 +408,11 @@ public class ReplicationServiceManager
     /**
      * Returns a list of properties that have the status for each of the current
      * services.
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#status()
      */
     @MethodDesc(description = "Return the status for one or more replicators", usage = "status(name)")
-    public TungstenProperties status(
+    public Map<String, String> status(
             @ParamDesc(name = "name", description = "optional name of replicator") String name)
             throws Exception
     {
@@ -429,64 +430,63 @@ public class ReplicationServiceManager
 
     /**
      * Returns a map of status properties for all current replicators
-     *
+     * 
      * @throws Exception
      */
     @MethodDesc(description = "Return the status for all current replicators", usage = "status()")
-    public TungstenProperties getStatus() throws Exception
+    public Map<String, String> getStatus() throws Exception
     {
-        TungstenProperties managerProps = new TungstenProperties();
+        Map<String, String> managerProps = new HashMap<String, String>();
 
-        managerProps.setProperty(Replicator.SOURCEID,
+        managerProps.put(Replicator.SOURCEID,
                 serviceProps.getString(ReplicatorConf.SOURCE_ID));
-        managerProps.setProperty(Replicator.STATE,
-                ResourceState.ONLINE.toString());
-        managerProps.setString(Replicator.CLUSTERNAME,
+        managerProps.put(Replicator.STATE, ResourceState.ONLINE.toString());
+        managerProps.put(Replicator.CLUSTERNAME,
                 serviceProps.getString(ReplicatorConf.CLUSTER_NAME));
-        managerProps.setString(Replicator.HOST,
+        managerProps.put(Replicator.HOST,
                 serviceProps.getString(ReplicatorConf.REPLICATOR_HOST));
-        managerProps.setString(Replicator.RESOURCE_JDBC_URL,
+        managerProps.put(Replicator.RESOURCE_JDBC_URL,
                 serviceProps.getString(ReplicatorConf.RESOURCE_JDBC_URL));
-        managerProps.setString(Replicator.RESOURCE_JDBC_DRIVER,
+        managerProps.put(Replicator.RESOURCE_JDBC_DRIVER,
                 serviceProps.getString(ReplicatorConf.RESOURCE_JDBC_DRIVER));
-        managerProps.setString(Replicator.RESOURCE_VENDOR,
+        managerProps.put(Replicator.RESOURCE_VENDOR,
                 serviceProps.getString(ReplicatorConf.RESOURCE_VENDOR));
-        managerProps.setString(Replicator.RESOURCE_LOGDIR,
+        managerProps.put(Replicator.RESOURCE_LOGDIR,
                 serviceProps.getString(ReplicatorConf.RESOURCE_LOGDIR));
-        managerProps.setString(Replicator.RESOURCE_LOGPATTERN,
+        managerProps.put(Replicator.RESOURCE_LOGPATTERN,
                 serviceProps.getString(ReplicatorConf.RESOURCE_LOGPATTERN));
-        managerProps.setString(ReplicatorConf.RESOURCE_DISKLOGDIR,
+        managerProps.put(ReplicatorConf.RESOURCE_DISKLOGDIR,
                 serviceProps.getString(ReplicatorConf.RESOURCE_DISKLOGDIR));
-        managerProps.setInt(Replicator.RESOURCE_PORT,
-                serviceProps.getInt(ReplicatorConf.RESOURCE_PORT));
+        managerProps.put(Replicator.RESOURCE_PORT, Integer
+                .toString(serviceProps.getInt(ReplicatorConf.RESOURCE_PORT)));
         managerProps
-                .setString(Replicator.DATASERVER_HOST, serviceProps
+                .put(Replicator.DATASERVER_HOST, serviceProps
                         .getString(ReplicatorConf.RESOURCE_DATASERVER_HOST));
-        managerProps.setString(Replicator.USER,
+        managerProps.put(Replicator.USER,
                 serviceProps.getString(ReplicatorConf.GLOBAL_DB_USER));
-        managerProps.setString(Replicator.PASSWORD,
+        managerProps.put(Replicator.PASSWORD,
                 serviceProps.getString(ReplicatorConf.GLOBAL_DB_PASSWORD));
-        managerProps.setInt(Replicator.MAX_PORT, getMaxPort());
+        managerProps.put(Replicator.MAX_PORT, Integer.toString(getMaxPort()));
 
-        Map<String, TungstenProperties> statusProps = new TreeMap<String, TungstenProperties>();
+        Map<String, Map<String, String>> statusProps = new TreeMap<String, Map<String, String>>();
 
         for (String name : replicators.keySet())
         {
             statusProps.put(name, status(name));
         }
 
-        managerProps.setObject("serviceProperties", statusProps);
+        managerProps.put("serviceProperties", statusProps.toString());
 
         return managerProps;
     }
 
     /**
      * Convenience method that can be visible in manager.
-     *
+     * 
      * @throws Exception
      */
     @MethodDesc(description = "Return the status for all current replicators", usage = "status()")
-    public TungstenProperties status() throws Exception
+    public Map<String, String> status() throws Exception
     {
         return getStatus();
     }
@@ -504,7 +504,7 @@ public class ReplicationServiceManager
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManager#createHelper()
      */
     @MethodDesc(description = "Returns a DynamicMBeanHelper to facilitate dynamic JMX calls", usage = "createHelper")
@@ -565,7 +565,7 @@ public class ReplicationServiceManager
     /**
      * Creates a replication service that will run as a thread internal to the
      * ReplicationServiceManager.
-     *
+     * 
      * @param serviceName
      * @return
      * @throws ReplicatorException
@@ -590,7 +590,7 @@ public class ReplicationServiceManager
     /**
      * Creates a replication service that will run in a separate process/JVM but
      * that can also be controlled from this manager.
-     *
+     * 
      * @param serviceName
      * @throws Exception
      */
@@ -695,7 +695,7 @@ public class ReplicationServiceManager
 
     /**
      * Exit the process with as much clean-up as we can manage.
-     *
+     * 
      * @param message
      */
     private void exitProcess(boolean ok, String message)
@@ -780,7 +780,7 @@ public class ReplicationServiceManager
 
     /**
      * Returns the maxPort value.
-     *
+     * 
      * @return Returns the maxPort.
      */
     public int getMaxPort()
@@ -790,7 +790,7 @@ public class ReplicationServiceManager
 
     /**
      * Sets the maximum listen port value for the master.
-     *
+     * 
      * @param maxPort maximum port allowed
      */
     public void setMaxPort(int maxPort)
@@ -801,7 +801,7 @@ public class ReplicationServiceManager
     /**
      * Returns the MBean for an open replicator. This is to be used when we
      * start an OpenReplicatorManager that is in a separate process.
-     *
+     * 
      * @param serviceName
      * @param rmiPort
      * @return
@@ -827,7 +827,7 @@ public class ReplicationServiceManager
      * Utility function to recursively remove a directory hierarchy and all
      * files in it. This function tracks what it does by putting entries in the
      * 'progress' map passed in.
-     *
+     * 
      * @param directory - directory to start at
      * @param progress - initialized map to be used to track progress.
      * @return

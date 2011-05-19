@@ -24,6 +24,7 @@ package com.continuent.tungsten.replicator.management;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.continuent.tungsten.commons.cluster.resource.physical.ReplicatorCapabilities;
 import com.continuent.tungsten.commons.config.TungstenProperties;
@@ -146,7 +147,7 @@ public interface OpenReplicatorPlugin
      * @return List of TungstenProperties instances containing task status
      * @throws Exception
      */
-    public List<TungstenProperties> statusList(String name) throws Exception;
+    public List<Map<String, String>> statusList(String name) throws Exception;
 
     /**
      * Performs a provision operation. The provision operation is invoked on the

@@ -1591,8 +1591,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     @MethodDesc(description = "Gets the maximum sequence number, if available", usage = "getMaxSeqNo")
     public String getMaxSeqNo() throws Exception
     {
-        TungstenProperties props = status();
-        return props.getString(Replicator.APPLIED_LAST_SEQNO);
+        return status().get(Replicator.APPLIED_LAST_SEQNO);
     }
 
     @MethodDesc(description = "Gets the minimum and maxmimum sequence number, if available", usage = "getMinMaxSeqNo")
@@ -1721,7 +1720,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#status()
      */
     @MethodDesc(description = "Gets the replicator's detailed status information.", usage = "status")
-    public TungstenProperties status() throws Exception
+    public Map<String, String> status() throws Exception
     {
         try
         {
@@ -1733,68 +1732,66 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
             // Get status from plugin
             HashMap<String, String> pluginStatus = openReplicator.status();
-            TungstenProperties statusProps = new TungstenProperties(
-                    pluginStatus);
 
             // Convert old plugin values so we don't mess up existing script
             // plug-ins.
-            convertOldValue(statusProps, Replicator.APPLIED_LAST_SEQNO,
+            convertOldValue(pluginStatus, Replicator.APPLIED_LAST_SEQNO,
                     OpenReplicatorPlugin.STATUS_LAST_APPLIED);
-            convertOldValue(statusProps, Replicator.MAX_STORED_SEQNO,
+            convertOldValue(pluginStatus, Replicator.MAX_STORED_SEQNO,
                     OpenReplicatorPlugin.STATUS_LAST_RECEIVED);
 
             // Following are standard variables over and above values provided
             // by plugin.
-            statusProps.setString(Replicator.SITENAME, siteName);
-            statusProps.setString(Replicator.CLUSTERNAME, clusterName);
-            statusProps.setString(Replicator.SERVICE_NAME, serviceName);
-            statusProps.setString(Replicator.SIMPLE_SERVICE_NAME,
+            pluginStatus.put(Replicator.SITENAME, siteName);
+            pluginStatus.put(Replicator.CLUSTERNAME, clusterName);
+            pluginStatus.put(Replicator.SERVICE_NAME, serviceName);
+            pluginStatus.put(Replicator.SIMPLE_SERVICE_NAME,
                     getSimpleServiceName());
-            statusProps.setString(Replicator.MASTER_CONNECT_URI,
+            pluginStatus.put(Replicator.MASTER_CONNECT_URI,
                     getMasterConnectUri());
-            statusProps.setString(Replicator.MASTER_LISTEN_URI,
+            pluginStatus.put(Replicator.MASTER_LISTEN_URI,
                     getMasterListenUri());
-            statusProps.setString(Replicator.SOURCEID, getSourceId());
-            statusProps.setString(Replicator.CLUSTERNAME, clusterName);
-            statusProps.setString(Replicator.ROLE, getRole());
-            statusProps.setString(Replicator.HOST,
+            pluginStatus.put(Replicator.SOURCEID, getSourceId());
+            pluginStatus.put(Replicator.CLUSTERNAME, clusterName);
+            pluginStatus.put(Replicator.ROLE, getRole());
+            pluginStatus.put(Replicator.HOST,
                     properties.getString(ReplicatorConf.REPLICATOR_HOST));
-            statusProps.setString(Replicator.DATASERVER_HOST, properties
+            pluginStatus.put(Replicator.DATASERVER_HOST, properties
                     .getString(ReplicatorConf.RESOURCE_DATASERVER_HOST));
-            statusProps
-                    .setDouble(Replicator.UPTIME_SECONDS, getUptimeSeconds());
-            statusProps.setDouble(Replicator.TIME_IN_STATE_SECONDS,
-                    getTimeInStateSeconds());
-            statusProps.setString(Replicator.STATE, getState());
+            pluginStatus
+                    .put(Replicator.UPTIME_SECONDS, Double.toString(getUptimeSeconds()));
+            pluginStatus.put(Replicator.TIME_IN_STATE_SECONDS,
+                    Double.toString(getTimeInStateSeconds()));
+            pluginStatus.put(Replicator.STATE, getState());
 
-            statusProps.setInt(Replicator.RMI_PORT, getRmiPort());
-            statusProps.setString(Replicator.PENDING_EXCEPTION_MESSAGE,
+            pluginStatus.put(Replicator.RMI_PORT, Integer.toString(getRmiPort()));
+            pluginStatus.put(Replicator.PENDING_EXCEPTION_MESSAGE,
                     (getPendingExceptionMessage() == null
                             ? "NONE"
                             : getPendingExceptionMessage()));
-            statusProps.setString(Replicator.PENDING_ERROR_CODE,
+            pluginStatus.put(Replicator.PENDING_ERROR_CODE,
                     (getPendingErrorCode() == null
                             ? "NONE"
                             : getPendingErrorCode()));
-            statusProps.setString(Replicator.PENDING_ERROR,
+            pluginStatus.put(Replicator.PENDING_ERROR,
                     (getPendingError() == null ? "NONE" : getPendingError()));
-            statusProps.setLong(Replicator.PENDING_ERROR_SEQNO,
-                    pendingErrorSeqno);
-            statusProps
-                    .setString(Replicator.PENDING_ERROR_EVENTID,
+            pluginStatus.put(Replicator.PENDING_ERROR_SEQNO,
+                    Long.toString(pendingErrorSeqno));
+            pluginStatus
+                    .put(Replicator.PENDING_ERROR_EVENTID,
                             (pendingErrorEventId == null
                                     ? "NONE"
                                     : pendingErrorEventId));
-            statusProps.setString(Replicator.RESOURCE_PRECEDENCE, properties
+            pluginStatus.put(Replicator.RESOURCE_PRECEDENCE, properties
                     .getString(ReplicatorConf.RESOURCE_PRECEDENCE,
                             ReplicatorConf.RESOURCE_PRECEDENCE_DEFAULT, true));
-            statusProps.setLong(Replicator.CURRENT_TIME_MILLIS,
-                    System.currentTimeMillis());
+            pluginStatus.put(Replicator.CURRENT_TIME_MILLIS,
+                    Long.toString(System.currentTimeMillis()));
 
             logger.debug("plugin status: " + pluginStatus.toString());
 
             // Return the finalized status values.
-            return statusProps;
+            return pluginStatus;
         }
         catch (Exception e)
         {
@@ -1805,14 +1802,14 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     // Convert property from old to new name by removing old and re-inserting
     // with new name.
-    private void convertOldValue(TungstenProperties props, String newName,
+    private void convertOldValue(Map<String, String> pluginStatus, String newName,
             String oldName)
     {
-        String value = props.getString(oldName);
+        String value = pluginStatus.get(oldName);
         if (value != null)
         {
-            props.remove(oldName);
-            props.setString(newName, value);
+            pluginStatus.remove(oldName);
+            pluginStatus.put(newName, value);
         }
     }
 
@@ -1823,7 +1820,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
      */
     public TungstenProperties getStatus() throws Exception
     {
-        return status();
+        return new TungstenProperties(status());
     }
 
     /**
@@ -1832,7 +1829,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#statusList(java.lang.String)
      */
     @MethodDesc(description = "Provides a list of individual components", usage = "statusList name")
-    public List<TungstenProperties> statusList(
+    public List<Map<String, String>> statusList(
             @ParamDesc(name = "name", description = "Name of the status list") String name)
             throws Exception
     {
@@ -1989,9 +1986,9 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         {
             // First insert a heartbeat to ensure there is something in the
             // that we can wait for.
-            TungstenProperties caps = capabilities();
+            Map<String, String> caps = capabilities();
             ReplicatorCapabilities capabilities = new ReplicatorCapabilities(
-                    caps);
+                    new TungstenProperties(caps));
             if (capabilities.isHeartbeat())
             {
                 HashMap<String, String> params = new HashMap<String, String>();
@@ -2373,13 +2370,13 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#capabilities()
      */
     @MethodDesc(description = "Gets the replicator capabilities", usage = "getCapabilities")
-    public TungstenProperties capabilities() throws Exception
+    public Map<String, String> capabilities() throws Exception
     {
         try
         {
             ReplicatorCapabilities capabilities = openReplicator
                     .getCapabilities();
-            return capabilities.asProperties();
+            return capabilities.asMap();
         }
         catch (Exception e)
         {

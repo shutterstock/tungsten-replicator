@@ -263,7 +263,7 @@ public interface OpenReplicatorManagerMBean
      * @return detailed status information as a TungstenProperties instance
      * @throws Exception
      */
-    public TungstenProperties status() throws Exception;
+    public Map<String, String> status() throws Exception;
 
     /**
      * Returns a list of status instances for a particular list of items.
@@ -273,7 +273,7 @@ public interface OpenReplicatorManagerMBean
      * @return List of TungstenProperties instances containing task status
      * @throws Exception
      */
-    public List<TungstenProperties> statusList(String name) throws Exception;
+    public List<Map<String, String>> statusList(String name) throws Exception;
 
     /**
      * Stops the OpenReplicatorManager
@@ -461,5 +461,5 @@ public interface OpenReplicatorManagerMBean
     /**
      * Gets the replicator capabilities.
      */
-    public TungstenProperties capabilities() throws Exception;
+    public Map<String, String> capabilities() throws Exception;
 }

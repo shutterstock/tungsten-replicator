@@ -37,7 +37,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.management.remote.JMXConnector;
 
@@ -63,8 +63,7 @@ import com.continuent.tungsten.replicator.consistency.ConsistencyTable;
  */
 public class OpenReplicatorManagerCtrl
 {
-    private static Logger                  logger               = Logger
-                                                                        .getLogger(OpenReplicatorManagerCtrl.class);
+    private static Logger                  logger               = Logger.getLogger(OpenReplicatorManagerCtrl.class);
     // Statics to read from stdin.
     private static InputStreamReader       converter            = new InputStreamReader(
                                                                         System.in);
@@ -173,7 +172,7 @@ public class OpenReplicatorManagerCtrl
                     if (nextVal == null || (nextVal.length() == 0)
                             || !Character.isDigit(nextVal.charAt(0)))
                     {
-                        // Take default. 
+                        // Take default.
                     }
                     else
                     {
@@ -184,7 +183,7 @@ public class OpenReplicatorManagerCtrl
                         }
                         catch (NumberFormatException e)
                         {
-                            // Take default. 
+                            // Take default.
                         }
                     }
                 }
@@ -414,7 +413,7 @@ public class OpenReplicatorManagerCtrl
         return openReplicatorMBean;
     }
 
-    // Fetch a specific replicator manager MBean by name, with optional delay. 
+    // Fetch a specific replicator manager MBean by name, with optional delay.
     private OpenReplicatorManagerMBean getOpenReplicatorSafely(String name)
             throws Exception
     {
@@ -477,41 +476,41 @@ public class OpenReplicatorManagerCtrl
         println("Processing services command...");
         List<Map<String, String>> serviceList = this.serviceManagerMBean
                 .services();
-        List<TungstenProperties> propList = new ArrayList<TungstenProperties>();
+        List<Map<String, String>> propList = new ArrayList<Map<String, String>>();
 
         for (Map<String, String> map : serviceList)
         {
-            TungstenProperties props = new TungstenProperties();
+            Map<String, String> props = new HashMap<String, String>();
 
             // Print the service information.
             String name = map.get("name");
             String started = map.get("started");
-            props.setString(Replicator.SERVICE_NAME, name);
-            props.setString("started", started);
+            props.put(Replicator.SERVICE_NAME, name);
+            props.put("started", started);
 
             // Look up the state of the replication service if it is started.
             if (new Boolean(started).booleanValue())
             {
                 OpenReplicatorManagerMBean mbean = getOpenReplicatorSafely(name);
-                TungstenProperties liveProps = mbean.status();
-                props.setString(Replicator.ROLE, liveProps
-                        .getString(Replicator.ROLE));
-                props.setString(Replicator.SERVICE_TYPE, liveProps
-                        .getString(Replicator.SERVICE_TYPE));
-                props.setString(Replicator.STATE, liveProps
-                        .getString(Replicator.STATE));
-                props.setString(Replicator.APPLIED_LAST_SEQNO, liveProps
-                        .getString(Replicator.APPLIED_LAST_SEQNO));
-                props.setString(Replicator.APPLIED_LATENCY, liveProps
-                        .getString(Replicator.APPLIED_LATENCY));
+                Map<String, String> liveProps = mbean.status();
+                props.put(Replicator.ROLE,
+                        liveProps.get(Replicator.ROLE));
+                props.put(Replicator.SERVICE_TYPE,
+                        liveProps.get(Replicator.SERVICE_TYPE));
+                props.put(Replicator.STATE,
+                        liveProps.get(Replicator.STATE));
+                props.put(Replicator.APPLIED_LAST_SEQNO,
+                        liveProps.get(Replicator.APPLIED_LAST_SEQNO));
+                props.put(Replicator.APPLIED_LATENCY,
+                        liveProps.get(Replicator.APPLIED_LATENCY));
             }
             else
             {
-                props.setString(Replicator.ROLE, "Unknown");
-                props.setString(Replicator.SERVICE_TYPE, "Unknown");
-                props.setString(Replicator.STATE, "Unknown");
-                props.setString(Replicator.APPLIED_LAST_SEQNO, "Unknown");
-                props.setString(Replicator.APPLIED_LATENCY, "Unknown");
+                props.put(Replicator.ROLE, "Unknown");
+                props.put(Replicator.SERVICE_TYPE, "Unknown");
+                props.put(Replicator.STATE, "Unknown");
+                props.put(Replicator.APPLIED_LAST_SEQNO, "Unknown");
+                props.put(Replicator.APPLIED_LATENCY, "Unknown");
             }
             propList.add(props);
         }
@@ -833,8 +832,7 @@ public class OpenReplicatorManagerCtrl
                 String[] limits = argvIterator.next().split(",");
                 if (limits.length != 2)
                 {
-                    fatal(
-                            "'-limit' option requires two comma-separated positive integer parameters: offset,range",
+                    fatal("'-limit' option requires two comma-separated positive integer parameters: offset,range",
                             null);
                 }
                 rowOffset = Integer.parseInt(limits[0]);
@@ -854,9 +852,8 @@ public class OpenReplicatorManagerCtrl
                 String[] names = curArg.split("\\.");
                 if (names.length > 2 || names.length < 1)
                 {
-                    fatal(
-                            "Schema/table name must be in the form schema[.table]. Found: "
-                                    + curArg, null);
+                    fatal("Schema/table name must be in the form schema[.table]. Found: "
+                            + curArg, null);
                 }
                 schemaName = names[0];
                 if (names.length == 2)
@@ -1131,17 +1128,16 @@ public class OpenReplicatorManagerCtrl
         if (name == null)
         {
             println("Processing status command...");
-            TungstenProperties props = getOpenReplicator().status();
-            List<TungstenProperties> propList = new ArrayList<TungstenProperties>();
-            propList.add(props);
+            List<Map<String, String>> propList = new ArrayList<Map<String, String>>();
+            propList.add(getOpenReplicator().status());
             printlnPropList(propList);
             println("Finished status command...");
         }
         else
         {
             println("Processing status command (" + name + ")...");
-            List<TungstenProperties> propList = getOpenReplicator().statusList(
-                    name);
+            List<Map<String, String>> propList = getOpenReplicator()
+                    .statusList(name);
             printlnPropList(propList);
             println("Finished status command (" + name + ")...");
         }
@@ -1150,11 +1146,11 @@ public class OpenReplicatorManagerCtrl
     // Handle a request to show plugin capabilities.
     private void doCapabilities() throws Exception
     {
-        TungstenProperties caps = getOpenReplicator().capabilities();
-        ReplicatorCapabilities capabilities = new ReplicatorCapabilities(caps);
+        Map<String, String> caps = getOpenReplicator().capabilities();
+        ReplicatorCapabilities capabilities = new ReplicatorCapabilities(
+                new TungstenProperties(caps));
         println("Replicator Capabilities");
-        println("  Roles:             "
-                + capabilities.getRoles().toArray().toString());
+        println("  Roles:             " + capabilities.getRoles());
         println("  Replication Model: " + capabilities.getModel());
         println("  Provision Driver:  " + capabilities.getProvisionDriver());
         println("  Consistency Check: " + capabilities.isConsistencyCheck());
@@ -1163,14 +1159,14 @@ public class OpenReplicatorManagerCtrl
     }
 
     // Print properties output.
-    private static void printlnPropList(List<TungstenProperties> propList)
+    private static void printlnPropList(List<Map<String, String>> propList)
     {
         // Scan for maximum property name and value lengths.
         int maxName = 4;
         int maxValue = 5;
-        for (TungstenProperties props : propList)
+        for (Map<String, String> props : propList)
         {
-            for (String key : props.map().keySet())
+            for (String key : props.keySet())
             {
                 if (key.length() > maxName)
                     maxName = key.length();
@@ -1182,13 +1178,15 @@ public class OpenReplicatorManagerCtrl
         String valueFormat = "%-" + maxName + "s: %s\n";
 
         // Print values.
-        for (TungstenProperties props : propList)
+        for (Map<String, String> props : propList)
         {
             printf(headerFormat, "NAME", "VALUE");
             printf(headerFormat, "----", "-----");
-            for (String key : new TreeMap<String, String>(props.map()).keySet())
+            
+            TreeSet<String> treeSet = new TreeSet<String>(props.keySet());
+            for (String key : treeSet)
             {
-                printf(valueFormat, key, props.getString(key));
+                printf(valueFormat, key, props.get(key));
             }
         }
     }

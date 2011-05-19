@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.Future;
@@ -802,9 +803,9 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
      * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#statusList(java.lang.String)
      */
-    public List<TungstenProperties> statusList(String name) throws Exception
+    public List<Map<String, String>> statusList(String name) throws Exception
     {
-        List<TungstenProperties> statusList = new ArrayList<TungstenProperties>();
+        List<Map<String, String>> statusList = new ArrayList<Map<String, String>>();
 
         // Fetch the pipeline.
         Pipeline pipeline = null;
@@ -820,31 +821,31 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                 List<TaskProgress> progressList = pipeline.getTaskProgress();
                 for (TaskProgress progress : progressList)
                 {
-                    TungstenProperties props = new TungstenProperties();
-                    props.setString("stage", progress.getStageName());
-                    props.setInt("taskId", progress.getTaskId());
-                    props.setBoolean("cancelled", progress.isCancelled());
-                    props.setLong("eventCount", progress.getEventCount());
-                    props.setDouble("appliedLatency",
-                            progress.getApplyLatencySeconds());
-                    props.setDouble("extractTime",
-                            progress.getTotalExtractSeconds());
-                    props.setDouble("filterTime",
-                            progress.getTotalFilterSeconds());
-                    props.setDouble("applyTime",
-                            progress.getTotalApplySeconds());
-                    props.setDouble("otherTime",
-                            progress.getTotalOtherSeconds());
+                    Map<String, String> props = new HashMap<String, String>();
+                    props.put("stage", progress.getStageName());
+                    props.put("taskId", Integer.toString(progress.getTaskId()));
+                    props.put("cancelled", Boolean.toString(progress.isCancelled()));
+                    props.put("eventCount", Long.toString(progress.getEventCount()));
+                    props.put("appliedLatency",
+                            Double.toString(progress.getApplyLatencySeconds()));
+                    props.put("extractTime",
+                            Double.toString(progress.getTotalExtractSeconds()));
+                    props.put("filterTime",
+                            Double.toString(progress.getTotalFilterSeconds()));
+                    props.put("applyTime",
+                            Double.toString(progress.getTotalApplySeconds()));
+                    props.put("otherTime",
+                            Double.toString(progress.getTotalOtherSeconds()));
                     ReplDBMSEvent lastEvent = progress.getLastEvent();
                     if (lastEvent == null)
                     {
-                        props.setLong("appliedLastSeqno", -1);
-                        props.setString("appliedLastEventId", "");
+                        props.put("appliedLastSeqno", "-1");
+                        props.put("appliedLastEventId", "");
                     }
                     else
                     {
-                        props.setLong("appliedLastSeqno", lastEvent.getSeqno());
-                        props.setString("appliedLastEventId",
+                        props.put("appliedLastSeqno", Long.toString(lastEvent.getSeqno()));
+                        props.put("appliedLastEventId",
                                 lastEvent.getEventId());
                     }
                     statusList.add(props);
@@ -856,14 +857,14 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                 List<ShardProgress> progressList = pipeline.getShardProgress();
                 for (ShardProgress progress : progressList)
                 {
-                    TungstenProperties props = new TungstenProperties();
-                    props.setString("shardId", progress.getShardId());
-                    props.setString("stage", progress.getStageName());
-                    props.setLong("eventCount", progress.getEventCount());
-                    props.setDouble("appliedLatency",
-                            progress.getApplyLatencySeconds());
-                    props.setLong("appliedLastSeqno", progress.getLastSeqno());
-                    props.setString("appliedLastEventId",
+                    Map<String, String> props = new HashMap<String, String>();
+                    props.put("shardId", progress.getShardId());
+                    props.put("stage", progress.getStageName());
+                    props.put("eventCount", Long.toString(progress.getEventCount()));
+                    props.put("appliedLatency",
+                            Double.toString(progress.getApplyLatencySeconds()));
+                    props.put("appliedLastSeqno", Long.toString(progress.getLastSeqno()));
+                    props.put("appliedLastEventId",
                             progress.getLastEventId());
 
                     statusList.add(props);
@@ -879,7 +880,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                     storeProps.setString("name", storeName);
                     storeProps.setString("storeClass", store.getClass()
                             .getName());
-                    statusList.add(storeProps);
+                    statusList.add(storeProps.hashMap());
                 }
             }
             else

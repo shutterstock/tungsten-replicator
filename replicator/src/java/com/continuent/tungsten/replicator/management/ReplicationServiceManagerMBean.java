@@ -25,7 +25,6 @@ package com.continuent.tungsten.replicator.management;
 import java.util.List;
 import java.util.Map;
 
-import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.commons.jmx.DynamicMBeanHelper;
 
 /**
@@ -51,7 +50,7 @@ public interface ReplicationServiceManagerMBean
      *
      * @throws Exception
      */
-    public TungstenProperties status() throws Exception;
+    public Map<String, String> status() throws Exception;
 
     /**
      * Starts a replication service.
@@ -84,14 +83,14 @@ public interface ReplicationServiceManagerMBean
      * Returns a list of properties that have the status for each of the current
      * services.
      */
-    public TungstenProperties status(String name) throws Exception;
+    public Map<String, String> status(String name) throws Exception;
 
     /**
      * Returns a map of status properties for all current replicators
      *
      * @throws Exception
      */
-    public TungstenProperties getStatus() throws Exception;
+    public Map<String, String> getStatus() throws Exception;
 
     /**
      * Stops all replication services and exits the process cleanly.

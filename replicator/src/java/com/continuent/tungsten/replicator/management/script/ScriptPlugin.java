@@ -399,7 +399,7 @@ public class ScriptPlugin extends NotificationBroadcasterSupport
      *
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#statusList(java.lang.String)
      */
-    public List<TungstenProperties> statusList(String name) throws Exception
+    public List<Map<String, String>> statusList(String name) throws Exception
     {
         throw new ReplicatorException(
                 "Detailed status lists are not supported for script plugins");
