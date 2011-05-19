@@ -399,11 +399,7 @@ find ${reldir} \( -name '.svn' -a -type d -o -name "*$SEDBAK_EXT" \) -exec \rm -
 ##########################################################################
 # Generate tar file.
 ##########################################################################
-if [ -z $BUILD_NUMBER ]; then
-  rel_tgz=${relname}.tar.gz
-else
-  rel_tgz=${relname}-${BUILD_NUMBER}.tar.gz
-fi
+rel_tgz=${relname}.tar.gz
 echo "### Creating tar file: ${rel_tgz}"
 (cd ${reldir}/..; tar -czf ${rel_tgz} ${relname})
 
