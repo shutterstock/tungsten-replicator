@@ -222,10 +222,9 @@ public class ReplicationServiceManager
             }
             logger.info("Stopping replication service manager");
         }
-        catch (Exception e)
+        catch (Throwable e)
         {
-            System.err.println(e.getMessage());
-            e.printStackTrace();
+            logger.fatal("Unable to start replicator", e);
         }
     }
 
