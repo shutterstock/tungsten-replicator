@@ -25,6 +25,7 @@ package com.continuent.tungsten.commons.cluster.resource.physical;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
@@ -276,5 +277,13 @@ public class ReplicatorCapabilities extends Capabilities
         caps.setString(PROVISION, getProvisionDriver());
 
         return caps;
+    }
+    
+    /**
+     * Writes capabilities to a HashMap instance for storage or transport.
+     */
+    public Map<String, String> asMap()
+    {
+        return asProperties().hashMap();
     }
 }
