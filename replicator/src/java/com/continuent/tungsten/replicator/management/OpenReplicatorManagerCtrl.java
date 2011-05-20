@@ -226,58 +226,55 @@ public class OpenReplicatorManagerCtrl
                 fatal("Connection failed: " + e.getMessage(), e);
             }
 
-            if (command != null)
-            {
-                if (command.equals(Commands.SERVICES))
-                    doServices();
-                else if (command.equals(Commands.START))
-                    doStartService();
-                else if (command.equals(Commands.STOP))
-                    doStopService();
-                else if (command.equals(Commands.RESET))
-                    doResetService();
-                else if (command.equals(Commands.SHUTDOWN))
-                    doShutdown();
-                else if (command.equals(Commands.KILL))
-                    doKill();
-                else if (command.equals(Commands.ONLINE))
-                    doOnline();
-                else if (command.equals(Commands.OFFLINE))
-                    doOffline();
-                else if (command.equals(Commands.OFFLINE_DEFERRED))
-                    doOfflineDeferred();
-                else if (command.equals(Commands.WAIT))
-                    doWait();
-                else if (command.equals(Commands.CHECK))
-                    doCheck();
-                else if (command.equals(Commands.HEARTBEAT))
-                    doHeartbeat();
-                else if (command.equals(Commands.FLUSH))
-                    doFlush();
-                else if (command.equals(Commands.CONFIGURE))
-                    doConfigure();
-                else if (command.equals(Commands.SETROLE))
-                    doSetRole();
-                else if (command.equals(Commands.CLEAR))
-                    doClearDynamic();
-                else if (command.equals(Commands.BACKUP))
-                    doBackup();
-                else if (command.equals(Commands.RESTORE))
-                    doRestore();
-                else if (command.equals(Commands.PROVISION))
-                    doProvision();
-                else if (command.equals(Commands.STATS))
-                    doStatus();
-                else if (command.equals(Commands.HELP))
-                    printHelp();
-                else if (command.equals(Commands.CAPABILITIES))
-                    doCapabilities();
-                else
-                {
-                    println("Unknown command: '" + command + "'");
-                    printHelp();
-                }
-            }
+            if (command == null)
+                fatal("No command entered: try 'help' to get a list", null);
+            else if (command.equals(Commands.SERVICES))
+                doServices();
+            else if (command.equals(Commands.START))
+                doStartService();
+            else if (command.equals(Commands.STOP))
+                doStopService();
+            else if (command.equals(Commands.RESET))
+                doResetService();
+            else if (command.equals(Commands.SHUTDOWN))
+                doShutdown();
+            else if (command.equals(Commands.KILL))
+                doKill();
+            else if (command.equals(Commands.ONLINE))
+                doOnline();
+            else if (command.equals(Commands.OFFLINE))
+                doOffline();
+            else if (command.equals(Commands.OFFLINE_DEFERRED))
+                doOfflineDeferred();
+            else if (command.equals(Commands.WAIT))
+                doWait();
+            else if (command.equals(Commands.CHECK))
+                doCheck();
+            else if (command.equals(Commands.HEARTBEAT))
+                doHeartbeat();
+            else if (command.equals(Commands.FLUSH))
+                doFlush();
+            else if (command.equals(Commands.CONFIGURE))
+                doConfigure();
+            else if (command.equals(Commands.SETROLE))
+                doSetRole();
+            else if (command.equals(Commands.CLEAR))
+                doClearDynamic();
+            else if (command.equals(Commands.BACKUP))
+                doBackup();
+            else if (command.equals(Commands.RESTORE))
+                doRestore();
+            else if (command.equals(Commands.PROVISION))
+                doProvision();
+            else if (command.equals(Commands.STATS))
+                doStatus();
+            else if (command.equals(Commands.HELP))
+                printHelp();
+            else if (command.equals(Commands.CAPABILITIES))
+                doCapabilities();
+            else
+                fatal("Unknown command, try 'help' to get a list: '" + command,
+                        null);
         }
         catch (ConnectException e)
         {
@@ -301,9 +298,7 @@ public class OpenReplicatorManagerCtrl
         catch (Exception e)
         {
             // Occurs when there is a server-side application exception.
-            println("Operation failed: " + e.getMessage());
-            if (verbose)
-                e.printStackTrace();
+            fatal("Operation failed: " + e.getMessage(), e);
         }
         catch (Throwable t)
         {
@@ -493,12 +488,10 @@ public class OpenReplicatorManagerCtrl
             {
                 OpenReplicatorManagerMBean mbean = getOpenReplicatorSafely(name);
                 Map<String, String> liveProps = mbean.status();
-                props.put(Replicator.ROLE,
-                        liveProps.get(Replicator.ROLE));
+                props.put(Replicator.ROLE, liveProps.get(Replicator.ROLE));
                 props.put(Replicator.SERVICE_TYPE,
                         liveProps.get(Replicator.SERVICE_TYPE));
-                props.put(Replicator.STATE,
-                        liveProps.get(Replicator.STATE));
+                props.put(Replicator.STATE, liveProps.get(Replicator.STATE));
                 props.put(Replicator.APPLIED_LAST_SEQNO,
                         liveProps.get(Replicator.APPLIED_LAST_SEQNO));
                 props.put(Replicator.APPLIED_LATENCY,
@@ -1182,7 +1175,7 @@ public class OpenReplicatorManagerCtrl
         {
             printf(headerFormat, "NAME", "VALUE");
             printf(headerFormat, "----", "-----");
-            
+
             TreeSet<String> treeSet = new TreeSet<String>(props.keySet());
             for (String key : treeSet)
             {
