@@ -50,16 +50,20 @@ import com.continuent.tungsten.replicator.consistency.ConsistencyTable;
 import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.database.Database;
 import com.continuent.tungsten.replicator.database.DatabaseFactory;
+import com.continuent.tungsten.replicator.database.MySQLOperationMatcher;
+import com.continuent.tungsten.replicator.database.SqlOperation;
+import com.continuent.tungsten.replicator.database.SqlOperationMatcher;
 import com.continuent.tungsten.replicator.database.Table;
+import com.continuent.tungsten.replicator.database.TableMetadataCache;
 import com.continuent.tungsten.replicator.dbms.DBMSData;
 import com.continuent.tungsten.replicator.dbms.LoadDataFileDelete;
 import com.continuent.tungsten.replicator.dbms.LoadDataFileFragment;
 import com.continuent.tungsten.replicator.dbms.LoadDataFileQuery;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
+import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
 import com.continuent.tungsten.replicator.dbms.RowChangeData;
 import com.continuent.tungsten.replicator.dbms.RowIdData;
 import com.continuent.tungsten.replicator.dbms.StatementData;
-import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
 import com.continuent.tungsten.replicator.event.DBMSEmptyEvent;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
@@ -120,7 +124,7 @@ public class JdbcApplier implements RawApplier
      */
     private int                       maxSQLLogLength      = 1000;
 
-    private Hashtable<String, Table>  metadataCache;
+    private TableMetadataCache        tableMetadataCache;
 
     private boolean                   transactionStarted   = false;
 
@@ -129,6 +133,11 @@ public class JdbcApplier implements RawApplier
     private Hashtable<Integer, File>  fileTable;
 
     protected HashMap<String, String> currentOptions;
+
+    // SQL parser.
+    SqlOperationMatcher               sqlMatcher             = new MySQLOperationMatcher();
+ 
+    // Setters.
 
     /**
      * {@inheritDoc}
@@ -393,8 +402,8 @@ public class JdbcApplier implements RawApplier
      */
     protected int fillColumnNames(OneRowChange data) throws SQLException
     {
-        String tableName = data.getSchemaName() + "." + data.getTableName();
-        Table t = metadataCache.get(tableName);
+        Table t = tableMetadataCache.retrieve(data.getSchemaName(), data
+                .getTableName());
         if (t == null)
         {
             // Not yet in cache
@@ -415,7 +424,7 @@ public class JdbcApplier implements RawApplier
                     column.setPosition(columnIdx);
                     t.AddColumn(column);
                 }
-                metadataCache.put(tableName, t);
+                tableMetadataCache.store(t);
             }
             finally
             {
@@ -439,7 +448,7 @@ public class JdbcApplier implements RawApplier
                     cv.setName(column.getName());
                     cv.setSigned(column.isSigned());
                     cv.setTypeDescription(column.getTypeDescription());
-                    
+
                     // Check whether column is real blob on the applier side
                     if (cv.getType() == Types.BLOB)
                         cv.setBlob(column.isBlob());
@@ -923,8 +932,8 @@ public class JdbcApplier implements RawApplier
                         keyValuesOfThisRow = keyValues.get(row);
 
                     // Construct separate SQL for every row, because there might
-                    // be
-                    // NULLs in keys in which case SQL is different (TREP-276).
+                    // be NULLs in keys in which case SQL is different
+                    // (TREP-276).
                     ArrayList<OneRowChange.ColumnVal> colValuesOfThisRow = null;
                     if (columnValues.size() > 0)
                         colValuesOfThisRow = columnValues.get(row);
@@ -1192,10 +1201,26 @@ public class JdbcApplier implements RawApplier
                     }
                     else if (dataElem instanceof StatementData)
                     {
-                        applyStatementData((StatementData) dataElem);
-                        // Clean the metadata cache. Some parsing could help by
-                        // just dropping updated object.
-                        metadataCache.clear();
+                        StatementData sdata = (StatementData) dataElem;
+                        applyStatementData(sdata);
+
+                        // Check for table metadata cache invalidation.
+                        String query = sdata.getQuery();
+                        if (query == null)
+                            query = new String(sdata.getQueryAsBytes());
+                        SqlOperation sqlOperation = sqlMatcher.match(query);
+
+                        int invalidated = tableMetadataCache.invalidate(
+                                sqlOperation, sdata.getDefaultSchema());
+                        if (invalidated > 0)
+                        {
+                            if (logger.isDebugEnabled())
+                                logger
+                                        .debug("Table metadata invalidation: stmt="
+                                                + query
+                                                + " invalidated="
+                                                + invalidated);
+                        }
                     }
                     else if (dataElem instanceof RowIdData)
                     {
@@ -1586,7 +1611,7 @@ public class JdbcApplier implements RawApplier
                 conn.setSessionVariable("TREPSLAVE", "YES");
             }
 
-            metadataCache = new Hashtable<String, Table>();
+            tableMetadataCache = new TableMetadataCache(5000);
 
             // Set up heartbeat table.
             heartbeatTable = new HeartbeatTable(
@@ -1641,13 +1666,24 @@ public class JdbcApplier implements RawApplier
     public void release(PluginContext context) throws ReplicatorException
     {
         if (commitSeqnoTable != null)
+        {
             commitSeqnoTable.release();
+            commitSeqnoTable = null;
+        }
 
         currentOptions = null;
 
         statement = null;
         if (conn != null)
+        {
             conn.close();
-        conn = null;
+            conn = null;
+        }
+
+        if (tableMetadataCache != null)
+        {
+            tableMetadataCache.invalidateAll();
+            tableMetadataCache = null;
+        }
     }
 }

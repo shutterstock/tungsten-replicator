@@ -174,7 +174,7 @@ replicator.stage.thl-to-q.blockCommitRowCount=${replicator.global.buffer.size}
 replicator.stage.q-to-dbms=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.q-to-dbms.extractor=parallel-q-extractor
 replicator.stage.q-to-dbms.applier=mysql
-replicator.stage.q-to-dbms.filters=mysqlsessions,bidiSlave
+replicator.stage.q-to-dbms.filters=mysqlsessions,pkey,bidiSlave
 # Use this form to ignore SQL statements from specific MySQL servers.
 #replicator.stage.q-to-dbms.filters=mysqlsessions,bidiSlave,ignoreserver
 replicator.stage.q-to-dbms.taskCount=${replicator.global.apply.channels}
@@ -210,7 +210,7 @@ replicator.stage.d-thl-to-pq.blockCommitRowCount=${replicator.global.buffer.size
 replicator.stage.d-pq-to-dbms=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.d-pq-to-dbms.extractor=parallel-q-extractor
 replicator.stage.d-pq-to-dbms.applier=mysql
-replicator.stage.d-pq-to-dbms.filters=mysqlsessions
+replicator.stage.d-pq-to-dbms.filters=mysqlsessions,pkey
 replicator.stage.d-pq-to-dbms.taskCount=${replicator.global.apply.channels}
 replicator.stage.d-pq-to-dbms.blockCommitRowCount=${replicator.global.buffer.size}
 
