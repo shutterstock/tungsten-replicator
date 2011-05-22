@@ -13,17 +13,10 @@ class DirectDeployment < ConfigureDeployment
     modules = [
       ConfigureDeploymentStepDirect
       ]
-      
-    modules << ConfigureDeploymentStepReplicationDataservice
-    case config.getProperty(DBMS_TYPE)
-    when "mysql"
-      modules << ConfigureDeploymentStepMySQL
-    when "postgresql"
-      modules << ConfigureDeploymentStepPostgresql
-    else
-      raise "Invalid value for #{DBMS_TYPE}"
-    end
     
+    modules << ConfigureDeploymentStepReplicator  
+    modules << ConfigureDeploymentStepReplicationDataservice
+    modules << ConfigureDeploymentStepMySQL
     modules << ConfigureDeploymentStepServices
     
     modules

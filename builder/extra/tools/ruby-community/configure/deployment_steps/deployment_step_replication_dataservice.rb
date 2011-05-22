@@ -11,6 +11,7 @@ module ConfigureDeploymentStepReplicationDataservice
       
       service_config = Properties.new()
       service_config.props = @config.props.merge(service_properties)
+      service_config.setProperty(REPL_SERVICES, nil)
       
       deploy_replication_dataservice(service_properties[DEPLOYMENT_SERVICE], service_config)
     }
@@ -27,10 +28,38 @@ module ConfigureDeploymentStepReplicationDataservice
 		transformer = Transformer.new(
 		  get_replication_dataservice_template(service_config),
 			service_config.getProperty(REPL_SVC_CONFIG_FILE), "#")
-
+			
+		case service_config.getProperty([DATASERVERS, service_config.getProperty(REPL_DATASERVER), DBMS_TYPE])
+		when "mysql"
+		  transform_func = lambda do |line, service_name, service_config|
+		    transform_my_my_replication_dataservice_line(line, service_name, service_config)
+		  end
+		when "postgresql"
+		  transform_func = lambda do |line, service_name, service_config|
+		    transform_pg_pg_replication_dataservice_line(line, service_name, service_config)
+		  end
+		end
+		
 		transformer.transform { |line|
-		  transform_replication_dataservice_line(line, service_name, service_config)
+		  transform_func.call(line, service_name, service_config)
 		}
+		
+		if service_config.getProperty(REPL_SVC_START) == "true"
+		  if svc_is_running?(get_svc_command("#{get_deployment_basedir()}/tungsten-replicator/bin/replicator"))
+		    begin
+		      info("Check if the replication service is running")
+		      cmd_result("#{get_trepctl_cmd()} -service #{service_config.getProperty(DEPLOYMENT_SERVICE)} status")
+		      warn("The replication service is already running.  You must stop and start it for the changes to take effect.")
+        rescue CommandError => ce
+          # The status command fails if the service is not running
+          info("Start the replication service")
+          cmd_result("#{get_trepctl_cmd()} -service #{service_config.getProperty(DEPLOYMENT_SERVICE)} start")
+        end
+      else
+        info("Start the replicator")
+        cmd_result(get_svc_command("#{get_deployment_basedir()}/tungsten-replicator/bin/replicator start"))
+      end
+    end
   end
   
   def transform_replication_dataservice_line(line, service_name, service_config)

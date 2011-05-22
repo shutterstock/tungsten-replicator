@@ -41,16 +41,9 @@ class RegularConfigureDeployment < ConfigureDeployment
       ConfigureDeploymentStepDeployment
       ]
     
+    modules << ConfigureDeploymentStepReplicator
     modules << ConfigureDeploymentStepReplicationDataservice
-    case config.getProperty(DBMS_TYPE)
-    when "mysql"
-      modules << ConfigureDeploymentStepMySQL
-    when "postgresql"
-      modules << ConfigureDeploymentStepPostgresql
-    else
-      raise "Invalid value for #{DBMS_TYPE}"
-    end
-    
+    modules << ConfigureDeploymentStepMySQL
     modules << ConfigureDeploymentStepServices
 
     modules

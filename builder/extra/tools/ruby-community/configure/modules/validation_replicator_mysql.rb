@@ -1,27 +1,6 @@
 class MySQLValidationCheck < ConfigureValidationCheck
   include GroupValidationCheckMember
   
-  # Execute mysql command and return result to client. 
-  def mysql(command, user = nil, password = nil, hostname = nil, port = nil)
-    if user == nil
-      user = @config.getProperty(get_member_key(REPL_DBLOGIN))
-    end
-    
-    if password == nil
-      password = @config.getProperty(get_member_key(REPL_DBPASSWORD))
-    end
-    
-    if hostname == nil
-      hostname = @config.getProperty(get_member_key(REPL_DBHOST))
-    end
-    
-    if port == nil
-      port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "3306")
-    end
-
-    cmd_result("mysql -u#{user} --password=\"#{password}\" -h#{hostname} --port=#{port} -e \"#{command}\"", true)
-  end
-  
   def get_value(command, column)
     response = mysql(command + "\\\\G")
     response.split("\n").each{ | response_line |
@@ -38,34 +17,6 @@ class MySQLValidationCheck < ConfigureValidationCheck
     }
     
     return nil
-  end
-  
-  def get_connection_summary(user = nil, password = nil, hostname = nil, port = nil)
-    if user == nil
-      user = @config.getProperty(get_member_key(REPL_DBLOGIN))
-    end
-    
-    if password == nil
-      password = @config.getProperty(get_member_key(REPL_DBPASSWORD))
-    end
-    
-    if password == false
-      password = ""
-    elsif password.to_s() == ""
-      password = " (NO PASSWORD)"
-    else
-      password = " (WITH PASSWORD)"
-    end
-    
-    if hostname == nil
-      hostname = @config.getProperty(get_member_key(REPL_DBHOST))
-    end
-    
-    if port == nil
-      port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "3306")
-    end
-    
-    "#{@config.getProperty(get_member_key(REPL_DBLOGIN))}@#{@config.getProperty(get_member_key(REPL_DBHOST))}:#{@config.getProperty(get_member_key(REPL_DBPORT))}#{password}"
   end
   
   def enabled?

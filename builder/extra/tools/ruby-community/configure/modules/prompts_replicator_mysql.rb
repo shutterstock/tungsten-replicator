@@ -1,6 +1,6 @@
 class MySQLConfigurePrompt < ConfigurePrompt
   def enabled?
-    @config.getProperty(DBMS_TYPE) == "mysql"
+    @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
   end
   
   def get_default_value
@@ -104,24 +104,7 @@ class MySQLReplicationUseRelayLogs < MySQLConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(DBMS_TYPE) == "mysql"
-  end
-end
-
-class MySQLRelayLogDirectory < MySQLConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(REPL_RELAY_LOG_DIR, "Enter the local-disk directory into which the relay-logs will be stored",
-		  PV_FILENAME)
-  end
-  
-  def get_default_value
-    if @config.getProperty(get_member_key(HOME_DIRECTORY))
-      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/relay"
-    else
-      ""
-    end
+    super() && @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
   end
 end
 

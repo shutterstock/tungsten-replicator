@@ -8,6 +8,7 @@ class DataServers < GroupConfigurePrompt
   def initialize
     super(DATASERVERS, "Enter dataserver information for @value", "dataserver", "dataservers")
     self.add_prompts(
+      DBMSTypePrompt.new(),
       DatabaseHost.new(),
       DatabasePort.new(),
       DataserverLogin.new(),
@@ -56,7 +57,7 @@ class DatabasePort < ConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(DBMS_TYPE) == "mysql"
+    if @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
       3306
     else
       5432
@@ -84,7 +85,7 @@ class DatabaseInitScript < ConfigurePrompt
   end
   
   def get_prompt
-    if @config.getProperty(DBMS_TYPE) == "mysql"
+    if @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
       "MySQL start script"
     else
       "Postgres start script"
@@ -92,7 +93,7 @@ class DatabaseInitScript < ConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(DBMS_TYPE) == "mysql"
+    if @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
       "/etc/init.d/mysql"
     else
       "/etc/init.d/postgres"
@@ -117,7 +118,7 @@ class BackupMethod < ConfigurePrompt
   end
   
   def get_prompt
-    if @config.getProperty(DBMS_TYPE) == "mysql"
+    if @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
       "Database backup method (none|mysqldump|lvm|xtrabackup|script)"
     else
       "Database backup method (none|pg_dump|lvm|script)"
@@ -125,7 +126,7 @@ class BackupMethod < ConfigurePrompt
   end
   
   def accept?(raw_value)
-    if @config.getProperty(DBMS_TYPE) == "mysql"
+    if @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
       @validator = PV_MYSQL_BACKUP_METHOD
     else
       @validator = PV_PG_BACKUP_METHOD

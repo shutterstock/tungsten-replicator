@@ -4,7 +4,6 @@ class ConfigurePackageCluster < ConfigurePackage
     repl_services.extend(AdvancedPromptModule)
     
     [
-      DBMSTypePrompt.new(),
       DeploymentTypePrompt.new(),
       DeployCurrentPackagePrompt.new(),
       DeployPackageURIPrompt.new(),
@@ -31,7 +30,6 @@ class ConfigurePackageCluster < ConfigurePackage
       SudoCheck.new(),
       HostnameCheck.new(),
       PackageDownloadCheck.new(),
-      THLStorageCheck.new(),
       TransferredLogStorageCheck.new(),
       DataserversChecks.new(),
       BackupMethodAvailableCheck.new(),

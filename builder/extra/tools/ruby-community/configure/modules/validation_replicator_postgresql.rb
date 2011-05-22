@@ -1,24 +1,6 @@
 class PostgreSQLValidationCheck < ConfigureValidationCheck
   include GroupValidationCheckMember
   
-  # Execute mysql command and return result to client. 
-  def psql(command, user = nil, password = nil, hostname = nil, port = nil)
-    if user == nil
-      user = @config.getProperty(get_member_key(REPL_DBLOGIN))
-    end
-    if password == nil
-      password = @config.getProperty(get_member_key(REPL_DBPASSWORD))
-    end
-    if hostname == nil
-      hostname = @config.getProperty(get_member_key(REPL_DBHOST))
-    end
-    if port == nil
-      port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "5432")
-    end
-
-    cmd_result("psql -U#{user} -h#{hostname} --port=#{port} -t -c \"#{command}\"")
-  end
-  
   def get_variable(name)
     psql("show #{name}").chomp.strip;
   end

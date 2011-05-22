@@ -150,14 +150,25 @@ class Properties
     for i in 0..(attr_count-1)
       attr_name = attrs[i]
       if i == (attr_count-1)
-        if new_val == nil
-          return (current_val.delete(attr_name))
-        else
-          return (current_val[attr_name] = new_val)
-        end
+        return setHashProperty(current_val, attr_name, new_val)
       end
       current_val[attr_name] = {} if current_val[attr_name].nil?
       current_val = current_val[attr_name]
+    end
+  end
+  
+  def setHashProperty(hash, key, value)
+    if value == nil
+      return (hash.delete(key))
+    else
+      if value.is_a?(Hash)
+        hash[key] ||= {}
+        value.each{|sub_key,sub_value|
+          setHashProperty(hash[key], sub_key, sub_value)
+        }
+      else
+        return (hash[key] = value)
+      end
     end
   end
   

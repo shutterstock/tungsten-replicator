@@ -67,25 +67,35 @@ class THLStorageCheck < ConfigureValidationCheck
   end
   
   def validate
-    @config.getPropertyOr(REPL_SERVICES, {}).keys().each{
-      |svc_alias|
-      
-      repl_log_dir = @config.getProperty([REPL_SERVICES, svc_alias, REPL_LOG_DIR])
-      if repl_log_dir
-        if File.exists?(repl_log_dir) && !File.directory?(repl_log_dir)
-          error("Replication log directory #{repl_log_dir} already exists as a file")
-        else
-          unless File.exists?(@config.getProperty([REPL_SERVICES, svc_alias, REPL_SVC_CONFIG_FILE]))
-            if File.exists?(repl_log_dir)
-              dir_file_count = cmd_result("ls #{repl_log_dir} | wc -l")
-              if dir_file_count.to_i() > 0
-                error("Replication log directory #{repl_log_dir} already contains log files but the service properties file is missing")
-              end
+    repl_log_dir = @config.getProperty(get_member_key(REPL_LOG_DIR))
+    if repl_log_dir
+      if File.exists?(repl_log_dir) && !File.directory?(repl_log_dir)
+        error("Replication log directory #{repl_log_dir} already exists as a file")
+      else
+        unless File.exists?(@config.getProperty(get_member_key(REPL_SVC_CONFIG_FILE)))
+          if File.exists?(repl_log_dir)
+            dir_file_count = cmd_result("ls #{repl_log_dir} | wc -l")
+            if dir_file_count.to_i() > 0
+              error("Replication log directory #{repl_log_dir} already contains log files but the service properties file is missing")
             end
           end
         end
       end
-    }
+    end
+    
+    datasource_alias = @config.getProperty(get_member_key(REPL_DATASERVER))
+    thl_schema = "tungsten_#{@config.getProperty(get_member_key(DEPLOYMENT_SERVICE))}"
+    case @config.getProperty([DATASERVERS, datasource_alias, DBMS_TYPE])
+    when "mysql"
+      schemas = mysql_on("SHOW SCHEMAS LIKE '#{thl_schema}'", datasource_alias)
+      if schemas != ""
+        error("THL schema #{thl_schema} already exists at #{get_connection_summary_for(datasource_alias)}")
+      end
+    when "postgresql"
+      warn("Currently unable to check for the THL schema in PostgreSQL")
+    else
+      error("An invalid database type (#{@config.getProperty([DATASERVERS, datasource_alias, DBMS_TYPE])}) is specified for replication service: #{get_member()}")
+    end
   end
 end
 
@@ -176,7 +186,8 @@ class ReplicationServiceChecks < GroupValidationCheck
     
     add_checks(
       ServiceNameCheck.new(),
-      DifferentMasterSlaveCheck.new()
+      DifferentMasterSlaveCheck.new(),
+      THLStorageCheck.new()
     )
   end
   

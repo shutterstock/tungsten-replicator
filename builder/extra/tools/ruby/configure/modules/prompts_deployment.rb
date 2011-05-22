@@ -24,7 +24,7 @@ class ClusterHosts < GroupConfigurePrompt
       THLStorageRetention.new(),
       THLStorageConsistency.new(),
       THLStorageFileSize.new(),
-      MySQLRelayLogDirectory.new(),
+      RelayLogStorageDirectory.new(),
       
       #ReplicationMonitorInterval.new(),
       JavaMemorySize.new(),
@@ -371,6 +371,23 @@ class THLStorageDirectory < ConfigurePrompt
       @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/thl"
     else
       "/opt/continuent/thl"
+    end
+  end
+end
+
+class RelayLogStorageDirectory < ConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_RELAY_LOG_DIR, "Enter the local-disk directory into which the relay-logs will be stored",
+		  PV_FILENAME)
+  end
+  
+  def get_default_value
+    if @config.getProperty(get_member_key(HOME_DIRECTORY))
+      @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/relay"
+    else
+      "/opt/continuent/relay"
     end
   end
 end

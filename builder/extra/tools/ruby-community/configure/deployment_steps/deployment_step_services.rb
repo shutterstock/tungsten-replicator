@@ -27,9 +27,14 @@ module ConfigureDeploymentStepServices
     end
     
     if @config.getProperty(SVC_START) == "true"
-      info("Starting services")
-      started = cmd_result("#{get_deployment_basedir()}/cluster-home/bin/startall")
-      info(started)
+      @services.each {
+        |svc| 
+        unless svc_is_running?("#{get_deployment_basedir()}/#{svc}")
+          cmd_result(get_svc_command("#{get_deployment_basedir()}/#{svc} start"))
+        else
+          cmd_result(get_svc_command("#{get_deployment_basedir()}/#{svc} restart"))
+        end
+      }
     end
     
     if @config.getProperty(SVC_REPORT) == "true"
@@ -172,5 +177,16 @@ module ConfigureDeploymentStepServices
       out.close
       info "GENERATED FILE: " + script
     end
+  end
+  
+  def svc_is_running?(cmd)
+    begin
+      cmd_result("#{cmd} status")
+      return true
+    rescue CommandError => ce
+      return false
+    end
+    
+    return false
   end
 end

@@ -1,32 +1,9 @@
-system_require "configure/deployment_steps/deployment_step_replicator"
 module ConfigureDeploymentStepPostgresql
-  include ConfigureDeploymentStepReplicator
-  
-  # The deploy_replicator method is defined in ConfigureDeploymentStepReplicator
-  def get_deployment_methods
-    unless Configurator.instance.package.is_a?(ConfigureServicePackage)
-      [
-        ConfigureDeploymentMethod.new("deploy_replicator"),
-        ConfigureDeploymentMethod.new("deploy_replication_dataservices", 50),
-        ConfigureDeploymentMethod.new("postgresql_configuration", ConfigureDeployment::FINAL_STEP_WEIGHT-1)
-      ]
-    else
-      []
-    end
-  end
-  module_function :get_deployment_methods
-  
   def apply_config_replicator
-    write_replication_service_properties()
     write_wal_shipping_properties()
-    write_wrapper_conf()
-    
-    if Configurator.instance.is_enterprise?
-		  write_monitor_checker_postgresql()
-		end
   end
   
-  def transform_replication_dataservice_line(line, service_name, service_config)
+  def transform_pg_pg_replication_dataservice_line(line, service_name, service_config)
     if line =~ /replicator.master.uri/ then
       if service_config.getProperty(REPL_MASTERHOST)
         "replicator.master.uri=wal://" + service_config.getProperty(REPL_MASTERHOST) + "/"
@@ -54,12 +31,8 @@ module ConfigureDeploymentStepPostgresql
     elsif line =~ /replicator.backup.agent.pg_dump.dumpDir/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
       "replicator.backup.agent.pg_dump.dumpDir=" + service_config.getProperty(REPL_BACKUP_DUMP_DIR)
 		else
-		  super(line, service_name, service_config)
+		  transform_replication_dataservice_line(line, service_name, service_config)
 		end
-	end
-	
-	def get_replication_dataservice_template(service_config)
-    "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.static.properties.postgresql"
 	end
   
   def write_wal_shipping_properties
@@ -117,21 +90,6 @@ module ConfigureDeploymentStepPostgresql
         "postgresql.boot.script=" + @config.getProperty(REPL_BOOT_SCRIPT)
       elsif line =~ /postgresql.root.prefix/ then
         "postgresql.root.prefix=" + get_root_prefix()
-      else
-        line
-      end
-    }
-  end
-  
-  def write_wrapper_conf
-    # Configure wrapper.conf to use the Open Replicator main class. 
-    transformer = Transformer.new(
-        "#{get_deployment_basedir()}/tungsten-replicator/conf/wrapper.conf",
-        "#{get_deployment_basedir()}/tungsten-replicator/conf/wrapper.conf", nil)
-    
-    transformer.transform { |line|
-      if line =~ /wrapper.java.maxmemory=/
-        "wrapper.java.maxmemory=" + @config.getProperty(REPL_JAVA_MEM_SIZE)
       else
         line
       end

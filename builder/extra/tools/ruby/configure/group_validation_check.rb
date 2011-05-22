@@ -49,12 +49,12 @@ class GroupValidationCheck
   
   # Add a single check to this group
   def add_check(new_check)
-    unless new_check.is_a?(GroupValidationCheckMember)
-      raise "Unable to add #{new_check.class().name()}:#{new_check.get_name()} because it does not extend GroupValidationCheckMember"
+    unless new_check.is_a?(ConfigureValidationCheck)
+      raise "Unable to add #{new_check.class().name()}:#{new_check.title} because it does not extend ConfigureValidationCheck"
     end
     
-    unless new_check.is_a?(ConfigureValidationCheck)
-      raise "Unable to add #{new_check.class().name()}:#{new_check.get_name()} because it does not extend ConfigureValidationCheck"
+    unless new_check.is_a?(GroupValidationCheckMember)
+      new_check.extend(GroupValidationCheckMember)
     end
     
     new_check.set_group(self)

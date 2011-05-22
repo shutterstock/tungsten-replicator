@@ -166,7 +166,6 @@ class ReplicatorInstallPackage < ConfigurePackage
       options.setProperty("current-release-directory", Configurator.instance.get_base_path())
     end
     
-    @config.setProperty(DBMS_TYPE, options.getProperty("dbms-type"))
     @config.setProperty(DEPLOYMENT_HOST, DIRECT_DEPLOYMENT_HOST_ALIAS)
     
     @config.setProperty(HOSTS, nil)
@@ -189,13 +188,15 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_DBLOGIN => options.getProperty("master-user"),
       REPL_DBPASSWORD => options.getProperty("master-password"),
       REPL_MYSQL_BINLOGDIR => options.getProperty("master-log-directory"),
-      REPL_MYSQL_BINLOGPATTERN => options.getProperty("master-log-pattern")
+      REPL_MYSQL_BINLOGPATTERN => options.getProperty("master-log-pattern"),
+      DBMS_TYPE => options.getProperty("dbms-type")
     })
     @config.setProperty([DATASERVERS, slave_alias], {
       REPL_DBHOST => options.getProperty("slave-host"),
       REPL_DBPORT => options.getProperty("slave-port"),
       REPL_DBLOGIN => options.getProperty("slave-user"),
       REPL_DBPASSWORD => options.getProperty("slave-password"),
+      DBMS_TYPE => options.getProperty("dbms-type")
     })
     
     @config.setProperty(REPL_SERVICES, {})
@@ -294,7 +295,6 @@ class ReplicatorInstallPackage < ConfigurePackage
       |host|
       host_alias = host.tr('.', '_')
       @config.setProperty([HOSTS, host_alias], {
-        SVC_START => options.getProperty('svc-start'),
         SVC_REPORT => options.getProperty('svc-report'),
         HOST => host,
         USERID => options.getProperty("user"),
@@ -309,11 +309,13 @@ class ReplicatorInstallPackage < ConfigurePackage
         REPL_DBHOST => host,
         REPL_DBPORT => options.getProperty("datasource-port"),
         REPL_DBLOGIN => options.getProperty("datasource-user"),
-        REPL_DBPASSWORD => options.getProperty("datasource-password")
+        REPL_DBPASSWORD => options.getProperty("datasource-password"),
+        DBMS_TYPE => options.getProperty("dbms-type")
       })
       
       service_alias = options.getProperty("service-name") + "_" + host_alias
       @config.setProperty([REPL_SERVICES, service_alias], {
+        REPL_SVC_START => options.getProperty('svc-start'),
         DEPLOYMENT_HOST => host_alias,
         DSNAME => options.getProperty("service-name"),
         DEPLOYMENT_SERVICE => options.getProperty("service-name"),
