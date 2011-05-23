@@ -412,7 +412,7 @@ public class ReplicationServiceManager
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#status()
      */
     @MethodDesc(description = "Return the status for one or more replicators", usage = "status(name)")
-    public Map<String, String> status(
+    public Map<String, String> replicatorStatus(
             @ParamDesc(name = "name", description = "optional name of replicator") String name)
             throws Exception
     {
@@ -472,7 +472,7 @@ public class ReplicationServiceManager
 
         for (String name : replicators.keySet())
         {
-            statusProps.put(name, status(name));
+            statusProps.put(name, replicatorStatus(name));
         }
 
         managerProps.put("serviceProperties", statusProps.toString());

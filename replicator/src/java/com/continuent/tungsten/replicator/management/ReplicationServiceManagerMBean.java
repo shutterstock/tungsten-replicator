@@ -83,7 +83,7 @@ public interface ReplicationServiceManagerMBean
      * Returns a list of properties that have the status for each of the current
      * services.
      */
-    public Map<String, String> status(String name) throws Exception;
+    public Map<String, String> replicatorStatus(String name) throws Exception;
 
     /**
      * Returns a map of status properties for all current replicators
