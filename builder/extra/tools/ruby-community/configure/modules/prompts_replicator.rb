@@ -191,3 +191,49 @@ class BackupScriptOnlineConfigurePrompt < ScriptBackupConfigurePrompt
     super(REPL_BACKUP_ONLINE, "Does this script support backing up a datasource while it is ONLINE", PV_BOOLEAN)
   end
 end
+
+class ReplicationAPI < AdvancedPrompt
+  def initialize
+    super(REPL_API, "Enable the replication API", PV_BOOLEAN, "false")
+  end
+end
+
+class ReplicationAPIPort < AdvancedPrompt
+  def initialize
+    super(REPL_API_PORT, "Port that the replication API should bind to", PV_INTEGER, "19999")
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_API)) == "true"
+  end
+end
+
+class ReplicationAPIHost < AdvancedPrompt
+  def initialize
+    super(REPL_API_HOST, "Hostname that the replication API should listen on", PV_HOSTNAME, "localhost")
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_API)) == "true"
+  end
+end
+
+class ReplicationAPIUser < AdvancedPrompt
+  def initialize
+    super(REPL_API_USER, "HTTP basic auth username for the replication API", PV_ANY, "tungsten")
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_API)) == "true"
+  end
+end
+
+class ReplicationAPIPassword < AdvancedPrompt
+  def initialize
+    super(REPL_API_PASSWORD, "HTTP basic auth password for the replication API", PV_ANY, "secret")
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_API)) == "true"
+  end
+end

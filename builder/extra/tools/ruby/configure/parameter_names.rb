@@ -95,6 +95,12 @@ REPL_SVC_CONFIG_FILE = "repl_svc_config_file"
 
 REPL_USE_DRIZZLE = "repl_use_drizzle"
 
+REPL_API = "repl_api"
+REPL_API_PORT = "repl_api_port"
+REPL_API_HOST = "repl_api_host"
+REPL_API_USER = "repl_api_user"
+REPL_API_PASSWORD = "repl_api_password"
+
 # MySQL-specific parameters
 GLOBAL_REPL_MYSQL_CONNECTOR_PATH = "global_mysql_connector_path"
 REPL_MYSQL_CONNECTOR_PATH = "mysql_connector_path"

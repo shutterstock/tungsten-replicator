@@ -38,7 +38,13 @@ class ClusterHosts < GroupConfigurePrompt
         PV_INTEGER, 3),
       BackupScriptPathConfigurePrompt.new(),
       BackupScriptCommandPrefixConfigurePrompt.new(),
-      BackupScriptOnlineConfigurePrompt.new()
+      BackupScriptOnlineConfigurePrompt.new(),
+      
+      ReplicationAPI.new(),
+      ReplicationAPIHost.new(),
+      ReplicationAPIPort.new(),
+      ReplicationAPIUser.new(),
+      ReplicationAPIPassword.new()
     )
   end
   
