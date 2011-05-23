@@ -101,7 +101,7 @@ public class ReplicationServiceManager
         // Start JMX registry.
         managerRMIPort = serviceProps.getInt(ReplicatorConf.RMI_PORT,
                 ReplicatorConf.RMI_DEFAULT_PORT, false);
-        String rmiHost = getHostName();
+        String rmiHost = getHostName(serviceProps);
         JmxManager jmxManager = new JmxManager(rmiHost, managerRMIPort,
                 ReplicatorConf.RMI_DEFAULT_SERVICE_NAME);
         jmxManager.start();
@@ -651,28 +651,29 @@ public class ReplicationServiceManager
         logger.info("Replication service stopped successfully: name=" + name);
     }
 
-    /*
-     * Returns the hostname to be used to bind ports for RMI use. This defaults
-     * to 'localhost' for backwards compatibility
+    /**
+     * Returns the hostname to be used to bind ports for RMI use.
      */
-    private static String getHostName()
+    private static String getHostName(TungstenProperties properties)
     {
+        String defaultHost = properties.getString(ReplicatorConf.RMI_HOST);
         String hostName = System.getProperty(ReplicatorConf.RMI_HOST,
-                ReplicatorConf.RMI_DEFAULT_HOST);
-
-        try
+                defaultHost);
+        // No value provided, retrieve from environment.
+        if (hostName == null)
         {
-            InetAddress addr = InetAddress.getLocalHost();
-
-            // Get hostname
-            hostName = addr.getHostName();
+            try
+            {
+                // Get hostname.
+                InetAddress addr = InetAddress.getLocalHost();
+                hostName = addr.getHostName();
+            }
+            catch (UnknownHostException e)
+            {
+                logger.info("Exception when trying to get the host name from the environment, reason="
+                        + e);
+            }
         }
-        catch (UnknownHostException e)
-        {
-            logger.info("Exception when trying to get the host name from the environment, reason="
-                    + e);
-        }
-
         return hostName;
     }
 

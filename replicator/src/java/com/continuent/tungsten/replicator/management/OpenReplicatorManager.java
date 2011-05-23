@@ -2641,10 +2641,14 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         return openReplicator.heartbeat(props);
     }
 
-    /*
+    /**
      * Returns the hostname to be used to bind ports for RMI use. This defaults
-     * to 'localhost' for backwards compatibility
+     * to 'localhost' for backwards compatibility.
+     * 
+     * @deprecated Not used by multi-service Replicator any more. See
+     *             {@link com.continuent.tungsten.replicator.management.ReplicationServiceManager#getHostName(TungstenProperties)}
      */
+    @Deprecated
     public static String getHostName()
     {
         String hostName = System.getProperty(ReplicatorConf.RMI_HOST,

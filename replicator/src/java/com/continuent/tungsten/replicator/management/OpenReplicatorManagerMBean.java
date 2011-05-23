@@ -255,6 +255,7 @@ public interface OpenReplicatorManagerMBean
      * @deprecated Use
      *             {@link com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#getStatus()}
      */
+    @Deprecated
     public TungstenProperties getStatus() throws Exception;
 
     /**
