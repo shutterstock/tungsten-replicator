@@ -383,6 +383,11 @@ replicator.extractor.mysql.relayLogWaitTimeout=0
 # them automatically.
 replicator.extractor.mysql.relayLogRetention=10
 
+# Sets the server ID used when connecting to the server to fetch relay logs.  
+# This must be changed if two replicators download relay logs from the same 
+# master.  In that case each must have a different ID. 
+#replicator.extractor.mysql.serverId=1
+
 # Local THL extractor. 
 replicator.extractor.thl-local=com.continuent.tungsten.replicator.thl.THLStoreAdapter
 replicator.extractor.thl-local.storeName=thl

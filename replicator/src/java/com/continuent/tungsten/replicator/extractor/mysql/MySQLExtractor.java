@@ -69,8 +69,7 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class MySQLExtractor implements RawExtractor
 {
-    private static Logger                   logger                  = Logger
-                                                                            .getLogger(MySQLExtractor.class);
+    private static Logger                   logger                  = Logger.getLogger(MySQLExtractor.class);
 
     private ReplicatorRuntime               runtime                 = null;
     private String                          host                    = "localhost";
@@ -94,6 +93,7 @@ public class MySQLExtractor implements RawExtractor
     private long                            relayLogWaitTimeout     = 0;
     private int                             relayLogRetention       = 3;
     private String                          relayLogDir             = null;
+    private int                             serverId                = 1;
 
     private String                          url;
 
@@ -104,9 +104,9 @@ public class MySQLExtractor implements RawExtractor
     // log-rotate event.
     private static long                     INDEX_CHECK_INTERVAL    = 60000;
 
-    // SQL parser. 
-    SqlOperationMatcher sqlMatcher = new MySQLOperationMatcher();
-    
+    // SQL parser.
+    SqlOperationMatcher                     sqlMatcher              = new MySQLOperationMatcher();
+
     private HashMap<Long, TableMapLogEvent> tableEvents             = new HashMap<Long, TableMapLogEvent>();
 
     private int                             transactionFragSize     = 0;
@@ -129,7 +129,7 @@ public class MySQLExtractor implements RawExtractor
     private String                          jdbcHeader;
 
     private int                             bufferSize              = 32768;
-    
+
     public String getHost()
     {
         return host;
@@ -260,6 +260,16 @@ public class MySQLExtractor implements RawExtractor
         this.relayLogDir = relayLogDir;
     }
 
+    public int getServerId()
+    {
+        return serverId;
+    }
+
+    public void setServerId(int serverId)
+    {
+        this.serverId = serverId;
+    }
+
     public int getTransactionFragSize()
     {
         return transactionFragSize;
@@ -294,7 +304,7 @@ public class MySQLExtractor implements RawExtractor
     {
         bufferSize = size;
     }
-    
+
     /*
      * Read binlog file header and verify it.
      */
@@ -325,8 +335,9 @@ public class MySQLExtractor implements RawExtractor
 
         if (!Arrays.equals(header, MysqlBinlog.BINLOG_MAGIC))
         {
-            logger.error("File is not a binary log file - found : " + LogEvent.hexdump(header)
-                    + " / expected : " + LogEvent.hexdump(MysqlBinlog.BINLOG_MAGIC));
+            logger.error("File is not a binary log file - found : "
+                    + LogEvent.hexdump(header) + " / expected : "
+                    + LogEvent.hexdump(MysqlBinlog.BINLOG_MAGIC));
             throw new MySQLExtractException("binlog file header mismatch");
         }
 
@@ -351,7 +362,7 @@ public class MySQLExtractor implements RawExtractor
 
                 position.getDataInputStream().readFully(buf);
                 tmp_pos += buf.length;
-                
+
                 logger.debug("buf[4]=" + buf[4]);
                 long start_position = 0;
                 /* always test for a Start_v3, even if no --start-position */
@@ -372,7 +383,10 @@ public class MySQLExtractor implements RawExtractor
                 {
                     /* This is 5.0 */
                     FormatDescriptionLogEvent new_description_event;
-                    position.getFileInputStream().reset(); /* seek back to event's start */
+                    position.getFileInputStream().reset(); /*
+                                                            * seek back to
+                                                            * event's start
+                                                            */
                     new_description_event = (FormatDescriptionLogEvent) LogEvent
                             .readLogEvent(runtime, position, description_event,
                                     parseStatements, useBytesForStrings,
@@ -380,11 +394,10 @@ public class MySQLExtractor implements RawExtractor
                     if (new_description_event == null)
                     /* EOF can't be hit here normally, so it's a real error */
                     {
-                        logger
-                                .error("Could not read a Format_description_log_event event "
-                                        + "at offset "
-                                        + tmp_pos
-                                        + "this could be a log format error or read error");
+                        logger.error("Could not read a Format_description_log_event event "
+                                + "at offset "
+                                + tmp_pos
+                                + "this could be a log format error or read error");
                         throw new MySQLExtractException("binlog format error");
                     }
                     description_event = new_description_event;
@@ -393,7 +406,10 @@ public class MySQLExtractor implements RawExtractor
                 else if (buf[4] == MysqlBinlog.ROTATE_EVENT)
                 {
                     LogEvent ev;
-                    position.getFileInputStream().reset(); /* seek back to event's start */
+                    position.getFileInputStream().reset(); /*
+                                                            * seek back to
+                                                            * event's start
+                                                            */
                     ev = LogEvent.readLogEvent(runtime, position,
                             description_event, parseStatements,
                             useBytesForStrings, prefetchSchemaNameLDI);
@@ -479,19 +495,17 @@ public class MySQLExtractor implements RawExtractor
                             // We are stuck at the tail of one binlog with more
                             // to follow. Generate and return fake log-rotate
                             // event.
-                            logger
-                                    .warn("Current log file appears to be missing log-rotate event: "
-                                            + position.getFileName());
-                            logger
-                                    .info("Auto-generating log-rotate event for next binlog file: "
-                                            + nextBinlog.getName());
+                            logger.warn("Current log file appears to be missing log-rotate event: "
+                                    + position.getFileName());
+                            logger.info("Auto-generating log-rotate event for next binlog file: "
+                                    + nextBinlog.getName());
                             return new RotateLogEvent(nextBinlog.getName());
                         }
-                        
-                        // Ensure relay logs are running. 
+
+                        // Ensure relay logs are running.
                         assertRelayLogsEnabled();
-                        
-                        // Update index check time. 
+
+                        // Update index check time.
                         indexCheckStart = System.currentTimeMillis();
                     }
 
@@ -664,10 +678,10 @@ public class MySQLExtractor implements RawExtractor
 
         long sessionId = 0;
         ArrayList<DBMSData> dataArray = new ArrayList<DBMSData>();
-        
+
         boolean foundRowsLogEvent = false;
         LinkedList<ReplOption> savedOptions = new LinkedList<ReplOption>();
-        
+
         try
         {
             String defaultDb = null;
@@ -728,7 +742,7 @@ public class MySQLExtractor implements RawExtractor
                         logger.debug("Query extracted: " + queryString
                                 + " charset=" + charsetName);
 
-                    // Parse for SQL metadata and add to the statement. 
+                    // Parse for SQL metadata and add to the statement.
                     String query;
 
                     if (!useBytesForStrings)
@@ -756,34 +770,39 @@ public class MySQLExtractor implements RawExtractor
                         inTransaction = true;
                         doCommit = false;
                         // This a a BEGIN statement : buffer session variables
-                        // for following row events if any and skip it                        
-                        
+                        // for following row events if any and skip it
+
                         /* Adding statement options */
                         savedOptions.add(new ReplOption("autocommit", event
                                 .getAutocommitFlag()));
-                        savedOptions.add(new ReplOption("sql_auto_is_null", event
-                                .getAutoIsNullFlag()));
-                        savedOptions.add(new ReplOption("foreign_key_checks", event
-                                .getForeignKeyChecksFlag()));
+                        savedOptions.add(new ReplOption("sql_auto_is_null",
+                                event.getAutoIsNullFlag()));
+                        savedOptions.add(new ReplOption("foreign_key_checks",
+                                event.getForeignKeyChecksFlag()));
                         savedOptions.add(new ReplOption("unique_checks", event
                                 .getUniqueChecksFlag()));
-                        savedOptions.add(new ReplOption("sql_mode", event.getSqlMode()));
-                        savedOptions.add(new ReplOption("character_set_client", String
-                                .valueOf(event.getClientCharsetId())));
-                        savedOptions.add(new ReplOption("collation_connection", String
-                                .valueOf(event.getClientCollationId())));
-                        savedOptions.add(new ReplOption("collation_server", String
-                                .valueOf(event.getServerCollationId())));
-                        
+                        savedOptions.add(new ReplOption("sql_mode", event
+                                .getSqlMode()));
+                        savedOptions.add(new ReplOption("character_set_client",
+                                String.valueOf(event.getClientCharsetId())));
+                        savedOptions.add(new ReplOption("collation_connection",
+                                String.valueOf(event.getClientCollationId())));
+                        savedOptions.add(new ReplOption("collation_server",
+                                String.valueOf(event.getServerCollationId())));
+
                         if (event.getAutoIncrementIncrement() >= 0)
-                            savedOptions.add(new ReplOption("auto_increment_increment",
+                            savedOptions.add(new ReplOption(
+                                    "auto_increment_increment",
                                     String.valueOf(event
                                             .getAutoIncrementIncrement())));
 
                         if (event.getAutoIncrementOffset() >= 0)
-                            savedOptions.add(new ReplOption("auto_increment_offset", String
-                                    .valueOf(event.getAutoIncrementOffset())));
-                        
+                            savedOptions
+                                    .add(new ReplOption(
+                                            "auto_increment_offset",
+                                            String.valueOf(event
+                                                    .getAutoIncrementOffset())));
+
                         continue;
                     }
 
@@ -843,14 +862,14 @@ public class MySQLExtractor implements RawExtractor
                         }
 
                         /* Adding statement options */
-                        statement.addOption("autocommit", event
-                                .getAutocommitFlag());
-                        statement.addOption("sql_auto_is_null", event
-                                .getAutoIsNullFlag());
-                        statement.addOption("foreign_key_checks", event
-                                .getForeignKeyChecksFlag());
-                        statement.addOption("unique_checks", event
-                                .getUniqueChecksFlag());
+                        statement.addOption("autocommit",
+                                event.getAutocommitFlag());
+                        statement.addOption("sql_auto_is_null",
+                                event.getAutoIsNullFlag());
+                        statement.addOption("foreign_key_checks",
+                                event.getForeignKeyChecksFlag());
+                        statement.addOption("unique_checks",
+                                event.getUniqueChecksFlag());
 
                         if (event.getAutoIncrementIncrement() >= 0)
                             statement.addOption("auto_increment_increment",
@@ -865,12 +884,12 @@ public class MySQLExtractor implements RawExtractor
                         statement.addOption("sql_mode", event.getSqlMode());
 
                         /* Adding character set / collation information */
-                        statement.addOption("character_set_client", String
-                                .valueOf(event.getClientCharsetId()));
-                        statement.addOption("collation_connection", String
-                                .valueOf(event.getClientCollationId()));
-                        statement.addOption("collation_server", String
-                                .valueOf(event.getServerCollationId()));
+                        statement.addOption("character_set_client",
+                                String.valueOf(event.getClientCharsetId()));
+                        statement.addOption("collation_connection",
+                                String.valueOf(event.getClientCollationId()));
+                        statement.addOption("collation_server",
+                                String.valueOf(event.getServerCollationId()));
                         statement.setErrorCode(event.getErrorCode());
 
                         dataArray.add(statement);
@@ -961,9 +980,8 @@ public class MySQLExtractor implements RawExtractor
                             && !newBinlogFilename
                                     .startsWith(this.binlogFilePattern))
                     {
-                        logger
-                                .info("Ignored superfluous master rotate log event: file="
-                                        + newBinlogFilename);
+                        logger.info("Ignored superfluous master rotate log event: file="
+                                + newBinlogFilename);
                     }
                     else
                     {
@@ -1030,29 +1048,29 @@ public class MySQLExtractor implements RawExtractor
                                 .getFileID()));
                     String queryString = event.getQuery();
                     LoadDataFileQuery statement = new LoadDataFileQuery(
-                            queryString, event.getWhen().getTime(), event
-                                    .getDefaultDb(), event.getFileID(), event
-                                    .getStartPos(), event.getEndPos());
+                            queryString, event.getWhen().getTime(),
+                            event.getDefaultDb(), event.getFileID(),
+                            event.getStartPos(), event.getEndPos());
                     /* Adding statement options */
                     statement
                             .addOption("autocommit", event.getAutocommitFlag());
-                    statement.addOption("sql_auto_is_null", event
-                            .getAutoIsNullFlag());
-                    statement.addOption("foreign_key_checks", event
-                            .getForeignKeyChecksFlag());
-                    statement.addOption("unique_checks", event
-                            .getUniqueChecksFlag());
+                    statement.addOption("sql_auto_is_null",
+                            event.getAutoIsNullFlag());
+                    statement.addOption("foreign_key_checks",
+                            event.getForeignKeyChecksFlag());
+                    statement.addOption("unique_checks",
+                            event.getUniqueChecksFlag());
 
                     /* Adding statement sql_mode */
                     statement.addOption("sql_mode", event.getSqlMode());
 
                     /* Adding character set / collation information */
-                    statement.addOption("character_set_client", String
-                            .valueOf(event.getClientCharsetId()));
-                    statement.addOption("collation_connection", String
-                            .valueOf(event.getClientCollationId()));
-                    statement.addOption("collation_server", String
-                            .valueOf(event.getServerCollationId()));
+                    statement.addOption("character_set_client",
+                            String.valueOf(event.getClientCharsetId()));
+                    statement.addOption("collation_connection",
+                            String.valueOf(event.getClientCollationId()));
+                    statement.addOption("collation_server",
+                            String.valueOf(event.getServerCollationId()));
 
                     // Extract the charset name if it can be found.
                     String charsetName = event.getCharsetName();
@@ -1088,7 +1106,7 @@ public class MySQLExtractor implements RawExtractor
                     String eventId = getDBMSEventId(position, sessionId);
 
                     dbmsEvent = new DBMSEvent(eventId, dataArray, startTime);
-                    if(foundRowsLogEvent)
+                    if (foundRowsLogEvent)
                         dbmsEvent.setOptions(savedOptions);
 
                     // Reset tableEvents hashtable when commit occurs
@@ -1110,7 +1128,7 @@ public class MySQLExtractor implements RawExtractor
                     String eventId = getDBMSEventId(position, sessionId);
                     dbmsEvent = new DBMSEvent(eventId, dataArray, false,
                             startTime);
-                    if(foundRowsLogEvent)
+                    if (foundRowsLogEvent)
                         dbmsEvent.setOptions(savedOptions);
 
                     this.fragmentedTransaction = true;
@@ -1122,7 +1140,7 @@ public class MySQLExtractor implements RawExtractor
                     String eventId = getDBMSEventId(position, sessionId);
                     dbmsEvent = new DBMSEvent(eventId, dataArray, false,
                             startTime);
-                    if(foundRowsLogEvent)
+                    if (foundRowsLogEvent)
                         dbmsEvent.setOptions(savedOptions);
 
                 }
@@ -1341,17 +1359,14 @@ public class MySQLExtractor implements RawExtractor
             // For now only MySQL 5.0 and 5.1 are certified.
             if (version != null && version.startsWith("5"))
             {
-                logger
-                        .info("Binlog extraction is supported for this MySQL version: "
-                                + version);
+                logger.info("Binlog extraction is supported for this MySQL version: "
+                        + version);
             }
             else
             {
-                logger
-                        .warn("Binlog extraction is not certified for this server version: "
-                                + version);
-                logger
-                        .warn("You may experience replication failures due to binlog incompatibilities");
+                logger.warn("Binlog extraction is not certified for this server version: "
+                        + version);
+                logger.warn("You may experience replication failures due to binlog incompatibilities");
             }
 
             getMaxBinlogSize(conn);
@@ -1442,8 +1457,7 @@ public class MySQLExtractor implements RawExtractor
             if (!rs.next()
                     || rs.getString(2).compareToIgnoreCase("disabled") == 0)
             {
-                logger
-                        .warn("Warning! InnoDB support does not seem to be activated (check mysql have_innodb variable)");
+                logger.warn("Warning! InnoDB support does not seem to be activated (check mysql have_innodb variable)");
             }
         }
         catch (SQLException e)
@@ -1484,6 +1498,7 @@ public class MySQLExtractor implements RawExtractor
         relayClient.setBinlogDir(binlogDir);
         relayClient.setBinlog(fileName);
         relayClient.setBinlogPrefix(binlogFilePattern);
+        relayClient.setServerId(serverId);
         relayClient.connect();
 
         // Start the relay log task.
@@ -1494,9 +1509,8 @@ public class MySQLExtractor implements RawExtractor
 
         // Delay until the relay log opens the file and reaches the desired
         // position.
-        logger
-                .info("Waiting for relay log position to catch up to extraction position: "
-                        + startPosition);
+        logger.info("Waiting for relay log position to catch up to extraction position: "
+                + startPosition);
         long startTime = System.currentTimeMillis();
         long maxEndTime;
         if (relayLogWaitTimeout > 0)
@@ -1574,8 +1588,8 @@ public class MySQLExtractor implements RawExtractor
             if (relayLogTask == null)
             {
                 // We must have a binlog position by time this is called.
-                startRelayLogs(binlogPosition.getFileName(), binlogPosition
-                        .getPosition());
+                startRelayLogs(binlogPosition.getFileName(),
+                        binlogPosition.getPosition());
             }
             else if (relayLogTask.isFinished())
                 throw new ExtractorException(
@@ -1599,8 +1613,7 @@ public class MySQLExtractor implements RawExtractor
         }
         catch (InterruptedException e)
         {
-            logger
-                    .warn("Interrupted while waiting for relay log task to complete");
+            logger.warn("Interrupted while waiting for relay log task to complete");
         }
 
         // Clean up.
@@ -1649,7 +1662,8 @@ public class MySQLExtractor implements RawExtractor
 
             String eventId = binlogFile
                     .substring(binlogFile.lastIndexOf('.') + 1)
-                    + ":" + getPositionAsString(binlogOffset);
+                    + ":"
+                    + getPositionAsString(binlogOffset);
 
             return eventId;
         }

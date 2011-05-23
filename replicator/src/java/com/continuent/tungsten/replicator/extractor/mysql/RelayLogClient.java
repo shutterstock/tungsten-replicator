@@ -67,6 +67,7 @@ public class RelayLogClient
     private long             offset       = 4;
     private String           binlogDir    = ".";
     private boolean          autoClean    = true;
+    private int              serverId     = 1;
 
     // Relay storage and positioning information.
     private File             relayLog;
@@ -164,6 +165,11 @@ public class RelayLogClient
     public void setAutoClean(boolean autoClean)
     {
         this.autoClean = autoClean;
+    }
+    
+    public void setServerId(int serverId)
+    {
+        this.serverId = serverId;
     }
 
     /** Connect to MySQL and start pulling down data. */
@@ -447,7 +453,7 @@ public class RelayLogClient
         packet.putByte((byte) MySQLConstants.COM_BINLOG_DUMP);
         packet.putInt32((int) offset);
         packet.putInt16(0);
-        packet.putInt32(25);
+        packet.putInt32(serverId);
         if (binlog != null)
             packet.putString(binlog);
         packet.write(out);
