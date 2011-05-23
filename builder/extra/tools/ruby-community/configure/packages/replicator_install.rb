@@ -236,6 +236,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       "dbms-type",
       "cluster-hosts",
       "master-host",
+      "master-thl-port",
       "user",
       "home-directory",
       "datasource-port",
@@ -310,7 +311,9 @@ class ReplicatorInstallPackage < ConfigurePackage
         REPL_DBPORT => options.getProperty("datasource-port"),
         REPL_DBLOGIN => options.getProperty("datasource-user"),
         REPL_DBPASSWORD => options.getProperty("datasource-password"),
-        DBMS_TYPE => options.getProperty("dbms-type")
+        DBMS_TYPE => options.getProperty("dbms-type"),
+        REPL_MYSQL_BINLOGDIR => options.getProperty("datasource-log-directory"),
+        REPL_MYSQL_BINLOGPATTERN => options.getProperty("datasource-log-pattern")
       })
       
       service_alias = options.getProperty("service-name") + "_" + host_alias
@@ -330,7 +333,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       else
         @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "slave")
         @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], options.getProperty("master-host"))
-        @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERPORT], options.getProperty("thl-port"))
+        @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERPORT], options.getPropertyOr("master-thl-port", options.getProperty("thl-port")))
       end
     }
   end

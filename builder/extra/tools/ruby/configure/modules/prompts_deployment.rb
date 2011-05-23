@@ -282,7 +282,7 @@ class StartServicesPrompt < ConfigurePrompt
   
   def initialize
     super(SVC_START, "Start services after configuration", 
-      PV_BOOLEAN, "true")
+      PV_BOOLEAN, "false")
   end
   
   def get_prompt
