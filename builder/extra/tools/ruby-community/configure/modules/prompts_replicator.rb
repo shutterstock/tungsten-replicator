@@ -18,6 +18,7 @@ class DataServers < GroupConfigurePrompt
       MySQLBinlogPattern.new(),
       MySQLReplicationUseRelayLogs.new(),
       ReplicationServiceUseDrizzle.new(),
+      MySQLServerID.new(),
       
       PostgresStreamingReplication.new(),
       PostgresRootDirectory.new(),

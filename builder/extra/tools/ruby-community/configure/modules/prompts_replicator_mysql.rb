@@ -16,16 +16,24 @@ class MySQLConfigurePrompt < ConfigurePrompt
   end
   
   # Execute mysql command and return result to client. 
-  def mysql(command, hostname = nil)
-    user = @config.getProperty(REPL_DBLOGIN)
-    password = @config.getProperty(REPL_DBPASSWORD)
-    port = @config.getProperty(REPL_DBPORT)
+  def mysql(command, user = nil, password = nil, hostname = nil, port = nil)
+    if user == nil
+      user = @config.getProperty(get_member_key(REPL_DBLOGIN))
+    end
+    
+    if password == nil
+      password = @config.getProperty(get_member_key(REPL_DBPASSWORD))
+    end
+    
     if hostname == nil
-      hosts = @config.getProperty(HOSTS).split(",")
-      hostname = hosts[0]
+      hostname = @config.getProperty(get_member_key(REPL_DBHOST))
+    end
+    
+    if port == nil
+      port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "3306")
     end
 
-    ssh_result("mysql -u#{user} -p#{password} -h#{hostname} --port=#{port} -e '#{command}'", true, hostname)
+    cmd_result("mysql -u#{user} --password=\"#{password}\" -h#{hostname} --port=#{port} -e \"#{command}\"", true)
   end
   
   def get_mysql_value(command, column)
@@ -92,6 +100,19 @@ class MySQLBinlogDirectory < MySQLConfigurePrompt
   
   def get_default_value
     @config.getPropertyOr(get_member_key(REPL_MYSQL_DATADIR), "/var/lib/mysql")
+  end
+end
+
+class MySQLServerID < MySQLConfigurePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_MYSQL_SERVER_ID, "MySQL server ID", 
+      PV_INTEGER)
+  end
+  
+  def get_mysql_default_value
+    get_mysql_value("SHOW VARIABLES LIKE 'server_id'", "Value")
   end
 end
 

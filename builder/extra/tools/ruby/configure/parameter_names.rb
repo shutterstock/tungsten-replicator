@@ -110,6 +110,7 @@ REPL_MYSQL_MYCNF = "repl_mysql_mycnf"
 REPL_MYSQL_BINLOGPATTERN = "repl_mysql_binlog_pattern"
 REPL_MYSQL_RO_SLAVE = "repl_mysql_ro_slave"
 REPL_MYSQL_EXTRACT_METHOD = "repl_mysql_extract_method"
+REPL_MYSQL_SERVER_ID = "repl_mysql_server_id"
 
 # Oracle-specific parameters.
 REPL_ORACLE_SERVICE = "repl_oracle_service"
