@@ -9,20 +9,12 @@ class DeleteServiceDeployment < ConfigureDeployment
     config_objs
   end
   
-  def get_deployment_object_modules
+  def get_deployment_object_modules(config)
     modules = [
       ConfigureDeploymentStepReplicationDataservice,
-      DeploymentStepDeleteService
+      DeploymentStepDeleteService,
+      ConfigureDeploymentStepMySQL
     ]
-      
-    case @config.getProperty(DBMS_TYPE)
-    when "mysql"
-      modules << ConfigureDeploymentStepMySQL
-    when "postgresql"
-      modules << ConfigureDeploymentStepPostgresql
-    else
-      raise "Invalid value for #{DBMS_TYPE}"
-    end
 
     modules
   end

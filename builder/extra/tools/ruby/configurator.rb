@@ -159,7 +159,7 @@ class Configurator
         
         save_prompts()
         
-        unless prompt_handler.is_valid()
+        unless prompt_handler.is_valid?()
           write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
           prompt_handler.print_errors()
           exit 1

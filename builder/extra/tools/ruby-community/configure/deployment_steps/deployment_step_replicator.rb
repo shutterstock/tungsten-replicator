@@ -123,21 +123,4 @@ module ConfigureDeploymentStepReplicator
     
     false
   end
-  
-  def get_replication_dataservice_template(service_config)
-    dbms_type = service_config.getProperty([DATASERVERS, service_config.getProperty(REPL_DATASERVER), DBMS_TYPE])
-    
-    case dbms_type
-    when "mysql"
-      if service_config.getProperty(REPL_USE_DRIZZLE) == "true"
-  			"#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.mysql-with-drizzle-driver"
-  		else
-  		  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.mysql"
-  		end
-  	when "postgresql"
-  	  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.static.properties.postgresql"
-  	else
-  	  error("Unable to determine the replicator properties template for #{dbms_type}")
-  	end
-	end
 end

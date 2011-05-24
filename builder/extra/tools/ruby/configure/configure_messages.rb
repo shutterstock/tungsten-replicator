@@ -10,6 +10,8 @@ module ConfigureMessages
   end
   
   def is_valid?()
+    @errors ||= []
+    
     @errors.each{
       |error|
       if error.is_fatal?

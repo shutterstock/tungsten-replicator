@@ -38,9 +38,13 @@ class ConfigureServicePackage < ConfigurePackage
       opts.on("#{arg} String")  {|val|  @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, prop_key], val) }
     }
     
-    
     begin
       remainder = Configurator.instance.run_option_parser(opts, arguments)
+      
+      if Configurator.instance.display_help?()
+        output_usage()
+        exit 0
+      end
       
       unless @config.getProperty(DEPLOYMENT_TYPE)
         error("You must specify -C, -D or -U")

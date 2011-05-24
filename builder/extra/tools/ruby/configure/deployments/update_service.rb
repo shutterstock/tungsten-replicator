@@ -12,17 +12,9 @@ class UpdateServiceDeployment < ConfigureDeployment
   def get_deployment_object_modules
     modules = [
       ConfigureDeploymentStepReplicationDataservice,
-      DeploymentStepUpdateService
+      DeploymentStepUpdateService,
+      ConfigureDeploymentStepMySQL
     ]
-      
-    case @config.getProperty(DBMS_TYPE)
-    when "mysql"
-      modules << ConfigureDeploymentStepMySQL
-    when "postgresql"
-      modules << ConfigureDeploymentStepPostgresql
-    else
-      raise "Invalid value for #{DBMS_TYPE}"
-    end
 
     modules
   end

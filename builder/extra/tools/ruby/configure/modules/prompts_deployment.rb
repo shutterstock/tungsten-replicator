@@ -233,14 +233,8 @@ class DeploymentTypePrompt < ConfigurePrompt
     validator = PropertyValidator.new(deployment_types.join("|"), 
       "Value must be #{deployment_types.join(',')}")
     
-    if Configurator.instance.is_full_tungsten_package?
-      default = DISTRIBUTED_DEPLOYMENT_NAME
-    else
-      default = DISTRIBUTED_DEPLOYMENT_NAME
-    end
-      
     super(DEPLOYMENT_TYPE, "Deployment type (#{deployment_types.join(',')})", 
-      validator, default)
+      validator, deployment_types[0])
   end
 end
 
