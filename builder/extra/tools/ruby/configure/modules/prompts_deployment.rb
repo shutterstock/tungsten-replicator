@@ -346,16 +346,12 @@ class RootCommandPrefixPrompt < AdvancedPrompt
   end
 end
 
-class THLStorageType < ConfigurePrompt
+class THLStorageType < ConstantValuePrompt
   include GroupConfigurePromptMember
   
   def initialize
     super(REPL_LOG_TYPE, "Replicator event log storage (dbms|disk)",
       PV_LOGTYPE, "disk")
-  end
-  
-  def enabled?
-    Configurator.instance.advanced_mode?()
   end
   
   def get_disabled_value

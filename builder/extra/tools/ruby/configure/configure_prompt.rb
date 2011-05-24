@@ -180,7 +180,11 @@ module AdvancedPromptModule
   end
   
   def get_disabled_value
-    get_value()
+    if enabled_for_config?
+      get_value()
+    else
+      nil
+    end
   end
 end
 
@@ -188,13 +192,9 @@ class AdvancedPrompt < ConfigurePrompt
   include AdvancedPromptModule
 end
 
-class ConstantValuePrompt < ConfigurePrompt
+class ConstantValuePrompt < AdvancedPrompt
   def enabled?
     false
-  end
-  
-  def get_disabled_value
-    get_value()
   end
 end
 

@@ -207,6 +207,10 @@ class ReplicationAPIPort < AdvancedPrompt
   def enabled?
     super() && @config.getProperty(get_member_key(REPL_API)) == "true"
   end
+  
+  def enabled_for_config?
+    super() && @config.getProperty(get_member_key(REPL_API)) == "true"
+  end
 end
 
 class ReplicationAPIHost < AdvancedPrompt
@@ -215,6 +219,10 @@ class ReplicationAPIHost < AdvancedPrompt
   end
   
   def enabled?
+    super() && @config.getProperty(get_member_key(REPL_API)) == "true"
+  end
+
+  def enabled_for_config?
     super() && @config.getProperty(get_member_key(REPL_API)) == "true"
   end
 end
@@ -227,6 +235,10 @@ class ReplicationAPIUser < AdvancedPrompt
   def enabled?
     super() && @config.getProperty(get_member_key(REPL_API)) == "true"
   end
+
+  def enabled_for_config?
+    super() && @config.getProperty(get_member_key(REPL_API)) == "true"
+  end
 end
 
 class ReplicationAPIPassword < AdvancedPrompt
@@ -235,6 +247,10 @@ class ReplicationAPIPassword < AdvancedPrompt
   end
   
   def enabled?
+    super() && @config.getProperty(get_member_key(REPL_API)) == "true"
+  end
+
+  def enabled_for_config?
     super() && @config.getProperty(get_member_key(REPL_API)) == "true"
   end
 end

@@ -155,13 +155,15 @@ class Configurator
     if @options.interactive
       # Collect responses to the configuration prompts
       begin
-        unless prompt_handler.run()
+        prompt_handler.run()
+        
+        save_prompts()
+        
+        unless prompt_handler.is_valid()
           write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
           prompt_handler.print_errors()
           exit 1
         end
-        
-        save_prompts()
         
         value = ""
         while value.to_s == ""
@@ -191,6 +193,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       rescue ConfigureSaveConfigAndExit => csce 
         write "Saving configuration values and exiting"
         save_prompts()
+        
         exit 0
       end
     else

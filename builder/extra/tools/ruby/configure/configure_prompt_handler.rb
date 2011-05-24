@@ -133,12 +133,6 @@ class ConfigurePromptHandler
         end
       end
     end
-    
-    unless is_valid?()
-      return false
-    end
-    
-    true
   end
   
   def is_valid?
