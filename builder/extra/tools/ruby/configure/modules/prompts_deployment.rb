@@ -119,13 +119,16 @@ class HomeDirectoryPrompt < ConfigurePrompt
       Configurator.instance.get_base_path()
     else
       begin
-        ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
-      rescue => e
-        if Configurator.instance.is_full_tungsten_package?()
-          Configurator.instance.get_base_path()
-        else
-          ENV['HOME']
+        unless Configurator.instance.is_localhost?(@config.getProperty(get_member_key(HOST)))
+          return ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
         end
+      rescue => e
+      end
+      
+      if Configurator.instance.is_full_tungsten_package?()
+        Configurator.instance.get_base_path()
+      else
+        ENV['HOME']
       end
     end
   end
