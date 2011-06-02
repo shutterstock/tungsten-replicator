@@ -198,6 +198,7 @@ else
 fi
 
 # Release name.
+product="Tungsten Replicator"
 relname=tungsten-replicator-${VERSION}
 
 ##########################################################################
@@ -368,6 +369,80 @@ echo -n "  replicator-extra: " >> $manifest
 svn info $source_replicator_extra | grep Revision: >> $manifest
 echo -n "  bristlecone: " >> $manifest
 svn info $source_bristlecone | grep Revision: >> $manifest
+
+##########################################################################
+# Create JSON manifest file. 
+##########################################################################
+
+# Extract SVN revision number from the SVN info. 
+extractRevision() {
+  svn info $1 | grep Revision: | sed "s/[^0-9]//g" | tr -d "\n"
+}
+
+manifestJSON=${reldir}/.manifest.json
+echo "### Creating JSON manifest file: $manifestJSON" 
+
+# Local details.
+echo    "{" >> $manifestJSON
+echo    "  \"date\": \"`date`\"," >> $manifestJSON
+echo    "  \"product\": \"${product}\"," >> $manifestJSON
+echo    "  \"version\":" >> $manifestJSON
+echo    "  {" >> $manifestJSON
+echo    "    \"major\": ${VERSION_MAJOR}," >> $manifestJSON
+echo    "    \"minor\": ${VERSION_MINOR}," >> $manifestJSON
+echo    "    \"revision\": ${VERSION_REVISION}" >> $manifestJSON
+echo    "  }," >> $manifestJSON
+echo    "  \"userAccount\": \"${USER}\"," >> $manifestJSON
+echo    "  \"host\": \"`hostname`\"," >> $manifestJSON
+
+# Hudson environment values.  These will be empty in local builds.
+echo    "  \"hudson\":" >> $manifestJSON
+echo    "  {" >> $manifestJSON
+echo    "    \"buildNumber\": ${BUILD_NUMBER-null}," >> $manifestJSON
+echo    "    \"buildId\": ${BUILD_NUMBER-null}," >> $manifestJSON
+echo    "    \"jobName\": \"${JOB_NAME}\"," >> $manifestJSON
+echo    "    \"buildTag\": \"${BUILD_TAG}\"," >> $manifestJSON
+echo    "    \"URL\": \"${HUDSON_URL}\"," >> $manifestJSON
+echo    "    \"SVNRevision\": ${SVN_REVISION-null}" >> $manifestJSON
+echo    "  }," >> $manifestJSON
+
+# SVN details. 
+echo    "  \"SVN\":" >> $manifestJSON
+echo    "  {" >> $manifestJSON
+echo    "    \"commons\":" >> $manifestJSON
+echo    "    {" >> $manifestJSON
+echo    "      \"URL\": \"${TCOM_SVN_URL}\"," >> $manifestJSON
+echo -n "      \"revision\": " >> $manifestJSON
+echo           "`extractRevision $source_commons`" >> $manifestJSON
+echo    "    }," >> $manifestJSON
+echo    "    \"fsm\":" >> $manifestJSON
+echo    "    {" >> $manifestJSON
+echo    "      \"URL\": \"${TFSM_SVN_URL}\"," >> $manifestJSON
+echo -n "      \"revision\": " >> $manifestJSON
+echo           "`extractRevision $source_fsm`" >> $manifestJSON
+echo    "    }," >> $manifestJSON
+echo    "    \"replicator\":" >> $manifestJSON
+echo    "    {" >> $manifestJSON
+echo    "      \"URL\": \"${TREP_SVN_URL}\"," >> $manifestJSON
+echo -n "      \"revision\": " >> $manifestJSON
+echo           "`extractRevision $source_replicator`" >> $manifestJSON
+echo    "    }," >> $manifestJSON
+echo    "    \"replicator-extra\":" >> $manifestJSON
+echo    "    {" >> $manifestJSON
+echo    "      \"URL\": \"${TREP_EXT_SVN_URL}\"," >> $manifestJSON
+echo -n "      \"revision\": " >> $manifestJSON
+echo           "`extractRevision $source_replicator_extra`" >> $manifestJSON
+echo    "    }," >> $manifestJSON
+echo    "    \"bristlecone\":" >> $manifestJSON
+echo    "    {" >> $manifestJSON
+echo    "      \"URL\": \"${BRI_SVN_URL}\"," >> $manifestJSON
+echo -n "      \"revision\": " >> $manifestJSON
+echo           "`extractRevision $source_bristlecone`" >> $manifestJSON
+echo    "    }" >> $manifestJSON
+echo    "  }" >> $manifestJSON
+echo    "}" >> $manifestJSON
+
+##########################################################################
 
 extra_ent_replicator=$source_replicator_extra
 reldir_replicator=$reldir/tungsten-replicator

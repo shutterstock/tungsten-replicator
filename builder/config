@@ -18,7 +18,10 @@ TCOM_SVN_URL=https://tungsten-replicator.googlecode.com/svn/trunk/commons
 BRI_SVN_URL=https://bristlecone.svn.sourceforge.net/svnroot/bristlecone/trunk/bristlecone
 
 # Version name of the release to build
-VERSION=2.0.3
+VERSION_MAJOR=2
+VERSION_MINOR=0
+VERSION_REVISION=3
+VERSION=$VERSION_MAJOR.$VERSION_MINOR.$VERSION_REVISION
 
 # Set to 1 to use existing code (found in $BUILD_DIR)
 SKIP_CHECKOUT=0
