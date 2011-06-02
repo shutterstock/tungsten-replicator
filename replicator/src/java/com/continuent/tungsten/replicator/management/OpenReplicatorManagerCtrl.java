@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s): Robert Hodges, Stephane Giron.
+ * Contributor(s): Robert Hodges, Stephane Giron, Linas Virbalas
  */
 
 package com.continuent.tungsten.replicator.management;
@@ -50,6 +50,7 @@ import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.commons.exec.ArgvIterator;
 import com.continuent.tungsten.commons.jmx.JmxManager;
 import com.continuent.tungsten.commons.jmx.ServerRuntimeException;
+import com.continuent.tungsten.commons.utils.ManifestParser;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.consistency.ConsistencyTable;
 
@@ -126,6 +127,14 @@ public class OpenReplicatorManagerCtrl
         println("  wait -state s [-limit s] - Wait up to s seconds for replicator state s");
         println("  wait -applied n [-limit s] - Wait up to s seconds for seqno to be applied");
         println("  check <table> [-limit offset,limit] [-method m] - generate consistency check for the given table");
+    }
+
+    /**
+     * Prints release information from the manifest file.
+     */
+    static void printVersion()
+    {
+        println(ManifestParser.parseReleaseWithBuildNumber());
     }
 
     /**
@@ -270,6 +279,8 @@ public class OpenReplicatorManagerCtrl
                 doStatus();
             else if (command.equals(Commands.HELP))
                 printHelp();
+            else if (command.equals(Commands.VERSION))
+                printVersion();
             else if (command.equals(Commands.CAPABILITIES))
                 doCapabilities();
             else
@@ -1271,6 +1282,7 @@ public class OpenReplicatorManagerCtrl
         public static final String CLEAR            = "clear";
         public static final String STATS            = "status";
         public static final String HELP             = "help";
+        public static final String VERSION          = "version";
         public static final String WAIT             = "wait";
         public static final String CHECK            = "check";
         public static final String BACKUP           = "backup";

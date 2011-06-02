@@ -47,6 +47,7 @@ import com.continuent.tungsten.commons.jmx.JmxManager;
 import com.continuent.tungsten.commons.jmx.MethodDesc;
 import com.continuent.tungsten.commons.jmx.ParamDesc;
 import com.continuent.tungsten.commons.utils.CLUtils;
+import com.continuent.tungsten.commons.utils.ManifestParser;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.PropertiesManager;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
@@ -186,6 +187,7 @@ public class ReplicationServiceManager
      */
     public static void main(String argv[])
     {
+        ManifestParser.logReleaseWithBuildNumber(logger);
         logger.info("Starting replication service manager");
 
         // Parse global options and command.
