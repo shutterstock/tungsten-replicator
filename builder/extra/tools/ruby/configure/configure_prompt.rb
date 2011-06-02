@@ -290,3 +290,9 @@ class TemporaryPrompt < ConfigurePrompt
   def save_disabled_value
   end
 end
+
+module IsReplicatorPrompt
+  def enabled?
+    super()
+  end
+end

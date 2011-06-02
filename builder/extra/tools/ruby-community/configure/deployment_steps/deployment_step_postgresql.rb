@@ -96,38 +96,6 @@ module ConfigureDeploymentStepPostgresql
     }
   end
   
-  def write_monitor_checker_postgresql
-    # Configure monitoring for PostgreSQL. 
-    transformer = Transformer.new(
-        "#{get_deployment_basedir()}/tungsten-monitor/conf/sample.checker.postgresqlserver.properties",
-        "#{get_deployment_basedir()}/tungsten-monitor/conf/checker.postgresqlserver.properties", "# ")
-    
-    user = @config.getProperty(REPL_DBLOGIN)
-    password = @config.getProperty(REPL_DBPASSWORD)
-    
-    transformer.transform { |line|
-      if line =~ /serverName=/
-          "serverName=" + @config.getProperty(HOST)
-      elsif line =~ /url=/ 
-          "url=jdbc:postgresql://" + @config.getProperty(HOST) + ':' + @config.getProperty(REPL_DBPORT) + "/" + user
-      elsif line =~ /frequency=/
-          "frequency=" + @config.getProperty(REPL_MONITOR_INTERVAL)
-      elsif line =~ /host=/
-          "host=" + @config.getProperty(HOST)
-      elsif line =~ /username=/
-          "username=" + user
-      elsif line =~ /password=/
-        if password == "" || password == nil then
-          "password="
-        else
-          "password=" + password
-        end
-      else
-        line
-      end
-    }
-  end
-  
   # Perform installation of required replication support files.  
   def postgresql_configuration
     # Select installation command. 

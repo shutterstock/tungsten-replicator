@@ -5,11 +5,12 @@ class ClusterHosts < GroupConfigurePrompt
       
     self.add_prompts(
       HostPrompt.new(),
-      IPAddressPrompt.new(),
       UserIDPrompt.new(),
       HomeDirectoryPrompt.new(),
       BaseDirectoryPrompt.new(),
       TempDirectoryPrompt.new(),
+      JavaMemorySize.new(),
+      ReplicationRMIPort.new(),
       
       ShellStartupScriptPrompt.new(),
       RootCommandPrefixPrompt.new(),
@@ -25,10 +26,6 @@ class ClusterHosts < GroupConfigurePrompt
       THLStorageConsistency.new(),
       THLStorageFileSize.new(),
       RelayLogStorageDirectory.new(),
-      
-      #ReplicationMonitorInterval.new(),
-      JavaMemorySize.new(),
-      ReplicationRMIPort.new(),
       
       BackupMethod.new(),
       BackupStorageDirectory.new(),
@@ -65,12 +62,6 @@ class ClusterHosts < GroupConfigurePrompt
   end
 end
 
-module IsReplicatorPrompt
-  def enabled?
-    super()
-  end
-end
-
 class DBMSTypePrompt < ConfigurePrompt
   def initialize
     super(DBMS_TYPE, "Database type (mysql, or postgresql)", PV_DBMSTYPE)
@@ -85,16 +76,6 @@ class DBMSTypePrompt < ConfigurePrompt
     else
       return "mysql"
     end
-  end
-end
-
-class ReplicationMonitorInterval < ConstantValuePrompt
-  include GroupConfigurePromptMember
-  include IsReplicatorPrompt
-  
-  def initialize
-    super(REPL_MONITOR_INTERVAL, "Replication monitor interval", 
-      PV_INTEGER, 3000)
   end
 end
 
@@ -179,18 +160,6 @@ class HostPrompt < ConfigurePrompt
   end
 end
 
-class IPAddressPrompt < ConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(IP_ADDRESS, "IP address for this host", PV_HOSTNAME)
-  end
-  
-  def get_default_value
-    Resolv.getaddress(@config.getProperty(get_member_key(HOST)))
-  end
-end
-
 class UserIDPrompt < ConfigurePrompt
   include GroupConfigurePromptMember
   
@@ -206,17 +175,6 @@ class TempDirectoryPrompt < ConfigurePrompt
   def initialize
     super(TEMP_DIRECTORY, "Temporary Directory",
       PV_FILENAME, "/tmp")
-  end
-end
-
-class SandboxCountPrompt < ConfigurePrompt
-  def initialize
-    super(SANDBOX_COUNT, "How many hosts would you like to simulate in the sandbox?", 
-      PV_INTEGER)
-  end
-  
-  def enabled?
-    @config.getProperty(DEPLOYMENT_TYPE) == "sandbox"
   end
 end
 
@@ -461,7 +419,7 @@ class THLStorageFileSize < AdvancedPrompt
   end
 end
 
-class DeploymentHost < ConfigurePrompt
+class DeploymentHost < AdvancedPrompt
   def initialize
     super(DEPLOYMENT_HOST, "Host alias for the host to be deployed here", PV_ANY)
   end

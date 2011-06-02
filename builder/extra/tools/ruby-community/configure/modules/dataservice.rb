@@ -231,13 +231,16 @@ class ReplicationServices < GroupConfigurePrompt
     
     self.add_prompts(
       ReplicationServiceDeploymentHost.new(),
+      
       LocalReplicationServiceName.new(),
       ReplicationServiceName.new(),
       ReplicationServiceType.new(),
       ReplicationServiceRole.new(),
+      
       ReplicationServiceMaster.new(),
       ReplicationServiceMasterTHLPort.new(),
       ReplicationServiceExtractor.new(),
+      
       ReplicationServiceDataserver.new(),
       ReplicationServiceTHLPort.new(),
       ReplicationServiceAutoEnable.new(),
@@ -246,6 +249,7 @@ class ReplicationServices < GroupConfigurePrompt
       ReplicationShardIDMode.new(),
       ReplicationAllowUnsafeSQL.new(),
       ReplicationAllowAllSQL.new(),
+      
       ReplicationServiceStart.new()
     )
   end

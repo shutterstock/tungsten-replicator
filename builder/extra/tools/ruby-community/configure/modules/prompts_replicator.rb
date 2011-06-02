@@ -13,6 +13,7 @@ class DataServers < GroupConfigurePrompt
       DatabasePort.new(),
       DataserverLogin.new(),
       DataserverPassword.new(),
+      
       MySQLDataDirectory.new(),
       MySQLBinlogDirectory.new(),
       MySQLBinlogPattern.new(),

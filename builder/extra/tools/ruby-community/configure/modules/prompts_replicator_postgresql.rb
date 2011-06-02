@@ -1,6 +1,6 @@
 class PostgresConfigurePrompt < ConfigurePrompt
   def enabled?
-    @config.getProperty(DBMS_TYPE) == "postgresql"
+    @config.getProperty(get_member_key(DBMS_TYPE)) == "postgresql"
   end
   
   def get_default_value
