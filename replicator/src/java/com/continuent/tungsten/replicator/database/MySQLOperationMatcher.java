@@ -25,6 +25,8 @@ package com.continuent.tungsten.replicator.database;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
+
 /**
  * Parses SQL statements to extract the SQL operation and the object, identified
  * by type, name and schema, to which it pertains.
@@ -34,6 +36,8 @@ import java.util.regex.Pattern;
  */
 public class MySQLOperationMatcher implements SqlOperationMatcher
 {
+    private static Logger               logger          = Logger.getLogger(MySQLOperationMatcher.class);
+
     // Maximum length to search down large strings.
     private static int                  PREFIX_LENGTH   = 150;
 
@@ -371,6 +375,10 @@ public class MySQLOperationMatcher implements SqlOperationMatcher
         SqlOperation unrecognized = new SqlOperation(SqlOperation.UNRECOGNIZED,
                 SqlOperation.UNRECOGNIZED, null, null, false);
         unrecognized.setBidiUnsafe(true);
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Unrecognized SQL statement: " + inputStatement);
+        }
         return unrecognized;
     }
 }
