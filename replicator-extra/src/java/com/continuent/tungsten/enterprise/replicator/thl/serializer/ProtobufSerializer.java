@@ -194,13 +194,16 @@ public class ProtobufSerializer implements Serializer
                 metadataBuilder.setValue(replOption.getOptionValue());
                 protoEventBuilder.addMetadata(metadataBuilder);
             }
-            for (ReplOption replOption : ev.getDBMSEvent().getOptions())
-            {
-                metadataBuilder = ProtobufEventOption.newBuilder();
-                metadataBuilder.setName(replOption.getOptionName());
-                metadataBuilder.setValue(replOption.getOptionValue());
-                protoEventBuilder.addOptions(metadataBuilder);
-            }
+            
+            List<ReplOption> options = ev.getDBMSEvent().getOptions();
+            if (options != null)
+                for (ReplOption replOption : ev.getDBMSEvent().getOptions())
+                {
+                    metadataBuilder = ProtobufEventOption.newBuilder();
+                    metadataBuilder.setName(replOption.getOptionName());
+                    metadataBuilder.setValue(replOption.getOptionValue());
+                    protoEventBuilder.addOptions(metadataBuilder);
+                }
 
             ArrayList<DBMSData> evData = ev.getData();
 
