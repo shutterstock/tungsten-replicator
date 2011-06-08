@@ -278,18 +278,6 @@ replicator_bin=$reldir_replicator/bin/replicator
 replicator_wrapper_conf=$reldir_replicator/conf/wrapper.conf
 
 echo "### Replicator: pointing to centralized Java Service Wrapper binaries"
-cp $extra_replicator/conf/wrapper.conf $reldir_replicator/conf
-
-# Following corrupts the wrapper.conf file.
-#${SED_DASH_I} 's/^wrapper.java.classpath.1.*/wrapper.java.classpath.1=..\/..\/tungsten-replicator\/lib\/*.jar/' ${replicator_wrapper_conf}
-#${SED_DASH_I} 's/^wrapper.java.classpath.2.*/wrapper.java.classpath.2=..\/..\/tungsten-replicator\/conf/' ${replicator_wrapper_conf}
-#${SED_DASH_I} 's/^wrapper.java.classpath.3.*/wrapper.java.classpath.3=..\/lib\/wrapper*.jar\
-#wrapper.java.classpath.4=..\/..\/cluster-home\/lib\/*.jar/' ${replicator_wrapper_conf}
-#${SED_DASH_I} 's/^wrapper.java.library.path.1=..\/lib\/wrapper/wrapper.java.library.path.1=..\/lib/' ${replicator_wrapper_conf}
-##${SED_DASH_I} 's/^wrapper.java.additional.1=-Dreplicator*/wrapper.java.additional.1=-Dreplicator.home.dir=..\/..\/tungsten-replicator/' ${replicator_wrapper_conf}
-##${SED_DASH_I} 's/^wrapper.java.additional.2=-Dreplicator*/wrapper.java.additional.2=-Dreplicator.log.dir=..\/..\/tungsten-replicator\/log/' ${replicator_wrapper_conf}
-#${SED_DASH_I} 's/^wrapper.logfile=..*/wrapper.logfile=..\/..\/tungsten-replicator\/log\/trepsvc.log/' ${replicator_wrapper_conf}
-
 fixWrapperBin $replicator_bin
 
 ##########################################################################
