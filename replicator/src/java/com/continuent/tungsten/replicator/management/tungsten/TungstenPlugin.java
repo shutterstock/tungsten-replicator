@@ -61,6 +61,7 @@ import com.continuent.tungsten.replicator.database.Database;
 import com.continuent.tungsten.replicator.database.DatabaseFactory;
 import com.continuent.tungsten.replicator.database.Table;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.extractor.Extractor;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
 import com.continuent.tungsten.replicator.heartbeat.HeartbeatTable;
@@ -442,15 +443,34 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                             ReplicatorConf.MASTER_THL_CHECK,
                             ReplicatorConf.MASTER_THL_CHECK_DEFAULT, false))
             {
-                // Check if THL is in sync with trep_commit_seqno before going
-                // online, as otherwise, we could loose some updates
-                long maxCommittedSeqno = pipeline.getMaxCommittedSeqno();
-                long maxStoredSeqno = pipeline.getMaxStoredSeqno();
-                if (maxStoredSeqno > maxCommittedSeqno)
-                    throw new ReplicatorException("Database (@seqno "
-                            + maxCommittedSeqno
-                            + ") does not seem in sync with THL (@seqno "
-                            + maxStoredSeqno + ").");
+                // Check if this host was already the master previously :
+                // Get the last applied event from the tail applier and compare
+                // its source id to this host source id
+                ReplDBMSHeader lastAppliedEvent = pipeline.getTailApplier()
+                        .getLastEvent();
+                if (lastAppliedEvent != null
+                        && !lastAppliedEvent.getSourceId().equals(
+                                runtime.getSourceId()))
+                {
+                    // Last applied event source id is different from this host
+                    // source id, which means that this host was a slave
+                    // previously.
+
+                    // Check if THL is in sync with trep_commit_seqno before
+                    // going online, as otherwise, we could loose some updates
+                    long maxStoredSeqno = pipeline.getMaxStoredSeqno();
+                    long maxCommittedSeqno = pipeline.getMaxCommittedSeqno();
+                    if (maxStoredSeqno > maxCommittedSeqno)
+                        throw new ReplicatorException("Database (@seqno "
+                                + maxCommittedSeqno
+                                + ") does not seem in sync with THL (@seqno "
+                                + maxStoredSeqno
+                                + "). The last stored event (#"
+                                + maxStoredSeqno + ") was extracted by "
+                                + lastAppliedEvent.getSourceId()
+                                + " and was not applied on "
+                                + runtime.getSourceId() + ".");
+                }
             }
 
             // Start the pipeline.
