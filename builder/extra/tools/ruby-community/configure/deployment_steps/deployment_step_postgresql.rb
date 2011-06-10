@@ -21,7 +21,7 @@ module ConfigureDeploymentStepPostgresql
     elsif line =~ /replicator.script.conf_file/
       "replicator.script.conf_file=conf/postgresql-wal.properties"
     elsif line =~ /replicator.script.processor/
-      "replicator.script.processor=bin/pg-wal-plugin"
+      "replicator.script.processor=bin/pg/pg-wal-plugin"
     elsif line =~ /replicator.backup.agent.pg_dump.port/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
       "replicator.backup.agent.pg_dump.port=" + service_config.getProperty(REPL_DBPORT)
     elsif line =~ /replicator.backup.agent.pg_dump.user/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
@@ -100,8 +100,8 @@ module ConfigureDeploymentStepPostgresql
   def postgresql_configuration
     # Select installation command. 
     info("Running procedure to configure warm standby...")
-    cmd1 = "#{get_deployment_basedir()}/tungsten-replicator/bin/pg-wal-plugin -o uninstall -c #{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties"
-    cmd2 = "#{get_deployment_basedir()}/tungsten-replicator/bin/pg-wal-plugin -o install -c #{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties"
+    cmd1 = "#{get_deployment_basedir()}/tungsten-replicator/bin/pg/pg-wal-plugin -o uninstall -c #{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties"
+    cmd2 = "#{get_deployment_basedir()}/tungsten-replicator/bin/pg/pg-wal-plugin -o install -c #{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties"
     info("############ RESTART=#{@config.getProperty(SVC_START)} ##################")
     
     if (@config.getProperty(SVC_START) == "false")

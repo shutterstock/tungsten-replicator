@@ -314,9 +314,9 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
         end
       elsif line =~ /replicator.script.processor/
         if @configurator.config.props[REPL_PG_REPLICATOR] == "wal"
-          "replicator.script.processor=bin/pg-wal-plugin"
+          "replicator.script.processor=bin/pg/pg-wal-plugin"
         else
-          "replicator.script.processor=bin/pg-londiste-plugin"
+          "replicator.script.processor=bin/pg/pg-londiste-plugin"
         end
       else
         line
@@ -477,8 +477,8 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
     # Select installation command.
     if @configurator.config.props[REPL_PG_REPLICATOR] == "wal"
       puts "Running procedure to configure warm standby..."
-      cmd1= "tungsten-replicator/bin/pg-wal-plugin -o uninstall -c tungsten-replicator/conf/postgresql-wal.properties"
-      cmd2 = "tungsten-replicator/bin/pg-wal-plugin -o install -c tungsten-replicator/conf/postgresql-wal.properties"
+      cmd1= "tungsten-replicator/bin/pg/pg-wal-plugin -o uninstall -c tungsten-replicator/conf/postgresql-wal.properties"
+      cmd2 = "tungsten-replicator/bin/pg/pg-wal-plugin -o install -c tungsten-replicator/conf/postgresql-wal.properties"
       puts "############ RESTART=#{@configurator.config.props[GLOBAL_RESTART_DBMS]} ##################"
       if (@configurator.config.props[GLOBAL_RESTART_DBMS] == "defer" ||
       @configurator.config.props[GLOBAL_RESTART_DBMS] == "false")
@@ -498,8 +498,8 @@ class SubConfiguratorPostgreSQL  < SubConfigurator
       #node_dir = "tungsten-replicator/conf/pg-londiste/nodes/#{host}"
       Dir.chdir("tungsten-replicator")
       node_dir = "conf/pg-londiste/nodes/#{host}"
-      #pg_londiste_plugin = "tungsten-replicator/bin/pg-londiste-plugin"
-      pg_londiste_plugin = "./bin/pg-londiste-plugin"
+      #pg_londiste_plugin = "tungsten-replicator/bin/pg/pg-londiste-plugin"
+      pg_londiste_plugin = "./bin/pg/pg-londiste-plugin"
 
       # Remove and recreate node directory.
       exec_cmd2("rm -r #{node_dir}", true)
