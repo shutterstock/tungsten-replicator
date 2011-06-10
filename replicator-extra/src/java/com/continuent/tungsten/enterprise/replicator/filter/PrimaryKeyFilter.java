@@ -243,7 +243,7 @@ public class PrimaryKeyFilter implements Filter
                 logger.debug("ALTER TABLE detected - no cached table metadata to remove for '"
                         + schemaName + "." + tableName + "'");
         }
-        else
+        else if (defaultDB != null)
         {
             Hashtable<String, Table> tableCache = metadataCache.get(defaultDB);
             if (tableCache != null && tableCache.remove(tableName) != null)
