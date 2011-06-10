@@ -436,7 +436,7 @@ extra_ent_replicator=$source_replicator_extra
 reldir_replicator=$reldir/tungsten-replicator
 
 echo "### Adding extra bin scripts for replicator plugins"
-cp $extra_ent_replicator/bin/pg-* $reldir_replicator/bin
+cp -r $extra_ent_replicator/bin/pg $reldir_replicator/bin
 
 echo "### Adding extra conf files for PostgreSQL"
 cp $extra_ent_replicator/conf/sample.* $reldir_replicator/conf
