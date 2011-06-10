@@ -17,8 +17,8 @@ require 'time'
 # Implementation class for PostgreSQL WAL shipping. 
 class PgWalPlugin < Plugin
   # GLOBAL VARIABLES
-  PG_WAL_ARCHIVE   = "/bin/pg-wal-archive"
-  PG_WAL_RESTORE   = "/bin/pg-wal-restore"
+  PG_WAL_ARCHIVE   = "/bin/pg/pg-wal-archive"
+  PG_WAL_RESTORE   = "/bin/pg/pg-wal-restore"
   PG_WAL_CONF_DIR  = "/conf/pg-wal"
   PG_WAL_PROPERTIES = "/pg-wal.properties"
   PG_TUNGSTEN_CONF = "/postgresql.tungsten.conf"

@@ -154,7 +154,7 @@ else
     if not File.exist?(pid_file)
       puts "PID file of sender daemon not found: #{pid_file}"
       puts "Starting pg-wal-archive-send for #{slave_folder}..."
-      cmd = replicator_home + "/bin/pg-wal-archive-send #{slave_outbox} &"
+      cmd = replicator_home + "/bin/pg/pg-wal-archive-send #{slave_outbox} &"
       puts "Executing: #{cmd}"
       if not system(cmd)
         puts "ERROR: failed to start pg-wal-archive-send"
