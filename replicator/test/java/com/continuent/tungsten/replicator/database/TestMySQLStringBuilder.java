@@ -44,10 +44,10 @@ public class TestMySQLStringBuilder
         MySQLOperationStringBuilder sb = new MySQLOperationStringBuilder(25);
         Assert.assertEquals("Empty", "", sb.build(" "));
         Assert.assertEquals("String", "abc", sb.build(" abc"));
-        Assert.assertEquals("String with blanks", "abc  abc", sb
-                .build(" abc  abc"));
-        Assert.assertEquals("String with trailing", "abc   ", sb
-                .build("   abc   "));
+        Assert.assertEquals("String with blanks", "abc  abc",
+                sb.build(" abc  abc"));
+        Assert.assertEquals("String with trailing", "abc   ",
+                sb.build("   abc   "));
     }
 
     /**
@@ -64,12 +64,10 @@ public class TestMySQLStringBuilder
         Assert.assertEquals("String", "abc", sb.build("abc/*def*/"));
         Assert.assertEquals("String", "abcghi", sb.build("abc/*def*/ghi"));
         Assert.assertEquals("String", "abc ghi", sb.build("abc/*def*/ ghi"));
-        Assert
-                .assertEquals(
-                        "String",
-                        "delete  from foo where id=1",
-                        sb
-                                .build("/* comment */ delete /* comment */ from foo where id=1"));
+        Assert.assertEquals(
+                "String",
+                "delete  from foo where id=1",
+                sb.build("/* comment */ delete /* comment */ from foo where id=1"));
 
     }
 
@@ -82,23 +80,53 @@ public class TestMySQLStringBuilder
         MySQLOperationStringBuilder sb = new MySQLOperationStringBuilder(100);
         Assert.assertEquals("Empty", "", sb.build("/*!12345*/"));
         Assert.assertEquals("String", "abc", sb.build("/*!23456 abc*/"));
-        Assert.assertEquals("String", "abc  def  ghi", sb
-                .build("abc /*!23456 def */ ghi"));
+        Assert.assertEquals("String", "abc  def  ghi",
+                sb.build("abc /*!23456 def */ ghi"));
         Assert.assertEquals("String", "CREATE DATABASE  IF NOT EXISTS `foo`  "
                 + "DEFAULT CHARACTER SET latin1 ", sb
                 .build("CREATE DATABASE /*!32312 IF NOT EXISTS*/ `foo` "
                         + "/*!40100 DEFAULT CHARACTER SET latin1 */"));
     }
-    
+
     /**
-     * Ensure we always truncate at the expected number of characters. 
+     * Ensure we always truncate at the expected number of characters.
      */
     @Test
     public void testTruncation() throws Exception
     {
         MySQLOperationStringBuilder sb = new MySQLOperationStringBuilder(10);
-        Assert.assertEquals("Simple truncation", "123456789*", sb.build("123456789*1"));
-        Assert.assertEquals("Simple truncation", "123456789*", sb.build(" 1234/*comment*/56789*1"));
-        Assert.assertEquals("Simple truncation", "123456789*", sb.build(" 1234/*!9999956*/789*1"));
+        Assert.assertEquals("Simple truncation", "123456789*",
+                sb.build("123456789*1"));
+        Assert.assertEquals("Simple truncation", "123456789*",
+                sb.build(" 1234/*comment*/56789*1"));
+        Assert.assertEquals("Simple truncation", "123456789*",
+                sb.build(" 1234/*!9999956*/789*1"));
     }
+
+    /**
+     * Ensure "--" comment lines are removed completely.
+     */
+    @Test
+    public void testMinusMinusComments() throws Exception
+    {
+        MySQLOperationStringBuilder sb = new MySQLOperationStringBuilder(250);
+        Assert.assertEquals("Empty", "", sb.build("--"));
+        Assert.assertEquals("Empty", "", sb.build("-- "));
+        Assert.assertEquals("Empty", "", sb.build("-- X"));
+        Assert.assertEquals("String", "abc", sb.build("--\nabc"));
+        Assert.assertEquals("String", "def", sb.build("-- abc\ndef"));
+        Assert.assertEquals("String", "abc  abc", sb.build("abc\n-- def\nabc"));
+        Assert.assertEquals("String", "abc abc", sb.build("abc-- def\nabc"));
+        Assert.assertEquals("String", "abc   def  ", sb.build("abc\n  def\n-- abc"));
+        Assert.assertEquals(
+                "Real thing",
+                "DELETE my_event.*  "
+                        + "FROM my_event as segment_event INNER JOIN"
+                        + "           my_segment as segment ON segment_event.segment_fk",
+                sb.build("-- segment_event\nDELETE my_event.* \n"
+                        + "FROM my_event as segment_event INNER JOIN"
+                        + "           my_segment as segment ON segment_event.segment_fk"));
+
+    }
+
 }

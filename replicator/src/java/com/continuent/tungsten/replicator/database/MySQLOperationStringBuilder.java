@@ -68,7 +68,7 @@ public class MySQLOperationStringBuilder
             {
                 if (inputStartsWith("*!"))
                 {
-                    // Look ahead to ensure we have a bang comment. 
+                    // Look ahead to ensure we have a bang comment.
                     String nextChars = peek(7);
                     boolean haveBangComment = false;
                     if (nextChars.length() == 7)
@@ -83,10 +83,11 @@ public class MySQLOperationStringBuilder
                             }
                         }
                     }
-                    
+
                     if (haveBangComment)
                     {
-                        // Strip the enclosing comment characters and add content.
+                        // Strip the enclosing comment characters and add
+                        // content.
                         skip(7);
                         String contents = getToDelimiter("*/");
                         if (contents != null)
@@ -97,21 +98,58 @@ public class MySQLOperationStringBuilder
                     }
                     else
                     {
-                        // No comment after all, so just add it. 
+                        // No comment after all, so just add it.
                         put(nextChar);
                     }
                 }
                 else if (inputStartsWith("*"))
                 {
-                    // Skip the entire comment. 
+                    // Skip the entire comment.
                     if (getToDelimiter("*/") != null)
                         skip(2);
                 }
                 else
                 {
-                    // Just add it. 
+                    // Just add it.
                     put(nextChar);
                 }
+            }
+            else if (nextChar == '-')
+            {
+                if (inputStartsWith("-"))
+                {
+                    // Ensure there is whitespace or end-of-input after the
+                    // comment. MySQL requires whitespace.
+                    String tail = peek(2);
+                    if (tail == null)
+                    {
+                        // Trailing comment, so we are done. It will be dropped.
+                        break;
+                    }
+                    else
+                    {
+                        // Look for whitespace following "--" comment.
+                        if (Character.isWhitespace(tail.charAt(1)))
+                        {
+                            // Skip the comment and put in a space instead. 
+                            String buf = getToEndOfLine();
+                            skip(buf.length());
+                            put(' ');
+                        }
+                        else
+                            put(nextChar);
+                    }
+                }
+                else
+                {
+                    // Just add it.
+                    put(nextChar);
+                }
+            }
+            else if (nextChar == '\n')
+            {
+                // Convert to space. 
+                put(" ");
             }
             else
             {
@@ -119,7 +157,7 @@ public class MySQLOperationStringBuilder
             }
         }
 
-        // Return what we found. 
+        // Return what we found.
         return outputString.toString();
     }
 
@@ -133,7 +171,8 @@ public class MySQLOperationStringBuilder
             return 0;
     }
 
-    // Preview the next N characters or return null if there are not enough of them. 
+    // Preview the next N characters or return null if there are not enough of
+    // them.
     private String peek(int n)
     {
         int endIndex = inputIndex + n;
@@ -143,7 +182,7 @@ public class MySQLOperationStringBuilder
             return null;
     }
 
-    // Return string characters up to but not including delimiter. 
+    // Return string characters up to but not including delimiter.
     private String getToDelimiter(String delimiter)
     {
         String content = null;
@@ -156,8 +195,22 @@ public class MySQLOperationStringBuilder
                 inputIndex = delimiterIndex;
             }
         }
-        
+
         return content;
+    }
+
+    // Skip characters up to but not including end-of-line.
+    private String getToEndOfLine()
+    {
+        String lineSeparator = System.getProperty("line.separator");
+        int endIndex = inputIndex;
+        while (endIndex < inputLength)
+        {
+            char c = inputString.charAt(endIndex++);
+            if (lineSeparator.indexOf(c) > -1)
+                break;
+        }
+        return inputString.substring(inputIndex, endIndex);
     }
 
     // Returns true if the input starts with the argument at the
@@ -169,8 +222,8 @@ public class MySQLOperationStringBuilder
         else
             return false;
     }
-    
-    // Skip over the desired number of characters. 
+
+    // Skip over the desired number of characters.
     private void skip(int n)
     {
         if (inputIndex < inputLength)
@@ -180,7 +233,7 @@ public class MySQLOperationStringBuilder
     // Adds a character to the output.
     private void put(char c)
     {
-        if (! Character.isWhitespace(c) || outputString.length() != 0)
+        if (!Character.isWhitespace(c) || outputString.length() != 0)
         {
             outputString.append(c);
         }

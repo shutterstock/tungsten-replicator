@@ -215,6 +215,11 @@ public class EventMetadataFilter implements Filter
                     // Parsed the schema from the SQL.
                     affectedSchema = opSchema;
                 }
+                else if (op.isGlobal())
+                {
+                    // Global operations are not assigned to a shard. 
+                    affectedSchema = ReplOptionParams.SHARD_ID_UNKNOWN;
+                }
                 else if (sd.getDefaultSchema() != null)
                 {
                     // Use default schema unless we don't recognize SQL and

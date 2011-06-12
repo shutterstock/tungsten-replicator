@@ -67,7 +67,8 @@ public class TestSqlOperationMatcher
     @Test
     public void testCreateDb() throws Exception
     {
-        String[] cmds = {"create database foo",
+        String[] cmds = {
+                "create database foo",
                 "CREATE DATABASE IF NOT EXISTS foo",
                 "CREATE DATABASE /*!32312 IF NOT EXISTS*/ `foo` /*!40100 DEFAULT CHARACTER SET latin1 */",
                 "   create   DATABASe  \"foo\"",
@@ -80,8 +81,8 @@ public class TestSqlOperationMatcher
                     sqlName.getObjectType());
             Assert.assertEquals("Found database: " + cmd, SqlOperation.CREATE,
                     sqlName.getOperation());
-            Assert.assertEquals("Found database: " + cmd, "foo", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "foo",
+                    sqlName.getSchema());
             Assert.assertNull("Found database: " + cmd, sqlName.getName());
             Assert.assertTrue("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
@@ -103,9 +104,10 @@ public class TestSqlOperationMatcher
                     sqlName.getObjectType());
             Assert.assertEquals("Found database: " + cmd, SqlOperation.DROP,
                     sqlName.getOperation());
-            Assert.assertEquals("Found database: " + cmd, "foo", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "foo",
+                    sqlName.getSchema());
             Assert.assertNull("Found database: " + cmd, sqlName.getName());
+            Assert.assertTrue("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
     }
 
@@ -132,6 +134,7 @@ public class TestSqlOperationMatcher
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
             Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+            Assert.assertTrue("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
 
         for (String cmd : cmds2)
@@ -143,8 +146,8 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd, SqlOperation.CREATE,
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
@@ -173,6 +176,7 @@ public class TestSqlOperationMatcher
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
             Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+            Assert.assertTrue("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
 
         for (String cmd : cmds2)
@@ -184,8 +188,8 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd, SqlOperation.DROP,
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
@@ -214,6 +218,7 @@ public class TestSqlOperationMatcher
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
             Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+            Assert.assertFalse("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
 
         for (String cmd : cmds2)
@@ -225,8 +230,80 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd, SqlOperation.INSERT,
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
+        }
+    }
+
+    /**
+     * Test create and drop of indexes with and without the db name.
+     */
+    @Test
+    public void testCreateDropIndex() throws Exception
+    {
+        // CREATE INDEX COMMANDS.
+        String[] cmds1 = {"CREATE INDEX my_index ON foo(c1)",
+                "CREATE ONLINE INDEX `index` ON `foo`(c2_2)",
+                "   CREATE FULLTEXT INDEX `index` ON \"foo\"(c2_2)"};
+        String[] cmds2 = {"CREATE INDEX my_index ON bar.foo(c1)",
+                "CREATE ONLINE INDEX `index` ON `bar`.`foo`(c2_2)",
+                "   CREATE FULLTEXT INDEX `index` ON \"bar\".\"foo\"(c2_2)"};
+        SqlOperationMatcher m = new MySQLOperationMatcher();
+        for (String cmd : cmds1)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd, SqlOperation.INDEX,
+                    sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.CREATE,
+                    sqlName.getOperation());
+            Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
+            Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+        }
+
+        for (String cmd : cmds2)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd, SqlOperation.INDEX,
+                    sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.CREATE,
+                    sqlName.getOperation());
+            Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
+        }
+
+        // DROP INDEX COMMANDS.
+        String[] cmds3 = {"DROP INDEX my_index ON foo(c1)",
+                "DROP INDEX `index` ON `foo`(c2_2)",
+                "   DROP INDEX `index` ON \"foo\"(c2_2)"};
+        String[] cmds4 = {"DROP INDEX my_index ON bar.foo(c1)",
+                "DROP INDEX `index` ON `bar`.`foo`(c2_2)",
+                "   DROP INDEX `index` ON \"bar\".\"foo\"(c2_2)"};
+        for (String cmd : cmds3)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd, SqlOperation.INDEX,
+                    sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.DROP,
+                    sqlName.getOperation());
+            Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
+            Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+        }
+
+        for (String cmd : cmds4)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd, SqlOperation.INDEX,
+                    sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.DROP,
+                    sqlName.getOperation());
+            Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
@@ -255,6 +332,7 @@ public class TestSqlOperationMatcher
                     SqlOperation.REPLACE, sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
             Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+            Assert.assertFalse("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
 
         for (String cmd : cmds2)
@@ -266,8 +344,8 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd,
                     SqlOperation.REPLACE, sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
@@ -296,6 +374,7 @@ public class TestSqlOperationMatcher
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
             Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+            Assert.assertFalse("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
 
         for (String cmd : cmds2)
@@ -307,8 +386,8 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd, SqlOperation.UPDATE,
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
@@ -318,7 +397,8 @@ public class TestSqlOperationMatcher
     @Test
     public void testDelete() throws Exception
     {
-        String[] cmds1 = {"/* comment */ delete /* comment */ from foo where id=1",
+        String[] cmds1 = {
+                "/* comment */ delete /* comment */ from foo where id=1",
                 "DELETE foo WHERE \"msg\" = 'value'",
                 "DELETE \"foo\" WHere msg= 'data'",
                 "delete    `foo` /* hello*/ where id=1",
@@ -339,6 +419,7 @@ public class TestSqlOperationMatcher
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
             Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+            Assert.assertFalse("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
 
         for (String cmd : cmds2)
@@ -350,8 +431,8 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd, SqlOperation.DELETE,
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
@@ -387,8 +468,8 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd,
                     SqlOperation.TRUNCATE, sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
@@ -431,6 +512,7 @@ public class TestSqlOperationMatcher
                     SqlOperation.LOAD_DATA, sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
             Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+            Assert.assertFalse("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
 
         for (String cmd : cmds2)
@@ -442,8 +524,8 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd,
                     SqlOperation.LOAD_DATA, sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
@@ -466,6 +548,7 @@ public class TestSqlOperationMatcher
                     sqlName.getOperation());
             Assert.assertNull("Found name: " + cmd, sqlName.getName());
             Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+            Assert.assertFalse("Is autocommit: " + cmd, sqlName.isAutoCommit());
         }
     }
 
@@ -503,8 +586,8 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd, SqlOperation.CREATE,
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
@@ -540,11 +623,91 @@ public class TestSqlOperationMatcher
             Assert.assertEquals("Found operation: " + cmd, SqlOperation.DROP,
                     sqlName.getOperation());
             Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
-            Assert.assertEquals("Found database: " + cmd, "bar", sqlName
-                    .getSchema());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
         }
     }
 
+    /**
+     * Test create view with and without db name.
+     */
+    @Test
+    public void testCreateView() throws Exception
+    {
+        String[] cmds1 = {
+        "CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `foo` AS select 1",
+                "CREATE OR REPLACE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `foo` AS select 1"};
+        String[] cmds2 = {
+                "CREATE OR REPLACE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `bar`.`foo` AS select 1",
+                "CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `bar`.`foo` AS select 1"};
+        SqlOperationMatcher m = new MySQLOperationMatcher();
+        for (String cmd : cmds1)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd, SqlOperation.VIEW,
+                    sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.CREATE,
+                    sqlName.getOperation());
+            Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
+            Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+        }
+
+        for (String cmd : cmds2)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd, SqlOperation.VIEW,
+                    sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.CREATE,
+                    sqlName.getOperation());
+            Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
+        }
+    }
+
+    /**
+     * Test drop view with and without db name.
+     */
+    @Test
+    public void testDropView() throws Exception
+    {
+        String[] cmds1 = {"drop view foo", "DROP VIEW foo",
+                "DrOp VieW \"foo\"",
+                "drop  view   `foo` /* hello*/",
+                "drop    view  if   exists  foo"};
+        String[] cmds2 = {"drop view bar.foo", "DROP VIEW bar.foo",
+                "DRop VieW \"bar\".\"foo\"",
+                "drop   view   `bar`.`foo` /* hello*/",
+                "drop view  if  exists bar.foo"};
+        SqlOperationMatcher m = new MySQLOperationMatcher();
+        for (String cmd : cmds1)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd, SqlOperation.VIEW,
+                    sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.DROP,
+                    sqlName.getOperation());
+            Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
+            Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+        }
+
+        for (String cmd : cmds2)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd, SqlOperation.VIEW,
+                    sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.DROP,
+                    sqlName.getOperation());
+            Assert.assertEquals("Found name: " + cmd, "foo", sqlName.getName());
+            Assert.assertEquals("Found database: " + cmd, "bar",
+                    sqlName.getSchema());
+        }
+    }
+    
     /**
      * Test suppression of leading comments including comments generated by
      * mysqldump.
@@ -556,7 +719,9 @@ public class TestSqlOperationMatcher
                 "/*!50000 CREATE TABLE IF NOT EXISTS foo */",
                 " /* another command */ creAtE TEMPORary TabLE \"foo\"",
                 "/** a difficult comment */ create   table   `foo` /* hello*/",
-                " /* comment*/create table foo"};
+                " /* comment*/create table foo",
+                "-- this is a comment\n   create table foo",
+                "-- this is a comment\n   create -- comment\ntable foo"};
         SqlOperationMatcher m = new MySQLOperationMatcher();
         for (String cmd : cmds1)
         {
@@ -577,17 +742,17 @@ public class TestSqlOperationMatcher
     @Test
     public void testCommentHandling2() throws Exception
     {
-        String cmd1 = "/* " + 
-        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
-        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
-        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
-        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
-        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
-        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
-        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
-        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
-        "comment comment comment comment comment comment comment comment comment comment comment comment" + 
-        " */ create table foo";
+        String cmd1 = "/* "
+                + "comment comment comment comment comment comment comment comment comment comment comment comment"
+                + "comment comment comment comment comment comment comment comment comment comment comment comment"
+                + "comment comment comment comment comment comment comment comment comment comment comment comment"
+                + "comment comment comment comment comment comment comment comment comment comment comment comment"
+                + "comment comment comment comment comment comment comment comment comment comment comment comment"
+                + "comment comment comment comment comment comment comment comment comment comment comment comment"
+                + "comment comment comment comment comment comment comment comment comment comment comment comment"
+                + "comment comment comment comment comment comment comment comment comment comment comment comment"
+                + "comment comment comment comment comment comment comment comment comment comment comment comment"
+                + " */ create table foo";
         String cmd2 = "/* comment */ create table foo /* comment */";
         String[] cmds1 = {cmd1, cmd2};
         SqlOperationMatcher m = new MySQLOperationMatcher();
@@ -670,6 +835,28 @@ public class TestSqlOperationMatcher
     }
 
     /**
+     * Test FLUSH TABLES. 
+     */
+    @Test
+    public void testFlushTables() throws Exception
+    {
+        String[] cmds1 = {"FLUSH TABLES", "flush tables", " flUsh tABLES", "flush /* foo */ tables"};
+        SqlOperationMatcher m = new MySQLOperationMatcher();
+        for (String cmd : cmds1)
+        {
+            SqlOperation sqlName = m.match(cmd);
+            Assert.assertNotNull("Matched: " + cmd, sqlName);
+            Assert.assertEquals("Found object: " + cmd,
+                    SqlOperation.DBMS, sqlName.getObjectType());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.FLUSH_TABLES,
+                    sqlName.getOperation());
+            Assert.assertNull("Found name: " + cmd, sqlName.getName());
+            Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
+            Assert.assertTrue("Is global: " + cmd, sqlName.isGlobal());
+        }
+    }
+
+    /**
      * Identify a select. We don't select the db.table as select syntax is quite
      * convoluted.
      */
@@ -686,8 +873,8 @@ public class TestSqlOperationMatcher
             Assert.assertNotNull("Matched: " + cmd, sqlName);
             Assert.assertEquals("Found object: " + cmd, SqlOperation.TABLE,
                     sqlName.getObjectType());
-            Assert.assertEquals("Found operation: " + cmd,
-                    SqlOperation.SELECT, sqlName.getOperation());
+            Assert.assertEquals("Found operation: " + cmd, SqlOperation.SELECT,
+                    sqlName.getOperation());
             Assert.assertNull("Found name: " + cmd, sqlName.getName());
             Assert.assertNull("Found database: " + cmd, sqlName.getSchema());
         }
@@ -696,7 +883,7 @@ public class TestSqlOperationMatcher
     /**
      * Test performance over a large number of inserts.
      */
-//    @Test
+    @Test
     public void testInsertMany() throws Exception
     {
         String[] cmds1 = {

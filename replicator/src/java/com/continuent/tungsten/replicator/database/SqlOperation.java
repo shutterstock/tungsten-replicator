@@ -42,6 +42,8 @@ public class SqlOperation
     public static int TRANSACTION  = 6;
     public static int BLOCK        = 7;
     public static int VIEW         = 8;
+    public static int INDEX        = 9;
+    public static int DBMS         = 10;
 
     // Operation types.
     public static int CREATE       = 1;
@@ -59,11 +61,14 @@ public class SqlOperation
     public static int SELECT       = 13;
     public static int ALTER        = 14;
 
+    // Specialized operation types for MySQL.
+    public static int FLUSH_TABLES = 101;
+
     int               objectType;
     int               operation;
     String            schema;
     String            name;
-    boolean           autoCommit;
+    boolean           autoCommit = true;
     boolean           bidiUnsafe;
 
     /** Instantiate a SQL operation with default values. */
@@ -117,6 +122,11 @@ public class SqlOperation
     public boolean isBidiUnsafe()
     {
         return bidiUnsafe;
+    }
+
+    public boolean isGlobal()
+    {
+        return this.objectType == DBMS;
     }
 
     public void setObjectType(int object)
