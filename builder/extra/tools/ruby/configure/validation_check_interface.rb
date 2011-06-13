@@ -99,7 +99,7 @@ module ValidationCheckInterface
       port = @config.getPropertyOr(get_member_key(REPL_DBPORT), "3306")
     end
 
-    cmd_result("mysql -u#{user} --password=\"#{password}\" -h#{hostname} --port=#{port} -e \"#{command}\"", true)
+    cmd_result("mysql -u#{user} --password=\"#{password}\" -h#{hostname} --port=#{port} -e \"#{command}\"")
   end
   
   def mysql_on(command, datasource_alias)
