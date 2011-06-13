@@ -1,8 +1,13 @@
 class MySQLValidationCheck < ConfigureValidationCheck
   include GroupValidationCheckMember
   
-  def get_value(command, column)
-    response = mysql(command + "\\\\G")
+  def get_value(command, column, on_datasource = nil)
+    if on_datasource == nil
+      response = mysql(command + "\\\\G")
+    else
+      response = mysql_on(command + "\\\\G", on_datasource)
+    end
+    
     response.split("\n").each{ | response_line |
       parts = response_line.chomp.split(":")
       if (parts.length != 2)
@@ -20,7 +25,7 @@ class MySQLValidationCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    (@config.getProperty(DBMS_TYPE) == "mysql")
+    (@config.getProperty(get_member_key(DBMS_TYPE)) == "mysql")
   end
 end
 
@@ -191,5 +196,29 @@ class ConnectorUserMySQLCheck < MySQLValidationCheck
   
   def enabled?
     (super() && is_connector?())
+  end
+end
+
+class MySQLNoMySQLReplicationCheck < MySQLValidationCheck
+  def set_vars
+    @title = "No MySQL replication check"
+  end
+  
+  def validate
+    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
+    info("Checking that MySQL replication is not running on the slave datasource")
+    slave_sql_running = get_value("SHOW SLAVE STATUS", "Slave_SQL_Running", applier)
+    if slave_sql_running != "No"
+      error("The slave datasource #{get_connection_summary_for(applier)} has a running slave SQL thread")
+    end
+  end
+  
+  def enabled?
+    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
+    if @config.getProperty([DATASERVERS, applier, DBMS_TYPE]) == "mysql"
+      true
+    else
+      false
+    end
   end
 end

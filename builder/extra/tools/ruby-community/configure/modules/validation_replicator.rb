@@ -187,7 +187,8 @@ class ReplicationServiceChecks < GroupValidationCheck
     add_checks(
       ServiceNameCheck.new(),
       DifferentMasterSlaveCheck.new(),
-      THLStorageCheck.new()
+      THLStorageCheck.new(),
+      MySQLNoMySQLReplicationCheck.new()
     )
   end
   
