@@ -208,7 +208,7 @@ class MySQLNoMySQLReplicationCheck < MySQLValidationCheck
     applier = @config.getProperty(get_member_key(REPL_DATASERVER))
     info("Checking that MySQL replication is not running on the slave datasource")
     slave_sql_running = get_value("SHOW SLAVE STATUS", "Slave_SQL_Running", applier)
-    if slave_sql_running != "No"
+    if (slave_sql_running != nil) and (slave_sql_running != "No")
       error("The slave datasource #{get_connection_summary_for(applier)} has a running slave SQL thread")
     end
   end
