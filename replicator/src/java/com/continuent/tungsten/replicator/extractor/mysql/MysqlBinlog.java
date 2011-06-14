@@ -208,7 +208,7 @@ public class MysqlBinlog
         sql_modes.put(Long.valueOf(0x8000000), "TRADITIONAL");
         sql_modes.put(Long.valueOf(0x10000000), "NO_AUTO_CREATE_USER");
         sql_modes.put(Long.valueOf(0x20000000), "HIGH_NOT_PRECEDENCE");
-        sql_modes.put(Long.valueOf(0x40000000), "MODE_NO_ENGINE_SUBSTITUTION");
+        sql_modes.put(Long.valueOf(0x40000000), "NO_ENGINE_SUBSTITUTION");
         sql_modes.put(Long.valueOf(0x80000000), "PAD_CHAR_TO_FULL_LENGTH");
     }
 
