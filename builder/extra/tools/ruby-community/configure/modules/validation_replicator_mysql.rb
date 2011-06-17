@@ -1,7 +1,7 @@
 class MySQLValidationCheck < ConfigureValidationCheck
   include GroupValidationCheckMember
   
-  def get_value(command, column, on_datasource = nil)
+  def get_value(command, column = nil, on_datasource = nil)
     if on_datasource == nil
       response = mysql(command + "\\\\G")
     else
@@ -16,7 +16,7 @@ class MySQLValidationCheck < ConfigureValidationCheck
       parts[0] = parts[0].strip;
       parts[1] = parts[1].strip;
       
-      if parts[0] == column
+      if parts[0] == column || column == nil
         return parts[1]
       end
     }
@@ -77,33 +77,20 @@ class MySQLPermissionsCheck < MySQLValidationCheck
   def validate
     has_missing_priv = false
     
-    response = mysql("select * from mysql.user where User = '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'\\\\G")
-    unless $? == 0
-      error("Unable to retrieve user permissions")
-      help("The #{@config.getProperty(get_member_key(REPL_DBLOGIN))} user must have SUPER,REPLICATION CLIENT permissions")
+    user = get_value("select user()", "user()")
+    grants = get_value("show grants")
+    
+    info("Checking user permissions: #{grants}")
+    unless grants =~ /ALL PRIVILEGES/
+      has_missing_priv = true
     end
     
-    response.split("\n").each{ | response_line |
-      parts = response_line.chomp.split(":")
-      if (parts.length != 2)
-        next
-      end
-      parts[0] = parts[0].strip;
-      parts[1] = parts[1].strip;
-      
-      if parts[0] == "Host"
-        current_host = parts[1]
-        command_added = false
-      end
-      
-      if parts[0] =~ /priv/ && parts[1] != "Y"
-        has_missing_priv = true
-        error("Missing #{parts[0]} for #{@config.getProperty(get_member_key(REPL_DBLOGIN))}")
-      end
-    }
+    unless grants =~ /WITH GRANT OPTION/
+      has_missing_priv = true
+    end
     
     if has_missing_priv
-      error("The database user is missing some privileges. Run 'mysql -u#{@config.getProperty(get_member_key(REPL_DBLOGIN))} -p#{@config.getProperty(get_member_key(REPL_DBPASSWORD))} -h#{@config.getProperty(get_member_key(HOST))} -e\"GRANT ALL ON *.* to '#{@config.getProperty(get_member_key(REPL_DBLOGIN))}'@'#{@config.getProperty(get_member_key(HOST))}' WITH GRANT OPTION\"' on #{@config.getProperty(get_member_key(HOST))}")
+      error("The database user is missing some privileges or the grant option. Run 'mysql -u#{@config.getProperty(get_member_key(REPL_DBLOGIN))} -p#{@config.getProperty(get_member_key(REPL_DBPASSWORD))} -h#{@config.getProperty(get_member_key(REPL_DBHOST))} -e\"GRANT ALL ON *.* to #{user} WITH GRANT OPTION\"'")
     else
       info("All privileges configured correctly")
     end
