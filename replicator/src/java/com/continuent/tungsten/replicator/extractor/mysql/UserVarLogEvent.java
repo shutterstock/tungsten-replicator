@@ -151,10 +151,9 @@ public class UserVarLogEvent extends LogEvent
                 {
                     case STRING_RESULT :
                         // TODO: use charset info
-                        // TODO: escape single quotes in value string
                         value = "'"
                                 + new String(buffer, variableValueIndex,
-                                        variableValueLength) + "'";
+                                        variableValueLength).replaceAll("'", "''") + "'";
                         break;
                     case REAL_RESULT :
                         if (variableValueLength != 8)
