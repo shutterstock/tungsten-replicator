@@ -536,19 +536,8 @@ replicator.backup.agent.mysqldump.port=${replicator.global.db.port}
 replicator.backup.agent.mysqldump.user=${replicator.global.db.user}
 replicator.backup.agent.mysqldump.password=${replicator.global.db.password}
 replicator.backup.agent.mysqldump.dumpDir=/tmp
-
-# Options for MySQL 5.1 with BUG 34306 (found in versions up to 5.1.34).
-replicator.backup.agent.mysqldump.mysqldumpOptions=--all-databases --add-drop-database --skip-lock-tables --skip-add-locks
-replicator.backup.agent.mysqldump.hotBackupEnabled=false
-
-# Options for MySQL 5.0 or 5.1 with BUG 34306 fix.
-#replicator.backup.agent.mysqldump.mysqldumpOptions=--all-databases --add-drop-database
-#replicator.backup.agent.mysqldump.hotBackupEnabled=true
-
-# Options to backup a few databases only.  This works on any database and 
-# can run hot on slaves thanks to the --single-transation option. 
-#replicator.backup.agent.mysqldump.mysqldumpOptions=--databases --add-drop-database --single-transaction tungsten test
-#replicator.backup.agent.mysqldump.hotBackupEnabled=true
+replicator.backup.agent.mysqldump.mysqldumpOptions=--opt --all-databases --add-drop-database
+replicator.backup.agent.mysqldump.hotBackupEnabled=true
 
 # LVM Snapshot Agent--backup using LVM snapshot and file copy
 replicator.backup.agent.lvm=com.continuent.tungsten.replicator.backup.mysql.MySqlLvmDumpAgent
