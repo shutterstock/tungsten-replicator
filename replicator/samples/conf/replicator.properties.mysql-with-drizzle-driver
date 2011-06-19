@@ -95,10 +95,6 @@ replicator.global.buffer.size=10
 # that apply is single threaded. 
 replicator.global.apply.channels=1
 
-# Information regarding the RMI port to use
-# for advertising JMX services
-replicator.rmi_port=10000
-
 # Policy for shard assignment based on default database.  If 'stringent', use
 # default database only if SQL is recognized.  For 'relaxed' always use the 
 # default database if it is available. 

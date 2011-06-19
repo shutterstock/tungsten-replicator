@@ -56,10 +56,6 @@ replicator.postfilter=mysqlsessions
 # defined below. 
 replicator.applier=drizzle
 
-# Information regarding the RMI port to use
-# for advertising JMX services
-replicator.rmi_port=10000
-
 # Used by manager to create datasources dynamically
 replicator.resourceJdbcUrl=jdbc:drizzle://$serviceFacet.name$:$serviceFacet.port$/\${DBNAME}
 replicator.resourceJdbcDriver=org.drizzle.jdbc.Driver

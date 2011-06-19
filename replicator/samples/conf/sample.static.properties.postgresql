@@ -40,10 +40,6 @@ replicator.service.type=local
 # Service to which this replicator belongs.
 service.name=default
 
-# Information regarding the RMI port to use
-# for advertising JMX services
-replicator.rmi_port=10000
-
 # Used by manager to create datasources dynamically
 replicator.resourceJdbcUrl=jdbc:postgresql://@HOSTNAME@/${DBNAME}
 replicator.resourceJdbcDriver=org.postgresql.Driver

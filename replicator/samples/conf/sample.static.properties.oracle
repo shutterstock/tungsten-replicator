@@ -49,10 +49,6 @@ service.name=default
 # Schema to store Replicator catalog tables.
 replicator.schema=tungsten_${service.name}
 
-# Information regarding the RMI port to use
-# for advertising JMX services
-replicator.rmi_port=10000
-
 # Used by manager to create datasources dynamically
 replicator.resourceJdbcUrl=jdbc:oracle:thin:@hostname@:1521:${DBNAME}
 replicator.resourceJdbcDriver=oracle.jdbc.driver.OracleDriver
