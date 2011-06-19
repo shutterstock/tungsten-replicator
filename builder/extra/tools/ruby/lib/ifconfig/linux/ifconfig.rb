@@ -12,7 +12,7 @@ class Ifconfig
   # 
   def initialize(input=nil,netstat=nil,verbose=nil)
     if input.nil?
-      cmd = IO.popen('which ifconfig 2>/dev/null'){ |f| f.readlines[0] }
+      cmd = IO.popen('which ifconfig 2>/dev/null'){ |f| f.readlines[0].chomp }
       if cmd.nil?
         @ifconfig = IO.popen("/sbin/ifconfig -a"){ |f| f.readlines.join }
       else
