@@ -750,6 +750,10 @@ public abstract class RowsLogEvent extends LogEvent
                     throw new MySQLExtractException(
                             "Failure while extracting blob", e);
                 }
+                if (spec != null)
+                {
+                    spec.setType(java.sql.Types.BLOB);
+                }
                 return length + blob_size;
 
             case MysqlBinlog.MYSQL_TYPE_VARCHAR :
@@ -891,7 +895,7 @@ public abstract class RowsLogEvent extends LogEvent
             OneRowChange.ColumnVal value = oneRowChange.new ColumnVal();
             if (isKeySpec)
             {
-                if (isKeySpec && rowIndex == 0)
+                if (rowIndex == 0)
                 {
                     spec = oneRowChange.new ColumnSpec();
                     spec.setIndex(i + 1);
@@ -906,6 +910,17 @@ public abstract class RowsLogEvent extends LogEvent
                     spec = oneRowChange.new ColumnSpec();
                     spec.setIndex(i + 1);
                     oneRowChange.getColumnSpec().add(spec);
+                }
+                else
+                {
+                    // Check if column was null until now
+                    ColumnSpec columnSpec = oneRowChange.getColumnSpec().get(i);
+                    if (columnSpec != null
+                            && columnSpec.getType() == java.sql.Types.NULL
+                            && !isNull)
+                    {
+                        spec = columnSpec;
+                    }
                 }
                 oneRowChange.getColumnValues().get(rowIndex).add(value);
             }

@@ -82,12 +82,32 @@ public class MySQLDrizzleDatabase extends MySQLDatabase
     @Override
     public String getPlaceHolder(ColumnSpec col, Object colValue, String typeDesc)
     {
-        if (col.getType() == Types.BLOB && colValue instanceof SerialBlob
-                && typeDesc != null && typeDesc.contains("TEXT"))
-            return " UNHEX ( ? ) ";
-        else if (col.getType() == Types.VARCHAR && colValue instanceof byte[])
-            return " UNHEX ( ? ) ";
+        if (col.getType() == Types.BLOB && typeDesc != null
+                && typeDesc.contains("TEXT"))
+        {
+            if (colValue == null)
+                return " NULL ";
+            else if (colValue instanceof SerialBlob)
+                return " UNHEX ( ? ) ";
+        }
+        else if (col.getType() == Types.VARCHAR)
+            if (colValue == null)
+                return " NULL ";
+            else if (colValue instanceof byte[])
+                return " UNHEX ( ? ) ";
         return super.getPlaceHolder(col, colValue, typeDesc);
+    }
+
+    @Override
+    public boolean nullsBoundDifferently(ColumnSpec col)
+    {
+        return (col.getType() == Types.BLOB || col.getType() == Types.VARCHAR);
+    }
+
+    @Override
+    public boolean nullsEverBoundDifferently()
+    {
+        return true;
     }
 
 }

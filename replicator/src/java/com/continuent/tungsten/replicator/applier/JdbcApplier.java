@@ -465,6 +465,7 @@ public class JdbcApplier implements RawApplier
                 {
                     cv.setName(column.getName());
                     cv.setSigned(column.isSigned());
+                    cv.setTypeDescription(column.getTypeDescription());
 
                     // Check whether column is real blob on the applier side
                     if (cv.getType() == Types.BLOB)
