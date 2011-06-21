@@ -352,7 +352,7 @@ public abstract class RowsLogEvent extends LogEvent
     /**
      * Returns the number of bytes that is used to store a decimal whose
      * precision and scale are given
-     *
+     * 
      * @param precision of the decimal
      * @param scale of the decimal
      * @return number of bytes used to store the decimal(precision, scale)
@@ -921,6 +921,8 @@ public abstract class RowsLogEvent extends LogEvent
                     {
                         spec = columnSpec;
                     }
+                    else
+                        spec = null;
                 }
                 oneRowChange.getColumnValues().get(rowIndex).add(value);
             }
