@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s): Robert Hodges
+ * Contributor(s): Robert Hodges, Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.applier;
@@ -66,7 +66,7 @@ public class TestApplierPlugin extends TestCase
             sql.add(new StatementData("SELECT " + i));
             applier.apply(new DBMSEvent(i.toString(), sql, new Timestamp(System.currentTimeMillis())),
                     new ReplDBMSHeaderData(i, (short) 0, true, "test", 0,
-                            "test"), true);
+                            "test"), true, false);
         }
 
         ArrayList<StatementData> sql = ((DummyApplier) applier).getTrx();

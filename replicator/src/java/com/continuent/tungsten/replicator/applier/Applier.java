@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2009 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.applier;
@@ -42,6 +42,8 @@ public interface Applier extends ReplicatorPlugin
      * @param event Event to be applied
      * @param doCommit Boolean flag indicating whether this is the last part of
      *            multipart event
+     * @param doRollback Boolean flag indicating whether this transaction should
+     *            rollback
      * @param syncTHL Should this applier synchronize the trep_commit_seqno
      *            table? This should be false for slave.
      * @throws ReplicatorException Thrown if applier processing fails
@@ -49,9 +51,9 @@ public interface Applier extends ReplicatorPlugin
      *             consistency check has failed
      * @throws InterruptedException Thrown if the applier is interrupted
      */
-    public void apply(ReplDBMSEvent event, boolean doCommit, boolean syncTHL)
-            throws ReplicatorException, ConsistencyException,
-            InterruptedException;
+    public void apply(ReplDBMSEvent event, boolean doCommit,
+            boolean doRollback, boolean syncTHL) throws ReplicatorException,
+            ConsistencyException, InterruptedException;
 
     /**
      * Update current recovery position but do not apply an event.
@@ -77,7 +79,7 @@ public interface Applier extends ReplicatorPlugin
     public void commit() throws ReplicatorException, InterruptedException;
 
     /**
-     * Rolls back any current work.  
+     * Rolls back any current work.
      * 
      * @throws InterruptedException
      */

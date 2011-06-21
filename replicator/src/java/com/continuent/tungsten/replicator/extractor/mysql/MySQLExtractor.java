@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -726,6 +726,9 @@ public class MySQLExtractor implements RawExtractor
                  * immediately.
                  */
                 boolean doCommit = false;
+                boolean doRollback = false;
+
+                boolean unsafeForBlockCommit = false;
 
                 if (logEvent.getClass() == QueryLogEvent.class)
                 {
@@ -765,7 +768,8 @@ public class MySQLExtractor implements RawExtractor
                     // START TRANSACTION, since they start new transaction at
                     // the same time
                     doCommit = !inTransaction || sqlOperation.isAutoCommit();
-                    if (sqlOperation.getOperation() == SqlOperation.BEGIN)
+                    int operation = sqlOperation.getOperation();
+                    if (operation == SqlOperation.BEGIN)
                     {
                         inTransaction = true;
                         doCommit = false;
@@ -806,19 +810,25 @@ public class MySQLExtractor implements RawExtractor
                         continue;
                     }
 
-                    if (sqlOperation.getOperation() == SqlOperation.COMMIT)
+                    if (operation == SqlOperation.COMMIT)
                     {
                         // This is a COMMIT statement : dropping it for now
                         // Temporary workaround for TREP-243
                         doCommit = true;
                         inTransaction = !autocommitMode;
                     }
+                    else if (operation == SqlOperation.ROLLBACK)
+                    {
+                        doRollback = true;
+                        inTransaction = !autocommitMode;
+
+                    }
                     else
                     {
                         // some optimisation: it makes sense to check for
                         // 'CREATE DATABASE' only if we know that it is not
                         // regular DML - this is a fix for TREP-52 - attempt
-                        // to use DB whis hasn't been created yet.
+                        // to use DB which hasn't been created yet.
                         boolean isCreateOrDropDB = sqlOperation.getObjectType() == SqlOperation.SCHEMA;
                         boolean prependUseDb = !(sqlOperation.isAutoCommit() && isCreateOrDropDB);
 
@@ -847,6 +857,12 @@ public class MySQLExtractor implements RawExtractor
                         if (isCreateOrDropDB)
                             statement.addOption(
                                     StatementData.CREATE_OR_DROP_DB, "");
+
+                        if (operation == SqlOperation.CREATE
+                                || operation == SqlOperation.DROP
+                                || operation == SqlOperation.ALTER
+                                || operation == SqlOperation.UNRECOGNIZED)
+                            unsafeForBlockCommit = true;
 
                         statement.setTimestamp(event.getWhen().getTime());
                         if (!useBytesForStrings)
@@ -1098,7 +1114,7 @@ public class MySQLExtractor implements RawExtractor
                     logger.debug("got binlog event: " + logEvent);
                 }
 
-                if (doCommit)
+                if (doCommit || doRollback)
                 {
                     logger.debug("Performing commit processing in extractor");
 
@@ -1148,6 +1164,12 @@ public class MySQLExtractor implements RawExtractor
                 {
                     dbmsEvent.addMetadataOption(ReplOptionParams.SERVER_ID,
                             String.valueOf(serverId));
+                    if (doRollback)
+                        dbmsEvent.addMetadataOption(ReplOptionParams.ROLLBACK,
+                                "");
+                    if (unsafeForBlockCommit)
+                        dbmsEvent.addMetadataOption(
+                                ReplOptionParams.UNSAFE_FOR_BLOCK_COMMIT, "");
                     return dbmsEvent;
                 }
             }

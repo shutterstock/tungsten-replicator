@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -135,8 +135,8 @@ public class JdbcApplier implements RawApplier
     protected HashMap<String, String> currentOptions;
 
     // SQL parser.
-    SqlOperationMatcher               sqlMatcher             = new MySQLOperationMatcher();
- 
+    SqlOperationMatcher               sqlMatcher           = new MySQLOperationMatcher();
+
     // Setters.
 
     /**
@@ -1102,10 +1102,11 @@ public class JdbcApplier implements RawApplier
      * {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.applier.RawApplier#apply(com.continuent.tungsten.replicator.event.DBMSEvent,
-     *      com.continuent.tungsten.replicator.event.ReplDBMSHeader, boolean)
+     *      com.continuent.tungsten.replicator.event.ReplDBMSHeader, boolean,
+     *      boolean)
      */
-    public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit)
-            throws ApplierException, ConsistencyException
+    public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit,
+            boolean doRollback) throws ApplierException, ConsistencyException
     {
         boolean transactionCommitted = false;
         boolean consistencyCheckFailure = false;
@@ -1118,7 +1119,7 @@ public class JdbcApplier implements RawApplier
         // case can arise during restart.
         if (lastProcessedEvent != null && lastProcessedEvent.getLastFrag()
                 && lastProcessedEvent.getSeqno() >= header.getSeqno()
-                && ! (event instanceof DBMSEmptyEvent))
+                && !(event instanceof DBMSEmptyEvent))
         {
             logger.info("Skipping over previously applied event: seqno="
                     + header.getSeqno() + " fragno=" + header.getFragno());
@@ -1216,11 +1217,8 @@ public class JdbcApplier implements RawApplier
                         if (invalidated > 0)
                         {
                             if (logger.isDebugEnabled())
-                                logger
-                                        .debug("Table metadata invalidation: stmt="
-                                                + query
-                                                + " invalidated="
-                                                + invalidated);
+                                logger.debug("Table metadata invalidation: stmt="
+                                        + query + " invalidated=" + invalidated);
                         }
                     }
                     else if (dataElem instanceof RowIdData)
@@ -1277,9 +1275,16 @@ public class JdbcApplier implements RawApplier
             {
                 if (!emptyEvent)
                 {
-                    // at this point we want to commit transaction even if
-                    // consistencyCheck() or heartbeat failed.
-                    if (doCommit)
+                    // at this point we want to commit or rollback transaction
+                    // even if consistencyCheck() or heartbeat failed.
+                    if (doRollback)
+                    {
+                        rollbackTransaction();
+                        updateCommitSeqno(lastProcessedEvent, appliedLatency);
+                        // And commit
+                        commitTransaction();
+                        transactionCommitted = true;                    }
+                    else if (doCommit)
                     {
                         commitTransaction();
                         transactionCommitted = true;
@@ -1353,8 +1358,8 @@ public class JdbcApplier implements RawApplier
     }
 
     /**
-     * 
      * {@inheritDoc}
+     * 
      * @see com.continuent.tungsten.replicator.applier.RawApplier#rollback()
      */
     public void rollback() throws InterruptedException
@@ -1365,8 +1370,8 @@ public class JdbcApplier implements RawApplier
         }
         catch (SQLException e)
         {
-            // Stack trace is not normally desirable as it creates 
-            // a lot of extra information in the log. 
+            // Stack trace is not normally desirable as it creates
+            // a lot of extra information in the log.
             logger.info("Unable to roll back transaction");
             if (logger.isDebugEnabled())
                 logger.debug("Transaction rollback error", e);

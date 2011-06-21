@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Scott Martin
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.database;
@@ -60,6 +60,7 @@ public class SqlOperation
     public static int BEGIN_END    = 12;
     public static int SELECT       = 13;
     public static int ALTER        = 14;
+    public static int ROLLBACK     = 15;
 
     // Specialized operation types for MySQL.
     public static int FLUSH_TABLES = 101;
@@ -68,7 +69,7 @@ public class SqlOperation
     int               operation;
     String            schema;
     String            name;
-    boolean           autoCommit = true;
+    boolean           autoCommit   = true;
     boolean           bidiUnsafe;
 
     /** Instantiate a SQL operation with default values. */

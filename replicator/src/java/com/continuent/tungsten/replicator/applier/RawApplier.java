@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s): Robert Hodges 
+ * Contributor(s): Robert Hodges, Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.applier;
@@ -53,13 +53,16 @@ public interface RawApplier extends ReplicatorPlugin
      * @param header Header data corresponding to event
      * @param doCommit Boolean flag indicating whether this is the last part of
      *            multi-part event
+     * @param doRollback Boolean flag indicating whether this transaction should
+     *            rollback
      * @throws ApplierException Thrown if applier processing fails
      * @throws ConsistencyException Thrown if the applier detects that a
      *             consistency check has failed
      * @throws InterruptedException Thrown if the applier is interrupted
      */
-    public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit)
-            throws ApplierException, ConsistencyException, InterruptedException;
+    public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit,
+            boolean doRollback) throws ApplierException, ConsistencyException,
+            InterruptedException;
 
     /**
      * Commits current open transaction to ensure data applied up to current
@@ -71,9 +74,9 @@ public interface RawApplier extends ReplicatorPlugin
     public void commit() throws ApplierException, InterruptedException;
 
     /**
-     * Rolls back any current work.  
+     * Rolls back any current work.
      * 
-     * @throws InterruptedException Thrown if the applier is interrupted. 
+     * @throws InterruptedException Thrown if the applier is interrupted.
      */
     public void rollback() throws InterruptedException;
 

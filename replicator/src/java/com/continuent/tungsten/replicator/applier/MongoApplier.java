@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s): Robert Hodges
+ * Contributor(s): Robert Hodges, Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.applier;
@@ -84,10 +84,10 @@ public class MongoApplier implements RawApplier
      * Applies row updates to MongoDB. Statements are discarded. {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.applier.RawApplier#apply(com.continuent.tungsten.replicator.event.DBMSEvent,
-     *      com.continuent.tungsten.replicator.event.ReplDBMSHeader, boolean)
+     *      com.continuent.tungsten.replicator.event.ReplDBMSHeader, boolean, boolean)
      */
     @Override
-    public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit)
+    public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit, boolean doRollback)
             throws ApplierException, ConsistencyException, InterruptedException
     {
         ArrayList<DBMSData> dbmsDataValues = event.getData();

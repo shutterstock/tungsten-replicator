@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.database;
@@ -132,6 +132,12 @@ public class MySQLOperationMatcher implements SqlOperationMatcher
     protected Pattern                   commit          = Pattern
                                                                 .compile(
                                                                         "^(commit)*",
+                                                                        Pattern.CASE_INSENSITIVE);
+
+    // ROLLBACK
+    protected Pattern                   rollback        = Pattern
+                                                                .compile(
+                                                                        "^(rollback)*",
                                                                         Pattern.CASE_INSENSITIVE);
 
     // BEGIN ... END block
@@ -260,6 +266,17 @@ public class MySQLOperationMatcher implements SqlOperationMatcher
             {
                 return new SqlOperation(SqlOperation.TRANSACTION,
                         SqlOperation.COMMIT, null, null);
+            }
+        }
+
+        // Look for a rollback statement
+        else if (prefix.startsWith("ROLLBACK"))
+        {
+            m = rollback.matcher(statement);
+            if (m.find())
+            {
+                return new SqlOperation(SqlOperation.TRANSACTION,
+                        SqlOperation.ROLLBACK, null, null);
             }
         }
 

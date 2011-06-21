@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.applier;
@@ -74,10 +74,11 @@ public class ApplierWrapper implements ParallelApplier
      * Apply the DBMSEvent in the ReplDBMSEvent. {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.applier.Applier#apply(com.continuent.tungsten.replicator.event.ReplDBMSEvent,
-     *      boolean, boolean)
+     *      boolean, boolean, boolean)
      */
-    public void apply(ReplDBMSEvent event, boolean doCommit, boolean syncTHL)
-            throws ApplierException, ConsistencyException, InterruptedException
+    public void apply(ReplDBMSEvent event, boolean doCommit,
+            boolean doRollback, boolean syncTHL) throws ApplierException,
+            ConsistencyException, InterruptedException
     {
         DBMSEvent myEvent = event.getDBMSEvent();
         if (myEvent instanceof DBMSEmptyEvent)
@@ -88,16 +89,16 @@ public class ApplierWrapper implements ParallelApplier
             // - if it is the last fragment, it should commit
             if (event.getFragno() > 0)
             {
-                applier.apply(myEvent, event, true);
+                applier.apply(myEvent, event, true, false);
             }
             else
             {
                 // Empty commit : just ignore
-                applier.apply(myEvent, event, false);
+                applier.apply(myEvent, event, false, false);
             }
         }
         else
-            applier.apply(myEvent, event, doCommit);
+            applier.apply(myEvent, event, doCommit, doRollback);
     }
 
     /**
@@ -110,7 +111,7 @@ public class ApplierWrapper implements ParallelApplier
             boolean syncTHL) throws ReplicatorException, InterruptedException
     {
         DBMSEmptyEvent empty = new DBMSEmptyEvent(null, null);
-        applier.apply(empty, header, doCommit);
+        applier.apply(empty, header, doCommit, false);
     }
 
     /**

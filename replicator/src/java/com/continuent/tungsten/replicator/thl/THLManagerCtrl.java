@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -242,8 +242,8 @@ public class THLManagerCtrl
      * @param pureSQL If true, use pure SQL output. Formatted form otherwise.
      * @return Schema name as given in the schema parameter.
      */
-    private static String printSchema(StringBuilder sb, String schema, String lastSchema,
-            boolean pureSQL)
+    private static String printSchema(StringBuilder sb, String schema,
+            String lastSchema, boolean pureSQL)
     {
         if (schema != null
                 && (lastSchema == null || (lastSchema != null && lastSchema
@@ -369,8 +369,9 @@ public class THLManagerCtrl
         {
             if (sb.length() > 1)
                 sb.append(";");
-            sb.append(option.getOptionName()).append("=")
-                    .append(option.getOptionValue());
+            String value = option.getOptionValue();
+            sb.append(option.getOptionName()).append(
+                    (value != null && value.length() > 0 ? "=" + value : ""));
         }
         sb.append("]");
         println(stringBuilder, "- METADATA = " + sb.toString());
@@ -527,7 +528,7 @@ public class THLManagerCtrl
             {
                 println(stringBuilder, " - ACTION = "
                         + oneRowChange.getAction().toString());
-                println(stringBuilder, 
+                println(stringBuilder,
                         " - SCHEMA = " + oneRowChange.getSchemaName());
                 println(stringBuilder,
                         " - TABLE = " + oneRowChange.getTableName());
