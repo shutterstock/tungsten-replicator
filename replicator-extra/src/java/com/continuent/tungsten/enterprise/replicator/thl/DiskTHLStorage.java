@@ -29,8 +29,10 @@ import java.util.ArrayList;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.config.Interval;
+import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.enterprise.replicator.thl.serializer.ProtobufSerializer;
 import com.continuent.tungsten.replicator.ReplicatorException;
+import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
@@ -63,6 +65,7 @@ public class DiskTHLStorage implements THLStorage
     protected String        password;
     protected String        url;
     protected String        user;
+    protected String        vendor;
 
     /** Store and compare checksum values on the log. */
     private boolean         doChecksum           = true;
@@ -108,11 +111,14 @@ public class DiskTHLStorage implements THLStorage
         // Prepare database connection.
         if (url != null && url.length() > 0)
         {
-            ReplicatorRuntime runtime = (ReplicatorRuntime) context;
-            String metadataSchema = context.getReplicatorSchemaName();
-            database = new JdbcTHLDatabase(runtime, null);
-            database.connect(url, user, password, metadataSchema);
-            database.prepareSchema();
+			ReplicatorRuntime runtime = (ReplicatorRuntime) context;
+			TungstenProperties conf = context.getReplicatorProperties();
+			String metadataSchema = context.getReplicatorSchemaName();
+			if (vendor == null && conf != null) // For heterogeneous cases.
+				vendor = conf.getString(ReplicatorConf.RESOURCE_VENDOR);
+			database = new JdbcTHLDatabase(runtime, null);
+			database.connect(url, user, password, metadataSchema, vendor);
+			database.prepareSchema();
         }
 
         // Configure and prepare the log.
