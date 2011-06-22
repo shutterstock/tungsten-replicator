@@ -108,7 +108,7 @@ public class ParallelQueueApplier implements ParallelApplier
      * @see com.continuent.tungsten.replicator.applier.Applier#apply(com.continuent.tungsten.replicator.event.ReplDBMSEvent,
      *      boolean)
      */
-    public void apply(ReplDBMSEvent event, boolean doCommit, boolean syncTHL)
+    public void apply(ReplDBMSEvent event, boolean doCommit, boolean doRollback, boolean syncTHL)
             throws ReplicatorException, ConsistencyException,
             InterruptedException
     {
