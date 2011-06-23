@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.database.Database;
+import com.continuent.tungsten.replicator.database.GreenplumDatabase;
 import com.continuent.tungsten.replicator.database.Key;
 import com.continuent.tungsten.replicator.database.Table;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
@@ -72,6 +73,9 @@ public class CommitSeqnoTable
     private Column             commitSeqnoTableEventId;
     private Column             commitSeqnoTableAppliedLatency;
     private Column             commitSeqnoTableUpdateTimestamp;
+    
+    /* Greenplum specifics */
+    private String             GREENPLUM_DISTRIBUTED_BY = "greenplumn_id";
 
     private PreparedStatement  commitSeqnoUpdate;
     private PreparedStatement  lastSeqnoQuery;
@@ -117,7 +121,15 @@ public class CommitSeqnoTable
         commitSeqnoTable.AddColumn(commitSeqnoTableEventId);
         commitSeqnoTable.AddColumn(commitSeqnoTableAppliedLatency);
         commitSeqnoTable.AddColumn(commitSeqnoTableUpdateTimestamp);
-
+        
+        if (database instanceof GreenplumDatabase)
+        {
+            // Add a serialized distribution column for the table.
+            Column commitSeqnoTableGreenplumId = new Column(
+                    GREENPLUM_DISTRIBUTED_BY, java.sql.Types.INTEGER);
+            commitSeqnoTable.AddColumn(commitSeqnoTableGreenplumId);
+        }
+        
         Key pkey = new Key(Key.Primary);
         pkey.AddColumn(commitSeqnoTableTaskId);
         commitSeqnoTable.AddKey(pkey);
@@ -145,6 +157,13 @@ public class CommitSeqnoTable
             logger.debug("Initializing " + TABLE_NAME + " table");
 
         database.createTable(commitSeqnoTable, false, tableType);
+        
+        if (database instanceof GreenplumDatabase)
+        {
+            // Specify distribution column for the table.
+            ((GreenplumDatabase) database).setDistributedBy(schema,
+                    commitSeqnoTable.getName(), GREENPLUM_DISTRIBUTED_BY);
+        }
 
         // Check to see if we need to initialize data for this task ID.
         if (lastCommitSeqno(taskId) == null)

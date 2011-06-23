@@ -309,6 +309,17 @@ public class GreenplumDatabase extends AbstractDatabase
     }
 
     /**
+     * Set's a Distribution Key for the table.
+     */
+    public void setDistributedBy(String schema, String table, String column)
+            throws SQLException
+    {
+        String SQL = "ALTER TABLE " + schema + "." + table
+                + " SET DISTRIBUTED BY (" + column + ")";
+        execute(SQL);
+    }
+
+    /**
      * Before using session variables in PostgreSQL one needs to define them in
      * postgresql.conf
      * 
