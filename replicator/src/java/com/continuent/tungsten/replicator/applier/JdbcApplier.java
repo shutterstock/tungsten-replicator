@@ -621,7 +621,7 @@ public class JdbcApplier implements RawApplier
         }
         catch (SQLException e)
         {
-            logFailedStatementSQL(data.getQuery());
+            logFailedStatementSQL(data.getQuery(), e);
             throw new ApplierException(e);
         }
     }
@@ -736,14 +736,22 @@ public class JdbcApplier implements RawApplier
         return sessionVarChange;
     }
 
+    protected void logFailedStatementSQL(String sql)
+    {
+        logFailedStatementSQL(sql, null);
+    }
+
     /**
      * Logs SQL into error log stream. Trims the message if it exceeds
-     * maxSQLLogLength.
+     * maxSQLLogLength.<br/>
+     * In addition, extracts and logs next exception of the SQLException, if
+     * available. This extends logging detail that is provided by general
+     * exception logging mechanism.
      * 
      * @see #maxSQLLogLength
      * @param sql the sql statement to be logged
      */
-    protected void logFailedStatementSQL(String sql)
+    protected void logFailedStatementSQL(String sql, SQLException ex)
     {
         try
         {
@@ -751,6 +759,18 @@ public class JdbcApplier implements RawApplier
             if (log.length() > maxSQLLogLength)
                 log = log.substring(0, maxSQLLogLength);
             logger.error(log);
+
+            // Sometimes there's more details to extract from the exception.
+            if (ex != null && ex.getCause() != null
+                    && ex.getCause() instanceof SQLException)
+            {
+                SQLException nextException = ((SQLException) ex.getCause())
+                        .getNextException();
+                if (nextException != null)
+                {
+                    logger.error(nextException.getMessage());
+                }
+            }
         }
         catch (Exception e)
         {

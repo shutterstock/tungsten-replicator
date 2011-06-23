@@ -125,7 +125,7 @@ public class DrizzleApplier extends JdbcApplier
         }
         catch (SQLException e)
         {
-            logFailedStatementSQL(query);
+            logFailedStatementSQL(query, e);
             throw new ApplierException(e);
         }
     }

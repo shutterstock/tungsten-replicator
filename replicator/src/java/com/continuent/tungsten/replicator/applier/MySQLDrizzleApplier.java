@@ -216,7 +216,7 @@ public class MySQLDrizzleApplier extends MySQLApplier
         }
         catch (SQLException e)
         {
-            logFailedStatementSQL(data.getQuery());
+            logFailedStatementSQL(data.getQuery(), e);
             throw new ApplierException(e);
         }
 
@@ -233,7 +233,7 @@ public class MySQLDrizzleApplier extends MySQLApplier
         }
         catch (SQLException e)
         {
-            logFailedStatementSQL(data.getQuery());
+            logFailedStatementSQL(data.getQuery(), e);
             throw new ApplierException(e);
         }
         catch (FileNotFoundException e)

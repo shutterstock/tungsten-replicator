@@ -146,7 +146,7 @@ public class MySQLApplier extends JdbcApplier
         }
         catch (SQLException e)
         {
-            logFailedStatementSQL(query);
+            logFailedStatementSQL(query, e);
             throw new ApplierException(e);
         }
     }
@@ -289,7 +289,7 @@ public class MySQLApplier extends JdbcApplier
         }
         catch (SQLException e)
         {
-            logFailedStatementSQL(data.getQuery());
+            logFailedStatementSQL(data.getQuery(), e);
             throw new ApplierException(e);
         }
 
@@ -307,7 +307,7 @@ public class MySQLApplier extends JdbcApplier
         }
         catch (SQLException e)
         {
-            logFailedStatementSQL(data.getQuery());
+            logFailedStatementSQL(data.getQuery(), e);
             throw new ApplierException(e);
         }
         catch (FileNotFoundException e)
