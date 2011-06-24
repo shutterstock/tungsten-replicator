@@ -8,7 +8,8 @@ module ConfigureDeploymentStepDeployment
   module_function :get_deployment_methods
   
   def create_release
-    unless @config.getProperty(HOME_DIRECTORY) == Configurator.instance.get_base_path()
+    symlink_source = false
+    unless @config.getProperty(HOME_DIRECTORY) == Configurator.instance.get_base_path() || ("#{@config.getProperty(HOME_DIRECTORY)}/releases/#{Configurator.instance.get_basename()}" == Configurator.instance.get_base_path())
       if @config.getProperty(DEPLOY_CURRENT_PACKAGE) == "true"
         if @config.getProperty(HOME_DIRECTORY) == get_deployment_basedir()
           destination = get_deployment_basedir()
@@ -127,12 +128,20 @@ module ConfigureDeploymentStepDeployment
     debug("Write #{config_file}")
 
     host_config = @stored_config.dup()
-    host_config.setProperty(DEPLOYMENT_TYPE, DIRECT_DEPLOYMENT_NAME)
+    host_config.setProperty(DEPLOYMENT_TYPE, DISTRIBUTED_DEPLOYMENT_NAME)
     host_config.setProperty(GLOBAL_DEPLOY_PACKAGE_URI, nil)
     host_config.setProperty(DEPLOY_PACKAGE_URI, nil)
     host_config.setProperty(DEPLOY_CURRENT_PACKAGE, "true")
+    
+    host_config.getPropertyOr(REPL_SERVICES, {}).delete_if{
+      |s_alias, s_props|
+      
+      (host_config.getProperty([REPL_SERVICES, s_alias, DEPLOYMENT_HOST]) != host_config.getProperty(DEPLOYMENT_HOST))
+    }
+    # Remove this to leave the services for the host in the config file
     host_config.setProperty(REPL_SERVICES, nil)
-    host_config.getProperty(HOSTS).delete_if{
+    
+    host_config.getPropertyOr(HOSTS, {}).delete_if{
       |h_alias, h_props|
       
       (h_alias != host_config.getProperty(DEPLOYMENT_HOST))
