@@ -267,10 +267,17 @@ class ReplicatorInstallPackage < ConfigurePackage
   def process_master_slave_options(options)
     if options.getProperty("cluster-hosts") == nil
       error("You must specify cluster-hosts")
+      cluster_hosts = []
+    else
+      cluster_hosts = options.getProperty("cluster-hosts").split(',')
     end
     
     if options.getProperty("master-host") == nil
       error("You must specify a master-host")
+    end
+    
+    unless cluster_hosts.include?(options.getProperty("master-host"))
+      confirm("The master-host (#{options.getProperty('master-host')}) does not appear in the cluster-hosts (#{options.getProperty('cluster-hosts')}).")
     end
     
     if options.getProperty("service-name") == nil
@@ -292,7 +299,7 @@ class ReplicatorInstallPackage < ConfigurePackage
     @config.setProperty(DATASERVERS, nil)
     @config.setProperty(REPL_SERVICES, nil)
     
-    options.getProperty("cluster-hosts").split(',').each{
+    cluster_hosts.each{
       |host|
       host_alias = host.tr('.', '_')
       @config.setProperty([HOSTS, host_alias], {
