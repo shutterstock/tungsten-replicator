@@ -15,6 +15,9 @@ class DataServers < GroupConfigurePrompt
       DataserverPassword.new(),
       
       MySQLDataDirectory.new(),
+      MySQLBinlogDirectory.new(),
+      MySQLBinlogPattern.new(),
+      MySQLReplicationUseRelayLogs.new(),
       ReplicationServiceUseDrizzle.new(),
       MySQLServerID.new(),
       
