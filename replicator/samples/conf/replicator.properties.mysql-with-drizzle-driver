@@ -360,7 +360,7 @@ replicator.extractor.mysql.transaction_frag_size=1000000
 
 # When using relay logs we download from the master into binlog_dir.  This 
 # is used for off-board replication. 
-replicator.extractor.mysql.useRelayLogs=true
+replicator.extractor.mysql.useRelayLogs=false
 
 # When you turn on relay logs, you must define a location for them.  This
 # overrides the normal log directory.
