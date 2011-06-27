@@ -19,15 +19,16 @@
  * Initial developer(s): Robert Hodges
  * Contributor(s): 
  */
+
 package com.continuent.tungsten.replicator.shard;
 
 /**
- * Default shard management interface with stubbed out implementations. 
+ * Default shard management interface with stubbed out implementations.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
-public class NullShardManager implements ShardManager
+public class NullShardManager
 {
 
 }

@@ -29,6 +29,7 @@ import java.util.Map;
 import com.continuent.tungsten.commons.cluster.resource.physical.ReplicatorCapabilities;
 import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.replicator.ReplicatorException;
+import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 
 /**
  * Replicator management plug-in definition. This interface defines basic
@@ -213,4 +214,6 @@ public interface OpenReplicatorPlugin
 
     /** Latency in seconds between sent and applied events. */
     public static final String STATUS_APPLIED_LATENCY = "applied-latency";
+
+    public ReplicatorRuntime getReplicatorRuntime();
 }

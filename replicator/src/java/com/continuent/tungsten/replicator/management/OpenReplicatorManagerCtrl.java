@@ -35,6 +35,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -53,6 +54,9 @@ import com.continuent.tungsten.commons.jmx.ServerRuntimeException;
 import com.continuent.tungsten.commons.utils.ManifestParser;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.consistency.ConsistencyTable;
+import com.continuent.tungsten.replicator.shard.ShardManager;
+import com.continuent.tungsten.replicator.shard.ShardManagerMBean;
+import com.continuent.tungsten.replicator.shard.ShardTable;
 
 /**
  * This class defines a ReplicatorManagerCtrl that implements a simple utility
@@ -78,6 +82,7 @@ public class OpenReplicatorManagerCtrl
     private JMXConnector                   conn                 = null;
     private ReplicationServiceManagerMBean serviceManagerMBean  = null;
     private OpenReplicatorManagerMBean     openReplicatorMBean  = null;
+    private ShardManagerMBean              shardMBean           = null;
 
     // JMX connection parameters.
     private String                         rmiHost;
@@ -127,6 +132,10 @@ public class OpenReplicatorManagerCtrl
         println("  wait -state s [-limit s] - Wait up to s seconds for replicator state s");
         println("  wait -applied n [-limit s] - Wait up to s seconds for seqno to be applied");
         println("  check <table> [-limit offset,limit] [-method m] - generate consistency check for the given table");
+        println("Shard Commands:");
+        println("  shard [-insert shard_definition] - Add a new shard");
+        println("  shard [-update shard_definition] - Update a shard");
+        println("  shard [-delete shardId] - Delete a shard");
     }
 
     /**
@@ -283,6 +292,13 @@ public class OpenReplicatorManagerCtrl
                 printVersion();
             else if (command.equals(Commands.CAPABILITIES))
                 doCapabilities();
+
+            // Shard commands
+            else if (command.equals(Commands.SHARD))
+            {
+                doShardCommand();
+            }
+
             else
                 fatal("Unknown command, try 'help' to get a list: '" + command,
                         null);
@@ -1261,6 +1277,308 @@ public class OpenReplicatorManagerCtrl
         return yes;
     }
 
+    // SHARD COMMANDS //
+
+    private ShardManagerMBean getShardManager() throws Exception
+    {
+        if (this.shardMBean == null)
+        {
+            if (service == null)
+            {
+                // If there is just one available service, we will use that as
+                // the default.
+                List<Map<String, String>> services = serviceManagerMBean
+                        .services();
+                if (services.size() == 0)
+                {
+                    throw new Exception(
+                            "Operation requires a service name, but the replicator does not have any services defined");
+                }
+                else if (services.size() == 1)
+                {
+                    service = services.get(0).get("name");
+                    logger.debug("Inferring service name automatically: "
+                            + service);
+                }
+                else
+                {
+                    throw new Exception(
+                            "You must specify a service name with the -service flag");
+                }
+            }
+            // Get MBean connection.
+            // shardMBean = (ShardManagerMBean)
+            // getOpenReplicator().getExtensionMBean("shard-manager");
+            // shardMBean = (ShardManagerMBean) JmxManager.getMBeanProxy(conn,
+            // ShardManager.class, false);
+            shardMBean = getShardManagerSafely(service);
+
+        }
+        return shardMBean;
+    }
+
+    // Fetch a specific replicator manager MBean by name, with optional delay.
+    private ShardManagerMBean getShardManagerSafely(String name)
+            throws Exception
+    {
+        // Get MBean connection.
+        int delay = 0;
+        for (;;)
+        {
+            Exception failure = null;
+            try
+            {
+                // Fetch MBean with service name.
+                shardMBean = (ShardManagerMBean) JmxManager.getMBeanProxy(conn,
+                        ShardManager.class, ShardManagerMBean.class, name,
+                        false, false);
+                shardMBean.isAlive();
+            }
+            catch (Exception e)
+            {
+                failure = e;
+            }
+            if (failure == null)
+            {
+                if (verbose)
+                    println("Connected to ShardManagerMBean: " + name);
+                break;
+            }
+            else if (connectDelay > delay)
+            {
+                sleep(1);
+                print(".");
+                delay++;
+            }
+            else
+                throw failure;
+        }
+        // If we delayed, need to have a carriage return.
+        if (delay > 0)
+            println("");
+        return shardMBean;
+    }
+
+    private void doShardCommand() throws Exception
+    {
+        // Checks for options.
+        int operation = -1;
+        String params = null;
+        String separator = "";
+
+        boolean readStdInput = false;
+
+        while (argvIterator.hasNext())
+        {
+            String curArg = argvIterator.next();
+            try
+            {
+                if ("-insert".equals(curArg))
+                {
+                    separator = "\\],\\[";
+                    operation = ShardCommand.ADD;
+                    if (argvIterator.hasNext())
+                    {
+                        params = argvIterator.next();
+                    }
+                    else
+                    {
+                        println("Reading from standard input");
+                        readStdInput = true;
+                    }
+                }
+                else if ("-update".equals(curArg))
+                {
+                    separator = "\\],\\[";
+                    operation = ShardCommand.UPD;
+                    if (argvIterator.hasNext())
+                    {
+                        params = argvIterator.next();
+                    }
+                    else
+                    {
+                        println("Reading from standard input");
+                        readStdInput = true;
+                    }
+                }
+                else if ("-delete".equals(curArg))
+                {
+                    separator = ",";
+                    operation = ShardCommand.DEL;
+                    params = argvIterator.next();
+                }
+                else if ("-deleteAll".equals(curArg))
+                {
+                    operation = ShardCommand.DELALL;
+                }
+                else if ("-list".equals(curArg))
+                {
+                    operation = ShardCommand.LIST;
+                }
+                else
+                    fatal("Unrecognized option: " + curArg, null);
+            }
+            catch (Exception e)
+            {
+                fatal("Missing or invalid argument to flag: " + curArg, null);
+            }
+        }
+
+        List<String[]> values = new ArrayList<String[]>();
+
+        // // Load parameters, if any.
+        TungstenProperties paramProps = new TungstenProperties();
+
+        if (params != null)
+        {
+            String[] param = params.split(separator);
+            for (int i = 0; i < param.length; i++)
+            {
+                param[i] = param[i].replace("[", "");
+                param[i] = param[i].replace("]", "");
+                values.add(param[i].split(","));
+            }
+        }
+        else if (readStdInput)
+        {
+            BufferedReader in = new BufferedReader(new InputStreamReader(
+                    System.in));
+            String s;
+            while ((s = in.readLine()) != null && s.length() != 0)
+            {
+                s = s.trim();
+                if (!s.startsWith("#"))
+                {
+                    values.add(s.split("\t"));
+                }
+            }
+        }
+
+        ShardManagerMBean shardManager = getShardManager();
+        if (shardManager == null)
+        {
+            throw new Exception("Unable to connect to shard manager");
+        }
+
+        int shardsCount = 0;
+        List<Map<String, String>> shardParams = new ArrayList<Map<String, String>>();
+        switch (operation)
+        {
+            case ShardCommand.ADD :
+                for (Iterator<String[]> iterator = values.iterator(); iterator
+                        .hasNext();)
+                {
+                    String[] val = (String[]) iterator.next();
+
+                    if (val.length < 4)
+                        println("Missing parameter for shard creation : " + val
+                                + "\nSkipping");
+                    else
+                    {
+                        paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
+                        paramProps.put(ShardTable.SHARD_CRIT_COL, val[1]);
+                        paramProps.put(ShardTable.SHARD_DISPO_COL, val[2]);
+                        paramProps.put(ShardTable.SHARD_CHANNEL_COL, val[3]);
+
+                        shardParams.add(paramProps.map());
+                    }
+                }
+
+                shardsCount = shardManager.insert(shardParams);
+                println(shardsCount
+                        + " new shard"
+                        + (shardsCount > 1 ? "s" : "")
+                        + " inserted."
+                        + (shardsCount == values.size()
+                                ? ""
+                                : " Some shards were not inserted due to errors. Please check the log."));
+                break;
+
+            case ShardCommand.UPD :
+                for (Iterator<String[]> iterator = values.iterator(); iterator
+                        .hasNext();)
+                {
+                    String[] val = (String[]) iterator.next();
+
+                    if (val.length < 4)
+                        println("Missing parameter for shard creation : " + val
+                                + "\nSkipping");
+                    else
+                    {
+                        paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
+                        paramProps.put(ShardTable.SHARD_CRIT_COL, val[1]);
+                        paramProps.put(ShardTable.SHARD_DISPO_COL, val[2]);
+                        paramProps.put(ShardTable.SHARD_CHANNEL_COL, val[3]);
+
+                        shardParams.add(paramProps.map());
+                    }
+                }
+                shardsCount = shardManager.update(shardParams);
+                println(shardsCount + " shard"
+                        + (shardsCount > 1 ? "s" : "") + " updated.");
+
+                break;
+
+            case ShardCommand.DEL :
+                for (Iterator<String[]> iterator = values.iterator(); iterator
+                        .hasNext();)
+                {
+                    String[] val = (String[]) iterator.next();
+                    paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
+                    shardParams.add(paramProps.map());
+                }
+                shardsCount = shardManager.delete(shardParams);
+                println(shardsCount + " shard"
+                        + (shardsCount > 1 ? "s" : "") + " deleted.");
+                break;
+
+            case ShardCommand.DELALL :
+                shardsCount = shardManager.deleteAll();
+                println(shardsCount + " shard"
+                        + (shardsCount > 1 ? "s" : "") + " deleted.");
+                break;
+
+            case ShardCommand.LIST :
+                List<Map<String, String>> list = shardManager.list();
+                if (list == null)
+                {
+                    println("Empty shard list");
+                    break;
+                }
+
+                StringBuffer buf = new StringBuffer();
+                buf.append("#");
+                buf.append(ShardTable.SHARD_ID_COL);
+                buf.append("\t");
+                buf.append(ShardTable.SHARD_CRIT_COL);
+                buf.append("\t");
+                buf.append(ShardTable.SHARD_DISPO_COL);
+                buf.append("\t");
+                buf.append(ShardTable.SHARD_CHANNEL_COL);
+                buf.append("\t\n");
+
+                for (Iterator<Map<String, String>> iterator = list.iterator(); iterator
+                        .hasNext();)
+                {
+                    Map<String, String> map = (Map<String, String>) iterator
+                            .next();
+                    buf.append(map.get(ShardTable.SHARD_ID_COL));
+                    buf.append("\t");
+                    buf.append(map.get(ShardTable.SHARD_CRIT_COL));
+                    buf.append("\t");
+                    buf.append(map.get(ShardTable.SHARD_DISPO_COL));
+                    buf.append("\t");
+                    buf.append(map.get(ShardTable.SHARD_CHANNEL_COL));
+                    if (iterator.hasNext())
+                        buf.append("\n");
+                }
+                println(buf.toString());
+                break;
+            default :
+                break;
+        }
+    }
+
     // List of commands. Originally a separate class in commons.
     class Commands
     {
@@ -1290,5 +1608,17 @@ public class OpenReplicatorManagerCtrl
         public static final String PROVISION        = "provision";
         public static final String CAPABILITIES     = "capabilities";
         public static final String RESET            = "reset";
+
+        // Shard commands (service-specific).
+        public static final String SHARD            = "shard";
+    }
+
+    class ShardCommand
+    {
+        public static final int ADD    = 0;
+        public static final int UPD    = 1;
+        public static final int DEL    = 2;
+        public static final int LIST   = 3;
+        public static final int DELALL = 4;
     }
 }

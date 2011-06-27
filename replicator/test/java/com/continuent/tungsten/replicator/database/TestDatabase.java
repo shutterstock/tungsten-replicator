@@ -356,7 +356,7 @@ public class TestDatabase
         db.update(seqno, seqno.getPrimaryKey().getColumns(), seqno.getNonKeyColumns());
 
         // Delete row from table seqno based on last value of PK. 
-        db.delete(seqno);
+        db.delete(seqno, false);
 
         // Replace row in seqno with last values of all columns.  
         // In Oracle this should casue a DELETE, INSERT */

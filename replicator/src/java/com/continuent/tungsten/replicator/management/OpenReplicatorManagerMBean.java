@@ -27,6 +27,7 @@ import java.util.Map;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.commons.jmx.DynamicMBeanHelper;
+import com.continuent.tungsten.replicator.ReplicatorException;
 
 /**
  * Replicator Manager MBean interface definition. This contains all replicator
@@ -463,4 +464,6 @@ public interface OpenReplicatorManagerMBean
      * Gets the replicator capabilities.
      */
     public Map<String, String> capabilities() throws Exception;
+
+    public void startShardManager(String serviceName) throws ReplicatorException;
 }

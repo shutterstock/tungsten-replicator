@@ -91,6 +91,7 @@ import com.continuent.tungsten.replicator.filter.FilterManualProperties;
 import com.continuent.tungsten.replicator.management.events.GoOfflineEvent;
 import com.continuent.tungsten.replicator.management.events.OfflineNotification;
 import com.continuent.tungsten.replicator.plugin.PluginException;
+import com.continuent.tungsten.replicator.shard.ShardManager;
 
 /**
  * This class provides overall management for the replication and is the
@@ -1866,6 +1867,22 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         this.doneLatch = new CountDownLatch(1);
     }
 
+    @Override
+    public void startShardManager(String serviceName) throws ReplicatorException
+    {
+      try
+      {
+          ShardManager sManager = new ShardManager(serviceName, openReplicator.getReplicatorRuntime());
+          sManager.advertiseInternal();
+      }
+      catch (Exception e)
+      {
+          throw new ReplicatorException(String.format(
+                  "Unable to instantiate shard manager service '%s'",
+                  serviceName), e);
+      }        
+    }
+
     /**
      * Stop Replicator Node Manager JMX service.
      */
@@ -2246,7 +2263,9 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             @ParamDesc(name = "name", description = "MBean name") String name)
             throws Exception
     {
+        logger.warn("looking for MBean " + name);
         Object mbean = mbeans.get(name);
+        logger.warn("Found = " + (mbean != null));
         return mbean;
     }
 

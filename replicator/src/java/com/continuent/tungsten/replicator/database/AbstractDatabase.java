@@ -56,8 +56,7 @@ import com.continuent.tungsten.replicator.dbms.OneRowChange;
  */
 public abstract class AbstractDatabase implements Database
 {
-    private static Logger    logger        = Logger
-                                                   .getLogger(AbstractDatabase.class);
+    private static Logger    logger        = Logger.getLogger(AbstractDatabase.class);
 
     protected DBMS           dbms;
     protected String         dbDriver      = null;
@@ -89,7 +88,8 @@ public abstract class AbstractDatabase implements Database
         return dbms;
     }
 
-    public abstract SqlOperationMatcher getSqlNameMatcher() throws DatabaseException;
+    public abstract SqlOperationMatcher getSqlNameMatcher()
+            throws DatabaseException;
 
     public void setUrl(String dbUri)
     {
@@ -106,7 +106,8 @@ public abstract class AbstractDatabase implements Database
         this.dbPassword = dbPassword;
     }
 
-    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue, String typeDesc)
+    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue,
+            String typeDesc)
     {
         return " ? ";
     }
@@ -392,7 +393,10 @@ public abstract class AbstractDatabase implements Database
 
     private String buildWhereClause(ArrayList<Column> columns)
     {
-        String retval = "WHERE ";
+        if (columns.size() == 0)
+            return "";
+
+        StringBuffer retval = new StringBuffer(" WHERE ");
 
         Iterator<Column> i = columns.iterator();
         boolean comma = false;
@@ -400,11 +404,11 @@ public abstract class AbstractDatabase implements Database
         {
             Column c = i.next();
             if (comma)
-                retval += " AND ";
+                retval.append(" AND ");
             comma = true;
-            retval += assignString(c);
+            retval.append(assignString(c));
         }
-        return retval;
+        return retval.toString();
     }
 
     private String buildCommaAssign(ArrayList<Column> columns)
@@ -440,7 +444,7 @@ public abstract class AbstractDatabase implements Database
         return c.getName() + "= ?";
     }
 
-    private void executePrepareStatement(List<Column> columns,
+    private int executePrepareStatement(List<Column> columns,
             PreparedStatement statement) throws SQLException
     {
         int bindNo = 1;
@@ -450,20 +454,33 @@ public abstract class AbstractDatabase implements Database
             statement.setObject(bindNo++, c.getValue());
         }
         // System.out.format("%s (%d binds)\n", SQL, bindNo - 1);
-        statement.executeUpdate();
+        return statement.executeUpdate();
     }
 
-    private void executePrepareStatement(Table table,
-            PreparedStatement statement) throws SQLException
+    private int executePrepareStatement(Table table, PreparedStatement statement)
+            throws SQLException
     {
-        executePrepareStatement(table.getAllColumns(), statement);
+        return executePrepareStatement(table.getAllColumns(), statement);
     }
 
-    private PreparedStatement executePrepare(List<Column> columns, String SQL,
-            boolean keep) throws SQLException
+    private int executePrepare(Table table, List<Column> columns, String SQL)
+            throws SQLException
+    {
+        return executePrepare(table, columns, SQL, false, -1);
+    }
+
+    private int executePrepare(Table table, String SQL) throws SQLException
+    {
+        return executePrepare(table, table.getAllColumns(), SQL, false, -1);
+    }
+
+    private int executePrepare(Table table, List<Column> columns, String SQL,
+            boolean keep, int type) throws SQLException
     {
         int bindNo = 1;
+
         PreparedStatement statement = null;
+        int affectedRows = 0;
 
         try
         {
@@ -473,8 +490,7 @@ public abstract class AbstractDatabase implements Database
             {
                 statement.setObject(bindNo++, c.getValue());
             }
-            // System.out.format("%s (%d binds)\n", SQL, bindNo - 1);
-            statement.executeUpdate();
+            affectedRows = statement.executeUpdate();
         }
         finally
         {
@@ -484,63 +500,48 @@ public abstract class AbstractDatabase implements Database
                 statement = null;
             }
         }
-        return statement;
-    }
+        if (keep && type > -1)
+            table.setStatement(type, statement);
 
-    private PreparedStatement executePrepare(List<Column> columns, String SQL)
-            throws SQLException
-    {
-        return executePrepare(columns, SQL, false);
-    }
-
-    private PreparedStatement executePrepare(Table table, String SQL)
-            throws SQLException
-    {
-        return executePrepare(table.getAllColumns(), SQL, false);
-    }
-
-    private PreparedStatement executePrepare(Table table, String SQL,
-            boolean keep) throws SQLException
-    {
-        return executePrepare(table.getAllColumns(), SQL, keep);
+        return affectedRows;
     }
 
     /**
      * {@inheritDoc}
      * 
+     * @return
      * @see com.continuent.tungsten.replicator.database.Database#insert(com.continuent.tungsten.replicator.database.Table)
      */
-    public void insert(Table table) throws SQLException
+    public int insert(Table table) throws SQLException
     {
         String SQL = "";
         PreparedStatement statement = null;
         boolean caching = table.getCacheStatements();
+        ArrayList<Column> allColumns = table.getAllColumns();
 
         if (caching && (statement = table.getStatement(Table.INSERT)) != null)
         {
-            executePrepareStatement(table, statement);
-            return;
+            return executePrepareStatement(table, statement);
         }
         else
         {
             SQL += "INSERT INTO " + table.getSchema() + "." + table.getName()
                     + " VALUES (";
-            SQL += buildCommaValues(table.getAllColumns());
+            SQL += buildCommaValues(allColumns);
             SQL += ")";
         }
 
-        statement = executePrepare(table, SQL, caching);
-        if (caching)
-            table.setStatement(Table.INSERT, statement);
+        return executePrepare(table, allColumns, SQL, caching, Table.INSERT);
     }
 
     /**
      * {@inheritDoc}
      * 
+     * @return
      * @see com.continuent.tungsten.replicator.database.Database#update(com.continuent.tungsten.replicator.database.Table,
      *      java.util.ArrayList, java.util.ArrayList)
      */
-    public void update(Table table, ArrayList<Column> whereClause,
+    public int update(Table table, ArrayList<Column> whereClause,
             ArrayList<Column> values) throws SQLException
     {
         StringBuffer sb = new StringBuffer("UPDATE ");
@@ -561,7 +562,7 @@ public abstract class AbstractDatabase implements Database
         {
             allColumns.addAll(whereClause);
         }
-        this.executePrepare(allColumns, SQL);
+        return this.executePrepare(table, allColumns, SQL);
     }
 
     public boolean supportsReplace()
@@ -590,7 +591,7 @@ public abstract class AbstractDatabase implements Database
         {
             try
             {
-                delete(table);
+                delete(table, false);
             }
             catch (SQLException e)
             {
@@ -602,15 +603,22 @@ public abstract class AbstractDatabase implements Database
     /**
      * {@inheritDoc}
      * 
-     * @see com.continuent.tungsten.replicator.database.Database#delete(com.continuent.tungsten.replicator.database.Table)
+     * @return
+     * @see com.continuent.tungsten.replicator.database.Database#delete(com.continuent.tungsten.replicator.database.Table,
+     *      boolean)
      */
-    public void delete(Table table) throws SQLException
+    public int delete(Table table, boolean allRows) throws SQLException
     {
         String SQL = "DELETE FROM " + table.getSchema() + "." + table.getName()
                 + " ";
-        SQL += buildWhereClause(table.getPrimaryKey().getColumns());
-
-        executePrepare(table.getPrimaryKey().getColumns(), SQL);
+        if (!allRows)
+        {
+            SQL += buildWhereClause(table.getPrimaryKey().getColumns());
+            return executePrepare(table, table.getPrimaryKey().getColumns(),
+                    SQL);
+        }
+        else
+            return executePrepare(table, new ArrayList<Column>(), SQL);
     }
 
     /**
@@ -967,10 +975,10 @@ public abstract class AbstractDatabase implements Database
         // Start consistency check transaction
         setAutoCommit(false);
         // Prepare row that will hold consistency check values
-        // TENT-134:  Delete holds a lock that causes LOCK WAIT TIMEOUT on 
-        // InnoDB.  Commented out for now. 
-        //delete(ct); // WHERE is taken from prim key
-        
+        // TENT-134: Delete holds a lock that causes LOCK WAIT TIMEOUT on
+        // InnoDB. Commented out for now.
+        // delete(ct); // WHERE is taken from prim key
+
         // Database.insert() does not work with TIMESTAMP fields on MySQL: I'm
         // getting
         // com.mysql.jdbc.MysqlDataTruncation: Data truncation: Incorrect

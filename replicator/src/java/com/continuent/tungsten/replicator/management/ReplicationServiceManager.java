@@ -545,6 +545,9 @@ public class ReplicationServiceManager
             }
 
             orm.start();
+
+            orm.startShardManager(serviceName);
+
             int listenPort = orm.getMasterListenPort();
             if (listenPort > masterListenPortMax)
                 masterListenPortMax = listenPort;
@@ -559,7 +562,7 @@ public class ReplicationServiceManager
         catch (Exception e)
         {
             logger.error(String.format(
-                    "Unable to start replication service '%s'", serviceName));
+                    "Unable to start replication service '%s'", serviceName), e);
         }
 
     }

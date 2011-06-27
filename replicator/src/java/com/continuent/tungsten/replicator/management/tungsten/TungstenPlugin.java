@@ -973,4 +973,9 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                 ReplicatorMonitor.getInstance());
         runtime.configure();
     }
+
+    public ReplicatorRuntime getReplicatorRuntime()
+    {
+        return runtime;
+    }
 }

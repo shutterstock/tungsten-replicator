@@ -50,7 +50,8 @@ public interface Database
     /**
      * Returns a SQL name matcher for this database type. You can get a matcher
      * without calling connect() first.
-     * @throws DatabaseException 
+     * 
+     * @throws DatabaseException
      */
     public SqlOperationMatcher getSqlNameMatcher() throws DatabaseException;
 
@@ -243,8 +244,9 @@ public interface Database
      * instances stored in the table definition.
      * 
      * @param table Table instance containing column data
+     * @return the number of inserted rows
      */
-    public void insert(Table table) throws SQLException;
+    public int insert(Table table) throws SQLException;
 
     /**
      * Updates on or more rows in a table.
@@ -253,8 +255,9 @@ public interface Database
      * @param whereClause List of columns containing where clause values, which
      *            are ANDed
      * @param values List of columns containing values to set for matching rows
+     * @return the number of updated rows
      */
-    public void update(Table table, ArrayList<Column> whereClause,
+    public int update(Table table, ArrayList<Column> whereClause,
             ArrayList<Column> values) throws SQLException;
 
     /**
@@ -277,9 +280,12 @@ public interface Database
      * 
      * @param table Table specification with primary key; columns for the key
      *            must be defined.
+     * @param allRows flag indicating that all rows from the underlying table
+     *            should be deleted
+     * @return the number of deleted rows
      * @throws SQLException
      */
-    public void delete(Table table) throws SQLException;
+    public int delete(Table table, boolean allRows) throws SQLException;
 
     /**
      * Generate a JDBC prepared statement.
@@ -313,7 +319,8 @@ public interface Database
      * Return a place holder in a prepared statement for a column of type
      * ColumnSpec. Typically "?" as is INSERT INTO FOO VALUES(?)
      */
-    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue, String typeDesc);
+    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue,
+            String typeDesc);
 
     /**
      * Return TRUE IFF NULL values are bound differently in SQL statement from
@@ -381,7 +388,7 @@ public interface Database
             throws SQLException;
 
     /**
-     * Returns a result set containing columns for a specific table. 
+     * Returns a result set containing columns for a specific table.
      * 
      * @param md DatabaseMetaData object
      * @param schemaName schema name

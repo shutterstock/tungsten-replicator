@@ -41,6 +41,7 @@ import com.continuent.tungsten.replicator.InSequenceNotification;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.backup.RestoreCompletionNotification;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
+import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.management.OpenReplicatorContext;
 import com.continuent.tungsten.replicator.management.OpenReplicatorPlugin;
 import com.continuent.tungsten.replicator.management.events.GoOfflineEvent;
@@ -454,5 +455,11 @@ public class ScriptPlugin extends NotificationBroadcasterSupport
     {
         TungstenProperties props = runScript(CMD_CAPABILITIES);
         return new ReplicatorCapabilities(props);
+    }
+
+    @Override
+    public ReplicatorRuntime getReplicatorRuntime()
+    {
+        return null;
     }
 }

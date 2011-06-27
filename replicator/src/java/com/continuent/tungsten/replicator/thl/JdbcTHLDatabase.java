@@ -49,6 +49,7 @@ import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeaderData;
 import com.continuent.tungsten.replicator.event.ReplEvent;
 import com.continuent.tungsten.replicator.heartbeat.HeartbeatTable;
+import com.continuent.tungsten.replicator.shard.ShardTable;
 
 /**
  * This class defines a JdbcTHLDatabase
@@ -186,6 +187,11 @@ public class JdbcTHLDatabase
         HeartbeatTable heartbeatTable = new HeartbeatTable(metadataSchema,
                 runtime.getTungstenTableType());
         heartbeatTable.initializeHeartbeatTable(conn);
+        
+        // Create shard table if it does not exist
+        ShardTable shardTable = new ShardTable(metadataSchema, runtime.getTungstenTableType());
+        shardTable.initializeShardTable(conn);
+        
     }
 
     /* Helper method to read ReplDBMSEvent from byte[] array */
