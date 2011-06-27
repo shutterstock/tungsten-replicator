@@ -97,33 +97,6 @@ class MySQLPermissionsCheck < MySQLValidationCheck
   end
 end
 
-class MySQLReadableLogsCheck < MySQLValidationCheck
-  def set_vars
-    @title = "Readable binary logs check"
-  end
-  
-  def validate
-    master_file = get_value("show master status", "File")
-    if master_file == nil
-      help("Check that the MySQL user can run \"show master status\"")
-      help("Add \"log-bin=mysql-bin\" to the MySQL configuration file.")
-      raise "Unable to determine current binlog file."
-    end
-    
-    info("Check readability of #{@config.getProperty(get_member_key(REPL_MYSQL_BINLOGDIR))}/#{master_file}")
-    file_info = cmd_result("file #{@config.getProperty(get_member_key(REPL_MYSQL_BINLOGDIR))}/#{master_file}")
-    if file_info =~ /no read permission|cannot open/
-      error("Unable to read current binlog file.  Check that this system user can read #{@config.getProperty(get_member_key(REPL_MYSQL_BINLOGDIR))}/#{master_file}.")
-    else
-      info("The system user is able to read binary logs")
-    end
-  end
-  
-  def enabled?
-    super() && (@config.getProperty(get_member_key(REPL_DBHOST)) == @config.getProperty(DEPLOYMENT_HOST))
-  end
-end
-
 class MySQLSettingsCheck < MySQLValidationCheck
   def set_vars
     @title = "MySQL settings check"

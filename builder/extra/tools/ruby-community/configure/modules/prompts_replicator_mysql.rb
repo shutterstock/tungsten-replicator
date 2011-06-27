@@ -61,45 +61,12 @@ class MySQLAdvancedPrompt < AdvancedPrompt
   end
 end
 
-class MySQLBinlogPattern < MySQLConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(REPL_MYSQL_BINLOGPATTERN, "MySQL binlog pattern", PV_ANY, "mysql-bin")
-  end
-  
-  def get_mysql_default_value
-    master_file = get_mysql_value("SHOW MASTER STATUS", "File")
-    master_file_parts = master_file.split(".")
-    
-    if master_file_parts.count() > 1
-      master_file_parts.pop()
-      return master_file_parts.join(".")
-    else
-      raise "Unable to read the master file"
-    end
-  end
-end
-
 class MySQLDataDirectory < MySQLConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
     super(REPL_MYSQL_DATADIR, "MySQL data directory", 
       PV_FILENAME, "/var/lib/mysql/")
-  end
-end
-
-class MySQLBinlogDirectory < MySQLConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(REPL_MYSQL_BINLOGDIR, "MySQL binlog directory", 
-      PV_FILENAME)
-  end
-  
-  def get_default_value
-    @config.getPropertyOr(get_member_key(REPL_MYSQL_DATADIR), "/var/lib/mysql")
   end
 end
 
@@ -113,19 +80,6 @@ class MySQLServerID < MySQLConfigurePrompt
   
   def get_mysql_default_value
     get_mysql_value("SHOW VARIABLES LIKE 'server_id'", "Value")
-  end
-end
-
-class MySQLReplicationUseRelayLogs < MySQLConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(REPL_EXTRACTOR_USE_RELAY_LOGS, "Configure the extractor to access the binlog via local relay-logs?",
-      PV_BOOLEAN, "false")
-  end
-  
-  def enabled?
-    super() && @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
   end
 end
 

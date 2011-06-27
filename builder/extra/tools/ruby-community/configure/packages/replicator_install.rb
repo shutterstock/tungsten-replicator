@@ -114,8 +114,6 @@ class ReplicatorInstallPackage < ConfigurePackage
       "master-port",
       "master-user",
       "master-password",
-      "master-log-directory",
-      "master-log-pattern",
       "master-log-file",
       "master-log-pos",
       "slave-alias",
@@ -187,8 +185,6 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_DBPORT => options.getProperty("master-port"),
       REPL_DBLOGIN => options.getProperty("master-user"),
       REPL_DBPASSWORD => options.getProperty("master-password"),
-      REPL_MYSQL_BINLOGDIR => options.getProperty("master-log-directory"),
-      REPL_MYSQL_BINLOGPATTERN => options.getProperty("master-log-pattern"),
       DBMS_TYPE => options.getProperty("dbms-type")
     })
     @config.setProperty([DATASERVERS, slave_alias], {
@@ -242,11 +238,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "datasource-port",
       "datasource-user",
       "datasource-password",
-      "datasource-log-directory",
-      "datasource-log-pattern",
       "master-log-file",
       "master-log-pos",
-      "datasource-transfer-logs",
       "thl-directory",
       "thl-port",
       "relay-directory",
@@ -318,9 +311,7 @@ class ReplicatorInstallPackage < ConfigurePackage
         REPL_DBPORT => options.getProperty("datasource-port"),
         REPL_DBLOGIN => options.getProperty("datasource-user"),
         REPL_DBPASSWORD => options.getProperty("datasource-password"),
-        DBMS_TYPE => options.getProperty("dbms-type"),
-        REPL_MYSQL_BINLOGDIR => options.getProperty("datasource-log-directory"),
-        REPL_MYSQL_BINLOGPATTERN => options.getProperty("datasource-log-pattern")
+        DBMS_TYPE => options.getProperty("dbms-type")
       })
       
       service_alias = options.getProperty("service-name") + "_" + host_alias
@@ -363,8 +354,6 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--master-port", "", "3306")
       output_usage_line("--master-user", "", Configurator.instance.whoami())
       output_usage_line("--master-password")
-      output_usage_line("--master-log-directory", "", "/var/lib/mysql")
-      output_usage_line("--master-log-pattern", "", "mysql-bin")
       output_usage_line("--master-log-file", "PENDING")
       output_usage_line("--master-log-pos", "PENDING")
       output_usage_line("--slave-alias")
@@ -394,11 +383,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--datasource-port", "", "3306")
       output_usage_line("--datasource-user", "", Configurator.instance.whoami())
       output_usage_line("--datasource-password")
-      output_usage_line("--datasource-log-directory", "", "/var/lib/mysql")
-      output_usage_line("--datasource-log-pattern", "", "mysql-bin")
       output_usage_line("--master-log-file", "PENDING")
       output_usage_line("--master-log-pos", "PENDING")
-      output_usage_line("--datasource-transfer-logs")
       output_usage_line("--thl-directory", "", Configurator.instance.get_base_path() + "/thl")
       output_usage_line("--thl-port", "", "2112")
       output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")

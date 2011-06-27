@@ -162,7 +162,6 @@ class DataserversChecks < GroupValidationCheck
       MySQLClientCheck.new(),
       MySQLLoginCheck.new(),
       MySQLPermissionsCheck.new(),
-      MySQLReadableLogsCheck.new(),
       MySQLSettingsCheck.new(),
       ConnectorUserMySQLCheck.new(),
       PostgreSQLSystemUserCheck.new(),
