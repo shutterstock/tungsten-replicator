@@ -344,11 +344,6 @@ replicator.extractor.mysql.user=${replicator.global.extract.db.user}
 replicator.extractor.mysql.password=${replicator.global.extract.db.password}
 replicator.extractor.mysql.parseStatements=true
 
-# Binlog mode defines whether we are replicating from a MySQL master
-# or taking over from the SQL thread on a MySQL slave.  Legal values
-# are 'master' or 'relay-slave' respectively.  
-replicator.extractor.mysql.binlogMode=master
-
 # Parse statements for binary data.
 replicator.extractor.mysql.parseStatements=true
 
@@ -364,11 +359,11 @@ replicator.extractor.mysql.transaction_frag_size=1000000
 
 # When using relay logs we download from the master into binlog_dir.  This 
 # is used for off-board replication. 
-replicator.extractor.mysql.useRelayLogs=false
+replicator.extractor.mysql.useRelayLogs=true
 
 # When you turn on relay logs, you must define a location for them.  This
 # overrides the normal log directory.
-replicator.extractor.mysql.relayLogDir=${replicator.home.dir}/../cluster-home/relay-logs
+replicator.extractor.mysql.relayLogDir=
 
 # The relay log wait timeout is the number of seconds to wait for the relay
 # log position to catch up to the current extract position that Tungsten
