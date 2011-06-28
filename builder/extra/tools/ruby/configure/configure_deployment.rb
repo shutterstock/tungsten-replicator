@@ -46,12 +46,12 @@ class ConfigureDeployment
         config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBPORT], config.getProperty([DATASERVERS, direct_datasource, REPL_DBPORT]))
         config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBLOGIN], config.getProperty([DATASERVERS, direct_datasource, REPL_DBLOGIN]))
         config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBPASSWORD], config.getProperty([DATASERVERS, direct_datasource, REPL_DBPASSWORD]))
+        config.setDefault([REPL_SERVICES, service_alias, REPL_MYSQL_BINLOGPATTERN], config.getProperty([DATASERVERS, direct_datasource, REPL_MYSQL_BINLOGPATTERN]))
         
         if config.getProperty([DATASERVERS, direct_datasource, REPL_DBHOST]) != config.getProperty([DATASERVERS, datasource, REPL_DBHOST])
           config.setProperty([REPL_SERVICES, service_alias, REPL_EXTRACTOR_USE_RELAY_LOGS], "true")
         else
           config.setDefault([REPL_SERVICES, service_alias, REPL_MYSQL_BINLOGDIR], config.getProperty([DATASERVERS, direct_datasource, REPL_MYSQL_BINLOGDIR]))
-          config.setDefault([REPL_SERVICES, service_alias, REPL_MYSQL_BINLOGPATTERN], config.getProperty([DATASERVERS, direct_datasource, REPL_MYSQL_BINLOGPATTERN]))
         end
       end
       

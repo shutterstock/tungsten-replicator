@@ -121,7 +121,7 @@ class MySQLReplicationUseRelayLogs < MySQLConfigurePrompt
   
   def initialize
     super(REPL_EXTRACTOR_USE_RELAY_LOGS, "Configure the extractor to access the binlog via local relay-logs?",
-      PV_BOOLEAN, "false")
+      PV_BOOLEAN, "true")
   end
   
   def enabled?

@@ -189,7 +189,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_DBPASSWORD => options.getProperty("master-password"),
       REPL_MYSQL_BINLOGDIR => options.getProperty("master-log-directory"),
       REPL_MYSQL_BINLOGPATTERN => options.getProperty("master-log-pattern"),
-      DBMS_TYPE => options.getProperty("dbms-type")
+      DBMS_TYPE => options.getProperty("dbms-type"),
+      REPL_EXTRACTOR_USE_RELAY_LOGS => "true"
     })
     @config.setProperty([DATASERVERS, slave_alias], {
       REPL_DBHOST => options.getProperty("slave-host"),
@@ -222,7 +223,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "rmi-port" => "10000",
       "svc-start" => "false",
       "svc-report" => "false",
-      "home-directory" => Configurator.instance.get_base_path()
+      "home-directory" => Configurator.instance.get_base_path(),
+      "use-relay-logs" => "true"
     }
     
     opts = OptionParser.new
@@ -230,6 +232,9 @@ class ReplicatorInstallPackage < ConfigurePackage
     opts.on("--start-and-report")      {
       options.setProperty("svc-start", "true")
       options.setProperty("svc-report", "true")
+    }
+    opts.on("--disable-relay-logs") {
+      options.setProperty("use-relay-logs", "false")
     }
 
     [
@@ -320,7 +325,8 @@ class ReplicatorInstallPackage < ConfigurePackage
         REPL_DBPASSWORD => options.getProperty("datasource-password"),
         DBMS_TYPE => options.getProperty("dbms-type"),
         REPL_MYSQL_BINLOGDIR => options.getProperty("datasource-log-directory"),
-        REPL_MYSQL_BINLOGPATTERN => options.getProperty("datasource-log-pattern")
+        REPL_MYSQL_BINLOGPATTERN => options.getProperty("datasource-log-pattern"),
+        REPL_EXTRACTOR_USE_RELAY_LOGS => options.getProperty("use-relay-logs")
       })
       
       service_alias = options.getProperty("service-name") + "_" + host_alias
@@ -394,6 +400,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--datasource-port", "", "3306")
       output_usage_line("--datasource-user", "", Configurator.instance.whoami())
       output_usage_line("--datasource-password")
+      output_usage_line("--disable-relay-logs", "Force the replicator to tail the binary log files.  This will reduce performance.")
       output_usage_line("--datasource-log-directory", "", "/var/lib/mysql")
       output_usage_line("--datasource-log-pattern", "", "mysql-bin")
       output_usage_line("--master-log-file", "PENDING")
