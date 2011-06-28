@@ -95,7 +95,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "rmi-port" => "10000",
       "svc-start" => "false",
       "report-services" => "false",
-      "home-directory" => Configurator.instance.get_base_path()
+      "home-directory" => Configurator.instance.get_base_path(),
+      "use-relay-logs" => "true"
     }
     
     opts = OptionParser.new
@@ -103,6 +104,9 @@ class ReplicatorInstallPackage < ConfigurePackage
     opts.on("--start-and-report")      {
       options.setProperty("svc-start", "true")
       options.setProperty("svc-report", "true")
+    }
+    opts.on("--disable-relay-logs") {
+      options.setProperty("use-relay-logs", "false")
     }
     
     [
@@ -190,14 +194,15 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_MYSQL_BINLOGDIR => options.getProperty("master-log-directory"),
       REPL_MYSQL_BINLOGPATTERN => options.getProperty("master-log-pattern"),
       DBMS_TYPE => options.getProperty("dbms-type"),
-      REPL_EXTRACTOR_USE_RELAY_LOGS => "true"
+      REPL_EXTRACTOR_USE_RELAY_LOGS => options.getProperty("use-relay-logs")
     })
     @config.setProperty([DATASERVERS, slave_alias], {
       REPL_DBHOST => options.getProperty("slave-host"),
       REPL_DBPORT => options.getProperty("slave-port"),
       REPL_DBLOGIN => options.getProperty("slave-user"),
       REPL_DBPASSWORD => options.getProperty("slave-password"),
-      DBMS_TYPE => options.getProperty("dbms-type")
+      DBMS_TYPE => options.getProperty("dbms-type"),
+      REPL_EXTRACTOR_USE_RELAY_LOGS => "true"
     })
     
     @config.setProperty(REPL_SERVICES, {})
@@ -369,6 +374,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--master-port", "", "3306")
       output_usage_line("--master-user", "", Configurator.instance.whoami())
       output_usage_line("--master-password")
+      output_usage_line("--disable-relay-logs", "Force the replicator to tail the binary log files.  This will reduce performance.")
       output_usage_line("--master-log-directory", "", "/var/lib/mysql")
       output_usage_line("--master-log-pattern", "", "mysql-bin")
       output_usage_line("--master-log-file", "PENDING")

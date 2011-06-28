@@ -120,7 +120,10 @@ class MySQLReadableLogsCheck < MySQLValidationCheck
   end
   
   def enabled?
-    super() && (@config.getProperty(get_member_key(REPL_DBHOST)) == @config.getProperty(DEPLOYMENT_HOST))
+    super() && 
+      (@config.getProperty(get_member_key(REPL_DBHOST)) == 
+        @config.getProperty([HOSTS, @config.getProperty(DEPLOYMENT_HOST), HOST])) && 
+      (@config.getProperty(get_member_key(REPL_EXTRACTOR_USE_RELAY_LOGS)) == "false")
   end
 end
 

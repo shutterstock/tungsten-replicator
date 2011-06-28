@@ -41,17 +41,17 @@ class ConfigureDeployment
         config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], config.getProperty(HOST))
       when REPL_ROLE_DI
         direct_datasource = config.getProperty([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DATASERVER])
-
+        
+        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_USE_RELAY_LOGS], config.getProperty([DATASERVERS, direct_datasource, REPL_EXTRACTOR_USE_RELAY_LOGS]))
         config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBHOST], config.getProperty([DATASERVERS, direct_datasource, REPL_DBHOST]))
         config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBPORT], config.getProperty([DATASERVERS, direct_datasource, REPL_DBPORT]))
         config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBLOGIN], config.getProperty([DATASERVERS, direct_datasource, REPL_DBLOGIN]))
         config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBPASSWORD], config.getProperty([DATASERVERS, direct_datasource, REPL_DBPASSWORD]))
         config.setDefault([REPL_SERVICES, service_alias, REPL_MYSQL_BINLOGPATTERN], config.getProperty([DATASERVERS, direct_datasource, REPL_MYSQL_BINLOGPATTERN]))
+        config.setDefault([REPL_SERVICES, service_alias, REPL_MYSQL_BINLOGDIR], config.getProperty([DATASERVERS, direct_datasource, REPL_MYSQL_BINLOGDIR]))
         
         if config.getProperty([DATASERVERS, direct_datasource, REPL_DBHOST]) != config.getProperty([DATASERVERS, datasource, REPL_DBHOST])
           config.setProperty([REPL_SERVICES, service_alias, REPL_EXTRACTOR_USE_RELAY_LOGS], "true")
-        else
-          config.setDefault([REPL_SERVICES, service_alias, REPL_MYSQL_BINLOGDIR], config.getProperty([DATASERVERS, direct_datasource, REPL_MYSQL_BINLOGDIR]))
         end
       end
       
