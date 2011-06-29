@@ -243,10 +243,8 @@ public class ShardManager implements ShardManagerMBean
                     shard.put(ShardTable.SHARD_CRIT_COL, Boolean.toString(rs
                             .getBoolean(ShardTable.SHARD_CRIT_COL)));
 
-                    String disposition = Shard.ShardDisposition.valueOf(
-                            rs.getString(ShardTable.SHARD_DISPO_COL))
-                            .toString();
-                    shard.put(ShardTable.SHARD_DISPO_COL, disposition);
+                    shard.put(ShardTable.SHARD_HOME_COL,
+                            rs.getString(ShardTable.SHARD_HOME_COL));
                     shard.put(ShardTable.SHARD_CHANNEL_COL, Integer.toString(rs
                             .getInt(ShardTable.SHARD_CHANNEL_COL)));
                     shards.add(shard);

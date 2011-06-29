@@ -32,7 +32,6 @@ import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.database.Database;
 import com.continuent.tungsten.replicator.database.Key;
 import com.continuent.tungsten.replicator.database.Table;
-import com.continuent.tungsten.replicator.shard.Shard.ShardDisposition;
 
 /**
  * Provides a definition for the shard table, which is a catalog of currently
@@ -51,12 +50,13 @@ public class ShardTable
     public static final String SHARD_CRIT_COL    = "critical";
     public static final String SHARD_DISPO_COL   = "disposition";
     public static final String SHARD_CHANNEL_COL = "channel";
+    public static final String SHARD_HOME_COL    = "home";
 
     public static final String SELECT            = "SELECT " + SHARD_ID_COL
                                                          + ", "
-                                                         + SHARD_CRIT_COL
+                                                         + SHARD_HOME_COL
                                                          + ", "
-                                                         + SHARD_DISPO_COL
+                                                         + SHARD_CRIT_COL
                                                          + ", "
                                                          + SHARD_CHANNEL_COL
                                                          + " FROM "
@@ -65,8 +65,8 @@ public class ShardTable
     private Table              shardTable;
     private Column             shardName;
     private Column             shardCritical;
-    private Column             shardDisposition;
     private Column             shardChannel;
+    private Column             shardHome;
 
     private String             tableType;
 
@@ -80,16 +80,16 @@ public class ShardTable
     {
         shardTable = new Table(schema, TABLE_NAME);
         shardName = new Column(SHARD_ID_COL, Types.VARCHAR, 128);
+        shardHome = new Column(SHARD_HOME_COL, Types.VARCHAR, 128);
         shardCritical = new Column(SHARD_CRIT_COL, Types.TINYINT, 1);
-        shardDisposition = new Column(SHARD_DISPO_COL, Types.VARCHAR, 6);
         shardChannel = new Column(SHARD_CHANNEL_COL, Types.INTEGER);
 
         Key shardKey = new Key(Key.Primary);
         shardKey.AddColumn(shardName);
 
         shardTable.AddColumn(shardName);
+        shardTable.AddColumn(shardHome);
         shardTable.AddColumn(shardCritical);
-        shardTable.AddColumn(shardDisposition);
         shardTable.AddColumn(shardChannel);
         shardTable.AddKey(shardKey);
     }
@@ -109,20 +109,9 @@ public class ShardTable
     public int insert(Database database, Shard shard) throws SQLException
     {
         shardName.setValue(shard.getShardId());
+        shardHome.setValue(shard.getHome());
         shardCritical.setValue(shard.isCritical());
 
-        ShardDisposition disposition = null;
-        try
-        {
-            disposition = Shard.ShardDisposition
-                    .valueOf(shard.getDisposition());
-        }
-        catch (IllegalArgumentException e)
-        {
-            logger.warn("Incorrect shard disposition " + shard.getDisposition());
-            return 0;
-        }
-        shardDisposition.setValue(disposition.toString());
         shardChannel.setValue(shard.getChannel());
         return database.insert(shardTable);
     }
@@ -136,9 +125,9 @@ public class ShardTable
         whereClause.add(shardName);
 
         shardCritical.setValue(shard.isCritical());
-        shardDisposition.setValue(shard.getDisposition());
+        shardHome.setValue(shard.getHome());
         shardChannel.setValue(shard.getChannel());
-        values.add(shardDisposition);
+        values.add(shardHome);
         values.add(shardCritical);
         values.add(shardChannel);
 

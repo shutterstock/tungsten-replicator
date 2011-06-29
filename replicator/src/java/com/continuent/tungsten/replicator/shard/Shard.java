@@ -25,40 +25,38 @@ package com.continuent.tungsten.replicator.shard;
 import java.util.Map;
 
 /**
- * 
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
  * @version 1.0
  */
 public class Shard
 {
-    
+
     public static enum ShardDisposition
     {
         ACCEPT, REJECT, WARN, ERROR
     }
-    
-    private String shardId;
-    private boolean critical; 
-    private String disposition;
-    private int channel;
-    
-    public Shard(String shardId, boolean critical, String disposition,
-            int channel)
+
+    private String  shardId;
+    private boolean critical;
+    private String  disposition;
+    private int     channel;
+    private String  home;
+
+    public Shard(String shardId, boolean critical, String home, int channel)
     {
         this.shardId = shardId;
         this.critical = critical;
-        this.disposition = disposition;
+        this.home = home;
         this.channel = channel;
     }
-    
+
     public Shard(Map<String, String> shard)
     {
         this.shardId = shard.get(ShardTable.SHARD_ID_COL);
         this.critical = Boolean.valueOf(shard.get(ShardTable.SHARD_CRIT_COL));
-        this.disposition = shard.get(ShardTable.SHARD_DISPO_COL).toUpperCase();
+        this.home = shard.get(ShardTable.SHARD_HOME_COL);
         this.channel = Integer.valueOf(shard.get(ShardTable.SHARD_CHANNEL_COL));
     }
-    
 
     public String getShardId()
     {
@@ -79,7 +77,10 @@ public class Shard
     {
         return channel;
     }
-    
-    
-    
+
+    public String getHome()
+    {
+        return home;
+    }
+
 }

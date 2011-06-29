@@ -1465,6 +1465,8 @@ public class OpenReplicatorManagerCtrl
         switch (operation)
         {
             case ShardCommand.ADD :
+                if(values.isEmpty())
+                    return;
                 for (Iterator<String[]> iterator = values.iterator(); iterator
                         .hasNext();)
                 {
@@ -1476,8 +1478,8 @@ public class OpenReplicatorManagerCtrl
                     else
                     {
                         paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
-                        paramProps.put(ShardTable.SHARD_CRIT_COL, val[1]);
-                        paramProps.put(ShardTable.SHARD_DISPO_COL, val[2]);
+                        paramProps.put(ShardTable.SHARD_HOME_COL, val[1]);
+                        paramProps.put(ShardTable.SHARD_CRIT_COL, val[2]);
                         paramProps.put(ShardTable.SHARD_CHANNEL_COL, val[3]);
 
                         shardParams.add(paramProps.map());
@@ -1495,6 +1497,9 @@ public class OpenReplicatorManagerCtrl
                 break;
 
             case ShardCommand.UPD :
+                if(values.isEmpty())
+                    return;
+
                 for (Iterator<String[]> iterator = values.iterator(); iterator
                         .hasNext();)
                 {
@@ -1506,8 +1511,8 @@ public class OpenReplicatorManagerCtrl
                     else
                     {
                         paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
-                        paramProps.put(ShardTable.SHARD_CRIT_COL, val[1]);
-                        paramProps.put(ShardTable.SHARD_DISPO_COL, val[2]);
+                        paramProps.put(ShardTable.SHARD_HOME_COL, val[1]);
+                        paramProps.put(ShardTable.SHARD_CRIT_COL, val[2]);
                         paramProps.put(ShardTable.SHARD_CHANNEL_COL, val[3]);
 
                         shardParams.add(paramProps.map());
@@ -1520,6 +1525,9 @@ public class OpenReplicatorManagerCtrl
                 break;
 
             case ShardCommand.DEL :
+                if(values.isEmpty())
+                    return;
+
                 for (Iterator<String[]> iterator = values.iterator(); iterator
                         .hasNext();)
                 {
@@ -1550,9 +1558,9 @@ public class OpenReplicatorManagerCtrl
                 buf.append("#");
                 buf.append(ShardTable.SHARD_ID_COL);
                 buf.append("\t");
-                buf.append(ShardTable.SHARD_CRIT_COL);
+                buf.append(ShardTable.SHARD_HOME_COL);
                 buf.append("\t");
-                buf.append(ShardTable.SHARD_DISPO_COL);
+                buf.append(ShardTable.SHARD_CRIT_COL);
                 buf.append("\t");
                 buf.append(ShardTable.SHARD_CHANNEL_COL);
                 buf.append("\t\n");
@@ -1564,9 +1572,9 @@ public class OpenReplicatorManagerCtrl
                             .next();
                     buf.append(map.get(ShardTable.SHARD_ID_COL));
                     buf.append("\t");
-                    buf.append(map.get(ShardTable.SHARD_CRIT_COL));
+                    buf.append(map.get(ShardTable.SHARD_HOME_COL));
                     buf.append("\t");
-                    buf.append(map.get(ShardTable.SHARD_DISPO_COL));
+                    buf.append(map.get(ShardTable.SHARD_CRIT_COL));
                     buf.append("\t");
                     buf.append(map.get(ShardTable.SHARD_CHANNEL_COL));
                     if (iterator.hasNext())
