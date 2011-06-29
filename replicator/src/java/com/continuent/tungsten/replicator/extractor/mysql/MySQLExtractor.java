@@ -1631,7 +1631,7 @@ public class MySQLExtractor implements RawExtractor
         relayLogThread.interrupt();
         try
         {
-            relayLogThread.join(10000);
+            relayLogThread.join(2000);
         }
         catch (InterruptedException e)
         {

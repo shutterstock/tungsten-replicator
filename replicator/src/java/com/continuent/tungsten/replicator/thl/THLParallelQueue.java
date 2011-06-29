@@ -518,14 +518,17 @@ public class THLParallelQueue implements ParallelStore
     public synchronized void release(PluginContext context)
             throws ReplicatorException
     {
-        for (THLParallelReadTask readTask : readTasks)
+        if (readTasks != null)
         {
-            // Stop the task thread again for good measure.
-            readTask.stop();
-            readTask.release();
+            for (THLParallelReadTask readTask : readTasks)
+            {
+                // Stop the task thread again for good measure.
+                readTask.stop();
+                readTask.release();
+            }
+            readTasks = null;
+            lastHeaders = null;
         }
-        readTasks = null;
-        lastHeaders = null;
     }
 
     /**
