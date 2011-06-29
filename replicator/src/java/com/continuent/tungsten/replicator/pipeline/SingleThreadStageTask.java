@@ -68,6 +68,8 @@ public class SingleThreadStageTask implements Runnable
     private long            blockEventCount = 0;
     private TaskProgress    taskProgress;
 
+    private volatile boolean cancelled       = false;
+
     public SingleThreadStageTask(Stage stage, int taskId)
     {
         this.taskId = taskId;
@@ -137,6 +139,14 @@ public class SingleThreadStageTask implements Runnable
     }
 
     /**
+     * Cancel a currently running task.
+     */
+    public void cancel()
+    {
+        cancelled = true;
+    }
+
+    /**
      * Perform thread processing logic.
      */
     public void run()
@@ -147,7 +157,7 @@ public class SingleThreadStageTask implements Runnable
         runTask();
 
         logInfo("Terminating processing for stage", null);
-        ReplDBMSEvent lastEvent = stage.getProgressTracker()
+        ReplDBMSHeader lastEvent = stage.getProgressTracker()
                 .getLastProcessedEvent(taskId);
         if (lastEvent != null)
         {
@@ -190,7 +200,7 @@ public class SingleThreadStageTask implements Runnable
             boolean syncTHLWithExtractor = stage.getPipeline()
                     .syncTHLWithExtractor();
 
-            while (!Thread.currentThread().isInterrupted())
+            while (!cancelled)
             {
                 // If we have a pending currentEvent from the last iteration,
                 // we should log it now, then test to see whether the task has
@@ -549,7 +559,7 @@ public class SingleThreadStageTask implements Runnable
         if (replEvent instanceof ReplControlEvent)
         {
             ReplControlEvent controlEvent = (ReplControlEvent) replEvent;
-            header = controlEvent.getEvent();
+            header = controlEvent.getHeader();
         }
         else if (replEvent instanceof ReplDBMSEvent)
         {

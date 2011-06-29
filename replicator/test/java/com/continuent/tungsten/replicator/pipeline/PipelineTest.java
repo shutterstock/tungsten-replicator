@@ -41,7 +41,7 @@ import com.continuent.tungsten.replicator.applier.RawApplier;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.dbms.StatementData;
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.extractor.DummyExtractor;
 import com.continuent.tungsten.replicator.extractor.ExtractorWrapper;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
@@ -84,8 +84,8 @@ public class PipelineTest extends TestCase
     {
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
 
         Pipeline pipeline = runtime.getPipeline();
@@ -100,8 +100,8 @@ public class PipelineTest extends TestCase
     {
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
@@ -117,8 +117,8 @@ public class PipelineTest extends TestCase
     {
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
@@ -138,8 +138,8 @@ public class PipelineTest extends TestCase
     {
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
@@ -178,8 +178,8 @@ public class PipelineTest extends TestCase
     {
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
 
@@ -198,8 +198,8 @@ public class PipelineTest extends TestCase
     {
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
 
@@ -244,8 +244,8 @@ public class PipelineTest extends TestCase
     {
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
 
@@ -275,8 +275,8 @@ public class PipelineTest extends TestCase
     {
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
@@ -322,40 +322,40 @@ public class PipelineTest extends TestCase
     {
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
         pipeline.start(new EventDispatcher());
 
         // Test for successfully applied and extracted sequence numbers.
-        Future<ReplDBMSEvent> future = pipeline
+        Future<ReplDBMSHeader> future = pipeline
                 .watchForAppliedSequenceNumber(9);
-        ReplDBMSEvent matchingEvent = future.get(3, TimeUnit.SECONDS);
+        ReplDBMSHeader matchingEvent = future.get(3, TimeUnit.SECONDS);
         assertTrue("Applied sequence number matches",
                 matchingEvent.getSeqno() >= 9);
-        assertTrue("Applied seqnence number not higher", matchingEvent
-                .getSeqno() < 10);
+        assertTrue("Applied seqnence number not higher",
+                matchingEvent.getSeqno() < 10);
 
         future = pipeline.watchForExtractedSequenceNumber(9);
         matchingEvent = future.get(3, TimeUnit.SECONDS);
-        assertTrue("Extracted sequence number matches", matchingEvent
-                .getSeqno() >= 9);
-        assertTrue("Extracted seqnence number not higher", matchingEvent
-                .getSeqno() < 10);
+        assertTrue("Extracted sequence number matches",
+                matchingEvent.getSeqno() >= 9);
+        assertTrue("Extracted seqnence number not higher",
+                matchingEvent.getSeqno() < 10);
 
         // Check for successfully applied and extracted event IDs.
         String eventId = matchingEvent.getEventId();
         future = pipeline.watchForExtractedEventId(eventId);
         matchingEvent = future.get(3, TimeUnit.SECONDS);
-        assertTrue("Extracted event ID matches", eventId.equals(matchingEvent
-                .getEventId()));
+        assertTrue("Extracted event ID matches",
+                eventId.equals(matchingEvent.getEventId()));
 
         future = pipeline.watchForAppliedEventId(eventId);
         matchingEvent = future.get(3, TimeUnit.SECONDS);
-        assertTrue("Applied event ID matches", eventId.equals(matchingEvent
-                .getEventId()));
+        assertTrue("Applied event ID matches",
+                eventId.equals(matchingEvent.getEventId()));
 
         // Test for higher numbers, which should time out.
         future = pipeline.watchForExtractedSequenceNumber(99);
@@ -394,19 +394,19 @@ public class PipelineTest extends TestCase
         // Create config with pipeline that has no fragmentation.
         TungstenProperties config = helper.createRuntimeWithStore(0);
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
         pipeline.start(new EventDispatcher());
 
         // Test for successfully applied and extracted sequence numbers.
-        Future<ReplDBMSEvent> future = pipeline
+        Future<ReplDBMSHeader> future = pipeline
                 .watchForAppliedSequenceNumber(9);
-        ReplDBMSEvent matchingEvent = future.get(2, TimeUnit.SECONDS);
-        assertEquals("Applied sequence number matches", 9, matchingEvent
-                .getSeqno());
+        ReplDBMSHeader matchingEvent = future.get(2, TimeUnit.SECONDS);
+        assertEquals("Applied sequence number matches", 9,
+                matchingEvent.getSeqno());
 
         // Shut it down.
         pipeline.shutdown(false);
@@ -423,8 +423,8 @@ public class PipelineTest extends TestCase
         // per transaction.
         TungstenProperties conf = helper.createRuntimeWithStore(3);
         ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
 
         // Configure pipeline. Set dummy applier to store events so we an fetch
         // them later.
@@ -440,8 +440,8 @@ public class PipelineTest extends TestCase
         pipeline.start(new EventDispatcher());
 
         // Wait for and verify events.
-        Future<ReplDBMSEvent> wait = pipeline.watchForAppliedSequenceNumber(9);
-        ReplDBMSEvent lastEvent = wait.get(10, TimeUnit.SECONDS);
+        Future<ReplDBMSHeader> wait = pipeline.watchForAppliedSequenceNumber(9);
+        ReplDBMSHeader lastEvent = wait.get(10, TimeUnit.SECONDS);
         assertEquals("Expected 10 sequence numbers", 9, lastEvent.getSeqno());
 
         // Confirm we have 30x2 statements, i.e., two statements for each
@@ -459,10 +459,11 @@ public class PipelineTest extends TestCase
      */
     public void testManyEvents() throws Exception
     {
+        int maxEvents = 10000000;
         TungstenProperties config = helper.createSimpleRuntime();
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
@@ -473,17 +474,17 @@ public class PipelineTest extends TestCase
         stage0.setLoggingInterval(1000000);
         ExtractorWrapper ew = (ExtractorWrapper) stage0.getExtractor0();
         DummyExtractor de = (DummyExtractor) ew.getExtractor();
-        de.setNTrx(10000000);
+        de.setNTrx(maxEvents);
         ApplierWrapper aw = (ApplierWrapper) stage0.getApplier0();
         DummyApplier da = (DummyApplier) aw.getApplier();
         da.setStoreAppliedEvents(false);
 
         // Test for successfully applied and extracted sequence numbers.
-        Future<ReplDBMSEvent> future = pipeline
-                .watchForAppliedSequenceNumber(9999999);
-        ReplDBMSEvent matchingEvent = future.get(600, TimeUnit.SECONDS);
-        assertEquals("Applied sequence number matches", 9999999, matchingEvent
-                .getSeqno());
+        Future<ReplDBMSHeader> future = pipeline
+                .watchForAppliedSequenceNumber(maxEvents - 1);
+        ReplDBMSHeader matchingEvent = future.get(600, TimeUnit.SECONDS);
+        assertEquals("Applied sequence number matches", maxEvents - 1,
+                matchingEvent.getSeqno());
 
         // Shut it down.
         pipeline.shutdown(false);

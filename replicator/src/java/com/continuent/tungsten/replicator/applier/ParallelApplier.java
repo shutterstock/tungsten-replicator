@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,7 +32,7 @@ package com.continuent.tungsten.replicator.applier;
 public interface ParallelApplier extends Applier
 {
     /**
-     * Sets the ID of the task using this extractor.
+     * Sets the ID of the task using this applier.
      * 
      * @param id Task ID
      * @throws ApplierException Thrown if the task ID exceeds the number of

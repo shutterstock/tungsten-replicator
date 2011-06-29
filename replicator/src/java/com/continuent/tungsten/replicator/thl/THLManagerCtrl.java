@@ -36,7 +36,7 @@ import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.commons.exec.ArgvIterator;
-import com.continuent.tungsten.replicator.conf.ReplicatorConf;
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntimeConf;
 import com.continuent.tungsten.replicator.dbms.DBMSData;
 import com.continuent.tungsten.replicator.dbms.LoadDataFileFragment;
@@ -49,6 +49,8 @@ import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSFilteredEvent;
 import com.continuent.tungsten.replicator.event.ReplEvent;
 import com.continuent.tungsten.replicator.event.ReplOption;
+import com.continuent.tungsten.replicator.thl.log.DiskLog;
+import com.continuent.tungsten.replicator.thl.log.LogConnection;
 
 /**
  * This class defines a THLManagerCtrl that implements a utility to access
@@ -80,12 +82,10 @@ public class THLManagerCtrl
     protected static ArgvIterator argvIterator       = null;
 
     protected String              configFile         = null;
-    private String                driver             = null;
-    protected String              url                = null;
-    protected String              user               = null;
-    protected String              password           = null;
-    private String                metadataSchema     = null;
-    private JdbcTHLDatabase       database           = null;
+
+    private String                logDir;
+
+    private DiskLog               diskLog;
 
     /**
      * Creates a new <code>THLManagerCtrl</code> object.
@@ -100,11 +100,7 @@ public class THLManagerCtrl
 
         // Read properties required to connect to database.
         TungstenProperties properties = readConfig();
-        url = properties.getString(ReplicatorConf.THL_DB_URL, url, true);
-        user = properties.getString(ReplicatorConf.THL_DB_USER);
-        password = properties.getString(ReplicatorConf.THL_DB_PASSWORD);
-        metadataSchema = properties.getString(ReplicatorConf.METADATA_SCHEMA,
-                null, true);
+        logDir = properties.getString("replicator.store.thl.log_dir");
     }
 
     /**
@@ -113,6 +109,7 @@ public class THLManagerCtrl
     protected TungstenProperties readConfig() throws Exception
     {
         TungstenProperties conf = null;
+
         // Open configuration file.
         File propsFile = new File(configFile);
         if (!propsFile.exists() || !propsFile.canRead())
@@ -121,6 +118,7 @@ public class THLManagerCtrl
                     + propsFile.getAbsolutePath(), null);
         }
         conf = new TungstenProperties();
+
         // Read configuration.
         try
         {
@@ -141,10 +139,12 @@ public class THLManagerCtrl
      * 
      * @throws THLException
      */
-    public void connect() throws THLException
+    public void connect(boolean readOnly) throws ReplicatorException, InterruptedException
     {
-        database = new JdbcTHLDatabase(driver);
-        database.connect(url, user, password, metadataSchema);
+        diskLog = new DiskLog();
+        diskLog.setLogDir(logDir);
+        diskLog.setReadOnly(readOnly);
+        diskLog.prepare();
     }
 
     /**
@@ -152,8 +152,22 @@ public class THLManagerCtrl
      */
     public void disconnect()
     {
-        database.close();
-        database = null;
+        if (diskLog != null)
+        {
+            try
+            {
+                diskLog.release();
+            }
+            catch (ReplicatorException e)
+            {
+                logger.warn("Unable to release log", e);
+            }
+            catch (InterruptedException e)
+            {
+                logger.warn("Unexpected interruption while closing log", e);
+            }
+            diskLog = null;
+        }
     }
 
     /**
@@ -164,21 +178,12 @@ public class THLManagerCtrl
      */
     public InfoHolder getInfo() throws THLException
     {
-        // TODO: implement database.getHighestReplicatedEvent() when we will
-        // have state table in the metadata schema.
-        return new InfoHolder(database.getMinSeqno(), database.getMaxSeqno(),
-                database.getEventCount(), -1);
+        long minSeqno = diskLog.getMinSeqno();
+        long maxSeqno = diskLog.getMaxSeqno();
+        return new InfoHolder(minSeqno, maxSeqno, maxSeqno - minSeqno, -1);
     }
-
-    /**
-     * @see com.continuent.tungsten.replicator.thl.JdbcTHLDatabase#getEventCount(Long,
-     *      Long)
-     */
-    public long getEventCount(Long low, Long high) throws THLException
-    {
-        return database.getEventCount(low, high);
-    }
-
+    
+    
     /**
      * Formats column and column value for printing.
      * 
@@ -270,14 +275,38 @@ public class THLManagerCtrl
      * @param charset character set name to be used to decode byte arrays in row
      *            replication
      * @throws THLException
+     * @throws InterruptedException 
      */
     public void listEvents(Long low, Long high, Long by, boolean pureSQL,
-            String charset) throws THLException
+            String charset) throws THLException, InterruptedException
     {
-        // TODO: implement "by" listing.
-        ArrayList<THLEvent> events = database.find(low, high);
-        for (THLEvent thlEvent : events)
+        long lowIndex = 0;
+        long minSeqno = diskLog.getMinSeqno();
+        if (low != null && low >= minSeqno)
+            lowIndex = low;
+        else
+            lowIndex = minSeqno;
+
+        Long highIndex;
+        long maxSeqno = diskLog.getMaxSeqno();
+        if (high != null && high <= maxSeqno)
+            highIndex = high;
+        else
+            highIndex = maxSeqno;
+
+        // Find low value. 
+        LogConnection conn = diskLog.connect(true);
+        if (! conn.seek(lowIndex))
         {
+            logger.error("Unable to find sequence number: " + lowIndex);
+            fail();
+        }
+
+        // Iterate until we run out of sequence numbers.  
+        THLEvent thlEvent = null;
+        while (lowIndex <= highIndex && (thlEvent = conn.next(false)) != null)
+        {
+            lowIndex = thlEvent.getSeqno();
             if (!pureSQL)
             {
                 StringBuilder sb = new StringBuilder();
@@ -293,10 +322,14 @@ public class THLManagerCtrl
                 print(sb.toString());
             }
             else
+            {
                 println("# " + replEvent.getClass().getName()
                         + ": not supported.");
-            // TODO: add support for ConsistencyCheckMetadata?
+            }
         }
+        
+        // Disconnect. 
+        conn.release();
     }
 
     /**
@@ -314,10 +347,9 @@ public class THLManagerCtrl
                 + thlEvent.getFragno()
                 + (thlEvent.getLastFrag() ? (" (last frag)") : ""));
         println(stringBuilder, "- TIME = " + thlEvent.getSourceTstamp());
+        println(stringBuilder, "- EPOCH# = " + thlEvent.getEpochNumber());
         println(stringBuilder, "- EVENTID = " + thlEvent.getEventId());
         println(stringBuilder, "- SOURCEID = " + thlEvent.getSourceId());
-        println(stringBuilder,
-                "- STATUS = " + THLEvent.statusToString(thlEvent.getStatus()));
         if (thlEvent.getComment() != null && thlEvent.getComment().length() > 0)
             println(stringBuilder, "- COMMENTS = " + thlEvent.getComment());
     }
@@ -597,77 +629,21 @@ public class THLManagerCtrl
      *            null to start from the very beginning of the table.
      * @param high Sequence number specifying the end of the range. Leave null
      *            to end at the very end of the table.
-     * @return Number of deleted events
      * @throws THLException
      */
-    public int purgeEvents(Long low, Long high, String before)
-            throws THLException
+    public void purgeEvents(Long low, Long high) throws THLException
     {
-        // TODO: what is the correct way of purging THL events?
-        return database.delete(low, high, before);
-    }
-
-    public int purgeEvents(Long low, Long high) throws THLException
-    {
-        // TODO: what is the correct way of purging THL events?
-        return purgeEvents(low, high, null);
-    }
-
-    /**
-     * Mark THL events in the given seqno interval as skipped.
-     * 
-     * @param low Sequence number specifying the beginning of the range. Leave
-     *            null to start from the very beginning of the table.
-     * @param high Sequence number specifying the end of the range. Leave null
-     *            to end at the very end of the table.
-     * @return Count of events that were marked as skipped.
-     * @throws THLException Exception is thrown in case there was a problem
-     *             marking event as skipped. Note that in case of multiple
-     *             events being marked as skipped this method is not
-     *             transactional, i.e. there is a possibility for a situation
-     *             that some events were skipped, but than an exception was
-     *             thrown.
-     */
-    public long skipEvents(Long low, Long high) throws THLException
-    {
-        ArrayList<THLEvent> events = database.find(low, high);
-        long count = 0;
-        for (THLEvent event : events)
+        LogConnection conn = diskLog.connect(false);
+        try
         {
-            database.setStatus(event.getSeqno(), event.getFragno(),
-                    THLEvent.SKIP, null);
-            count++;
+            conn.delete(low, high);
+            conn.release();
         }
-        return count;
-    }
-
-    /**
-     * Prints to stdout program usage.
-     */
-    protected static void printHelp()
-    {
-        println("Replicator THL Manager");
-        println("Syntax: thl [global-options] command [command-options]");
-        println("Global options:");
-        println("  -conf path                       - Path to replicator.properties. Default:    ");
-        println("                                     " + defaultConfigPath);
-        println("age_format: Seconds=s, Minutes=m, hours=h, days=d e.g \"2d 4h\" is 2 days + 4 hours");
-        println("Commands and corresponding options:");
-        println("  list [-low #] [-high #] [-by #]  - Dump THL events from low to high #.        ");
-        println("       [-sql]                        Specify -sql to use pure SQL output only.  ");
-        println("       [-charset <charset_name>]     Character set used for decoding, when needed.");
-        println("                                     (only with row replication with using_bytes_for string is set to true).");
-        println("  list [-seqno #] [-sql]           - Dump the exact event by a given #.         ");
-        println("       [-charset <charset_name>]     Character set used for decoding, when needed.");
-        println("  purge [-low #] [-high #] [-age <age_format>] [-y]");
-        println("                                   - Delete events within the given range earlier than the optional age.");
-        println("  purge [-seqno #] [-y]            - Delete the exact event.                    ");
-        println("                                     Use -y to answer yes to all questions.     ");
-        println("  skip [-low #] [-high #] [-y]     - Mark a range of events to be skipped.      ");
-        println("  skip [-seqno #] [-y]               Mark an event to be skipped.               ");
-        println("  info                             - Display minimum, maximum sequence number   ");
-        println("                                     and other summary.                         ");
-        println("  help                             - Print this help information.               ");
+        catch (InterruptedException e)
+        {
+            logger.warn("Delete operation was interrupted!");
+        }
+        logger.info("Transactions deleted");
     }
 
     /**
@@ -681,14 +657,15 @@ public class THLManagerCtrl
         {
             // Command line parameters and options.
             String configFile = null;
+            String service = null;
             String command = null;
-            String age = null;
             Long seqno = null;
             Long low = null;
             Long high = null;
             Long by = null;
             Boolean pureSQL = null;
             Boolean yesToQuestions = null;
+            String fileName = null;
             String charsetName = null;
 
             // Parse command line arguments.
@@ -699,14 +676,14 @@ public class THLManagerCtrl
                 curArg = argvIterator.next();
                 if ("-conf".equals(curArg))
                     configFile = argvIterator.next();
+                else if ("-service".equals(curArg))
+                    service = argvIterator.next();
                 else if ("-seqno".equals(curArg))
                     seqno = Long.parseLong(argvIterator.next());
                 else if ("-low".equals(curArg))
                     low = Long.parseLong(argvIterator.next());
                 else if ("-high".equals(curArg))
                     high = Long.parseLong(argvIterator.next());
-                else if ("-age".equals(curArg))
-                    age = argvIterator.next();
                 else if ("-by".equals(curArg))
                     by = Long.parseLong(argvIterator.next());
                 else if ("-sql".equals(curArg))
@@ -723,20 +700,14 @@ public class THLManagerCtrl
                         charsetName = null;
                     }
                 }
+                else if ("-file".equals(curArg))
+                {
+                    fileName = argvIterator.next();
+                }
                 else if (curArg.startsWith("-"))
                     fatal("Unrecognized option: " + curArg, null);
                 else
                     command = curArg;
-            }
-
-            // Use default configuration file in case user didn't specify one.
-            if (configFile == null)
-            {
-                ReplicatorRuntimeConf runtimeConf = ReplicatorRuntimeConf
-                        .getConfiguration("default");
-                configFile = runtimeConf.getReplicatorHomeDir()
-                        + File.separator + "bin" + File.separator
-                        + defaultConfigPath;
             }
 
             // Construct actual THLManagerCtrl and call methods based on a
@@ -745,16 +716,38 @@ public class THLManagerCtrl
             {
                 println("Command is missing!");
                 printHelp();
+                fail();
             }
             else if (THLCommands.HELP.equals(command))
+            {
                 printHelp();
-            else if (THLCommands.INFO.equals(command))
+                succeed();
+            }
+
+            // Use default configuration file in case user didn't specify one.
+            if (configFile == null)
+            {
+                if (service == null)
+                {
+                    fatal("You must specify either a config file or a service name (-conf or -service)",
+                            null);
+                }
+                else
+                {
+                    ReplicatorRuntimeConf runtimeConf = ReplicatorRuntimeConf
+                            .getConfiguration(service);
+                    configFile = runtimeConf.getReplicatorProperties()
+                            .getAbsolutePath();
+                }
+            }
+
+            if (THLCommands.INFO.equals(command))
             {
                 THLManagerCtrl thlManager = new THLManagerCtrl(configFile);
-                thlManager.connect();
+                thlManager.connect(true);
 
                 InfoHolder info = thlManager.getInfo();
-                println("min seq# = " + info.getMinSeqNo());
+                println("min seq# = " +  info.getMinSeqNo());
                 println("max seq# = " + info.getMaxSeqNo());
                 println("events = " + info.getEventCount());
                 println("highest known replicated seq# = "
@@ -765,9 +758,14 @@ public class THLManagerCtrl
             else if (THLCommands.LIST.equals(command))
             {
                 THLManagerCtrl thlManager = new THLManagerCtrl(configFile);
-                thlManager.connect();
+                thlManager.connect(true);
 
-                if (seqno == null)
+                if (fileName != null)
+                {
+                    thlManager.listEvents(fileName, getBoolOrFalse(pureSQL),
+                            charsetName);
+                }
+                else if (seqno == null)
                     thlManager.listEvents(low, high, by,
                             getBoolOrFalse(pureSQL), charsetName);
                 else
@@ -779,7 +777,7 @@ public class THLManagerCtrl
             else if (THLCommands.PURGE.equals(command))
             {
                 THLManagerCtrl thlManager = new THLManagerCtrl(configFile);
-                thlManager.connect();
+                thlManager.connect(false);
 
                 println("WARNING: The purge command will break replication if you delete all events or delete events that have not reached all slaves.");
 
@@ -787,22 +785,11 @@ public class THLManagerCtrl
                 if (!getBoolOrFalse(yesToQuestions))
                 {
                     confirmed = false;
-                    long toBeDeleted = -1;
-                    if (seqno == null)
-                        toBeDeleted = thlManager.getEventCount(low, high);
+                    println("Are you sure you wish to delete these events [y/N]?");
+                    if (readYes())
+                        confirmed = true;
                     else
-                        toBeDeleted = thlManager.getEventCount(seqno, seqno);
-                    if (toBeDeleted == 0)
-                        println("Nothing to delete.");
-                    else
-                    {
-                        println("Are you sure you wish to delete "
-                                + toBeDeleted + " events [y/N]?");
-                        if (readYes())
-                            confirmed = true;
-                        else
-                            println("Nothing done.");
-                    }
+                        println("Nothing done.");
                 }
                 if (confirmed)
                 {
@@ -816,16 +803,14 @@ public class THLManagerCtrl
                             log += " and";
                         if (high != null)
                             log += " SEQ# <=" + high;
-                        if (age != null)
-                            log += " age is older than " + age;
                         println(log);
-                        deleted = thlManager.purgeEvents(low, high, age);
+                        thlManager.purgeEvents(low, high);
                     }
                     else
                     {
                         log += " SEQ# = " + seqno;
                         println(log);
-                        deleted = thlManager.purgeEvents(seqno, seqno);
+                        thlManager.purgeEvents(seqno, seqno);
                     }
                     println("Deleted events: " + deleted);
                 }
@@ -834,55 +819,16 @@ public class THLManagerCtrl
             }
             else if (THLCommands.SKIP.equals(command))
             {
+                println("SKIP operation is no longer supported");
+                println("Please check the ");
+                return;
+            }
+            else if (command.equals("index"))
+            {
                 THLManagerCtrl thlManager = new THLManagerCtrl(configFile);
-                thlManager.connect();
+                thlManager.connect(true);
 
-                println("WARNING: Skipping events may cause data inconsistencies with the master database.");
-
-                boolean confirmed = true;
-                if (!getBoolOrFalse(yesToQuestions))
-                {
-                    confirmed = false;
-                    long toBeSkipped = -1;
-                    if (seqno == null)
-                        toBeSkipped = thlManager.getEventCount(low, high);
-                    else
-                        toBeSkipped = thlManager.getEventCount(seqno, seqno);
-                    if (toBeSkipped == 0)
-                        println("Nothing to skip.");
-                    else
-                    {
-                        println("Are you sure you wish to skip " + toBeSkipped
-                                + " events [y/N]?");
-                        if (readYes())
-                            confirmed = true;
-                        else
-                            println("Nothing done.");
-                    }
-                }
-                if (confirmed)
-                {
-                    String log = "Skipping events where";
-                    long skipped = 0;
-                    if (seqno == null)
-                    {
-                        if (low != null)
-                            log += " SEQ# >= " + low;
-                        if (low != null && high != null)
-                            log += " and";
-                        if (high != null)
-                            log += " SEQ# <=" + high;
-                        println(log);
-                        skipped = thlManager.skipEvents(low, high);
-                    }
-                    else
-                    {
-                        log += " SEQ# = " + seqno;
-                        println(log);
-                        skipped = thlManager.skipEvents(seqno, seqno);
-                    }
-                    println("Marked events as skipped: " + skipped);
-                }
+                thlManager.printIndex();
 
                 thlManager.disconnect();
             }
@@ -890,12 +836,78 @@ public class THLManagerCtrl
             {
                 println("Unknown command: '" + command + "'");
                 printHelp();
+                fail();
             }
         }
         catch (Throwable t)
         {
             fatal("Fatal error: " + t.getMessage(), t);
         }
+    }
+
+    private void listEvents(String fileName, boolean pureSQL, String charset)
+            throws ReplicatorException, IOException, InterruptedException
+    {
+        LogConnection conn = diskLog.connect(true);
+        if (! conn.seek(fileName))
+        {
+            logger.error("File not found: " + fileName);
+            fail();
+        }
+        THLEvent thlEvent = null;
+        while ((thlEvent = conn.next(false)) != null)
+        {
+            if (!pureSQL)
+            {
+                StringBuilder sb = new StringBuilder();
+                printHeader(sb, thlEvent);
+                print(sb.toString());
+            }
+            ReplEvent replEvent = thlEvent.getReplEvent();
+            if (replEvent instanceof ReplDBMSEvent)
+            {
+                ReplDBMSEvent event = (ReplDBMSEvent) replEvent;
+                StringBuilder sb = new StringBuilder();
+                printReplDBMSEvent(sb, event, pureSQL, charset);
+                print(sb.toString());
+            }
+            else
+            {
+                println("# " + replEvent.getClass().getName()
+                        + ": not supported.");
+            }
+        }
+    }
+
+    private void printIndex()
+    {
+        println(diskLog.getIndex());
+    }
+
+    protected static void printHelp()
+    {
+        println("Replicator THL Manager");
+        println("Syntax: thl [global-options] command [command-options]");
+        println("Global options:");
+        println("  -conf path                       - Path to replicator.properties. Default:    ");
+        println("                                     " + defaultConfigPath);
+        println("age_format: Seconds=s, Minutes=m, hours=h, days=d e.g \"2d 4h\" is 2 days + 4 hours");
+        println("Commands and corresponding options:");
+        println("  list [-low #] [-high #] [-by #]  - Dump THL events from low to high #.        ");
+        println("       [-sql]                        Specify -sql to use pure SQL output only.  ");
+        println("       [-charset <charset_name>]     Character set used for decoding, when needed.");
+        println("                                     (only with row replication with using_bytes_for_string is set to true).");
+        println("  list [-seqno #] [-sql]           - Dump the exact event by a given #.         ");
+        println("       [-charset <charset_name>]     Character set used for decoding, when needed.");
+        println("  list [-file <file_name>] [-sql]  - Dump the content of the given file (for Disk-based storage).");
+        println("       [-charset <charset_name>]     Character set used for decoding, when needed.");
+        println("  index                            - Display index of Disk-based storage        ");
+        println("  purge [-low #] [-high #] [-y]    - Delete events within the given range");
+        println("  purge [-seqno #] [-y]            - Delete the exact event.                    ");
+        println("                                     Use -y to answer yes to all questions.     ");
+        println("  info                             - Display minimum, maximum sequence number   ");
+        println("                                     and other summary.                         ");
+        println("  help                             - Print this help information.               ");
     }
 
     /**

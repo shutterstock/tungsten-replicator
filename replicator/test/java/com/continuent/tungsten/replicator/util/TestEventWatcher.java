@@ -36,6 +36,7 @@ import org.junit.Before;
 
 import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 
 /**
  * This class tests the EventWatcher class and event watches.
@@ -229,9 +230,9 @@ public class TestEventWatcher extends TestCase
      */
     public void testTimestampWatch() throws Exception
     {
-        WatchManager<ReplDBMSEvent> em = new WatchManager<ReplDBMSEvent>();
+        WatchManager<ReplDBMSHeader> em = new WatchManager<ReplDBMSHeader>();
         long currentTimeMillis = System.currentTimeMillis();
-        Watch<ReplDBMSEvent> w = em.watch(new SourceTimestampWatchPredicate(
+        Watch<ReplDBMSHeader> w = em.watch(new SourceTimestampWatchPredicate(
                 new Timestamp(currentTimeMillis + 1)), 1);
 
         // Should ignore an earlier event. Note the source event is on the
@@ -239,7 +240,7 @@ public class TestEventWatcher extends TestCase
         DBMSEvent dbmsEvent1 = new DBMSEvent("1", null, null, new Timestamp(
                 currentTimeMillis));
         ReplDBMSEvent replEvent1 = new ReplDBMSEvent(1, (short) 0, true,
-                "source", 0, new Timestamp(currentTimeMillis + 2), dbmsEvent1);
+                "source", 0, new Timestamp(currentTimeMillis), dbmsEvent1);
         em.process(replEvent1, 0);
         assertFalse("Should not be done", w.isDone());
 
@@ -247,7 +248,7 @@ public class TestEventWatcher extends TestCase
         DBMSEvent dbmsEvent2 = new DBMSEvent("1", null, null, new Timestamp(
                 currentTimeMillis + 1));
         ReplDBMSEvent event2 = new ReplDBMSEvent(1, (short) 0, true, "source",
-                0, new Timestamp(currentTimeMillis + 2), dbmsEvent2);
+                0, new Timestamp(currentTimeMillis + 1), dbmsEvent2);
         em.process(event2, 0);
         assertTrue("Should be done", w.isDone());
         assertEquals("Should return event", event2, w.get(1, TimeUnit.SECONDS));

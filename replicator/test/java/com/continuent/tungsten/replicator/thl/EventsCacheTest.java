@@ -72,8 +72,8 @@ public class EventsCacheTest extends TestCase
             // Confirm we can get our event back.
             THLEvent ev1 = ec.get(ev.getSeqno());
             assertNotNull("Most recent event always in cache", ev1);
-            assertEquals("Found event has correct content", new Long(i)
-                    .toString(), ev1.getEventId());
+            assertEquals("Found event has correct content",
+                    new Long(i).toString(), ev1.getEventId());
 
             // Confirm FIFO aging using inductive proof.
             if (i <= size)
@@ -87,8 +87,8 @@ public class EventsCacheTest extends TestCase
                 int last = i - size + 1;
                 THLEvent evSize = ec.get(last);
                 assertNotNull("Last N events always in cache", evSize);
-                assertEquals("Found event has correct content", new Long(last)
-                        .toString(), evSize.getEventId());
+                assertEquals("Found event has correct content",
+                        new Long(last).toString(), evSize.getEventId());
 
                 // Older events have aged out.
                 THLEvent evSizePlus = ec.get(i - size);
@@ -101,7 +101,6 @@ public class EventsCacheTest extends TestCase
     private THLEvent makeTHLEvent(long seqno)
     {
         return new THLEvent(seqno, (short) 0, true, "test", (short) 0, 0, null,
-                null, null, (short) 0, "Comment", new Long(seqno).toString(),
-                null);
+                null, null, new Long(seqno).toString(), "#UNKNOWN", null);
     }
 }

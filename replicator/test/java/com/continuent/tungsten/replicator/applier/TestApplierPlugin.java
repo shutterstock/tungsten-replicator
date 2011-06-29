@@ -64,9 +64,10 @@ public class TestApplierPlugin extends TestCase
         {
             ArrayList<DBMSData> sql = new ArrayList<DBMSData>();
             sql.add(new StatementData("SELECT " + i));
-            applier.apply(new DBMSEvent(i.toString(), sql, new Timestamp(System.currentTimeMillis())),
+            Timestamp now = new Timestamp(System.currentTimeMillis());
+            applier.apply(new DBMSEvent(i.toString(), sql, now),
                     new ReplDBMSHeaderData(i, (short) 0, true, "test", 0,
-                            "test"), true, false);
+                            "test", "myshard", now), true, false);
         }
 
         ArrayList<StatementData> sql = ((DummyApplier) applier).getTrx();

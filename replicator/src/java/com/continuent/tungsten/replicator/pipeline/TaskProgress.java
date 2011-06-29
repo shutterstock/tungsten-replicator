@@ -22,33 +22,33 @@
 
 package com.continuent.tungsten.replicator.pipeline;
 
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 
 /**
  * Tracks statistics for an individual task, which is identified by a task ID.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class TaskProgress
 {
-    private final String  stageName;
-    private final int     taskId;
-    private ReplDBMSEvent lastEvent           = null;
-    private boolean       cancelled           = false;
-    private long          eventCount          = 0;
-    private long          applyLatencyMillis  = 0;
-    private long          startMillis;
-    private long          totalExtractMillis  = 0;
-    private long          totalFilterMillis   = 0;
-    private long          totalApplyMillis    = 0;
+    private final String   stageName;
+    private final int      taskId;
+    private ReplDBMSHeader lastEvent           = null;
+    private boolean        cancelled           = false;
+    private long           eventCount          = 0;
+    private long           applyLatencyMillis  = 0;
+    private long           startMillis;
+    private long           totalExtractMillis  = 0;
+    private long           totalFilterMillis   = 0;
+    private long           totalApplyMillis    = 0;
 
     // Used to mark the beginning of a timing interval.
-    private long          intervalStartMillis = 0;
+    private long           intervalStartMillis = 0;
 
     /**
      * Defines a new task progress tracker for the given task ID.
-     *
+     * 
      * @param stageName Name of stage to which task belongs
      * @param taskId Task ID number
      */
@@ -100,12 +100,12 @@ public class TaskProgress
         return this.taskId;
     }
 
-    public ReplDBMSEvent getLastEvent()
+    public ReplDBMSHeader getLastEvent()
     {
         return lastEvent;
     }
 
-    public void setLastEvent(ReplDBMSEvent lastEvent)
+    public void setLastEvent(ReplDBMSHeader lastEvent)
     {
         this.lastEvent = lastEvent;
     }

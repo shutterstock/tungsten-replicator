@@ -32,7 +32,7 @@ import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
-import com.continuent.tungsten.replicator.event.ReplOptionParams;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.storage.ParallelStore;
 import com.continuent.tungsten.replicator.util.EventIdWatchPredicate;
 import com.continuent.tungsten.replicator.util.HeartbeatWatchPredicate;
@@ -50,8 +50,7 @@ import com.continuent.tungsten.replicator.util.WatchPredicate;
  */
 public class StageProgressTracker
 {
-    private static Logger                        logger              = Logger
-                                                                             .getLogger(StageProgressTracker.class);
+    private static Logger                        logger              = Logger.getLogger(StageProgressTracker.class);
     String                                       name;
 
     // Record of last processed event on each task.
@@ -62,10 +61,10 @@ public class StageProgressTracker
     private final TreeMap<String, ShardProgress> shardInfo           = new TreeMap<String, ShardProgress>();
 
     // Watch lists.
-    private final WatchManager<ReplDBMSEvent>    seqnoWatches        = new WatchManager<ReplDBMSEvent>();
-    private final WatchManager<ReplDBMSEvent>    eventIdWatches      = new WatchManager<ReplDBMSEvent>();
-    private final WatchManager<ReplDBMSEvent>    heartbeatWatches    = new WatchManager<ReplDBMSEvent>();
-    private final WatchManager<ReplDBMSEvent>    timestampWatches    = new WatchManager<ReplDBMSEvent>();
+    private final WatchManager<ReplDBMSHeader>   seqnoWatches        = new WatchManager<ReplDBMSHeader>();
+    private final WatchManager<ReplDBMSHeader>   eventIdWatches      = new WatchManager<ReplDBMSHeader>();
+    private final WatchManager<ReplDBMSHeader>   heartbeatWatches    = new WatchManager<ReplDBMSHeader>();
+    private final WatchManager<ReplDBMSHeader>   timestampWatches    = new WatchManager<ReplDBMSHeader>();
 
     // Upstream parallel store for inserting watch events.
     ParallelStore                                upstreamStore       = null;
@@ -74,10 +73,10 @@ public class StageProgressTracker
     private boolean                              shouldInterruptTask = false;
 
     // Watch action to terminate this task.
-    WatchAction<ReplDBMSEvent>                   cancelAction        = new WatchAction<ReplDBMSEvent>()
+    WatchAction<ReplDBMSHeader>                  cancelAction        = new WatchAction<ReplDBMSHeader>()
                                                                      {
                                                                          public void matched(
-                                                                                 ReplDBMSEvent event,
+                                                                                 ReplDBMSHeader event,
                                                                                  int taskId)
                                                                          {
                                                                              taskInfo[taskId]
@@ -144,7 +143,7 @@ public class StageProgressTracker
     /**
      * Return last event that we have seen.
      */
-    public synchronized ReplDBMSEvent getLastProcessedEvent(int taskId)
+    public synchronized ReplDBMSHeader getLastProcessedEvent(int taskId)
     {
         return taskInfo[taskId].getLastEvent();
     }
@@ -158,7 +157,7 @@ public class StageProgressTracker
         long minSeqno = Long.MAX_VALUE;
         for (TaskProgress progress : taskInfo)
         {
-            ReplDBMSEvent event = progress.getLastEvent();
+            ReplDBMSHeader event = progress.getLastEvent();
             if (event == null)
                 minSeqno = -1;
             else
@@ -170,12 +169,12 @@ public class StageProgressTracker
     /**
      * Return the last processed event or null if none such exists.
      */
-    public synchronized ReplDBMSEvent getMinLastEvent()
+    public synchronized ReplDBMSHeader getMinLastEvent()
     {
-        ReplDBMSEvent minEvent = null;
+        ReplDBMSHeader minEvent = null;
         for (TaskProgress progress : taskInfo)
         {
-            ReplDBMSEvent event = progress.getLastEvent();
+            ReplDBMSHeader event = progress.getLastEvent();
             if (event == null)
             {
                 minEvent = null;
@@ -211,9 +210,9 @@ public class StageProgressTracker
             progressList.add(taskInfo[i].clone());
         return progressList;
     }
-    
+
     /**
-     * Return underlying progress instance for a particular task. 
+     * Return underlying progress instance for a particular task.
      */
     public synchronized TaskProgress getTaskProgress(int taskId)
     {
@@ -225,9 +224,9 @@ public class StageProgressTracker
      */
     public synchronized List<ShardProgress> getShardProgress()
     {
-        // Get a sorted array of keys and then generate the list. 
+        // Get a sorted array of keys and then generate the list.
         List<ShardProgress> progressList = new ArrayList<ShardProgress>();
-        for (ShardProgress progress: shardInfo.values())
+        for (ShardProgress progress : shardInfo.values())
         {
             progressList.add(progress);
         }
@@ -238,7 +237,7 @@ public class StageProgressTracker
      * Set the last processed event, which triggers checks for watches.
      */
     public synchronized void setLastProcessedEvent(int taskId,
-            ReplDBMSEvent replEvent) throws InterruptedException
+            ReplDBMSHeader replEvent) throws InterruptedException
     {
         if (logger.isDebugEnabled())
         {
@@ -248,21 +247,19 @@ public class StageProgressTracker
         // Log global statistics.
         eventCount++;
         applyLatencyMillis = System.currentTimeMillis()
-                - replEvent.getDBMSEvent().getSourceTstamp().getTime();
+                - replEvent.getExtractedTstamp().getTime();
 
         // Log per-task statistics.
         taskInfo[taskId].incrementEventCount();
         taskInfo[taskId].setApplyLatencyMillis(applyLatencyMillis);
-        
-        // Log per-shard statistics. 
-        String shardId = replEvent.getDBMSEvent().getMetadataOptionValue(
-                    ReplOptionParams.SHARD_ID);
-        if (shardId == null)
-            shardId = ReplOptionParams.SHARD_ID_UNKNOWN;
+
+        // Log per-shard statistics.
+        String shardId = replEvent.getShardId();
         ShardProgress shardProgress = shardInfo.get(shardId);
         if (shardProgress == null)
         {
-            shardProgress = new ShardProgress(shardId, taskInfo[taskId].getStageName());
+            shardProgress = new ShardProgress(shardId,
+                    taskInfo[taskId].getStageName());
             shardInfo.put(shardId, shardProgress);
         }
         shardProgress.setLastSeqno(replEvent.getSeqno());
@@ -277,11 +274,14 @@ public class StageProgressTracker
             taskInfo[taskId].setLastEvent(replEvent);
         }
 
-        // Process watches no matter what.
-        seqnoWatches.process(replEvent, taskId);
-        eventIdWatches.process(replEvent, taskId);
-        heartbeatWatches.process(replEvent, taskId);
-        timestampWatches.process(replEvent, taskId);
+        // If we have a real event, process watches.
+        if (replEvent instanceof ReplDBMSEvent)
+        {
+            seqnoWatches.process(replEvent, taskId);
+            eventIdWatches.process(replEvent, taskId);
+            heartbeatWatches.process(replEvent, taskId);
+            timestampWatches.process(replEvent, taskId);
+        }
         if (loggingInterval > 0 && eventCount % loggingInterval == 0)
             logger.info("Stage processing counter: event count=" + eventCount);
     }
@@ -349,7 +349,7 @@ public class StageProgressTracker
      * @return Returns a watch on the matching event
      * @throws InterruptedException
      */
-    public synchronized Future<ReplDBMSEvent> watchForProcessedSequenceNumber(
+    public synchronized Future<ReplDBMSHeader> watchForProcessedSequenceNumber(
             long seqno, boolean cancel) throws InterruptedException
     {
         SeqnoWatchPredicate seqnoPredicate = new SeqnoWatchPredicate(seqno);
@@ -364,7 +364,7 @@ public class StageProgressTracker
      * @return Returns a watch on the matching event
      * @throws InterruptedException
      */
-    public synchronized Future<ReplDBMSEvent> watchForProcessedEventId(
+    public synchronized Future<ReplDBMSHeader> watchForProcessedEventId(
             String eventId, boolean cancel) throws InterruptedException
     {
         EventIdWatchPredicate eventPredicate = new EventIdWatchPredicate(
@@ -379,7 +379,7 @@ public class StageProgressTracker
      * @return Returns a watch on the matching event
      * @throws InterruptedException
      */
-    public synchronized Future<ReplDBMSEvent> watchForProcessedHeartbeat(
+    public synchronized Future<ReplDBMSHeader> watchForProcessedHeartbeat(
             String name, boolean cancel) throws InterruptedException
     {
         HeartbeatWatchPredicate predicate = new HeartbeatWatchPredicate(name);
@@ -400,7 +400,7 @@ public class StageProgressTracker
      * @return Returns a watch on the matching event
      * @throws InterruptedException
      */
-    public synchronized Future<ReplDBMSEvent> watchForProcessedTimestamp(
+    public synchronized Future<ReplDBMSHeader> watchForProcessedTimestamp(
             Timestamp timestamp, boolean cancel) throws InterruptedException
     {
         SourceTimestampWatchPredicate predicate = new SourceTimestampWatchPredicate(
@@ -412,15 +412,15 @@ public class StageProgressTracker
      * Private utility to set a watch of arbitrary type. This *must* be
      * synchronized to ensure we compute minimum events correctly.
      */
-    private Future<ReplDBMSEvent> waitForEvent(
-            WatchPredicate<ReplDBMSEvent> predicate,
-            WatchManager<ReplDBMSEvent> manager, boolean cancel)
+    private Future<ReplDBMSHeader> waitForEvent(
+            WatchPredicate<ReplDBMSHeader> predicate,
+            WatchManager<ReplDBMSHeader> manager, boolean cancel)
             throws InterruptedException
     {
         // Find the trailing event that has been processed across all
         // tasks.
-        ReplDBMSEvent lastEvent = getMinLastEvent();
-        Watch<ReplDBMSEvent> watch;
+        ReplDBMSHeader lastEvent = getMinLastEvent();
+        Watch<ReplDBMSHeader> watch;
         if (lastEvent == null || !predicate.match(lastEvent))
         {
             // We have not reached the requested event, so we have to enqueue
@@ -440,7 +440,7 @@ public class StageProgressTracker
         {
             // We have already reached it, so signal that we are cancelled, post
             // an interrupt flag, and return the current event.
-            watch = new Watch<ReplDBMSEvent>(predicate, threadCount);
+            watch = new Watch<ReplDBMSHeader>(predicate, threadCount);
             offerAll(watch);
             if (cancel)
             {
@@ -455,12 +455,12 @@ public class StageProgressTracker
     // Offers the watch to each task in succession. This operation ensures
     // watches are correctly initialized in the event that some threads but
     // not others have satisfied the watch predicate.
-    private void offerAll(Watch<ReplDBMSEvent> watch)
+    private void offerAll(Watch<ReplDBMSHeader> watch)
             throws InterruptedException
     {
         for (int i = 0; i < this.taskInfo.length; i++)
         {
-            ReplDBMSEvent event = taskInfo[i].getLastEvent();
+            ReplDBMSHeader event = taskInfo[i].getLastEvent();
             if (event != null)
                 watch.offer(event, i);
         }
@@ -483,8 +483,8 @@ public class StageProgressTracker
         }
         else if (this.seqnosToBeSkipped != null)
         {
-            // Purge skip numbers processing has already reached.  
-            long minSeqno = getMinLastSeqno(); 
+            // Purge skip numbers processing has already reached.
+            long minSeqno = getMinLastSeqno();
             while (!this.seqnosToBeSkipped.isEmpty()
                     && this.seqnosToBeSkipped.first() < minSeqno)
                 this.seqnosToBeSkipped.remove(this.seqnosToBeSkipped.first());
@@ -497,7 +497,7 @@ public class StageProgressTracker
                     if (logger.isDebugEnabled())
                         logger.debug("Skipping event with seqno "
                                 + event.getSeqno());
-                    // Skip event and remove seqno after last fragment. 
+                    // Skip event and remove seqno after last fragment.
                     if (event.getLastFrag())
                         this.seqnosToBeSkipped.remove(event.getSeqno());
                     return true;

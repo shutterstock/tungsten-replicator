@@ -83,9 +83,9 @@ public class InMemoryQueueStore implements Store
     /**
      * {@inheritDoc}
      *
-     * @see com.continuent.tungsten.replicator.storage.Store#getMaxStoredSeqno(boolean)
+     * @see com.continuent.tungsten.replicator.storage.Store#getMaxStoredSeqno()
      */
-    public long getMaxStoredSeqno(boolean adminCommand)
+    public long getMaxStoredSeqno()
     {
         return -1;
     }
@@ -93,9 +93,9 @@ public class InMemoryQueueStore implements Store
     /**
      * {@inheritDoc}
      *
-     * @see com.continuent.tungsten.replicator.storage.Store#getMinStoredSeqno(boolean)
+     * @see com.continuent.tungsten.replicator.storage.Store#getMinStoredSeqno()
      */
-    public long getMinStoredSeqno(boolean adminCommand)
+    public long getMinStoredSeqno()
     {
         return 0;
     }

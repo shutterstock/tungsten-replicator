@@ -22,7 +22,7 @@
 
 package com.continuent.tungsten.replicator.util;
 
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 
 /**
  * Implements a WatchPredicate to identify that a particular sequence number has
@@ -32,7 +32,7 @@ import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
-public class SeqnoWatchPredicate implements WatchPredicate<ReplDBMSEvent>
+public class SeqnoWatchPredicate implements WatchPredicate<ReplDBMSHeader>
 {
     private final long seqno;
 
@@ -48,7 +48,7 @@ public class SeqnoWatchPredicate implements WatchPredicate<ReplDBMSEvent>
      * 
      * @see com.continuent.tungsten.replicator.util.WatchPredicate#match(java.lang.Object)
      */
-    public boolean match(ReplDBMSEvent event)
+    public boolean match(ReplDBMSHeader event)
     {
         if (event == null)
             return false;

@@ -37,41 +37,37 @@ import org.apache.log4j.Logger;
  */
 public class EventSchemaStatistics
 {
-    private static Logger logger             = Logger
-                                                     .getLogger(EventMetadataFilter.class);
+    private static Logger        logger             = Logger.getLogger(EventMetadataFilter.class);
 
     // Map relating schema names and references.
-    private Map<String, Integer>  dbMap              = new HashMap<String, Integer>();
+    private Map<String, Integer> dbMap              = new HashMap<String, Integer>();
 
     // Counts.
-    private int           normalDbCount      = 0;
-    private int           tungstenDbCount    = 0;
-    private String        singleDbName             = null;
-    private String        service            = null;
-    private String        lastDb             = null;
+    private int                  normalDbCount      = 0;
+    private int                  tungstenDbCount    = 0;
+    private String               singleDbName       = null;
+    private String               service            = null;
+    private String               lastDb             = null;
 
     // Pattern for tungsten schema name.
-    private Pattern       serviceNamePattern = Pattern
-                                                     .compile(
-                                                             "tungsten_([a-zA-Z0-9-_]+)",
-                                                             Pattern.CASE_INSENSITIVE);
+    private static Pattern       serviceNamePattern = Pattern
+                                                            .compile(
+                                                                    "tungsten_([a-zA-Z0-9-_]+)",
+                                                                    Pattern.CASE_INSENSITIVE);
 
     public EventSchemaStatistics()
     {
     }
 
-    
     public Map<String, Integer> getDbMap()
     {
         return dbMap;
     }
 
-
     public int getNormalDbCount()
     {
         return normalDbCount;
     }
-
 
     public int getTungstenDbCount()
     {
@@ -143,7 +139,7 @@ public class EventSchemaStatistics
     // metadata schema or null if it is an ordinary schema.
     private String schemaToServiceName(String schema)
     {
-        Matcher m = this.serviceNamePattern.matcher(schema);
+        Matcher m = serviceNamePattern.matcher(schema);
         if (m.find())
             return m.group(1);
         else

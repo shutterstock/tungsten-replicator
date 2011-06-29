@@ -34,11 +34,13 @@ import com.continuent.tungsten.replicator.ReplicatorException;
 public interface ParallelExtractor extends Extractor
 {
     /**
-     * Sets the ID of the task using this extractor.
+     * Sets the ID of the task using this extractor. This method is called prior
+     * to invoking the configure() method.
      * 
      * @param id Task ID
      * @throws ExtractorException Thrown if the task ID exceeds the number of
      *             tasks allowed by the extractor
+     * @see #configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void setTaskId(int id) throws ReplicatorException;
 

@@ -24,7 +24,7 @@ package com.continuent.tungsten.replicator.util;
 
 import java.sql.Timestamp;
 
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 
 /**
  * Implements a WatchPredicate to identify that a particular sequence number has
@@ -36,7 +36,7 @@ import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
  */
 public class SourceTimestampWatchPredicate
         implements
-            WatchPredicate<ReplDBMSEvent>
+            WatchPredicate<ReplDBMSHeader>
 {
     private final Timestamp timestamp;
 
@@ -51,13 +51,13 @@ public class SourceTimestampWatchPredicate
      * 
      * @see com.continuent.tungsten.replicator.util.WatchPredicate#match(java.lang.Object)
      */
-    public boolean match(ReplDBMSEvent event)
+    public boolean match(ReplDBMSHeader event)
     {
         if (event == null)
             return false;
         else
         {
-            Timestamp sourceTimestamp = event.getDBMSEvent().getSourceTstamp();
+            Timestamp sourceTimestamp = event.getExtractedTstamp();
             if (sourceTimestamp == null || sourceTimestamp.before(timestamp))
                 return false;
             else

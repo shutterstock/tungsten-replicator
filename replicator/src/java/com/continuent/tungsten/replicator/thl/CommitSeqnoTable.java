@@ -49,15 +49,15 @@ import com.continuent.tungsten.replicator.event.ReplDBMSHeaderData;
  * is stored.</li>
  * <li>Slave - Slave must update trep_commit_seqno whenever an event is applied</li>
  * </ul>
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class CommitSeqnoTable
 {
-    private static Logger      logger     = Logger.getLogger(CommitSeqnoTable.class);
+    private static Logger      logger                   = Logger.getLogger(CommitSeqnoTable.class);
 
-    public static final String TABLE_NAME = "trep_commit_seqno";
+    public static final String TABLE_NAME               = "trep_commit_seqno";
 
     // Properties.
     private final String       schema;
@@ -72,8 +72,10 @@ public class CommitSeqnoTable
     private Column             commitSeqnoTableEpochNumber;
     private Column             commitSeqnoTableEventId;
     private Column             commitSeqnoTableAppliedLatency;
+    private Column             commitSeqnoTableExtractTimestamp;
     private Column             commitSeqnoTableUpdateTimestamp;
-    
+    private Column             commitSeqnoTableShardId;
+
     /* Greenplum specifics */
     private String             GREENPLUM_DISTRIBUTED_BY = "greenplumn_id";
 
@@ -111,6 +113,9 @@ public class CommitSeqnoTable
                 Types.INTEGER);
         commitSeqnoTableUpdateTimestamp = new Column("update_timestamp",
                 Types.TIMESTAMP);
+        commitSeqnoTableShardId = new Column("shard_id", Types.VARCHAR, 128);
+        commitSeqnoTableExtractTimestamp = new Column("extract_timestamp",
+                Types.TIMESTAMP);
 
         commitSeqnoTable.AddColumn(commitSeqnoTableTaskId);
         commitSeqnoTable.AddColumn(commitSeqnoTableSeqno);
@@ -121,7 +126,9 @@ public class CommitSeqnoTable
         commitSeqnoTable.AddColumn(commitSeqnoTableEventId);
         commitSeqnoTable.AddColumn(commitSeqnoTableAppliedLatency);
         commitSeqnoTable.AddColumn(commitSeqnoTableUpdateTimestamp);
-        
+        commitSeqnoTable.AddColumn(commitSeqnoTableShardId);
+        commitSeqnoTable.AddColumn(commitSeqnoTableExtractTimestamp);
+
         if (database instanceof GreenplumDatabase)
         {
             // Add a serialized distribution column for the table.
@@ -129,14 +136,14 @@ public class CommitSeqnoTable
                     GREENPLUM_DISTRIBUTED_BY, java.sql.Types.INTEGER);
             commitSeqnoTable.AddColumn(commitSeqnoTableGreenplumId);
         }
-        
+
         Key pkey = new Key(Key.Primary);
         pkey.AddColumn(commitSeqnoTableTaskId);
         commitSeqnoTable.AddKey(pkey);
 
         // Prepare SQL.
         lastSeqnoQuery = database
-                .prepareStatement("SELECT seqno, fragno, last_frag, source_id, epoch_number, eventid from "
+                .prepareStatement("SELECT seqno, fragno, last_frag, source_id, epoch_number, eventid, shard_id, extract_timestamp from "
                         + schema + "." + TABLE_NAME + " WHERE task_id=?");
 
         commitSeqnoUpdate = database.prepareStatement("UPDATE "
@@ -149,7 +156,9 @@ public class CommitSeqnoTable
                 + commitSeqnoTableEpochNumber.getName() + "=?, "
                 + commitSeqnoTableEventId.getName() + "=?, "
                 + commitSeqnoTableAppliedLatency.getName() + "=?, "
-                + commitSeqnoTableUpdateTimestamp.getName() + "=? " + "WHERE "
+                + commitSeqnoTableUpdateTimestamp.getName() + "=?, "
+                + commitSeqnoTableShardId.getName() + "=?, "
+                + commitSeqnoTableExtractTimestamp.getName() + "=? " + "WHERE "
                 + commitSeqnoTableTaskId.getName() + "=?");
 
         // Create the table if it does not exist.
@@ -158,6 +167,13 @@ public class CommitSeqnoTable
 
         database.createTable(commitSeqnoTable, false, tableType);
         
+        if (database instanceof GreenplumDatabase)
+        {
+            // Specify distribution column for the table.
+            ((GreenplumDatabase) database).setDistributedBy(schema,
+                    commitSeqnoTable.getName(), GREENPLUM_DISTRIBUTED_BY);
+        }
+
         if (database instanceof GreenplumDatabase)
         {
             // Specify distribution column for the table.
@@ -259,7 +275,7 @@ public class CommitSeqnoTable
         {
             // Scan task positions.
             allSeqnosQuery = database
-                    .prepareStatement("SELECT seqno, fragno, last_frag, source_id, epoch_number, eventid, task_id from "
+                    .prepareStatement("SELECT seqno, fragno, last_frag, source_id, epoch_number, eventid, shard_id, extract_timestamp, task_id from "
                             + schema + "." + TABLE_NAME);
             rs = allSeqnosQuery.executeQuery();
             while (rs.next())
@@ -272,7 +288,7 @@ public class CommitSeqnoTable
                     hasCommonSeqno = false;
 
                 // Check for task 0.
-                int task_id = rs.getInt(7);
+                int task_id = rs.getInt(9);
                 if (task_id == 0)
                     hasTask0 = true;
             }
@@ -323,9 +339,12 @@ public class CommitSeqnoTable
         commitSeqnoUpdate.setString(6, header.getEventId());
         // Latency can go negative due to clock differences. Round up to 0.
         commitSeqnoUpdate.setLong(7, Math.abs(appliedLatency));
+        new Timestamp(System.currentTimeMillis());
         commitSeqnoUpdate.setTimestamp(8,
                 new Timestamp(System.currentTimeMillis()));
-        commitSeqnoUpdate.setInt(9, taskId);
+        commitSeqnoUpdate.setString(9, header.getShardId());
+        commitSeqnoUpdate.setTimestamp(10, header.getExtractedTstamp());
+        commitSeqnoUpdate.setInt(11, taskId);
 
         commitSeqnoUpdate.executeUpdate();
     }
@@ -340,9 +359,11 @@ public class CommitSeqnoTable
         String sourceId = rs.getString(4);
         long epochNumber = rs.getLong(5);
         String eventId = rs.getString(6);
+        String shardId = rs.getString(7);
+        Timestamp extractTimestamp = rs.getTimestamp(8);
 
         return new ReplDBMSHeaderData(seqno, fragno, lastFrag, sourceId,
-                epochNumber, eventId);
+                epochNumber, eventId, shardId, extractTimestamp);
     }
 
     // Close a result set properly.

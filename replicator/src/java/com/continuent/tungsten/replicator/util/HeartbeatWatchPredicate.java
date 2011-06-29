@@ -23,6 +23,7 @@
 package com.continuent.tungsten.replicator.util;
 
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplOptionParams;
 
 /**
@@ -32,40 +33,40 @@ import com.continuent.tungsten.replicator.event.ReplOptionParams;
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
-public class HeartbeatWatchPredicate implements WatchPredicate<ReplDBMSEvent>
+public class HeartbeatWatchPredicate implements WatchPredicate<ReplDBMSHeader>
 {
-    private final String name;
-    private final boolean matchAny; 
+    private final String  name;
+    private final boolean matchAny;
 
     public HeartbeatWatchPredicate(String name)
     {
-        this.name = name; 
+        this.name = name;
         matchAny = "*".equals(name) || name == null;
     }
 
     /**
-     * Return true if the sequence number is greater than or equal to what we
-     * are seeking. {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.util.WatchPredicate#match(java.lang.Object)
+     * Return true if we have a ReplDBMSEvent instance *and* it has a matching
+     * heartbeat name.
      */
-    public boolean match(ReplDBMSEvent event)
+    public boolean match(ReplDBMSHeader event)
     {
         if (event == null)
             return false;
-        else
+        else if (event instanceof ReplDBMSEvent)
         {
-            String heartbeatName = event.getDBMSEvent().getMetadataOptionValue(
-                    ReplOptionParams.HEARTBEAT);
+            String heartbeatName = ((ReplDBMSEvent) event).getDBMSEvent()
+                    .getMetadataOptionValue(ReplOptionParams.HEARTBEAT);
             if (heartbeatName != null)
             {
                 if (matchAny)
                     return true;
-                else 
+                else
                     return name.equals(heartbeatName);
             }
             else
                 return false;
         }
+        else
+            return false;
     }
 }

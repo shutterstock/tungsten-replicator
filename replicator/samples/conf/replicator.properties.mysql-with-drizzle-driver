@@ -149,7 +149,7 @@ replicator.stage.binlog-to-q.applier=queue
 
 replicator.stage.q-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.q-to-thl.extractor=queue
-replicator.stage.q-to-thl.applier=thl-local
+replicator.stage.q-to-thl.applier=thl-applier
 replicator.stage.q-to-thl.blockCommitRowCount=${replicator.global.buffer.size}
 
 # SLAVE PIPELINE:  three stages:  extract from remote THL to local THL;
@@ -160,10 +160,10 @@ replicator.pipeline.slave.syncTHLWithExtractor=false
 
 replicator.stage.remote-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.remote-to-thl.extractor=thl-remote
-replicator.stage.remote-to-thl.applier=thl-local
+replicator.stage.remote-to-thl.applier=thl-applier
 
 replicator.stage.thl-to-q=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
-replicator.stage.thl-to-q.extractor=thl-local
+replicator.stage.thl-to-q.extractor=thl-extractor
 replicator.stage.thl-to-q.applier=parallel-q-applier
 replicator.stage.thl-to-q.blockCommitRowCount=${replicator.global.buffer.size}
 
@@ -194,11 +194,11 @@ replicator.stage.d-binlog-to-q.applier=queue
 # Write from queue to Tungsten log. 
 replicator.stage.d-q-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.d-q-to-thl.extractor=queue
-replicator.stage.d-q-to-thl.applier=thl-local
+replicator.stage.d-q-to-thl.applier=thl-applier
 
 # Extract from Tungsten log to parallel queue. 
 replicator.stage.d-thl-to-pq=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
-replicator.stage.d-thl-to-pq.extractor=thl-local
+replicator.stage.d-thl-to-pq.extractor=thl-extractor
 replicator.stage.d-thl-to-pq.applier=parallel-q-applier
 replicator.stage.d-thl-to-pq.blockCommitRowCount=${replicator.global.buffer.size}
 
@@ -223,19 +223,12 @@ replicator.stage.binlog-to-dummy.applier=dummy
 # TRANSACTION HISTORY LOG (THL) #
 #################################
 
-# The following parameters set up THL database access.  If you use a
-# a database name other than 'tungsten' you must change property
-# replicator.schema to match. (JIRA TREP-157). 
 # NOTE:  If you run multiple replication services, beware of collisions 
 # on log file names and THL lister ports. 
 
-# Set the THL storage implementation class.  For disk logs use commercial class
-# com.continuent.tungsten.enterprise.replicator.thl.EnterpriseTHL.  
-replicator.store.thl=com.continuent.tungsten.enterprise.replicator.thl.EnterpriseTHL
-
-# Set the storage accessor.  If you use disk logging this must be commercial
-# class com.continuent.tungsten.enterprise.replicator.thl.DiskTHLStorage. 
-replicator.store.thl.storage=com.continuent.tungsten.enterprise.replicator.thl.DiskTHLStorage
+# Set the THL storage implementation class.  All replicators now use
+# a single implementation. 
+replicator.store.thl=com.continuent.tungsten.replicator.thl.THL
 
 # All THL implementations require database access to store metadata. 
 replicator.store.thl.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_${service.name}?createDB=true
@@ -274,17 +267,12 @@ replicator.store.thl.log_file_retention=7d
 # The THL serialization for events is pluggable.  The default is Protobuf
 # serialization which is relatively fast and compact.  Java serialization
 # is also provided but is experimental.
-replicator.store.thl.event_serializer=com.continuent.tungsten.enterprise.replicator.thl.serializer.ProtobufSerializer
+replicator.store.thl.event_serializer=com.continuent.tungsten.replicator.thl.serializer.ProtobufSerializer
 
 # The disk log can compute checksums automatically on log records.  This
 # is enabled by default but can cut performance by 50% or more.  Set false
 # for faster log performance.
 replicator.store.thl.doChecksum=false
-
-# The THL storage transfer protocol is pluggable.  Use commercial class 
-# com.continuent.tungsten.enterprise.replicator.thl.ConnectorV2 for fast
-# byte-based transfer. 
-#replicator.thl.protocol=com.continuent.tungsten.replicator.thl.Connector;
 
 # Maximum number of events to transfer at once.  Higher values are better
 # but as with queue store sizes require more memory.
@@ -297,23 +285,10 @@ replicator.thl.protocol.buffer_size=${replicator.global.buffer.size}
 # slaves may connect to the wrong port. 
 replicator.store.thl.storageListenerUri=thl://0.0.0.0:2112
 
-# The following settings can be used in order to get better
-# performance.  THL on the slave side is caching events that are
-# received from the master THL.  This is done in order to prevent
-# from reading events from THL database on the slave side.  The
-# size of this cache can be changed by the following setting. By
-# default, this cache only contains one event at a time.  
-#
-# WARNING: increasing the size of the cache will potientially require 
-# more memory.
-
-replicator.store.thl.cacheSize=0
-
 # The transfer rate between the master and the slave can be improved
 # by setting the following setting to a value greater than 1, which
 # is the default.  In doing so, this will also require more memory
 # on the master side.
-
 replicator.store.thl.resetPeriod=1
 
 #################################
@@ -325,10 +300,10 @@ replicator.store.queue=com.continuent.tungsten.replicator.storage.InMemoryQueueS
 replicator.store.queue.maxSize=${replicator.global.buffer.size}
 
 # Parallel queue storage. 
-replicator.store.parallel-queue=com.continuent.tungsten.enterprise.replicator.store.ParallelQueueStore
+replicator.store.parallel-queue=com.continuent.tungsten.replicator.thl.THLParallelQueue
 replicator.store.parallel-queue.maxSize=${replicator.global.buffer.size}
 replicator.store.parallel-queue.partitions=${replicator.global.apply.channels}
-replicator.store.parallel-queue.partitionerClass=com.continuent.tungsten.enterprise.replicator.store.ShardListPartitioner
+replicator.store.parallel-queue.partitionerClass=com.continuent.tungsten.replicator.storage.parallel.ShardListPartitioner
 
 ##############
 # EXTRACTORS #
@@ -381,8 +356,8 @@ replicator.extractor.mysql.relayLogRetention=10
 #replicator.extractor.mysql.serverId=1
 
 # Local THL extractor. 
-replicator.extractor.thl-local=com.continuent.tungsten.replicator.thl.THLStoreAdapter
-replicator.extractor.thl-local.storeName=thl
+replicator.extractor.thl-extractor=com.continuent.tungsten.replicator.thl.THLStoreExtractor
+replicator.extractor.thl-extractor.storeName=thl
 
 # Remote THL extractor. 
 replicator.extractor.thl-remote=com.continuent.tungsten.replicator.thl.RemoteTHLExtractor
@@ -395,7 +370,7 @@ replicator.extractor.queue=com.continuent.tungsten.replicator.storage.InMemoryQu
 replicator.extractor.queue.storeName=queue
 
 # Parallel queue extractor. 
-replicator.extractor.parallel-q-extractor=com.continuent.tungsten.enterprise.replicator.store.ParallelQueueExtractor 
+replicator.extractor.parallel-q-extractor=com.continuent.tungsten.replicator.thl.THLParallelQueueExtractor
 replicator.extractor.parallel-q-extractor.storeName=parallel-queue
 
 # Dummy extractor.
@@ -419,15 +394,15 @@ replicator.applier.mysql.password=${replicator.global.db.password}
 replicator.applier.mysql.ignoreSessionVars=autocommit
 
 # Local THL applier. 
-replicator.applier.thl-local=com.continuent.tungsten.replicator.thl.THLStoreAdapter
-replicator.applier.thl-local.storeName=thl
+replicator.applier.thl-applier=com.continuent.tungsten.replicator.thl.THLStoreApplier
+replicator.applier.thl-applier.storeName=thl
 
 # Queue applier.
 replicator.applier.queue=com.continuent.tungsten.replicator.storage.InMemoryQueueAdapter
 replicator.applier.queue.storeName=queue
 
 # Parallel queue applier. 
-replicator.applier.parallel-q-applier=com.continuent.tungsten.enterprise.replicator.store.ParallelQueueApplier 
+replicator.applier.parallel-q-applier=com.continuent.tungsten.replicator.thl.THLParallelQueueApplier
 replicator.applier.parallel-q-applier.storeName=parallel-queue
 
 # Dummy applier.
@@ -482,11 +457,11 @@ replicator.filter.foreignkeychecks.script=${replicator.home.dir}/samples/extensi
 replicator.filter.delay=com.continuent.tungsten.replicator.filter.TimeDelayFilter
 replicator.filter.delay.delay=300
 
-# Remote slave filter.  This filter sanitizes events on remote slaves by 
-# dropping events produced on the same service ID.  To use this you *must* 
-# set the localServiceName parameter, which must be the same as the 
-# service.name parameter of the local service that reads the binlog. 
-replicator.filter.bidiSlave=com.continuent.tungsten.enterprise.replicator.filter.BidiRemoteSlaveFilter
+# Remote slave filter.  This filter sanitizes events on remote slaves by
+# dropping events produced on the same service ID.  To use this you *must*
+# set the localServiceName parameter, which must be the same as the
+# service.name parameter of the local service that reads the binlog.
+replicator.filter.bidiSlave=com.continuent.tungsten.replicator.filter.BidiRemoteSlaveFilter
 replicator.filter.bidiSlave.localServiceName=${local.service.name}
 
 # If true allow statements that may be unsafe for bi-directional replication. 
@@ -503,7 +478,7 @@ replicator.filter.ignoreserver.server_ids=3,7
 
 # Primary key filter.  This filter is required for MySQL row replication to 
 # reduce the number of columns used in comparisons for updates and deletes. 
-replicator.filter.pkey=com.continuent.tungsten.enterprise.replicator.filter.PrimaryKeyFilter
+replicator.filter.pkey=com.continuent.tungsten.replicator.filter.PrimaryKeyFilter
 
 # Column name filter.  Adds column name metadata to row updates.  This is 
 # required for MySQL row replication if you have logic that requires column

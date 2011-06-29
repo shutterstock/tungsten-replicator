@@ -35,7 +35,7 @@ import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.replicator.EventDispatcher;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
 
 /**
@@ -121,8 +121,8 @@ public class PipelineProgressTest extends TestCase
         pipeline.start(new EventDispatcher());
 
         // Wait for and verify events.
-        Future<ReplDBMSEvent> wait = pipeline.watchForAppliedSequenceNumber(9);
-        ReplDBMSEvent lastEvent = wait.get(10, TimeUnit.SECONDS);
+        Future<ReplDBMSHeader> wait = pipeline.watchForAppliedSequenceNumber(9);
+        ReplDBMSHeader lastEvent = wait.get(10, TimeUnit.SECONDS);
         assertEquals("Expected 10 sequence numbers", 9, lastEvent.getSeqno());
 
         // Check a selection of default values.

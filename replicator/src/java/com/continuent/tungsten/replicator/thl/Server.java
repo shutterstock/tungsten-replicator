@@ -52,7 +52,6 @@ public class Server implements Runnable
                                                                       .getLogger(Server.class);
     private PluginContext                         context;
     private Thread                                thd;
-    private AtomicCounter                         sequencer;
     private THL                                   thl;
     private String                                host;
     private int                                   port        = 0;
@@ -70,7 +69,6 @@ public class Server implements Runnable
             throws THLException
     {
         this.context = context;
-        this.sequencer = sequencer;
         this.thl = thl;
         this.storeName = thl.getName();
 
@@ -117,7 +115,6 @@ public class Server implements Runnable
                                 + "Handler");
                 handler.configure(context);
                 handler.setChannel(clientChannel);
-                handler.setSeq(sequencer);
                 handler.setServer(this);
                 handler.setThl(thl);
                 handler.prepare(context);

@@ -60,7 +60,7 @@ import com.continuent.tungsten.replicator.consistency.ConsistencyTable;
 import com.continuent.tungsten.replicator.database.Database;
 import com.continuent.tungsten.replicator.database.DatabaseFactory;
 import com.continuent.tungsten.replicator.database.Table;
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.extractor.Extractor;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
@@ -658,8 +658,8 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
         heartbeat(props);
 
         // Wait for the event we were seeking to show up.
-        Future<ReplDBMSEvent> expectedEvent = runtime.getPipeline().flush();
-        ReplDBMSEvent event = null;
+        Future<ReplDBMSHeader> expectedEvent = runtime.getPipeline().flush();
+        ReplDBMSHeader event = null;
         try
         {
             if (timeout <= 0)
@@ -699,10 +699,10 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                     "Invalid replicator state for this operation. Cannot wait for event "
                             + seqno + " to be applied.");
 
-        Future<ReplDBMSEvent> expectedEvent = pipeline
+        Future<ReplDBMSHeader> expectedEvent = pipeline
                 .watchForAppliedSequenceNumber(seqno);
 
-        ReplDBMSEvent replEvent = null;
+        ReplDBMSHeader replEvent = null;
         try
         {
             if (timeout <= 0)
@@ -757,7 +757,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
             extensions = runtime.getExtensionNames();
             type = (runtime.isRemoteService() ? "remote" : "local");
         }
-        ReplDBMSEvent lastEvent = null;
+        ReplDBMSHeader lastEvent = null;
         if (pipeline != null)
         {
             lastEvent = pipeline.getLastAppliedEvent();
@@ -844,8 +844,10 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                     Map<String, String> props = new HashMap<String, String>();
                     props.put("stage", progress.getStageName());
                     props.put("taskId", Integer.toString(progress.getTaskId()));
-                    props.put("cancelled", Boolean.toString(progress.isCancelled()));
-                    props.put("eventCount", Long.toString(progress.getEventCount()));
+                    props.put("cancelled",
+                            Boolean.toString(progress.isCancelled()));
+                    props.put("eventCount",
+                            Long.toString(progress.getEventCount()));
                     props.put("appliedLatency",
                             Double.toString(progress.getApplyLatencySeconds()));
                     props.put("extractTime",
@@ -856,7 +858,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                             Double.toString(progress.getTotalApplySeconds()));
                     props.put("otherTime",
                             Double.toString(progress.getTotalOtherSeconds()));
-                    ReplDBMSEvent lastEvent = progress.getLastEvent();
+                    ReplDBMSHeader lastEvent = progress.getLastEvent();
                     if (lastEvent == null)
                     {
                         props.put("appliedLastSeqno", "-1");
@@ -864,9 +866,9 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                     }
                     else
                     {
-                        props.put("appliedLastSeqno", Long.toString(lastEvent.getSeqno()));
-                        props.put("appliedLastEventId",
-                                lastEvent.getEventId());
+                        props.put("appliedLastSeqno",
+                                Long.toString(lastEvent.getSeqno()));
+                        props.put("appliedLastEventId", lastEvent.getEventId());
                     }
                     statusList.add(props);
                 }
@@ -880,12 +882,13 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                     Map<String, String> props = new HashMap<String, String>();
                     props.put("shardId", progress.getShardId());
                     props.put("stage", progress.getStageName());
-                    props.put("eventCount", Long.toString(progress.getEventCount()));
+                    props.put("eventCount",
+                            Long.toString(progress.getEventCount()));
                     props.put("appliedLatency",
                             Double.toString(progress.getApplyLatencySeconds()));
-                    props.put("appliedLastSeqno", Long.toString(progress.getLastSeqno()));
-                    props.put("appliedLastEventId",
-                            progress.getLastEventId());
+                    props.put("appliedLastSeqno",
+                            Long.toString(progress.getLastSeqno()));
+                    props.put("appliedLastEventId", progress.getLastEventId());
 
                     statusList.add(props);
                 }

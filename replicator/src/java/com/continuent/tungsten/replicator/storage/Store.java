@@ -42,22 +42,23 @@ public interface Store extends ReplicatorPlugin
 
     /**
      * Returns the maximum stored sequence number.
-     * 
-     * @param adminCommand true to use the administrative connection
      */
-    public long getMaxStoredSeqno(boolean adminCommand);
+    public long getMaxStoredSeqno();
 
     /**
      * Returns the minimum stored sequence number.
-     * 
-     * @param adminCommand true to use the administrative connection
      */
-    public long getMinStoredSeqno(boolean adminCommand);
+    public long getMinStoredSeqno();
     
     /**
      * Returns status information as a set of named properties. 
      */
     public TungstenProperties status();
 
+    /**
+     * Returns the maximum committed sequence number. 
+     * TODO: This should be the same as the max stored seqno. 
+     * @throws InterruptedException 
+     */
     public long getMaxCommittedSeqno() throws ReplicatorException;
 }

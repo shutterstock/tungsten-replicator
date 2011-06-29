@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s):
+ * Contributor(s): Robert Hodges
  */
 
 package com.continuent.tungsten.replicator.thl;
@@ -27,6 +27,7 @@ import java.sql.Timestamp;
 
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplEvent;
+import com.continuent.tungsten.replicator.event.ReplOptionParams;
 
 /**
  * This class defines a THLEvent
@@ -41,34 +42,17 @@ public class THLEvent implements Serializable
     /* Event types */
     /** Event carrying DBMS event information */
     static public final short REPL_DBMS_EVENT    = 0;
+
     /** This event is created each time node gets into master state */
     static public final short START_MASTER_EVENT = 1;
+
     /**
      * This event is created each time master node exits master state gracefully
      */
     static public final short STOP_MASTER_EVENT  = 2;
+
     /** Heartbeat event */
     static public final short HEARTBEAT_EVENT    = 3;
-
-    /* THL event status codes */
-    /**
-     * Event is inserted into THL storage but it is not processed yet in any
-     * way.
-     */
-    static public final short PENDING            = 0;
-    /** Event is in applying stage. */
-    static public final short IN_PROCESS         = 1;
-    /** Event has been applied successfully. */
-    static public final short COMPLETED          = 2;
-    /** Applying event has failed for some reason. */
-    static public final short FAILED             = 3;
-    /** Event should be skipped automatically on its turn. */
-    static public final short SKIP               = 4;
-    /**
-     * Event has been skipped either due to applying failure or because its
-     * state was earlier set to SKIP
-     */
-    static public final short SKIPPED            = 5;
 
     private final long        seqno;
     private final short       fragno;
@@ -79,9 +63,9 @@ public class THLEvent implements Serializable
     private final Timestamp   sourceTstamp;
     private final Timestamp   localEnqueueTstamp;
     private final Timestamp   processedTstamp;
-    private short             status;
     private String            comment;
     private final String      eventId;
+    private final String      shardId;
     private final ReplEvent   event;
 
     /**
@@ -101,34 +85,10 @@ public class THLEvent implements Serializable
         this.localEnqueueTstamp = null;
         this.sourceTstamp = event.getDBMSEvent().getSourceTstamp();
         this.processedTstamp = null;
-        this.status = COMPLETED;
         this.comment = null;
         this.eventId = eventId;
+        this.shardId = event.getShardId();
         this.event = event;
-    }
-
-    /**
-     * Creates a new <code>THLEvent</code> object with initial status
-     * 
-     * @param event Event
-     * @param initialStatus Initial status for the event
-     */
-    public THLEvent(ReplDBMSEvent event, short initialStatus)
-    {
-        this.seqno = event.getSeqno();
-        this.fragno = event.getFragno();
-        this.lastFrag = event.getLastFrag();
-        this.sourceId = event.getSourceId();
-        this.type = REPL_DBMS_EVENT;
-        this.epochNumber = event.getEpochNumber();
-        this.localEnqueueTstamp = null;
-        this.sourceTstamp = event.getDBMSEvent().getSourceTstamp();
-        this.processedTstamp = null;
-        this.status = initialStatus;
-        this.comment = null;
-        this.eventId = event.getEventId();
-        this.event = event;
-
     }
 
     /**
@@ -142,16 +102,14 @@ public class THLEvent implements Serializable
      * @param localEnqueueTstamp Local enqueue timestamp
      * @param sourceTstamp Source timestamp
      * @param processedTstamp Processed timestamp
-     * @param status Status
-     * @param comment Comment
      * @param eventId Event identifier
      * @param event Event
      */
     public THLEvent(long seqno, short fragno, boolean lastFrag,
             String sourceId, short type, long epochNumber,
             Timestamp localEnqueueTstamp, Timestamp sourceTstamp,
-            Timestamp processedTstamp, short status, String comment,
-            String eventId, ReplEvent event)
+            Timestamp processedTstamp, String eventId, String shardId,
+            ReplEvent event)
     {
         this.seqno = seqno;
         this.fragno = fragno;
@@ -162,9 +120,8 @@ public class THLEvent implements Serializable
         this.localEnqueueTstamp = localEnqueueTstamp;
         this.sourceTstamp = sourceTstamp;
         this.processedTstamp = processedTstamp;
-        this.status = status;
-        this.comment = comment;
         this.eventId = eventId;
+        this.shardId = shardId;
         this.event = event;
     }
 
@@ -259,28 +216,6 @@ public class THLEvent implements Serializable
     }
 
     /**
-     * Set event status and comment.
-     * 
-     * @param status New status
-     * @param comment New comment
-     */
-    public void setStatus(short status, String comment)
-    {
-        this.status = status;
-        this.comment = comment;
-    }
-
-    /**
-     * Get event status.
-     * 
-     * @return Status
-     */
-    public short getStatus()
-    {
-        return status;
-    }
-
-    /**
      * Get event comment.
      * 
      * @return Comment
@@ -298,6 +233,17 @@ public class THLEvent implements Serializable
     public String getEventId()
     {
         return eventId;
+    }
+
+    /**
+     * Returns the shard ID.
+     */
+    public String getShardId()
+    {
+        if (shardId == null)
+            return ReplOptionParams.SHARD_ID_UNKNOWN;
+        else
+            return shardId;
     }
 
     /**
@@ -325,47 +271,9 @@ public class THLEvent implements Serializable
         ret += " localEnqueueTstamp=" + localEnqueueTstamp;
         ret += " sourceTstamp=" + sourceTstamp;
         ret += " processedTstamp=" + processedTstamp;
-        ret += " status=" + status;
-        ret += " comment=" + comment;
         ret += " eventId=" + eventId;
+        ret += " shardId=" + getShardId();
         ret += " event=" + event.toString();
         return ret;
     }
-
-    /**
-     * Return human readable interpretation of
-     * the 'status'
-     * 
-     * @return status as a string(number)
-     */
-    static public String statusToString(int status)
-    {
-        String value = "UNKNOWN";
-        switch (status)
-        {
-            case PENDING :
-                value = "PENDING";
-                break;
-            case IN_PROCESS :
-                value = "IN_PROCESS";
-                break;
-            case COMPLETED :
-                value = "COMPLETED";
-                break;
-            case FAILED :
-                value = "FAILED";
-                break;
-            case SKIP :
-                value = "SKIP";
-                break;
-            case SKIPPED :
-                value = "SKIPPED";
-                break;
-            default :
-                value = "UNKNOWN";
-        }
-
-        return String.format("%s(%d)", value, status);
-    }
-
 }

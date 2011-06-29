@@ -33,7 +33,7 @@ import com.continuent.tungsten.replicator.EventDispatcher;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.applier.Applier;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.extractor.Extractor;
 import com.continuent.tungsten.replicator.filter.Filter;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
@@ -43,7 +43,7 @@ import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
 /**
  * Stores the implementation of a single replicator processing stage, which
  * consists of extract, filtering, and apply operations.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -75,7 +75,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Creates a new stage instance.
-     *
+     * 
      * @param pipeline Pipeline to which this stage belongs.
      */
     public Stage(Pipeline pipeline)
@@ -227,7 +227,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public synchronized void configure(PluginContext context)
@@ -246,7 +246,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public synchronized void prepare(PluginContext context)
@@ -257,7 +257,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @throws ReplicatorException
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
@@ -310,16 +310,16 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular sequence number to be processed.
-     *
+     * 
      * @param seqno Sequence number to watch for
      * @param terminate If true, terminate task when watch is successful
      * @return Returns a watch on matching event
      * @throws InterruptedException
      */
-    public Future<ReplDBMSEvent> watchForProcessedSequenceNumber(long seqno,
+    public Future<ReplDBMSHeader> watchForProcessedSequenceNumber(long seqno,
             boolean terminate) throws InterruptedException
     {
-        Future<ReplDBMSEvent> watch = progressTracker
+        Future<ReplDBMSHeader> watch = progressTracker
                 .watchForProcessedSequenceNumber(seqno, terminate);
         notifyThreads();
         return watch;
@@ -327,32 +327,32 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Sets a watch for a particular event ID to be extracted.
-     *
+     * 
      * @param eventId Native event ID to watch for
      * @return Returns a watch on matching event
      * @param terminate If true, terminate task when watch is successful
      * @throws InterruptedException
      */
-    public Future<ReplDBMSEvent> watchForProcessedEventId(String eventId,
+    public Future<ReplDBMSHeader> watchForProcessedEventId(String eventId,
             boolean terminate) throws InterruptedException
     {
-        Future<ReplDBMSEvent> watch = progressTracker.watchForProcessedEventId(
-                eventId, terminate);
+        Future<ReplDBMSHeader> watch = progressTracker
+                .watchForProcessedEventId(eventId, terminate);
         notifyThreads();
         return watch;
     }
 
     /**
      * Sets a watch for a heartbeat event to be extracted.
-     *
+     * 
      * @return Returns a watch on matching event
      * @param terminate If true, terminate task when watch is successful
      * @throws InterruptedException
      */
-    public Future<ReplDBMSEvent> watchForProcessedHeartbeat(String name,
+    public Future<ReplDBMSHeader> watchForProcessedHeartbeat(String name,
             boolean terminate) throws InterruptedException
     {
-        Future<ReplDBMSEvent> watch = progressTracker
+        Future<ReplDBMSHeader> watch = progressTracker
                 .watchForProcessedHeartbeat(name, terminate);
         notifyThreads();
         return watch;
@@ -360,16 +360,16 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Sets a watch for a source timestamp to be extracted.
-     *
+     * 
      * @param timestamp Timestamp to watch for
      * @param terminate If true, terminate task when watch is successful
      * @return Returns a watch on matching event
      * @throws InterruptedException
      */
-    public Future<ReplDBMSEvent> watchForProcessedTimestamp(
+    public Future<ReplDBMSHeader> watchForProcessedTimestamp(
             Timestamp timestamp, boolean terminate) throws InterruptedException
     {
-        Future<ReplDBMSEvent> watch = progressTracker
+        Future<ReplDBMSHeader> watch = progressTracker
                 .watchForProcessedTimestamp(timestamp, terminate);
         notifyThreads();
         return watch;
@@ -403,7 +403,7 @@ public class Stage implements ReplicatorPlugin
 
     /**
      * Returns the pipeline value.
-     *
+     * 
      * @return Returns the pipeline.
      */
     public Pipeline getPipeline()

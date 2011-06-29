@@ -22,6 +22,7 @@
 
 package com.continuent.tungsten.replicator.applier;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -33,12 +34,12 @@ import com.continuent.tungsten.replicator.consistency.ConsistencyException;
 import com.continuent.tungsten.replicator.dbms.DBMSData;
 import com.continuent.tungsten.replicator.dbms.LoadDataFileFragment;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
-import com.continuent.tungsten.replicator.dbms.RowChangeData;
-import com.continuent.tungsten.replicator.dbms.RowIdData;
-import com.continuent.tungsten.replicator.dbms.StatementData;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnVal;
+import com.continuent.tungsten.replicator.dbms.RowChangeData;
 import com.continuent.tungsten.replicator.dbms.RowChangeData.ActionType;
+import com.continuent.tungsten.replicator.dbms.RowIdData;
+import com.continuent.tungsten.replicator.dbms.StatementData;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeaderData;
@@ -189,9 +190,8 @@ public class MongoApplier implements RawApplier
                             if (logger.isDebugEnabled())
                             {
                                 if (updatedRow == null)
-                                    logger
-                                            .debug("Unable to find document for update: query="
-                                                    + query);
+                                    logger.debug("Unable to find document for update: query="
+                                            + query);
                                 else
                                     logger.debug("Documented updated: doc="
                                             + doc);
@@ -235,8 +235,7 @@ public class MongoApplier implements RawApplier
                             if (logger.isDebugEnabled())
                             {
                                 if (deletedRow == null)
-                                    logger
-                                            .debug("Unable to find document for delete");
+                                    logger.debug("Unable to find document for delete");
                                 else
                                     logger.debug("Documented deleted: doc="
                                             + deletedRow);
@@ -307,6 +306,7 @@ public class MongoApplier implements RawApplier
         doc.put("source_id", latestHeader.getSourceId());
         doc.put("epoch_number", latestHeader.getEpochNumber());
         doc.put("event_id", latestHeader.getEventId());
+        doc.put("extract_timestamp", latestHeader.getExtractedTstamp().getTime());
 
         // Update trep_commit_seqno.
         DBObject updatedDoc = trepCommitSeqno.findAndModify(query, null, null,
@@ -314,9 +314,8 @@ public class MongoApplier implements RawApplier
         if (logger.isDebugEnabled())
         {
             if (updatedDoc == null)
-                logger
-                        .debug("Unable to update/insert trep_commit_seqno: query="
-                                + query + " doc=" + doc);
+                logger.debug("Unable to update/insert trep_commit_seqno: query="
+                        + query + " doc=" + doc);
             else
                 logger.debug("Trep_commit_seqno updated: updatedDoc="
                         + updatedDoc);
@@ -363,8 +362,11 @@ public class MongoApplier implements RawApplier
             String sourceId = (String) doc.get("source_id");
             long epochNumber = (Long) doc.get("epoch_number");
             String eventId = (String) doc.get("event_id");
+            String shardId = (String) doc.get("shard_id");
+            long extractTimestamp = (Long) doc.get("extract_timestamp");
             ReplDBMSHeaderData header = new ReplDBMSHeaderData(seqno,
-                    (short) fragno, lastFrag, sourceId, epochNumber, eventId);
+                    (short) fragno, lastFrag, sourceId, epochNumber, eventId,
+                    shardId, new Timestamp(extractTimestamp));
             return header;
         }
     }

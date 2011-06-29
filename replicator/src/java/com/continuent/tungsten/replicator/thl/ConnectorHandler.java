@@ -35,7 +35,7 @@ import com.continuent.tungsten.replicator.event.ReplDBMSFilteredEvent;
 import com.continuent.tungsten.replicator.event.ReplEvent;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
-import com.continuent.tungsten.replicator.util.AtomicCounter;
+import com.continuent.tungsten.replicator.thl.log.LogConnection;
 
 /**
  * This class defines a ConnectorHandler
@@ -49,14 +49,12 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
     private PluginContext    context   = null;
     private Thread           thd       = null;
     private SocketChannel    channel   = null;
-    private AtomicCounter    seq       = null;
     private THL              thl       = null;
     private int              resetPeriod;
     private volatile boolean cancelled = false;
     private volatile boolean finished  = false;
 
-    private static Logger    logger    = Logger
-                                               .getLogger(ConnectorHandler.class);
+    private static Logger    logger    = Logger.getLogger(ConnectorHandler.class);
 
     // Implements call-back to check log consistency between client and
     // master.
@@ -81,42 +79,59 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
 
             long clientLastEpochNumber = handshakeResponse.getLastEpochNumber();
             long clientLastSeqno = handshakeResponse.getLastSeqno();
+
             if (clientLastEpochNumber < 0 || clientLastSeqno < 0)
             {
-                logger
-                        .info("Client log checking disabled; not checking for diverging histories");
+                logger.info("Client log checking disabled; not checking for diverging histories");
             }
             else
             {
-                THLEvent event = thl.find(clientLastSeqno, (short) 0);
-                if (event == null)
+                LogConnection conn = thl.connect(true);
+                try
                 {
-                    throw new THLException(
-                            "Client requested non-existent transaction: client source ID="
-                                    + handshakeResponse.getSourceId()
-                                    + " seqno=" + clientLastSeqno
-                                    + " client epoch number="
-                                    + clientLastEpochNumber);
+                    // Look for the indicated event.
+                    THLEvent event = null;
+                    if (conn.seek(clientLastSeqno))
+                        event = conn.next(false);
+
+                    // Did we find it?
+                    if (event == null)
+                    {
+                        throw new THLException(
+                                "Client requested non-existent transaction: client source ID="
+                                        + handshakeResponse.getSourceId()
+                                        + " seqno=" + clientLastSeqno
+                                        + " client epoch number="
+                                        + clientLastEpochNumber);
+                    }
+                    else if (event.getEpochNumber() != clientLastEpochNumber)
+                    {
+                        throw new THLException(
+                                "Log epoch numbers do not match: client source ID="
+                                        + handshakeResponse.getSourceId()
+                                        + " seqno=" + clientLastSeqno
+                                        + " server epoch number="
+                                        + event.getEpochNumber()
+                                        + " client epoch number="
+                                        + clientLastEpochNumber);
+                    }
+                    else
+                    {
+                        logger.info("Log epoch numbers checked and match: client source ID="
+                                + handshakeResponse.getSourceId()
+                                + " seqno="
+                                + clientLastSeqno
+                                + " epoch number="
+                                + clientLastEpochNumber);
+                    }
+
                 }
-                else if (event.getEpochNumber() != clientLastEpochNumber)
+                finally
                 {
-                    throw new THLException(
-                            "Log epoch numbers do not match: client source ID="
-                                    + handshakeResponse.getSourceId()
-                                    + " seqno=" + clientLastSeqno
-                                    + " server epoch number="
-                                    + event.getEpochNumber()
-                                    + " client epoch number="
-                                    + clientLastEpochNumber);
-                }
-                else
-                {
-                    logger
-                            .info("Log epoch numbers checked and match: client source ID="
-                                    + handshakeResponse.getSourceId()
-                                    + " seqno="
-                                    + clientLastSeqno
-                                    + " epoch number=" + clientLastEpochNumber);
+                    if (conn != null)
+                    {
+                        conn.release();
+                    }
                 }
             }
         }
@@ -127,20 +142,6 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
      */
     public ConnectorHandler()
     {
-    }
-
-    /**
-     * Creates a new <code>ConnectorHandler</code> object
-     */
-    public ConnectorHandler(Server server, PluginContext context,
-            SocketChannel channel, AtomicCounter seq, THL thl, int resetPeriod)
-    {
-        this.server = server;
-        this.context = context;
-        this.channel = channel;
-        this.seq = seq;
-        this.thl = thl;
-        this.resetPeriod = resetPeriod;
     }
 
     /**
@@ -157,6 +158,7 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
      */
     public void run()
     {
+        LogConnection connection = null;
         Protocol protocol;
         try
         {
@@ -170,8 +172,8 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
         try
         {
             long minSeqno, maxSeqno;
-            maxSeqno = thl.getMaxStoredSeqno(false);
-            minSeqno = thl.getMinStoredSeqno(false);
+            maxSeqno = thl.getMaxStoredSeqno();
+            minSeqno = thl.getMinStoredSeqno();
             LogValidator logValidator = new LogValidator();
 
             // TUC-2 Added log validator to check log for divergent
@@ -181,49 +183,48 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
             // Name the thread so that developers can see which source ID we
             // are serving.
             Thread.currentThread().setName(
-                    "ConnectorHandler: " + protocol.getClientSourceId());
+                    "connector-handler-" + protocol.getClientSourceId());
 
+            // Loop until we are cancelled.
             while (!cancelled)
             {
                 ProtocolReplEventRequest request;
 
+                // Get the client request.
                 request = protocol.waitReplEventRequest();
-
                 long seqno = request.getSeqNo();
                 logger.debug("Request " + seqno);
                 long prefetchRange = request.getPrefetchRange();
                 short fragno = 0;
 
-                long i = 0;
-                while (i < prefetchRange)
+                // If we don't have a connection to the log, make it now.
+                if (connection == null)
                 {
-                    // Note: Waiting for a sequence number causes us to
-                    // ignore clients going away until the next event or two
-                    // is extracted.
-                    if (logger.isDebugEnabled())
-                        logger.debug("Waiting for sequence number: "
-                                + (seqno + i));
-                    seq.waitSeqnoGreaterEqual(seqno + i);
-
-                    THLEvent event = thl.find(seqno + i, fragno);
-
-                    // Event can be null if it cannot be retrieved from database
-                    if (event == null)
+                    connection = thl.connect(true);
+                    if (!connection.seek(seqno))
                     {
-                        String message = "Requested event (#" + (seqno + i)
+                        String message = "Requested event (#" + seqno
                                 + " / " + fragno + ") not found in database";
                         logger.warn(message);
                         sendError(protocol, message);
                         return;
                     }
+                }
 
+                long i = 0;
+                while (i < prefetchRange)
+                {
+                    // Get the next event from the log, waiting if necessary.
+                    THLEvent event = connection.next();
+
+                    // Peel off and process the underlying replication event. 
                     ReplEvent revent = event.getReplEvent();
                     if (revent instanceof ReplDBMSEvent
                             && ((ReplDBMSEvent) revent).getDBMSEvent() instanceof DBMSEmptyEvent)
                     {
                         logger.debug("Got an empty event");
-                        sendEvent(protocol, revent, (seqno + i >= seq
-                                .getSeqno()));
+                        sendEvent(protocol, revent,
+                                (seqno + i >= thl.getMaxCommittedSeqno()));
                         i++;
                         fragno = 0;
                     }
@@ -271,8 +272,8 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                             i++;
                             fragno = 0;
                         }
-                        sendEvent(protocol, revent, (seqno + i >= seq
-                                .getSeqno()));
+                        sendEvent(protocol, revent,
+                                (seqno + i >= thl.getMaxCommittedSeqno()));
                     }
                 }
             }
@@ -295,23 +296,21 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                         "Connector handler terminated by java.io.EOFException",
                         e);
             else
-                logger
-                        .info("Connector handler terminated by java.io.EOFException");
+                logger.info("Connector handler terminated by java.io.EOFException");
         }
         catch (IOException e)
         {
             // The IOException occurs normally when a client goes away.
             if (logger.isDebugEnabled())
-                logger
-                        .debug("Connector handler terminated by i/o exception",
-                                e);
+                logger.debug("Connector handler terminated by i/o exception", e);
             else
                 logger.info("Connector handler terminated by i/o exception");
         }
         catch (THLException e)
         {
-            logger.error("Connector handler terminated by THL exception: "
-                    + e.getMessage(), e);
+            logger.error(
+                    "Connector handler terminated by THL exception: "
+                            + e.getMessage(), e);
         }
         catch (Throwable t)
         {
@@ -320,8 +319,9 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
         }
         finally
         {
-            // Release storage.
-            thl.releaseStorageHandler();
+            // Release log connection.
+            if (connection != null)
+                connection.release();
 
             // Close TCP/IP.
             try
@@ -394,18 +394,33 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
+     */
     public void configure(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
         this.context = context;
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
+     */
     public void prepare(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
         resetPeriod = thl.getResetPeriod();
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
+     */
     public void release(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
@@ -429,16 +444,6 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
     public void setChannel(SocketChannel channel)
     {
         this.channel = channel;
-    }
-
-    /**
-     * Sets the seq value.
-     * 
-     * @param seq The seq to set.
-     */
-    public void setSeq(AtomicCounter seq)
-    {
-        this.seq = seq;
     }
 
     /**

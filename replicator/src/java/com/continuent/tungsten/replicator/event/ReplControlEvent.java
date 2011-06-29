@@ -22,7 +22,6 @@
 
 package com.continuent.tungsten.replicator.event;
 
-
 /**
  * An implementation of ReplEvent used to transmit control information within
  * pipelines. Control events add extra information that affects the disposition
@@ -40,7 +39,7 @@ public class ReplControlEvent extends ReplEvent
      * Event indicates end of processing. Task should immediately commit current
      * work and exit.
      */
-    public static final int               STOP                 = 1;
+    public static final int      STOP = 1;
 
     /**
      * Event is provided for synchronization purposes when waiting for a
@@ -48,20 +47,23 @@ public class ReplControlEvent extends ReplEvent
      * all tasks "see" an event on which we are waiting when parallel apply is
      * active.
      */
-    public static final int               SYNC = 2;
+    public static final int      SYNC = 2;
 
     // Control event data.
-    private int                           eventType;
-    private ReplDBMSEvent                 event;
+    private final int            eventType;
+    private final long           seqno;
+    private final ReplDBMSHeader header;
 
     /**
      * Creates a new control event instance.
      * 
      * @param eventType A static control event type
      */
-    public ReplControlEvent(int eventType)
+    public ReplControlEvent(int eventType, long seqno, ReplDBMSHeader header)
     {
         this.eventType = eventType;
+        this.seqno = seqno;
+        this.header = header;
     }
 
     /** Returns the control event type. */
@@ -74,13 +76,18 @@ public class ReplControlEvent extends ReplEvent
      * Returns the event to which control information applies or null if
      * inapplicable.
      */
-    public ReplDBMSEvent getEvent()
+    public ReplDBMSHeader getHeader()
     {
-        return event;
+        return header;
     }
 
-    public void setEvent(ReplDBMSEvent event)
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.event.ReplEvent#getSeqno()
+     */
+    public long getSeqno()
     {
-        this.event = event;
+        return seqno;
     }
 }

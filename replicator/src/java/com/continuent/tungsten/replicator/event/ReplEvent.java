@@ -44,6 +44,11 @@ public abstract class ReplEvent implements Serializable
     {
     }
 
+    /** 
+     * Returns the sequence number of this event. 
+     */
+    public abstract long getSeqno();
+    
     /**
      * Returns the estimated serialized size of this event, if known.
      */

@@ -55,8 +55,7 @@ import com.continuent.tungsten.replicator.storage.ParallelStore;
  */
 public class StageTaskGroup implements ReplicatorPlugin
 {
-    private static Logger           logger    = Logger
-                                                      .getLogger(StageTaskGroup.class);
+    private static Logger           logger    = Logger.getLogger(StageTaskGroup.class);
     private Stage                   stage;
     private int                     taskCount;
     private StageProgressTracker    tracker;
@@ -149,9 +148,9 @@ public class StageTaskGroup implements ReplicatorPlugin
             tasks[i].setApplier((Applier) applier);
         }
 
-        // Figure out if we have a parallel store up-stream from this stage.  
-        // If so store the reference and also pass it to the progress tracker, 
-        // which needs to access the store to coordinate watches. 
+        // Figure out if we have a parallel store up-stream from this stage.
+        // If so store the reference and also pass it to the progress tracker,
+        // which needs to access the store to coordinate watches.
         if (getTask(0).getExtractor() instanceof ParallelExtractor)
         {
             ParallelExtractor parallelExtractor = (ParallelExtractor) getTask(0)
@@ -298,13 +297,17 @@ public class StageTaskGroup implements ReplicatorPlugin
                     // We have to interrupt for non-parallel store or if
                     // this an immediate shutdown.
                     if (immediate || parallelStore == null)
+                    {
+                        task.cancel();
                         stageThread.interrupt();
-                    stageThread.join();
+                        stageThread.join();
+                    }
+                    else
+                        stageThread.join();
                 }
                 catch (InterruptedException e)
                 {
-                    logger
-                            .warn("Interrupted while waiting for stage thread to exit");
+                    logger.warn("Interrupted while waiting for stage thread to exit");
                 }
             }
         }
@@ -335,8 +338,7 @@ public class StageTaskGroup implements ReplicatorPlugin
         {
             this.shutdown = true;
             if (logger.isDebugEnabled())
-                logger
-                        .debug("Task group has shut down following last task end");
+                logger.debug("Task group has shut down following last task end");
         }
     }
 

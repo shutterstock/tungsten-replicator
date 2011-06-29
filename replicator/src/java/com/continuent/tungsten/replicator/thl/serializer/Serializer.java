@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2009 Continuent Inc.
+ * Copyright (C) 2010 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,26 +20,23 @@
  * Contributor(s):
  */
 
-package com.continuent.tungsten.replicator.thl;
+package com.continuent.tungsten.replicator.thl.serializer;
 
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import com.continuent.tungsten.replicator.thl.THLEvent;
+import com.continuent.tungsten.replicator.thl.THLException;
 
 /**
- * 
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
  * @version 1.0
  */
-public class SkippedEvent extends ReplDBMSEvent
+public interface Serializer
 {
+    public void serializeEvent(THLEvent replEvent, OutputStream outStream)
+            throws IOException;
 
-    public SkippedEvent(long seqno)
-    {
-        super(seqno, null);
-    }
-
-    /**
-     * 
-     */
-    private static final long serialVersionUID = 1L;
-
+    public THLEvent deserializeEvent(InputStream inStream) throws IOException, THLException;
 }

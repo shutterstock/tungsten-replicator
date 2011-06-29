@@ -146,8 +146,6 @@ public class DummyExtractor implements RawExtractor
      */
     public void prepare(PluginContext context)
     {
-        nTrx = 10;
-        trxIndex = 0;
     }
 
     /**

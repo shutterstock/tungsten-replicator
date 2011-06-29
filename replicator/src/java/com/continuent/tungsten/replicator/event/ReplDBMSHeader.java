@@ -21,6 +21,8 @@
  */
 package com.continuent.tungsten.replicator.event;
 
+import java.sql.Timestamp;
+
 /**
  * Denotes header data used for replication.  This is the core information
  * used to remember the replication position so that restart is possible. 
@@ -63,5 +65,14 @@ public interface ReplDBMSHeader
      * Returns the native event ID corresponding to this log sequence number. 
      */
     public String getEventId();
-
+    
+    /**
+     * Returns the shard ID for this transaction. 
+     */
+    public String getShardId();
+    
+    /**
+     * Returns the extractedTstamp value.
+     */
+    public Timestamp getExtractedTstamp();
 }

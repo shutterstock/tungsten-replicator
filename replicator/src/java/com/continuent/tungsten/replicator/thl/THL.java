@@ -23,62 +23,97 @@
 package com.continuent.tungsten.replicator.thl;
 
 import java.io.IOException;
-import java.util.Hashtable;
-import java.util.Iterator;
+import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.cluster.resource.physical.Replicator;
 import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.replicator.ReplicatorException;
+import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
+import com.continuent.tungsten.replicator.event.ReplControlEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplEvent;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 import com.continuent.tungsten.replicator.storage.Store;
+import com.continuent.tungsten.replicator.thl.log.DiskLog;
+import com.continuent.tungsten.replicator.thl.log.LogConnection;
+import com.continuent.tungsten.replicator.thl.serializer.ProtobufSerializer;
 import com.continuent.tungsten.replicator.util.AtomicCounter;
 
 /**
  * Implements a standard Store interface on the THL (transaction history log).
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class THL implements Store
 {
-    protected static Logger               logger              = Logger.getLogger(THL.class);
+    protected static Logger    logger               = Logger.getLogger(THL.class);
 
     // Version information and constants.
-    public static final int               MAJOR               = 1;
-    public static final int               MINOR               = 3;
-    public static final String            SUFFIX              = "";
-    public static final String            URI_SCHEME          = "thl";
+    public static final int    MAJOR                = 1;
+    public static final int    MINOR                = 3;
+    public static final String SUFFIX               = "";
+    public static final String URI_SCHEME           = "thl";
 
     // Name of this store.
-    private String                        name;
+    private String             name;
 
-    // Store properties.
-    private String                        storageListenerUri  = "thl://0.0.0.0:2112/";
-    protected String                      storage             = JdbcTHLStorage.class
-                                                                      .getName();
-    protected String                      url;
-    protected String                      user;
-    protected String                      password;
-    private int                           cacheSize           = 0;
-    private int                           resetPeriod         = 1;
+    /** URL of storage listener. Default listens on all interfaces. */
+    private String             storageListenerUri   = "thl://0.0.0.0:2112/";
+
+    private String             logDir               = "/opt/continuent/logs/";
+    private String             eventSerializer      = ProtobufSerializer.class
+                                                            .getName();
+    private String             logFileRetention     = "0";
+
+    // Settable properties to control this storage implementation.
+    protected String           password;
+    protected String           url;
+    protected String           user;
+
+    /** Number of events between resets on stream. */
+    private int                resetPeriod          = 1;
+
+    /** Store and compare checksum values on the log. */
+    private boolean            doChecksum           = true;
+
+    /** Name of the class used to serialize events. */
+    protected String           eventSerializerClass = ProtobufSerializer.class
+                                                            .getName();
+
+    /** Log file maximum size in bytes. */
+    protected int              logFileSize          = 1000000000;
+
+    /** Log file retention in milliseconds. Defaults to 0 (= forever) */
+    protected long             logFileRetainMillis  = 0;
+
+    /** Idle log Connection timeout in seconds. */
+    protected int              logConnectionTimeout = 28800;
+
+    /** I/O buffer size in bytes. */
+    protected int              bufferSize           = 131072;
+
+    /**
+     * Flush data after this many milliseconds. 0 flushes after every write.
+     */
+    private long               flushIntervalMillis  = 0;
+
+    /** If true, fsync when flushing. */
+    private boolean            fsyncOnFlush         = false;
+
+    // Database storage and disk log.
+    private CatalogManager     catalog              = null;
+    private DiskLog            diskLog              = null;
 
     // Storage management variables.
-    protected PluginContext               context;
-    protected Hashtable<Long, THLStorage> storageHandlers;
-    protected THLStorage                  adminStorageHandler = null;
-    private AtomicCounter                 sequencer;
-
-    // Cache management values.
-    private EventsCache                   eventsCache         = null;
-    private boolean                       useCache;
+    protected PluginContext    context;
+    private AtomicCounter      sequencer;
 
     // Storage connectivity.
-    private Server                        server              = null;
+    private Server             server               = null;
 
     /** Creates a store instance. */
     public THL()
@@ -104,60 +139,6 @@ public class THL implements Store
     public void setStorageListenerUri(String storageListenerUri)
     {
         this.storageListenerUri = storageListenerUri;
-    }
-
-    public String getStorage()
-    {
-        return storage;
-    }
-
-    protected THLStorage getStorageHandler() throws ReplicatorException,
-            InterruptedException
-    {
-        THLStorage storage = null;
-        Long threadId = Long.valueOf(Thread.currentThread().getId());
-        if (logger.isDebugEnabled())
-            logger.debug("Looking for storage handler for "
-                    + Thread.currentThread().getName() + " (id :" + threadId
-                    + ")");
-        if (storageHandlers != null)
-        {
-            if (logger.isDebugEnabled())
-                logger.debug("List of currently opened storage handlers : "
-                        + storageHandlers);
-            if (storageHandlers.containsKey(threadId))
-            {
-                storage = storageHandlers.get(threadId);
-                if (logger.isDebugEnabled())
-                    logger.debug("Retrieved storage handler "
-                            + storage.toString() + " for "
-                            + Thread.currentThread().getName());
-            }
-            else
-            {
-                storage = getThlStorageHandler();
-                if (logger.isDebugEnabled())
-                    logger.debug("Using new storage handler "
-                            + storage.toString() + " for "
-                            + Thread.currentThread().getName());
-                storageHandlers.put(threadId, storage);
-            }
-        }
-        else
-        {
-            storageHandlers = new Hashtable<Long, THLStorage>();
-            storage = getThlStorageHandler();
-            if (logger.isDebugEnabled())
-                logger.debug("Using new storage handler " + storage + " for "
-                        + Thread.currentThread().getName());
-            storageHandlers.put(threadId, storage);
-        }
-        return storage;
-    }
-
-    public void setStorage(String storageAccessor)
-    {
-        this.storage = storageAccessor;
     }
 
     public String getUrl()
@@ -190,16 +171,6 @@ public class THL implements Store
         this.password = password;
     }
 
-    public int getCacheSize()
-    {
-        return cacheSize;
-    }
-
-    public void setCacheSize(int cacheSize)
-    {
-        this.cacheSize = cacheSize;
-    }
-
     public int getResetPeriod()
     {
         return resetPeriod;
@@ -210,101 +181,106 @@ public class THL implements Store
         this.resetPeriod = resetPeriod;
     }
 
+    /**
+     * Sets the logDir value.
+     * 
+     * @param logDir The logDir to set.
+     */
+    public void setLogDir(String logDir)
+    {
+        this.logDir = logDir;
+    }
+
+    /**
+     * Sets the logFileSize value in bytes.
+     * 
+     * @param logFileSize The logFileSize to set.
+     */
+    public void setLogFileSize(int logFileSize)
+    {
+        this.logFileSize = logFileSize;
+    }
+
+    /**
+     * Determines whether to checksum log records.
+     * 
+     * @param doChecksum If true use checksums
+     */
+    public void setDoChecksum(boolean doChecksum)
+    {
+        this.doChecksum = doChecksum;
+    }
+
+    /**
+     * Sets the event serializer name.
+     */
+    public void setEventSerializer(String eventSerializer)
+    {
+        this.eventSerializer = eventSerializer;
+    }
+
+    /**
+     * Sets the log file retention interval.
+     */
+    public void setLogFileRetention(String logFileRetention)
+    {
+        this.logFileRetention = logFileRetention;
+    }
+
+    /**
+     * Sets the idle log connection timeout in seconds.
+     */
+    public void setLogConnectionTimeout(int logConnectionTimeout)
+    {
+        this.logConnectionTimeout = logConnectionTimeout;
+    }
+
+    /**
+     * Sets the log buffer size.
+     */
+    public void setBufferSize(int bufferSize)
+    {
+        this.bufferSize = bufferSize;
+    }
+
+    /**
+     * Sets the interval between flush calls.
+     */
+    public void setFlushIntervalMillis(long flushIntervalMillis)
+    {
+        this.flushIntervalMillis = flushIntervalMillis;
+    }
+
+    /**
+     * If set to true, perform an fsync with every flush. Warning: fsync is very
+     * slow, so you want a long flush interval in this case.
+     */
+    public synchronized void setFsyncOnFlush(boolean fsyncOnFlush)
+    {
+        this.fsyncOnFlush = fsyncOnFlush;
+    }
+
     // STORE API STARTS HERE.
 
     /**
-     * {@inheritDoc}
-     *
-     * @see com.continuent.tungsten.replicator.storage.Store#getMaxStoredSeqno(boolean)
+     * Return max stored sequence number.
      */
-    public long getMaxStoredSeqno(boolean adminCommand)
+    public long getMaxStoredSeqno()
     {
-        // Choose the right storage to be used
-        THLStorage storage = null;
-        if (adminCommand)
-        {
-            storage = adminStorageHandler;
-        }
-        else
-        {
-            try
-            {
-                storage = getStorageHandler();
-            }
-            catch (ReplicatorException e)
-            {
-                logger.error(
-                        "Unable to fetch maximum sequence number from THL", e);
-                return -1;
-            }
-            catch (InterruptedException e)
-            {
-                logger.error(
-                        "Unable to fetch maximum sequence number from THL", e);
-                return -1;
-            }
-        }
+        return diskLog.getMaxSeqno();
+    }
 
-        // And query the chosen storage handler
-        try
-        {
-            return storage.getMaxSeqno();
-        }
-        catch (THLException e)
-        {
-            logger.error("Unable to fetch maximum sequence number from THL", e);
-            return -1;
-        }
+    /**
+     * Return minimum stored sequence number.
+     */
+    public long getMinStoredSeqno()
+    {
+        return diskLog.getMinSeqno();
     }
 
     /**
      * {@inheritDoc}
-     *
-     * @see com.continuent.tungsten.replicator.storage.Store#getMinStoredSeqno(boolean)
-     */
-    public long getMinStoredSeqno(boolean adminCommand)
-    {
-        // Choose the right storage to be used
-        THLStorage storage = null;
-        if (adminCommand)
-        {
-            storage = adminStorageHandler;
-        }
-        else
-        {
-            try
-            {
-                storage = getStorageHandler();
-            }
-            catch (ReplicatorException e)
-            {
-                logger.error(
-                        "Unable to fetch minimum sequence number from THL", e);
-                return -1;
-            }
-            catch (InterruptedException e)
-            {
-                logger.error(
-                        "Unable to fetch minimum sequence number from THL", e);
-                return -1;
-            }
-        }
-
-        // And query the chosen storage handler
-        try
-        {
-            return storage.getMinSeqno();
-        }
-        catch (THLException e)
-        {
-            logger.error("Unable to fetch minimum sequence number from THL", e);
-            return -1;
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException,
@@ -312,34 +288,43 @@ public class THL implements Store
     {
         // Store variables.
         this.context = context;
-
-        storageHandlers = new Hashtable<Long, THLStorage>();
-        // Create an administrative connection (to be used by admin commands, as
-        // status(), for example)
-        this.adminStorageHandler = this.getThlStorageHandler();
     }
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public synchronized void prepare(PluginContext context)
             throws ReplicatorException, InterruptedException
     {
-        // Configure cache, if used.
-        useCache = (cacheSize > 0);
-        if (cacheSize > 0)
+        // Prepare database connection.
+        if (url != null && url.length() > 0)
         {
-            useCache = true;
-            eventsCache = new EventsCache(cacheSize);
-            context.getMonitor().setCacheSize(cacheSize);
+            logger.info("Preparing SQL catalog tables");
+            ReplicatorRuntime runtime = (ReplicatorRuntime) context;
+            String metadataSchema = context.getReplicatorSchemaName();
+            catalog = new CatalogManager(runtime);
+            catalog.connect(url, user, password, metadataSchema);
+            catalog.prepareSchema();
         }
         else
-            useCache = false;
+            logger.info("SQL catalog tables are disabled");
 
-        // Set sequencer.
-        sequencer = new AtomicCounter(getStorageHandler().getMaxSeqno());
+        // Configure and prepare the log.
+        diskLog = new DiskLog();
+        diskLog.setDoChecksum(doChecksum);
+        diskLog.setEventSerializerClass(eventSerializer);
+        diskLog.setLogDir(logDir);
+        diskLog.setLogFileSize(logFileSize);
+        diskLog.setLogFileRetainMillis(logFileRetainMillis);
+        diskLog.setLogConnectionTimeoutMillis(logConnectionTimeout * 1000);
+        diskLog.setBufferSize(bufferSize);
+        diskLog.setFlushIntervalMillis(flushIntervalMillis);
+        diskLog.setFsyncOnFlush(fsyncOnFlush);
+        diskLog.setReadOnly(false);
+        diskLog.prepare();
+        logger.info("Log preparation is complete");
 
         // Start server for THL connections.
         if (context.isRemoteService() == false)
@@ -358,11 +343,11 @@ public class THL implements Store
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public synchronized void release(PluginContext context)
-            throws ReplicatorException
+            throws InterruptedException, ReplicatorException
     {
         // Cancel server.
         if (server != null)
@@ -382,141 +367,70 @@ public class THL implements Store
             }
         }
 
-        // Drop storage.
-        if (adminStorageHandler != null)
+        if (catalog != null)
         {
-            releaseThlStorageHandler(adminStorageHandler);
-            adminStorageHandler = null;
+            catalog.close();
+            catalog = null;
         }
-        // Release all storage handlers
-        if (storageHandlers != null)
-            synchronized (storageHandlers)
-            {
-                for (Iterator<THLStorage> iterator = storageHandlers.values()
-                        .iterator(); iterator.hasNext();)
-                {
-                    releaseThlStorageHandler(iterator.next());
-                    iterator.remove();
-                }
-            }
-    }
-
-    // STORE ADAPTER API BEGINS HERE
-
-    /**
-     * Store event in THL.
-     *
-     * @param replEvent Event to store
-     * @param doCommit If true, commit this and previous uncommitted events
-     * @param syncTHL If true, sync to THL table to track commits
-     * @throws ReplicatorException Thrown if there is a storage error
-     * @throws InterruptedException Thrown if we are cancelled during operation
-     */
-    public void storeEvent(ReplDBMSEvent replEvent, boolean doCommit,
-            boolean syncTHL) throws ReplicatorException, InterruptedException
-    {
-        // TODO: Compute a checksum if desired.
-        //
-        // if (context.isDoChecksum())
-        // replEvent.addChecksum();
-
-        // Store event.
-        THLEvent thlEvent = new THLEvent(replEvent.getEventId(), replEvent);
-        try
+        if (diskLog != null)
         {
-            getStorageHandler().store(thlEvent, doCommit, syncTHL);
-            logger.debug("Stored event " + replEvent.getSeqno());
+            diskLog.release();
+            diskLog = null;
         }
-        catch (THLException e)
-        {
-            throw new ReplicatorException("Unable to store event: seqno="
-                    + replEvent.getSeqno(), e);
-        }
-
-        // Add thlEvent to cache if active.
-        if (useCache)
-        {
-            eventsCache.put(thlEvent);
-        }
-
-        if (replEvent.getLastFrag())
-            // Update the sequence number.
-            sequencer.setSeqno(replEvent.getSeqno());
     }
 
     /**
-     * Fetches an event from the THL
-     *
-     * @param seqno Sequence number of the event
-     * @param fragno Fragment number
-     * @return Requested event or null if it should be skipped.
-     * @throws ReplicatorException Thrown if there is a storage error
-     * @throws InterruptedException Thrown if we are cancelled during operation
+     * Connect to the log. Adapters must call this to use the log.
+     * 
+     * @param readonly If true, this is a readonly connection
+     * @return A disk log client
      */
-    public ReplDBMSEvent fetchEvent(long seqno, short fragno,
-            boolean ignoreSkippedEvents) throws InterruptedException,
-            ReplicatorException
+    public LogConnection connect(boolean readonly) throws THLException
     {
-        ReplEvent replEvent = null;
-        ReplDBMSEvent replDbmsEvent = null;
-        THLEvent thlEvent = null;
-        long eventSeqno = -1;
+        return diskLog.connect(readonly);
+    }
 
-        // Ensure sequence number is available.
-        sequencer.waitSeqnoGreaterEqual(seqno);
+    /**
+     * Disconnect from the log. Adapters must call this to free resources and
+     * avoid leaks.
+     * 
+     * @param client a Disk log client to be disconnected
+     * @throws THLException
+     */
+    public void disconnect(LogConnection client) throws THLException
+    {
+        client.release();
+    }
 
-        // Try using the cache.
-        if (useCache)
+    /**
+     * Updates the sequence number stored in the catalog trep_commit_seqno. If
+     * the catalog is disabled we do nothing, which allows us to run unit tests
+     * easily without a DBMS present.
+     * 
+     * @throws THLException Thrown if update is unsuccessful
+     */
+    public void updateCommitSeqno(THLEvent thlEvent) throws THLException
+    {
+        if (catalog == null)
         {
-            thlEvent = eventsCache.get(seqno);
-            if (thlEvent != null)
-                eventSeqno = thlEvent.getSeqno();
-        }
-        if (eventSeqno == seqno)
-        {
-            // Cache hit
             if (logger.isDebugEnabled())
-                logger.debug("Cache hit for seqno " + seqno);
+                logger.debug("Seqno update is disabled: seqno="
+                        + thlEvent.getSeqno());
         }
         else
         {
-            THLStorage storage = getStorageHandler();
-            thlEvent = storage.find(seqno, fragno);
-
-            if (thlEvent == null)
+            try
             {
-                logger.debug("Storage range: [" + storage.getMinSeqno() + ","
-                        + storage.getMaxSeqno() + "]");
-                throw new THLException("Event " + seqno
-                        + " missing from storage");
+                catalog.updateCommitSeqnoTable(thlEvent);
+            }
+            catch (SQLException e)
+            {
+                throw new THLException(
+                        "Unable to update commit sequence number: seqno="
+                                + thlEvent.getSeqno() + " event id="
+                                + thlEvent.getEventId(), e);
             }
         }
-        replEvent = thlEvent.getReplEvent();
-
-        if (replEvent instanceof ReplDBMSEvent)
-        {
-            replDbmsEvent = (ReplDBMSEvent) replEvent;
-
-            short status = thlEvent.getStatus();
-            if (ignoreSkippedEvents
-                    && (status == THLEvent.SKIP || status == THLEvent.SKIPPED))
-            {
-                /*
-                 * This event has been marked to be skipped or has already been
-                 * skipped
-                 */
-                return new SkippedEvent(replDbmsEvent.getSeqno());
-            }
-
-            // TODO: Implement proper checksums.
-            // if (context.isDoChecksum() && !replDbmsEvent.validateChecksum())
-            // {
-            // throw new ReplicatorException(
-            // "Event checksum failed for event: "
-            // + replDbmsEvent.getSeqno());
-            // }
-        }
-        return replDbmsEvent;
     }
 
     /**
@@ -524,198 +438,103 @@ public class THL implements Store
      */
     public boolean pollSeqno(long seqno)
     {
-        return seqno <= sequencer.getSeqno();
+        return seqno <= diskLog.getMaxSeqno();
     }
 
     /**
-     * Returns the maximum event ID in this store.
-     */
-    public String getMaxEventId() throws ReplicatorException
-    {
-        try
-        {
-            return getStorageHandler().getMaxEventId(context.getSourceId());
-        }
-        catch (THLException e)
-        {
-            throw new ReplicatorException("Unable to fetch maximum event ID", e);
-        }
-        catch (InterruptedException e)
-        {
-            throw new ReplicatorException("Unable to fetch maximum event ID", e);
-        }
-    }
-
-    /**
-     * Create new THLStorage handler.
-     *
-     * @return THLStorage handler
-     * @throws ReplicatorException
-     */
-    public synchronized THLStorage getThlStorageHandler()
-            throws ReplicatorException, InterruptedException
-    {
-        logger.debug("Configuring THL storage handler: name=" + storage);
-        try
-        {
-            THLStorage storageHandler = (THLStorage) Class.forName(storage)
-                    .newInstance();
-            storageHandler.setUrl(url);
-            storageHandler.setUser(user);
-            storageHandler.setPassword(password);
-            storageHandler.prepare(context);
-            return storageHandler;
-        }
-        catch (Exception e)
-        {
-            throw new ReplicatorException(
-                    "Unable to instantiate storage handler: " + storage, e);
-        }
-    }
-
-    /**
-     * Release storage handler.
-     *
-     * @param storageHandler Handler to be released
-     */
-    private void releaseThlStorageHandler(THLStorage storageHandler)
-    {
-        if (storageHandler == null)
-            return;
-
-        try
-        {
-            storageHandler.release();
-        }
-        catch (ReplicatorException e)
-        {
-            logger.warn("Error while releasing storage handler", e);
-        }
-        catch (InterruptedException e)
-        {
-            logger.warn("Error while releasing storage handler", e);
-        }
-    }
-
-    /**
-     * Get sequence number of the last event which has been processed. Event is
-     * taken to be processed if it has reached state COMPLETED or SKIPPED.
-     *
-     * @return Sequence number of the last event which has been processed
+     * Get the last applied event. We first try the disk log then if that is
+     * absent try the catalog. If there is nothing there we must be starting
+     * from scratch and return null.
+     * 
+     * @return An event header or null if log is newly initialized
+     * @throws InterruptedException
      * @throws THLException
      */
-    public long getMaxCompletedSeqno(THLStorage storageHandler)
-            throws THLException
-    {
-        return storageHandler.getMaxCompletedSeqno();
-    }
-
-    public short getMaxFragno(long seqno)
-    {
-        try
-        {
-            return getStorageHandler().getMaxFragno(seqno);
-        }
-        catch (THLException e)
-        {
-            logger.error("Unable to fetch last fragno for seqno " + seqno
-                    + " from THL", e);
-            return -1;
-        }
-        catch (ReplicatorException e)
-        {
-            logger.error("Unable to fetch last fragno for seqno " + seqno
-                    + " from THL", e);
-            return -1;
-        }
-        catch (InterruptedException e)
-        {
-            logger.error("Unable to fetch last fragno for seqno " + seqno
-                    + " from THL", e);
-            return -1;
-        }
-    }
-
-    public THLEvent find(long seqno, short fragno) throws THLException,
+    public ReplDBMSHeader getLastAppliedEvent() throws ReplicatorException,
             InterruptedException
     {
-        try
-        {
-            return getStorageHandler().find(seqno, fragno);
-        }
-        catch (ReplicatorException e)
-        {
-            throw new THLException("Unable to find event " + seqno + " / "
-                    + fragno + " from storage", e);
-        }
-    }
+        // Look for maximum sequence number in log and use that if available.
+        if (diskLog != null)
 
-    protected void releaseStorageHandler()
-    {
-        Long threadId = Long.valueOf(Thread.currentThread().getId());
-        if (storageHandlers != null)
         {
-            synchronized (storageHandlers)
+            long maxSeqno = diskLog.getMaxSeqno();
+            if (maxSeqno > -1)
             {
-                THLStorage storageHandler = storageHandlers.remove(threadId);
-                releaseThlStorageHandler(storageHandler);
+                LogConnection conn = null;
+                try
+                {
+                    // Try to connect and find the event.
+                    THLEvent thlEvent = null;
+                    conn = diskLog.connect(true);
+                    conn.seek(maxSeqno);
+                    while ((thlEvent = conn.next(false)) != null
+                            && thlEvent.getSeqno() == maxSeqno)
+                    {
+                        // Return only the last fragment.
+                        if (thlEvent.getLastFrag())
+                        {
+                            ReplEvent event = thlEvent.getReplEvent();
+                            if (event instanceof ReplDBMSEvent)
+                                return (ReplDBMSEvent) event;
+                            else if (event instanceof ReplControlEvent)
+                                return ((ReplControlEvent) event).getHeader();
+                        }
+                    }
+
+                    // If we did not find the last fragment of the event
+                    // we need to warn somebody.
+                    if (thlEvent != null)
+                        logger.warn("Unable to find last fragment of event: seqno="
+                                + maxSeqno);
+                }
+                finally
+                {
+                    conn.release();
+                }
             }
         }
-    }
 
-    public THLBinaryEvent findBinaryEvent(long seqno, short fragno)
-            throws InterruptedException, THLException
-    {
-        try
+        // If that does not work, try the catalog.
+        if (catalog != null)
         {
-            return getStorageHandler().findBinaryEvent(seqno, fragno);
+            return catalog.getLastEvent();
         }
-        catch (ReplicatorException e)
-        {
-            throw new THLException("Unable to find event " + seqno + " / "
-                    + fragno + " from storage", e);
-        }
-    }
 
-    /**
-     * Return the last applied event as stored in the CommitSeqnoTable.
-     *
-     * @return the last applied event or null if nothing was found
-     * @throws ReplicatorException
-     */
-    public ReplDBMSHeader getLastAppliedEvent() throws ReplicatorException
-    {
-        try
-        {
-            return getStorageHandler().getLastAppliedEvent();
-        }
-        catch (ReplicatorException e)
-        {
-            throw new ReplicatorException("Unable to get last applied event", e);
-        }
-        catch (InterruptedException e)
-        {
-            throw new ReplicatorException("Unable to get last applied event", e);
-        }
+        // If we get to this point, the log is newly initialized and there is no
+        // such event to return.
+        return null;
     }
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.storage.Store#status()
      */
     @Override
     public TungstenProperties status()
     {
         TungstenProperties props = new TungstenProperties();
-        props.setLong(Replicator.MIN_STORED_SEQNO, getMinStoredSeqno(true));
-        props.setLong(Replicator.MAX_STORED_SEQNO, getMaxStoredSeqno(true));
+        props.setLong(Replicator.MIN_STORED_SEQNO, getMinStoredSeqno());
+        props.setLong(Replicator.MAX_STORED_SEQNO, getMaxStoredSeqno());
+        props.setInt("logFileSize", logFileSize);
+        props.setBoolean("doChecksum", doChecksum);
+        props.setString("logFileRetention", logFileRetention);
+        props.setString("logDir", logDir);
         return props;
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * @throws InterruptedException
+     * @see com.continuent.tungsten.replicator.storage.Store#getMaxCommittedSeqno()
+     */
     @Override
     public long getMaxCommittedSeqno() throws ReplicatorException
     {
-        return getLastAppliedEvent().getSeqno();
+        // TODO: This could use getMaxSeqno() as the log is now cleaned up and
+        // has better commit semantics.
+        // return getLastAppliedEvent().getSeqno();
+        return this.getMaxStoredSeqno();
     }
 }

@@ -22,7 +22,7 @@
 
 package com.continuent.tungsten.replicator.storage;
 
-import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.util.WatchPredicate;
 
 /**
@@ -42,6 +42,6 @@ public interface ParallelStore extends Store
      * Inserts watch synchronization event after next complete transaction that
      * matches the provided predicate.  
      */
-    public void insertWatchSyncEvent(WatchPredicate<ReplDBMSEvent> predicate)
+    public void insertWatchSyncEvent(WatchPredicate<ReplDBMSHeader> predicate)
             throws InterruptedException;
 }
