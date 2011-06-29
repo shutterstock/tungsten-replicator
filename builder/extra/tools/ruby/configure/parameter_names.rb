@@ -92,6 +92,7 @@ REPL_SVC_SHARD_DEFAULT_DB = "repl_svc_shard_default_db"
 REPL_SVC_ALLOW_BIDI_UNSAFE = "repl_svc_allow_bidi_unsafe"
 REPL_SVC_ALLOW_ANY_SERVICE = "repl_svc_allow_any_remote_service"
 REPL_SVC_CONFIG_FILE = "repl_svc_config_file"
+REPL_SVC_PARALLELIZATION_TYPE = "repl_svc_parallelization_type"
 
 REPL_USE_DRIZZLE = "repl_use_drizzle"
 

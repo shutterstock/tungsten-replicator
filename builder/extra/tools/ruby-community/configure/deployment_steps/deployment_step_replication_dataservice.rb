@@ -171,6 +171,25 @@ module ConfigureDeploymentStepReplicationDataservice
         service_config.getProperty(REPL_SVC_THL_PORT) + "/"
     elsif line =~ /replicator.global.apply.channels=/
       "replicator.global.apply.channels=" + service_config.getProperty(REPL_SVC_CHANNELS)
+    elsif line =~ /replicator.store.parallel-queue=/ then
+          # Switch between disk and in-memory parallelization.
+          if service_config.getProperty(REPL_SVC_PARALLELIZATION_TYPE) == "memory"
+            "replicator.store.parallel-queue=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueStore"
+          else
+            "replicator.store.parallel-queue=com.continuent.tungsten.replicator.thl.THLParallelQueue"
+          end
+    elsif line =~ /replicator.extractor.parallel-q-extractor=/ then
+      if service_config.getProperty(REPL_SVC_PARALLELIZATION_TYPE) == "memory"
+        "replicator.extractor.parallel-q-extractor=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueExtractor"
+      else
+        "replicator.extractor.parallel-q-extractor=com.continuent.tungsten.replicator.thl.THLParallelQueueExtractor"
+      end
+    elsif line =~ /replicator.extractor.parallel-q-applier=/ then
+      if service_config.getProperty(REPL_SVC_PARALLELIZATION_TYPE) == "memory"
+        "replicator.extractor.parallel-q-applier=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueApplier"
+      else
+        "replicator.extractor.parallel-q-applier=com.continuent.tungsten.replicator.thl.THLParallelQueueApplier"
+      end
     elsif line =~ /replicator.shard.default.db=/
       "replicator.shard.default.db=" + service_config.getProperty(REPL_SVC_SHARD_DEFAULT_DB)
     elsif line =~ /replicator.filter.bidiSlave.allowBidiUnsafe=/

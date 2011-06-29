@@ -185,6 +185,17 @@ class ReplicationServiceChannels < ConfigurePrompt
   end
 end
 
+class ReplicationServiceParallelizationType < ConfigurePrompt
+  include NotDeleteServicePrompt
+  include GroupConfigurePromptMember
+  
+  def initialize
+    super(REPL_SVC_PARALLELIZATION_TYPE, "Method for implementing parallel queues",
+      PropertyValidator.new("disk|memory", 
+        "Value must be disk or memory"), "memory")
+  end
+end
+
 class ReplicationServiceBufferSize < ConfigurePrompt
   include NotDeleteServicePrompt
   include GroupConfigurePromptMember
@@ -245,6 +256,7 @@ class ReplicationServices < GroupConfigurePrompt
       ReplicationServiceTHLPort.new(),
       ReplicationServiceAutoEnable.new(),
       ReplicationServiceChannels.new(),
+      ReplicationServiceParallelizationType.new(),
       ReplicationServiceBufferSize.new(),
       ReplicationShardIDMode.new(),
       ReplicationAllowUnsafeSQL.new(),

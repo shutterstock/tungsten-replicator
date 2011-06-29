@@ -96,7 +96,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "svc-start" => "false",
       "report-services" => "false",
       "home-directory" => Configurator.instance.get_base_path(),
-      "use-relay-logs" => "true"
+      "use-relay-logs" => "true",
+      "svc-parallelization-type" => "memory"
     }
     
     opts = OptionParser.new
@@ -135,6 +136,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       "service-name",
       "rmi-port",
       "user",
+      "svc-parallelization-type"
     ].each{
       |prop_key|
       opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
@@ -215,7 +217,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_DATASERVER => slave_alias,
       REPL_BUFFER_SIZE => options.getProperty("buffer-size"),
       REPL_SVC_CHANNELS => options.getProperty("channels"),
-      REPL_SVC_THL_PORT => options.getProperty("thl-port")
+      REPL_SVC_THL_PORT => options.getProperty("thl-port"),
+      REPL_SVC_PARALLELIZATION_TYPE => options.getProperty("svc-parallelization-type")
     })
   end
   
@@ -229,7 +232,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "svc-start" => "false",
       "svc-report" => "false",
       "home-directory" => Configurator.instance.get_base_path(),
-      "use-relay-logs" => "true"
+      "use-relay-logs" => "true",
+      "svc-parallelization-type" => "memory"
     }
     
     opts = OptionParser.new
@@ -263,7 +267,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "buffer-size",
       "channels",
       "service-name",
-      "rmi-port"
+      "rmi-port",
+      "svc-parallelization-type"
     ].each{
       |prop_key|
       opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
@@ -343,7 +348,8 @@ class ReplicatorInstallPackage < ConfigurePackage
         REPL_DATASERVER => host_alias,
         REPL_BUFFER_SIZE => options.getProperty("buffer-size"),
         REPL_SVC_CHANNELS => options.getProperty("channels"),
-        REPL_SVC_THL_PORT => options.getProperty("thl-port")
+        REPL_SVC_THL_PORT => options.getProperty("thl-port"),
+        REPL_SVC_PARALLELIZATION_TYPE => options.getProperty("svc-parallelization-type")
       })
       
       if host == options.getProperty("master-host")
@@ -367,7 +373,7 @@ class ReplicatorInstallPackage < ConfigurePackage
     if @display_direct_help
       Configurator.instance.write_divider(Logger::ERROR)
       puts "Install options: --direct"
-      output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
+      output_usage_line("--dbms-type (mysql|postgresql)", "", "mysql")
       output_usage_line("--home-directory")
       output_usage_line("--master-alias")
       output_usage_line("--master-host")
@@ -389,6 +395,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
       output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
       output_usage_line("--channels", "Number of channels for parallel apply", "1")
+      output_usage_line("--svc-parallelization-type (disk|memory)", "Method for storing parallel queues", "memory")
       output_usage_line("--rmi-port", "", "10001")
       output_usage_line("--service-name")
       output_usage_line("--start", "Start the replicator after configuration")
@@ -398,7 +405,7 @@ class ReplicatorInstallPackage < ConfigurePackage
     if @display_ms_help
       Configurator.instance.write_divider(Logger::ERROR)
       puts "Install options: --master-slave"
-      output_usage_line("--dbms-type [mysql|postgresql]", "", "mysql")
+      output_usage_line("--dbms-type (mysql|postgresql)", "", "mysql")
       output_usage_line("--cluster-hosts")
       output_usage_line("--master-host")
       output_usage_line("--user")
@@ -417,6 +424,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
       output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
       output_usage_line("--channels", "Number of channels for parallel apply", "1")
+      output_usage_line("--svc-parallelization-type (disk|memory)", "Method for implementing parallel queues", "memory")
       output_usage_line("--rmi-port", "", "10001")
       output_usage_line("--service-name")
       output_usage_line("--start", "Start the replicator after configuration")
