@@ -48,18 +48,7 @@ module ConfigureDeploymentStepReplicator
   end
   
   def write_replicator_thl
-		# Fix up the THL utility class name.
-		transformer = Transformer.new(
-									  "#{get_deployment_basedir()}/tungsten-replicator/bin/thl",
-									  "#{get_deployment_basedir()}/tungsten-replicator/bin/thl", nil)
-	
-		transformer.transform { |line|
-			if line =~ /THL_CTRL=/
-			    "THL_CTRL=com.continuent.tungsten.enterprise.replicator.thl.EnterpriseTHLManagerCtrl"
-			else
-				line
-			end
-		}
+		# Fix up the THL utility class name. (No longer necessary.) 
 	end
 	
 	def write_wrapper_conf

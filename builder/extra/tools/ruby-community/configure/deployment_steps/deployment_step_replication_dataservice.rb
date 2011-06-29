@@ -101,24 +101,8 @@ module ConfigureDeploymentStepReplicationDataservice
       "replicator.service.type=local"
 		elsif line =~ /replicator.global.buffer.size=/ then
 			"replicator.global.buffer.size=" + service_config.getProperty(REPL_BUFFER_SIZE)
-		elsif line =~ /replicator.store.thl=/
-			if service_config.getProperty(REPL_LOG_TYPE) == "disk" then
-				"replicator.store.thl=com.continuent.tungsten.enterprise.replicator.thl.EnterpriseTHL"
-			else
-				"replicator.store.thl=com.continuent.tungsten.replicator.thl.THL"
-			end
-		elsif line =~ /replicator.store.thl.storage=/
-			if service_config.getProperty(REPL_LOG_TYPE) == "disk" then
-				"replicator.store.thl.storage=com.continuent.tungsten.enterprise.replicator.thl.DiskTHLStorage"
-			else
-				"replicator.store.thl.storage=com.continuent.tungsten.replicator.thl.JdbcTHLStorage"
-			end
 		elsif line =~ /replicator.store.thl.log_dir=/
-			if service_config.getProperty(REPL_LOG_TYPE) == "disk" then
-				"replicator.store.thl.log_dir="+ service_config.getProperty(REPL_LOG_DIR)
-			else
-				"#" + line
-			end
+			"replicator.store.thl.log_dir="+ service_config.getProperty(REPL_LOG_DIR)
 		elsif line =~ /replicator.master.listen.uri=/ then
 			"replicator.master.listen.uri=thl://" + service_config.getProperty(HOST) + ":" + 
 			  service_config.getProperty(REPL_SVC_THL_PORT) + "/"

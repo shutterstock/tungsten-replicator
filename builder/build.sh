@@ -244,7 +244,7 @@ else
   doAnt commons $source_commons/build.xml clean releases
   doAnt fsm $source_fsm/build.xml clean releases
   doAnt replicator $source_replicator/build.xml clean releases
-  doAnt replicator-extra $source_replicator_extra/build.xml clean dist
+  #doAnt replicator-extra $source_replicator_extra/build.xml clean dist
   doAnt bristlecone $source_bristlecone/build.xml clean releases
 fi
 
