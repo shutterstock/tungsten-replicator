@@ -67,7 +67,6 @@ OS_ARCH_64 = "64-bit"
 OS_ARCH_UNKNOWN = "unknown"
 
 DISTRIBUTED_DEPLOYMENT_NAME = "regular"
-DIRECT_DEPLOYMENT_NAME = "direct"
 DIRECT_DEPLOYMENT_HOST_ALIAS = "local"
 
 Dir[File.dirname(__FILE__) + '/configure/packages/*.rb'].each do |file| 

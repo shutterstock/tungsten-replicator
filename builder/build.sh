@@ -315,7 +315,6 @@ cp $extra_tools/configure-service $tools_dir
 cp $extra_tools/tungsten-installer $tools_dir
 rsync -Ca $extra_tools/ruby $tools_dir
 rsync -Ca $extra_tools/ruby-community/ $tools_dir/ruby
-rsync -Ca $extra_tools/ruby-full-package/ $tools_dir/ruby
 
 ##########################################################################
 # Create manifest file.

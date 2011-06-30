@@ -44,22 +44,6 @@ class ClusterHosts < GroupConfigurePrompt
       ReplicationAPIPassword.new()
     )
   end
-  
-  def can_add_member
-    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
-      (get_members().size() < 1)
-    else
-      true
-    end
-  end
-  
-  def default_member_alias(member_index)
-    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
-      DIRECT_DEPLOYMENT_HOST_ALIAS
-    else
-      super(member_index)
-    end
-  end
 end
 
 class DBMSTypePrompt < ConfigurePrompt
@@ -96,21 +80,17 @@ class HomeDirectoryPrompt < ConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
+    begin
+      unless Configurator.instance.is_localhost?(@config.getProperty(get_member_key(HOST)))
+        return ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
+      end
+    rescue => e
+    end
+    
+    if Configurator.instance.is_full_tungsten_package?()
       Configurator.instance.get_base_path()
     else
-      begin
-        unless Configurator.instance.is_localhost?(@config.getProperty(get_member_key(HOST)))
-          return ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
-        end
-      rescue => e
-      end
-      
-      if Configurator.instance.is_full_tungsten_package?()
-        Configurator.instance.get_base_path()
-      else
-        ENV['HOME']
-      end
+      ENV['HOME']
     end
   end
   
@@ -127,12 +107,7 @@ class BaseDirectoryPrompt < AdvancedPrompt
   end
   
   def get_default_value
-    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME || 
-        Configurator.instance.get_base_path() == @config.getProperty(get_member_key(HOME_DIRECTORY))
-      @config.getProperty(get_member_key(HOME_DIRECTORY))
-    else
-      "#{@config.getProperty(get_member_key(HOME_DIRECTORY))}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
-    end
+    "#{@config.getProperty(get_member_key(HOME_DIRECTORY))}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
   end
   
   def allow_group_default
@@ -148,11 +123,7 @@ class HostPrompt < ConfigurePrompt
   end
   
   def get_default_value
-    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
-      Configurator.instance.hostname()
-    else
-      get_member()
-    end
+    get_member()
   end
   
   def allow_group_default
@@ -425,26 +396,27 @@ class DeploymentHost < AdvancedPrompt
   end
   
   def enabled?
-    Configurator.instance.get_deployment().require_deployment_host() &&
-      get_value() == ""
+    super() && Configurator.instance.get_deployment().require_deployment_host() &&
+      get_value().to_s() == ""
+  end
+  
+  def enabled_for_config?
+    super() && Configurator.instance.get_deployment().require_deployment_host() &&
+      get_value().to_s() == ""
   end
   
   def get_default_value
-    if @config.getProperty(DEPLOYMENT_TYPE) == DIRECT_DEPLOYMENT_NAME
-      return DIRECT_DEPLOYMENT_HOST_ALIAS
-    else
-      @config.getPropertyOr(HOSTS, {}).each{
-        |host_alias, host_props|
-      
-        if host_props[HOST] == Configurator.instance.hostname()
-          if host_props[HOME_DIRECTORY] == Configurator.instance.get_base_path()
-            return host_alias
-          end
-        end
-      }
-    end
+    @config.getPropertyOr(HOSTS, {}).each{
+      |host_alias, host_props|
     
-    ""
+      if host_props[HOST] == Configurator.instance.hostname()
+        if host_props[HOME_DIRECTORY] == Configurator.instance.get_base_path()
+          return host_alias
+        end
+      end
+    }
+    
+    nil
   end
   
   def get_disabled_value
