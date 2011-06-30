@@ -22,11 +22,7 @@
 
 package com.continuent.tungsten.replicator.shard;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -219,55 +215,23 @@ public class ShardManager implements ShardManagerMBean
     }
 
     @Override
-    public List<Map<String, String>> list()
+    public List<Map<String, String>> list() throws SQLException
     {
         if (logger.isDebugEnabled())
             logger.debug("Listing defined shards for service " + serviceName);
         Database connection = null;
-        List<Map<String, String>> shards = new ArrayList<Map<String, String>>();
+        ShardTable shardTable = new ShardTable(schema, tableType);
 
         try
         {
             connection = getConnection();
-            ResultSet rs = null;
-            Statement statement = connection.createStatement();
-            try
-            {
-                rs = statement.executeQuery(ShardTable.SELECT);
-
-                while (rs.next())
-                {
-                    Map<String, String> shard = new HashMap<String, String>();
-                    shard.put(ShardTable.SHARD_ID_COL,
-                            rs.getString(ShardTable.SHARD_ID_COL));
-                    shard.put(ShardTable.SHARD_CRIT_COL, Boolean.toString(rs
-                            .getBoolean(ShardTable.SHARD_CRIT_COL)));
-
-                    shard.put(ShardTable.SHARD_HOME_COL,
-                            rs.getString(ShardTable.SHARD_HOME_COL));
-                    shard.put(ShardTable.SHARD_CHANNEL_COL, Integer.toString(rs
-                            .getInt(ShardTable.SHARD_CHANNEL_COL)));
-                    shards.add(shard);
-
-                }
-            }
-            finally
-            {
-                statement.close();
-            }
-
-        }
-        catch (SQLException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            return shardTable.list(connection);
         }
         finally
         {
             if (connection != null)
                 connection.close();
         }
-        return shards;
     }
 
     private Database getConnection() throws SQLException

@@ -83,6 +83,6 @@ public interface ShardManagerMBean
      * 
      * @returns A list of shards represented by maps of name-value.
      */
-    public List<Map<String, String>> list();
+    public List<Map<String, String>> list() throws SQLException;
 
 }

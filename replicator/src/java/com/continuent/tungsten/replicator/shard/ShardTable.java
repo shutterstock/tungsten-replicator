@@ -22,9 +22,14 @@
 
 package com.continuent.tungsten.replicator.shard;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -52,7 +57,7 @@ public class ShardTable
     public static final String SHARD_CHANNEL_COL = "channel";
     public static final String SHARD_HOME_COL    = "home";
 
-    public static final String SELECT            = "SELECT " + SHARD_ID_COL
+    private static final String SELECT            = "SELECT " + SHARD_ID_COL
                                                          + ", "
                                                          + SHARD_HOME_COL
                                                          + ", "
@@ -144,6 +149,39 @@ public class ShardTable
         shardName.setValue(id);
 
         return database.delete(shardTable, false);
+    }
+
+    public List<Map<String, String>> list(Database conn) throws SQLException
+    {
+        ResultSet rs = null;
+        Statement statement = conn.createStatement();
+        List<Map<String, String>> shards = new ArrayList<Map<String, String>>();
+        try
+        {
+            rs = statement.executeQuery(ShardTable.SELECT);
+
+            while (rs.next())
+            {
+                Map<String, String> shard = new HashMap<String, String>();
+                
+                shard.put(ShardTable.SHARD_ID_COL,
+                        rs.getString(ShardTable.SHARD_ID_COL));
+                shard.put(ShardTable.SHARD_CRIT_COL, Boolean.toString(rs
+                        .getBoolean(ShardTable.SHARD_CRIT_COL)));
+
+                shard.put(ShardTable.SHARD_HOME_COL,
+                        rs.getString(ShardTable.SHARD_HOME_COL));
+                shard.put(ShardTable.SHARD_CHANNEL_COL, Integer.toString(rs
+                        .getInt(ShardTable.SHARD_CHANNEL_COL)));
+                shards.add(shard);
+
+            }
+        }
+        finally
+        {
+            statement.close();
+        }
+        return shards;
     }
 
 }
