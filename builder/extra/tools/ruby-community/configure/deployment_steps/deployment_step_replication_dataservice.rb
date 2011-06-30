@@ -184,11 +184,11 @@ module ConfigureDeploymentStepReplicationDataservice
       else
         "replicator.extractor.parallel-q-extractor=com.continuent.tungsten.replicator.thl.THLParallelQueueExtractor"
       end
-    elsif line =~ /replicator.extractor.parallel-q-applier=/ then
+    elsif line =~ /replicator.applier.parallel-q-applier=/ then
       if service_config.getProperty(REPL_SVC_PARALLELIZATION_TYPE) == "memory"
-        "replicator.extractor.parallel-q-applier=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueApplier"
+        "replicator.applier.parallel-q-applier=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueApplier"
       else
-        "replicator.extractor.parallel-q-applier=com.continuent.tungsten.replicator.thl.THLParallelQueueApplier"
+        "replicator.applier.parallel-q-applier=com.continuent.tungsten.replicator.thl.THLParallelQueueApplier"
       end
     elsif line =~ /replicator.shard.default.db=/
       "replicator.shard.default.db=" + service_config.getProperty(REPL_SVC_SHARD_DEFAULT_DB)
