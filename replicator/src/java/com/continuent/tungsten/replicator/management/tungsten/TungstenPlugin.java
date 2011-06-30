@@ -61,7 +61,6 @@ import com.continuent.tungsten.replicator.database.Database;
 import com.continuent.tungsten.replicator.database.DatabaseFactory;
 import com.continuent.tungsten.replicator.database.Table;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
-import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.extractor.Extractor;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
 import com.continuent.tungsten.replicator.heartbeat.HeartbeatTable;

@@ -210,7 +210,15 @@ public class THLParallelQueue implements ParallelStore
             throws ReplicatorException
     {
         assertTaskIdWithinRange(taskId);
-        lastHeaders[taskId] = header;
+
+        // Position the thread if we have a real header with sequence number.
+        // Otherwise we note nothing and this thread will start at the beginning
+        // of the log.
+        if (header != null)
+        {
+            lastHeaders[taskId] = header;
+            readTasks.get(taskId).setSeqno(header.getSeqno());
+        }
     }
 
     /** Returns the last header processed. */

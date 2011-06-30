@@ -42,11 +42,12 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 public class THLParallelQueueExtractor implements ParallelExtractor
 {
-    private static Logger    logger = Logger.getLogger(THLParallelQueueExtractor.class);
+    private static Logger    logger  = Logger.getLogger(THLParallelQueueExtractor.class);
 
-    private int              taskId = -1;
+    private int              taskId  = -1;
     private String           storeName;
     private THLParallelQueue thlParallelQueue;
+    private boolean          started = false;
 
     /**
      * Instantiate the adapter.
@@ -72,6 +73,15 @@ public class THLParallelQueueExtractor implements ParallelExtractor
      */
     public ReplEvent extract() throws ExtractorException, InterruptedException
     {
+        // Make sure the queue is started. This cannot happen earlier or the
+        // queue might not have the right position for restart.
+        if (started == false)
+        {
+            thlParallelQueue.start(this.taskId);
+            started = true;
+        }
+
+        // Get next event.
         try
         {
             return thlParallelQueue.get(taskId);
@@ -163,10 +173,6 @@ public class THLParallelQueueExtractor implements ParallelExtractor
             throw new ReplicatorException(
                     "Unknown storage name; configuration may be in error: "
                             + storeName);
-
-        // Start the individual queue. This starts the thread once we are good
-        // and ready.
-        thlParallelQueue.start(this.taskId);
     }
 
     /**
@@ -178,8 +184,11 @@ public class THLParallelQueueExtractor implements ParallelExtractor
     {
         // Stop our queue. This is required to prevent deadlocks on store
         // release.
-        thlParallelQueue.stop(this.taskId);
-        thlParallelQueue = null;
+        if (thlParallelQueue != null)
+        {
+            thlParallelQueue.stop(this.taskId);
+            thlParallelQueue = null;
+        }
     }
 
     /**

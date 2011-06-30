@@ -107,7 +107,7 @@ public class ReplicationServiceManager
                 ReplicatorConf.RMI_DEFAULT_SERVICE_NAME);
         jmxManager.start();
 
-        // Make sure we the configurations for the replicators
+        // Make sure we have configurations for the replicators
         // to work with.
         loadServiceConfigurations();
 
@@ -251,8 +251,6 @@ public class ReplicationServiceManager
     public List<Map<String, String>> services() throws Exception
     {
         List<Map<String, String>> services = new ArrayList<Map<String, String>>();
-
-        loadServiceConfigurations();
 
         for (String name : serviceConfigurations.keySet())
         {

@@ -126,15 +126,8 @@ public class THLParallelReadTask implements Runnable
         this.readQueue = new THLParallelReadQueue(eventQueue, maxControlEvents,
                 startSeqno);
 
-        // Connect to the log and seek to the current record.
+        // Connect to the log.  
         connection = thl.connect(true);
-        if (!connection.seek(startSeqno))
-        {
-            throw new THLException(
-                    "Unable to locate starting seqno in log: seqno="
-                            + startSeqno + " store=" + thl.getName()
-                            + " taskId=" + taskId);
-        }
 
         // Add a read filter that will accept only events that are in this
         // partition. We use an inner class so we can access the partitioner
@@ -222,10 +215,21 @@ public class THLParallelReadTask implements Runnable
     @Override
     public void run()
     {
-        // Connect to store.
+        // Get the starting sequence number. 
         long readSeqno = startSeqno;
+
         try
         {
+            // Seek to initial position to start reading. 
+            if (!connection.seek(startSeqno))
+            {
+                throw new THLException(
+                        "Unable to locate starting seqno in log: seqno="
+                                + startSeqno + " store=" + thl.getName()
+                                + " taskId=" + taskId);
+            }
+            
+            // Read records until we are cancelled.
             while (!cancelled)
             {
                 // Read next event from the log.
