@@ -34,6 +34,7 @@ import com.continuent.tungsten.replicator.database.Table;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeaderData;
 import com.continuent.tungsten.replicator.heartbeat.HeartbeatTable;
+import com.continuent.tungsten.replicator.shard.ShardTable;
 
 /**
  * Encapsulates management of catalog tables used by THL.
@@ -131,6 +132,10 @@ public class CatalogManager
             HeartbeatTable heartbeatTable = new HeartbeatTable(metadataSchema,
                     runtime.getTungstenTableType());
             heartbeatTable.initializeHeartbeatTable(conn);
+            
+            // Create shard table if it does not exist
+            ShardTable shardTable = new ShardTable(metadataSchema, runtime.getTungstenTableType());
+            shardTable.initializeShardTable(conn);
 
         }
         catch (SQLException e)
