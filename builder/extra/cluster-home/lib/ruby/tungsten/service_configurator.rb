@@ -43,6 +43,7 @@ class ServiceConfigurator
   REPL_SVC_EXTRACT_DB_PORT = "repl_svc_extract_db_port"
   REPL_SVC_EXTRACT_DB_USER = "repl_svc_extract_db_user"
   REPL_SVC_EXTRACT_DB_PASSWORD = "repl_svc_extract_db_password"
+  REPL_SVC_PARALLELIZATION_TYPE = "repl_svc_parallelization_type"
 
   # Initialize configuration arguments.
   def initialize(arguments, stdin)
@@ -155,6 +156,8 @@ class ServiceConfigurator
       @config_overrides.setProperty(REPL_MYSQL_EXTRACT_METHOD, val)}
     opts.on("--shard-default-db String") {|val|
       @config_overrides.setProperty(REPL_SVC_SHARD_DEFAULT_DB, val)}
+    opts.on("--parallelization-type String") {|val|
+      @config_overrides.setProperty(REPL_SVC_PARALLELIZATION_TYPE, val)}
     opts.on("--allow-bidi-unsafe String") {|val|
       @config_overrides.setProperty(REPL_SVC_ALLOW_BIDI_UNSAFE, val)}
     opts.on("--allow-any-remote-service String") {|val|
@@ -245,6 +248,8 @@ class ServiceConfigurator
       output_param(cfg_loaded, REPL_MASTERHOST)
     printf "--master-port      Replicator remote master port [%s]\n", 
       output_param(cfg_loaded, REPL_SVC_MASTERPORT)
+    printf "--parallelization-type Parallelization method (disk|memory) [%s]\n", 
+      output_param(cfg_loaded, REPL_SVC_PARALLELIZATION_TYPE)
     printf "--relay-log-dir    Directory for relay log files [%s]\n", 
       output_param(cfg_loaded, REPL_RELAY_LOG_DIR)
     printf "--role             Replicator role [%s]\n", 
@@ -295,6 +300,7 @@ class ServiceConfigurator
     @config.setProperty(REPL_SVC_SHARD_DEFAULT_DB, "stringent")
     @config.setProperty(REPL_SVC_ALLOW_BIDI_UNSAFE, "false")
     @config.setProperty(REPL_SVC_ALLOW_ANY_SERVICE, "false")
+    @config.setProperty(REPL_SVC_PARALLELIZATION_TYPE, "memory")
 
     # Apply override values. 
     @config_overrides.hash().keys.each {|key| 
@@ -583,6 +589,25 @@ class ServiceConfigurator
         "replicator.store.thl.log_dir="+ log_dir
       elsif line =~ /replicator.store.thl.log_file_size=/
         "replicator.store.thl.log_file_size=" + @config.props[REPL_THL_LOG_FILE_SIZE]
+      elsif line =~ /replicator.store.parallel-queue=/ then
+        # Switch between disk and in-memory parallelization.
+        if @config.props[REPL_SVC_PARALLELIZATION_TYPE] == "memory"
+          "replicator.store.parallel-queue=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueStore"
+        else
+          "replicator.store.parallel-queue=com.continuent.tungsten.replicator.thl.THLParallelQueue"
+        end
+      elsif line =~ /replicator.extractor.parallel-q-extractor=/ then
+        if @config.props[REPL_SVC_PARALLELIZATION_TYPE] == "memory"
+          "replicator.extractor.parallel-q-extractor=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueExtractor"
+        else
+          "replicator.extractor.parallel-q-extractor=com.continuent.tungsten.replicator.thl.THLParallelQueueExtractor"
+        end
+      elsif line =~ /replicator.applier.parallel-q-applier=/ then
+        if @config.props[REPL_SVC_PARALLELIZATION_TYPE] == "memory"
+          "replicator.applier.parallel-q-applier=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueApplier"
+        else
+          "replicator.applier.parallel-q-applier=com.continuent.tungsten.replicator.thl.THLParallelQueueApplier"
+        end
       elsif line =~ /replicator.shard.default.db=/
         "replicator.shard.default.db=" + @config.props[REPL_SVC_SHARD_DEFAULT_DB]
       elsif line =~ /replicator.filter.bidiSlave.allowBidiUnsafe=/
