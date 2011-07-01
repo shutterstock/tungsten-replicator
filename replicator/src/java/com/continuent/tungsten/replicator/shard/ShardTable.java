@@ -47,33 +47,36 @@ import com.continuent.tungsten.replicator.database.Table;
  */
 public class ShardTable
 {
-    private static Logger      logger            = Logger.getLogger(ShardTable.class);
+    private static Logger       logger            = Logger.getLogger(ShardTable.class);
 
-    public static final String TABLE_NAME        = "trep_shard";
+    public static final String  TABLE_NAME        = "trep_shard";
 
-    public static final String SHARD_ID_COL      = "name";
-    public static final String SHARD_CRIT_COL    = "critical";
-    public static final String SHARD_DISPO_COL   = "disposition";
-    public static final String SHARD_CHANNEL_COL = "channel";
-    public static final String SHARD_HOME_COL    = "home";
+    public static final String  SHARD_ID_COL      = "name";
+    public static final String  SHARD_CRIT_COL    = "critical";
+    public static final String  SHARD_DISPO_COL   = "disposition";
+    public static final String  SHARD_CHANNEL_COL = "channel";
+    public static final String  SHARD_MASTER_COL  = "master";
 
     private static final String SELECT            = "SELECT " + SHARD_ID_COL
-                                                         + ", "
-                                                         + SHARD_HOME_COL
-                                                         + ", "
-                                                         + SHARD_CRIT_COL
-                                                         + ", "
-                                                         + SHARD_CHANNEL_COL
-                                                         + " FROM "
-                                                         + TABLE_NAME;
+                                                          + ", "
+                                                          + SHARD_MASTER_COL
+                                                          + ", "
+                                                          + SHARD_CRIT_COL
+                                                          + ", "
+                                                          + SHARD_CHANNEL_COL
+                                                          + " FROM "
+                                                          + TABLE_NAME
+                                                          + " ORDER BY "
+                                                          + SHARD_MASTER_COL
+                                                          + ", " + SHARD_ID_COL;
 
-    private Table              shardTable;
-    private Column             shardName;
-    private Column             shardCritical;
-    private Column             shardChannel;
-    private Column             shardHome;
+    private Table               shardTable;
+    private Column              shardName;
+    private Column              shardCritical;
+    private Column              shardChannel;
+    private Column              shardMaster;
 
-    private String             tableType;
+    private String              tableType;
 
     public ShardTable(String schema, String tableType)
     {
@@ -84,8 +87,8 @@ public class ShardTable
     private void initialize(String schema)
     {
         shardTable = new Table(schema, TABLE_NAME);
+        shardMaster = new Column(SHARD_MASTER_COL, Types.VARCHAR, 128);
         shardName = new Column(SHARD_ID_COL, Types.VARCHAR, 128);
-        shardHome = new Column(SHARD_HOME_COL, Types.VARCHAR, 128);
         shardCritical = new Column(SHARD_CRIT_COL, Types.TINYINT, 1);
         shardChannel = new Column(SHARD_CHANNEL_COL, Types.INTEGER);
 
@@ -93,7 +96,7 @@ public class ShardTable
         shardKey.AddColumn(shardName);
 
         shardTable.AddColumn(shardName);
-        shardTable.AddColumn(shardHome);
+        shardTable.AddColumn(shardMaster);
         shardTable.AddColumn(shardCritical);
         shardTable.AddColumn(shardChannel);
         shardTable.AddKey(shardKey);
@@ -114,7 +117,7 @@ public class ShardTable
     public int insert(Database database, Shard shard) throws SQLException
     {
         shardName.setValue(shard.getShardId());
-        shardHome.setValue(shard.getHome());
+        shardMaster.setValue(shard.getMaster());
         shardCritical.setValue(shard.isCritical());
 
         shardChannel.setValue(shard.getChannel());
@@ -130,9 +133,9 @@ public class ShardTable
         whereClause.add(shardName);
 
         shardCritical.setValue(shard.isCritical());
-        shardHome.setValue(shard.getHome());
+        shardMaster.setValue(shard.getMaster());
         shardChannel.setValue(shard.getChannel());
-        values.add(shardHome);
+        values.add(shardMaster);
         values.add(shardCritical);
         values.add(shardChannel);
 
@@ -163,14 +166,14 @@ public class ShardTable
             while (rs.next())
             {
                 Map<String, String> shard = new HashMap<String, String>();
-                
+
                 shard.put(ShardTable.SHARD_ID_COL,
                         rs.getString(ShardTable.SHARD_ID_COL));
                 shard.put(ShardTable.SHARD_CRIT_COL, Boolean.toString(rs
                         .getBoolean(ShardTable.SHARD_CRIT_COL)));
 
-                shard.put(ShardTable.SHARD_HOME_COL,
-                        rs.getString(ShardTable.SHARD_HOME_COL));
+                shard.put(ShardTable.SHARD_MASTER_COL,
+                        rs.getString(ShardTable.SHARD_MASTER_COL));
                 shard.put(ShardTable.SHARD_CHANNEL_COL, Integer.toString(rs
                         .getInt(ShardTable.SHARD_CHANNEL_COL)));
                 shards.add(shard);

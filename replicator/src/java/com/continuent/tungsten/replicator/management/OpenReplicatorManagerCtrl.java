@@ -1465,7 +1465,7 @@ public class OpenReplicatorManagerCtrl
         switch (operation)
         {
             case ShardCommand.ADD :
-                if(values.isEmpty())
+                if (values.isEmpty())
                     return;
                 for (Iterator<String[]> iterator = values.iterator(); iterator
                         .hasNext();)
@@ -1478,7 +1478,7 @@ public class OpenReplicatorManagerCtrl
                     else
                     {
                         paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
-                        paramProps.put(ShardTable.SHARD_HOME_COL, val[1]);
+                        paramProps.put(ShardTable.SHARD_MASTER_COL, val[1]);
                         paramProps.put(ShardTable.SHARD_CRIT_COL, val[2]);
                         paramProps.put(ShardTable.SHARD_CHANNEL_COL, val[3]);
 
@@ -1497,7 +1497,7 @@ public class OpenReplicatorManagerCtrl
                 break;
 
             case ShardCommand.UPD :
-                if(values.isEmpty())
+                if (values.isEmpty())
                     return;
 
                 for (Iterator<String[]> iterator = values.iterator(); iterator
@@ -1511,7 +1511,7 @@ public class OpenReplicatorManagerCtrl
                     else
                     {
                         paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
-                        paramProps.put(ShardTable.SHARD_HOME_COL, val[1]);
+                        paramProps.put(ShardTable.SHARD_MASTER_COL, val[1]);
                         paramProps.put(ShardTable.SHARD_CRIT_COL, val[2]);
                         paramProps.put(ShardTable.SHARD_CHANNEL_COL, val[3]);
 
@@ -1519,13 +1519,13 @@ public class OpenReplicatorManagerCtrl
                     }
                 }
                 shardsCount = shardManager.update(shardParams);
-                println(shardsCount + " shard"
-                        + (shardsCount > 1 ? "s" : "") + " updated.");
+                println(shardsCount + " shard" + (shardsCount > 1 ? "s" : "")
+                        + " updated.");
 
                 break;
 
             case ShardCommand.DEL :
-                if(values.isEmpty())
+                if (values.isEmpty())
                     return;
 
                 for (Iterator<String[]> iterator = values.iterator(); iterator
@@ -1536,14 +1536,14 @@ public class OpenReplicatorManagerCtrl
                     shardParams.add(paramProps.map());
                 }
                 shardsCount = shardManager.delete(shardParams);
-                println(shardsCount + " shard"
-                        + (shardsCount > 1 ? "s" : "") + " deleted.");
+                println(shardsCount + " shard" + (shardsCount > 1 ? "s" : "")
+                        + " deleted.");
                 break;
 
             case ShardCommand.DELALL :
                 shardsCount = shardManager.deleteAll();
-                println(shardsCount + " shard"
-                        + (shardsCount > 1 ? "s" : "") + " deleted.");
+                println(shardsCount + " shard" + (shardsCount > 1 ? "s" : "")
+                        + " deleted.");
                 break;
 
             case ShardCommand.LIST :
@@ -1556,9 +1556,9 @@ public class OpenReplicatorManagerCtrl
 
                 StringBuffer buf = new StringBuffer();
                 buf.append("#");
-                buf.append(ShardTable.SHARD_ID_COL);
+                buf.append(ShardTable.SHARD_MASTER_COL);
                 buf.append("\t");
-                buf.append(ShardTable.SHARD_HOME_COL);
+                buf.append(ShardTable.SHARD_ID_COL);
                 buf.append("\t");
                 buf.append(ShardTable.SHARD_CRIT_COL);
                 buf.append("\t");
@@ -1570,9 +1570,9 @@ public class OpenReplicatorManagerCtrl
                 {
                     Map<String, String> map = (Map<String, String>) iterator
                             .next();
-                    buf.append(map.get(ShardTable.SHARD_ID_COL));
+                    buf.append(map.get(ShardTable.SHARD_MASTER_COL));
                     buf.append("\t");
-                    buf.append(map.get(ShardTable.SHARD_HOME_COL));
+                    buf.append(map.get(ShardTable.SHARD_ID_COL));
                     buf.append("\t");
                     buf.append(map.get(ShardTable.SHARD_CRIT_COL));
                     buf.append("\t");

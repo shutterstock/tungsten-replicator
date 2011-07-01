@@ -201,7 +201,7 @@ public class ShardFilter implements Filter
                 return null;
             }
         }
-        else if (shard.getHome().equals(service))
+        else if (shard.getMaster().equals(service))
         {
             // Shard home matches the service name, apply this event
             if (logger.isDebugEnabled())
@@ -211,7 +211,7 @@ public class ShardFilter implements Filter
         else
         {
             // Shard home does not match, discard this event
-            logger.info("Event shard (" + shard.getHome()
+            logger.info("Event shard (" + shard.getMaster()
                     + ") does not match local home (" + service
                     + "). Dropping event");
             return null;
@@ -237,7 +237,7 @@ public class ShardFilter implements Filter
         Map<String, String> newShard = new HashMap<String, String>();
         newShard.put(ShardTable.SHARD_ID_COL, eventShard);
         newShard.put(ShardTable.SHARD_CRIT_COL, Boolean.toString(criticalByDef));
-        newShard.put(ShardTable.SHARD_HOME_COL, service);
+        newShard.put(ShardTable.SHARD_MASTER_COL, service);
         newShard.put(ShardTable.SHARD_CHANNEL_COL, Integer.toString(defaultChannel));
         params.add(newShard);
         try

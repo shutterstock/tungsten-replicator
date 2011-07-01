@@ -40,13 +40,13 @@ public class Shard
     private boolean critical;
     private String  disposition;
     private int     channel;
-    private String  home;
+    private String  master;
 
     public Shard(String shardId, boolean critical, String home, int channel)
     {
         this.shardId = shardId;
         this.critical = critical;
-        this.home = home;
+        this.master = home;
         this.channel = channel;
     }
 
@@ -54,7 +54,7 @@ public class Shard
     {
         this.shardId = shard.get(ShardTable.SHARD_ID_COL);
         this.critical = Boolean.valueOf(shard.get(ShardTable.SHARD_CRIT_COL));
-        this.home = shard.get(ShardTable.SHARD_HOME_COL);
+        this.master = shard.get(ShardTable.SHARD_MASTER_COL);
         this.channel = Integer.valueOf(shard.get(ShardTable.SHARD_CHANNEL_COL));
     }
 
@@ -78,9 +78,9 @@ public class Shard
         return channel;
     }
 
-    public String getHome()
+    public String getMaster()
     {
-        return home;
+        return master;
     }
 
 }
