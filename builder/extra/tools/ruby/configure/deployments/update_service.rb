@@ -9,7 +9,7 @@ class UpdateServiceDeployment < ConfigureDeployment
     config_objs
   end
   
-  def get_deployment_object_modules
+  def get_deployment_object_modules(config)
     modules = [
       ConfigureDeploymentStepReplicationDataservice,
       DeploymentStepUpdateService,

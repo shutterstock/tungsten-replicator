@@ -468,8 +468,8 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     remaining_arguments
   end
   
-  def save_prompts
-    if @package.store_config_file?
+  def save_prompts(force = false)
+    if @package.store_config_file? || force
       temp = @package.prepare_saved_config(@config)
       temp.store(@options.config)
     end

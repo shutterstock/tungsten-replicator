@@ -374,7 +374,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       Configurator.instance.write_divider(Logger::ERROR)
       puts "Install options: --direct"
       output_usage_line("--dbms-type (mysql|postgresql)", "", "mysql")
-      output_usage_line("--home-directory")
+      output_usage_line("--home-directory", "Specify this if you would like Tungsten to be installed to a different directory")
       output_usage_line("--master-alias")
       output_usage_line("--master-host")
       output_usage_line("--master-port", "", "3306")
@@ -409,7 +409,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--cluster-hosts")
       output_usage_line("--master-host")
       output_usage_line("--user")
-      output_usage_line("--home-directory", "", Configurator.instance.get_base_path())
+      output_usage_line("--home-directory", "Specify this if you would like Tungsten to be installed to a different directory")
       output_usage_line("--datasource-port", "", "3306")
       output_usage_line("--datasource-user", "", Configurator.instance.whoami())
       output_usage_line("--datasource-password")

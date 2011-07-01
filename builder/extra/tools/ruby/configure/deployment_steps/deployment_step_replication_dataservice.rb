@@ -11,7 +11,6 @@ module ConfigureDeploymentStepReplicationDataservice
       
       service_config = Properties.new()
       service_config.props = @config.props.merge(service_properties)
-      service_config.setProperty(REPL_SERVICES, nil)
       
       deploy_replication_dataservice(service_properties[DEPLOYMENT_SERVICE], service_config)
     }

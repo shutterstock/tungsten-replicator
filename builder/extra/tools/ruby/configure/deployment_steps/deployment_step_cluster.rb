@@ -138,8 +138,6 @@ module ConfigureDeploymentStepDeployment
       
       (host_config.getProperty([REPL_SERVICES, s_alias, DEPLOYMENT_HOST]) != host_config.getProperty(DEPLOYMENT_HOST))
     }
-    # Remove this to leave the services for the host in the config file
-    host_config.setProperty(REPL_SERVICES, nil)
     
     host_config.getPropertyOr(HOSTS, {}).delete_if{
       |h_alias, h_props|

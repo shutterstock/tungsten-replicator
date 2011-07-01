@@ -167,6 +167,17 @@ class DeploymentTypePrompt < ConfigurePrompt
   end
 end
 
+class DeploymentServicePrompt < AdvancedPrompt
+  def initialize
+    super(DEPLOYMENT_SERVICE, "Deployment Service", 
+      PV_ANY, DISTRIBUTED_DEPLOYMENT_NAME)
+  end
+  
+  def enabled?
+    super() && [SERVICE_CREATE, SERVICE_DELETE, SERVICE_UPDATE].include?(@config.getPropertyOr(DEPLOYMENT_TYPE, ""))
+  end
+end
+
 class DeployCurrentPackagePrompt < ConfigurePrompt
   def initialize
     super(DEPLOY_CURRENT_PACKAGE, "Deploy the current Tungsten package", PV_BOOLEAN, "true")

@@ -9,9 +9,14 @@ module DeploymentStepCreateService
   def create_replication_dataservice
     info("Write the replication service configuration")
     
+    service_key = @config.getProperty(DEPLOYMENT_SERVICE)
     service_config = Properties.new()
-    service_config.props = @config.props.merge(@config.getProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE]))
+    service_config.props = @config.props.merge(
+      @config.getProperty([REPL_SERVICES, service_key])
+    )
     
-    deploy_replication_dataservice(service_config.getProperty(DEPLOYMENT_SERVICE), service_config)
+    deploy_replication_dataservice(
+      @config.getProperty([REPL_SERVICES, service_key, DEPLOYMENT_SERVICE]), 
+      service_config)
   end
 end

@@ -6,17 +6,15 @@ class ConfigureServicePackage < ConfigurePackage
   SERVICE_UPDATE = "update_service"
   
   def parsed_options?(arguments)
-    @config.setProperty(DEPLOYMENT_TYPE, nil)
-    @config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
-    @config.setProperty(DEPLOY_PACKAGE_URI, nil)
-    @config.setProperty(REPL_SERVICES, {})
+    deployment_type = nil
+    service_config = Properties.new
     
     opts=OptionParser.new
     
-    opts.on("-C", "--create")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_CREATE) }
-    opts.on("-D", "--delete")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_DELETE) }
-    opts.on("-U", "--update")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_UPDATE) }
-    opts.on("--start")          { @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, REPL_SVC_START], "true") }
+    opts.on("-C", "--create")   { deployment_type = SERVICE_CREATE }
+    opts.on("-D", "--delete")   { deployment_type = SERVICE_DELETE }
+    opts.on("-U", "--update")   { deployment_type = SERVICE_UPDATE }
+    opts.on("--start")          { service_config.setProperty(REPL_SVC_START, "true") }
     
     {
       "--local-service-name" => DSNAME,
@@ -35,7 +33,7 @@ class ConfigureServicePackage < ConfigurePackage
       "--service-type" => REPL_SVC_SERVICE_TYPE
     }.each{
       |arg, prop_key|
-      opts.on("#{arg} String")  {|val|  @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, prop_key], val) }
+      opts.on("#{arg} String")  {|val|  service_config.setProperty(prop_key, val) }
     }
     
     begin
@@ -46,7 +44,7 @@ class ConfigureServicePackage < ConfigurePackage
         exit 0
       end
       
-      unless @config.getProperty(DEPLOYMENT_TYPE)
+      unless deployment_type
         error("You must specify -C, -D or -U")
       end
       
@@ -54,16 +52,60 @@ class ConfigureServicePackage < ConfigurePackage
       when 0
         raise "No service_name specified"
       when 1
-        @config.setProperty([REPL_SERVICES, TEMP_DEPLOYMENT_SERVICE, DEPLOYMENT_SERVICE], remainder[0])
+        deploy_service_key = false
+        @config.getPropertyOr(REPL_SERVICES, {}).each_key{
+          |s_key|
+          if @config.getProperty([REPL_SERVICES, s_key, DEPLOYMENT_SERVICE]) == remainder[0]
+            deploy_service_key = s_key
+          end
+        }
+        
+        case deployment_type
+        when SERVICE_CREATE
+          if deploy_service_key != false
+            raise "A service named '#{remainder[0]}' already exists"
+          else
+            deploy_service_key = remainder[0]
+            @config.setProperty([REPL_SERVICES, remainder[0]], service_config.props)
+          end
+        when SERVICE_UPDATE
+          if deploy_service_key == false
+            raise "Unable to find an existing service config for '#{remainder[0]}'"
+          else
+            service_config.props.each{
+              |sc_key, sc_val|
+              @config.setProperty([REPL_SERVICES, deploy_service_key, sc_key], sc_val)
+            }
+            service_config.props = @config.getProperty([REPL_SERVICES, deploy_service_key])
+          end
+        when SERVICE_DELETE
+          if deploy_service_key == false
+            raise "Unable to find an existing service config for '#{remainder[0]}'"
+          else
+            service_config.props = @config.getProperty([REPL_SERVICES, deploy_service_key])
+            @config.setProperty([REPL_SERVICES, deploy_service_key], nil)
+          end
+        end
       else
-        raise "Ambiguous service names specified: #{remainder.join(', ')}"
+        raise "Multiple service names specified: #{remainder.join(', ')}"
       end
     rescue => e
       error("Argument parsing failed: #{e.to_s()}")
       return false
     end
     
-    is_valid?()
+    unless is_valid?()
+      return false
+    end
+    
+    Configurator.instance.save_prompts(true)
+    @config.setProperty(DEPLOYMENT_TYPE, deployment_type)
+    @config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
+    @config.setProperty(DEPLOY_PACKAGE_URI, nil)
+    @config.setProperty(DEPLOYMENT_SERVICE, deploy_service_key)
+    @config.setProperty([REPL_SERVICES, deploy_service_key], service_config.props)
+    
+    true
   end
   
   def output_usage
@@ -90,7 +132,8 @@ class ConfigureServicePackage < ConfigurePackage
   
   def get_prompts
     [
-      ReplicationServices.new()
+      ReplicationServices.new(),
+      DeploymentServicePrompt.new()
     ]
   end
   
