@@ -139,7 +139,8 @@ public class THLManagerCtrl
      * 
      * @throws THLException
      */
-    public void connect(boolean readOnly) throws ReplicatorException, InterruptedException
+    public void connect(boolean readOnly) throws ReplicatorException,
+            InterruptedException
     {
         diskLog = new DiskLog();
         diskLog.setLogDir(logDir);
@@ -182,8 +183,7 @@ public class THLManagerCtrl
         long maxSeqno = diskLog.getMaxSeqno();
         return new InfoHolder(minSeqno, maxSeqno, maxSeqno - minSeqno, -1);
     }
-    
-    
+
     /**
      * Formats column and column value for printing.
      * 
@@ -275,38 +275,60 @@ public class THLManagerCtrl
      * @param charset character set name to be used to decode byte arrays in row
      *            replication
      * @throws THLException
-     * @throws InterruptedException 
+     * @throws InterruptedException
      */
     public void listEvents(Long low, Long high, Long by, boolean pureSQL,
             String charset) throws THLException, InterruptedException
     {
-        long lowIndex = 0;
-        long minSeqno = diskLog.getMinSeqno();
-        if (low != null && low >= minSeqno)
-            lowIndex = low;
-        else
-            lowIndex = minSeqno;
-
-        Long highIndex;
-        long maxSeqno = diskLog.getMaxSeqno();
-        if (high != null && high <= maxSeqno)
-            highIndex = high;
-        else
-            highIndex = maxSeqno;
-
-        // Find low value. 
-        LogConnection conn = diskLog.connect(true);
-        if (! conn.seek(lowIndex))
+        // Make sure range is OK.
+        if (low != null && high != null && low > high)
         {
-            logger.error("Unable to find sequence number: " + lowIndex);
+            logger.error("Invalid range:  -low must be equal to or lower than -high value");
             fail();
         }
 
-        // Iterate until we run out of sequence numbers.  
+        // Adjust for missing ranges.
+        long lowIndex;
+        if (low == null)
+            lowIndex = diskLog.getMinSeqno();
+        else
+            lowIndex = low;
+
+        long highIndex;
+        if (high == null)
+            highIndex = diskLog.getMaxSeqno();
+        else
+            highIndex = high;
+
+        // Find low value.
+        LogConnection conn = diskLog.connect(true);
+        if (!conn.seek(lowIndex))
+        {
+            if (lowIndex == diskLog.getMinSeqno())
+            {
+                logger.info("No events found; log is empty");
+                conn.release();
+                return;
+            }
+            else
+            {
+                logger.error("Unable to find sequence number: " + lowIndex);
+                fail();
+            }
+        }
+
+        // Iterate until we run out of sequence numbers.
         THLEvent thlEvent = null;
+        int found = 0;
         while (lowIndex <= highIndex && (thlEvent = conn.next(false)) != null)
         {
+            // Make sure event is within range.
             lowIndex = thlEvent.getSeqno();
+            if (lowIndex > highIndex)
+                break;
+
+            // Print it.
+            found++;
             if (!pureSQL)
             {
                 StringBuilder sb = new StringBuilder();
@@ -327,8 +349,26 @@ public class THLManagerCtrl
                         + ": not supported.");
             }
         }
-        
-        // Disconnect. 
+
+        // Corner case and kludge: if lowIndex is 0 and we find no events,
+        // log was empty.
+        if (found == 0)
+        {
+            if (lowIndex == 0)
+            {
+                logger.info("No events found; log is empty");
+                conn.release();
+                return;
+            }
+            else
+            {
+                logger.error("Unable to find sequence number: " + lowIndex);
+                fail();
+            }
+
+        }
+
+        // Disconnect.
         conn.release();
     }
 
@@ -747,7 +787,7 @@ public class THLManagerCtrl
                 thlManager.connect(true);
 
                 InfoHolder info = thlManager.getInfo();
-                println("min seq# = " +  info.getMinSeqNo());
+                println("min seq# = " + info.getMinSeqNo());
                 println("max seq# = " + info.getMaxSeqNo());
                 println("events = " + info.getEventCount());
                 println("highest known replicated seq# = "
@@ -849,7 +889,7 @@ public class THLManagerCtrl
             throws ReplicatorException, IOException, InterruptedException
     {
         LogConnection conn = diskLog.connect(true);
-        if (! conn.seek(fileName))
+        if (!conn.seek(fileName))
         {
             logger.error("File not found: " + fileName);
             fail();
