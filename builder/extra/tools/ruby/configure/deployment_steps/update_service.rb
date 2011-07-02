@@ -18,5 +18,10 @@ module DeploymentStepUpdateService
     deploy_replication_dataservice(
       @config.getProperty([REPL_SERVICES, service_key, DEPLOYMENT_SERVICE]), 
       service_config)
+    
+    stored_config = Properties.new
+    stored_config.load(Configurator.instance.get_config_filename)
+    stored_config.setProperty([REPL_SERVICES, service_key], @stored_config.getProperty([REPL_SERVICES, service_key]))
+    stored_config.store(Configurator.instance.get_config_filename)
   end
 end

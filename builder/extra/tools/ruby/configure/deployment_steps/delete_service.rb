@@ -23,5 +23,10 @@ module DeploymentStepDeleteService
     end
     
     cmd_result("rm -rf #{service_config.getProperty(REPL_SVC_CONFIG_FILE)}")
+    
+    stored_config = Properties.new
+    stored_config.load(Configurator.instance.get_config_filename)
+    stored_config.setProperty([REPL_SERVICES, service_key], nil)
+    stored_config.store(Configurator.instance.get_config_filename)
   end
 end

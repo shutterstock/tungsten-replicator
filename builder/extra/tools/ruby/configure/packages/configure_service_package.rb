@@ -6,14 +6,17 @@ class ConfigureServicePackage < ConfigurePackage
   SERVICE_UPDATE = "update_service"
   
   def parsed_options?(arguments)
-    deployment_type = nil
+    @config.setProperty(DEPLOYMENT_TYPE, nil)
+    @config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
+    @config.setProperty(DEPLOY_PACKAGE_URI, nil)
+    
     service_config = Properties.new
     
     opts=OptionParser.new
     
-    opts.on("-C", "--create")   { deployment_type = SERVICE_CREATE }
-    opts.on("-D", "--delete")   { deployment_type = SERVICE_DELETE }
-    opts.on("-U", "--update")   { deployment_type = SERVICE_UPDATE }
+    opts.on("-C", "--create")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_CREATE) }
+    opts.on("-D", "--delete")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_DELETE) }
+    opts.on("-U", "--update")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_UPDATE) }
     opts.on("--start")          { service_config.setProperty(REPL_SVC_START, "true") }
     
     {
@@ -44,7 +47,7 @@ class ConfigureServicePackage < ConfigurePackage
         exit 0
       end
       
-      unless deployment_type
+      unless @config.getProperty(DEPLOYMENT_TYPE)
         error("You must specify -C, -D or -U")
       end
       
@@ -60,12 +63,13 @@ class ConfigureServicePackage < ConfigurePackage
           end
         }
         
-        case deployment_type
+        case @config.getProperty(DEPLOYMENT_TYPE)
         when SERVICE_CREATE
           if deploy_service_key != false
             raise "A service named '#{remainder[0]}' already exists"
           else
             deploy_service_key = remainder[0]
+            service_config.setProperty(DEPLOYMENT_SERVICE, deploy_service_key)
             @config.setProperty([REPL_SERVICES, remainder[0]], service_config.props)
           end
         when SERVICE_UPDATE
@@ -76,14 +80,10 @@ class ConfigureServicePackage < ConfigurePackage
               |sc_key, sc_val|
               @config.setProperty([REPL_SERVICES, deploy_service_key, sc_key], sc_val)
             }
-            service_config.props = @config.getProperty([REPL_SERVICES, deploy_service_key])
           end
         when SERVICE_DELETE
           if deploy_service_key == false
             raise "Unable to find an existing service config for '#{remainder[0]}'"
-          else
-            service_config.props = @config.getProperty([REPL_SERVICES, deploy_service_key])
-            @config.setProperty([REPL_SERVICES, deploy_service_key], nil)
           end
         end
       else
@@ -94,18 +94,9 @@ class ConfigureServicePackage < ConfigurePackage
       return false
     end
     
-    unless is_valid?()
-      return false
-    end
-    
-    Configurator.instance.save_prompts(true)
-    @config.setProperty(DEPLOYMENT_TYPE, deployment_type)
-    @config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
-    @config.setProperty(DEPLOY_PACKAGE_URI, nil)
     @config.setProperty(DEPLOYMENT_SERVICE, deploy_service_key)
-    @config.setProperty([REPL_SERVICES, deploy_service_key], service_config.props)
     
-    true
+    is_valid?()
   end
   
   def output_usage
