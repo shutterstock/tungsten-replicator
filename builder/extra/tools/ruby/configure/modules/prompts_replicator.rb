@@ -121,9 +121,9 @@ class BackupMethod < ConfigurePrompt
   
   def get_prompt
     if @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
-      "Database backup method (none|mysqldump|lvm|xtrabackup|script)"
+      "Database backup method (none|mysqldump|xtrabackup|script)"
     else
-      "Database backup method (none|pg_dump|lvm|script)"
+      "Database backup method (none|pg_dump|script)"
     end
   end
   

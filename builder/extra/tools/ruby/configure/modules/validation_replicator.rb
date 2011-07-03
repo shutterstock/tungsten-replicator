@@ -46,7 +46,6 @@ class BackupMethodAvailableCheck < ConfigureValidationCheck
     when "pg_dump"
       path = cmd_result("which pg_dump")
       info("pg_dump found at #{path}")
-    when "lvm"
     when "script"
       if File.executable(@config.getProperty(REPL_BACKUP_SCRIPT))
         info("The backup script is executable")

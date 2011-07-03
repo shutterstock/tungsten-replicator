@@ -39,8 +39,6 @@ module ConfigureDeploymentStepMySQL
 		elsif line =~ /replicator.extractor.mysql.serverId/ && 
 		    service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
 		  "replicator.extractor.mysql.serverId=#{service_config.getProperty(REPL_MYSQL_SERVER_ID)}"
-		elsif line =~ /replicator.backup.agent.lvm.dataDir/ && service_config.getPropertyOr(REPL_BACKUP_METHOD) == "lvm"
-			"replicator.backup.agent.lvm.dataDir=" + service_config.getProperty(REPL_MYSQL_DATADIR)
 		elsif line =~ /^replicator.backup.agent.xtrabackup.options/ && service_config.getPropertyOr(REPL_BACKUP_METHOD) == "xtrabackup"
       directory = service_config.getProperty(REPL_BACKUP_DUMP_DIR) + "/innobackup"
       unless mkdir_if_absent(directory)

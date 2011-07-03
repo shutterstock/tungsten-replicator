@@ -150,10 +150,10 @@ PV_JAVA_MEM_SIZE = IntegerRangeValidator.new(128, 2048,
   "Java heap size must be between 128 and 2048")
 PV_REPL_BUFFER_SIZE = IntegerRangeValidator.new(1, 100, 
   "Replication transaction buffer size must be between 1 and 100")
-PV_PG_BACKUP_METHOD = PropertyValidator.new("none|pg_dump|lvm|script",
-  "Value must be none, pg_dump, lvm, or script")
-PV_MYSQL_BACKUP_METHOD = PropertyValidator.new("none|mysqldump|lvm|xtrabackup|script",
-  "Value must be none, mysqldump, lvm, xtrabackup, or script")
+PV_PG_BACKUP_METHOD = PropertyValidator.new("none|pg_dump|script",
+  "Value must be none, pg_dump, or script")
+PV_MYSQL_BACKUP_METHOD = PropertyValidator.new("none|mysqldump|xtrabackup|script",
+  "Value must be none, mysqldump, xtrabackup, or script")
 PV_READABLE_DIR = FilePropertyValidator.new("directory", false, 
   "Value must be a readable directory", false)
 PV_WRITABLE_DIR = FilePropertyValidator.new("directory", true, 

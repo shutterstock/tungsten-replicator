@@ -120,12 +120,6 @@ module ConfigureDeploymentStepReplicationDataservice
 			else
 				"replicator.backup.default=" + service_config.getPropertyOr(REPL_BACKUP_METHOD, "")
 			end
-		elsif line =~ /replicator.backup.agent.lvm.port/
-			"replicator.backup.agent.lvm.port=" + service_config.getProperty(REPL_DBPORT)
-		elsif line =~ /replicator.backup.agent.lvm.host/
-			"replicator.backup.agent.lvm.host=" + service_config.getProperty(REPL_DBHOST)
-		elsif line =~ /replicator.backup.agent.lvm.dumpDir/ && service_config.getProperty(REPL_BACKUP_METHOD) != "none"
-			"replicator.backup.agent.lvm.dumpDir=" + service_config.getProperty(REPL_BACKUP_DUMP_DIR)
 		elsif line =~ /replicator.backup.agent.script.script/ && service_config.getProperty(REPL_BACKUP_METHOD) == "script"
       "replicator.backup.agent.script.script=" + service_config.getProperty(REPL_BACKUP_SCRIPT)
     elsif line =~ /replicator.backup.agent.script.commandPrefix/ && service_config.getProperty(REPL_BACKUP_METHOD) == "script"
