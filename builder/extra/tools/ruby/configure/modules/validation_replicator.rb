@@ -188,7 +188,8 @@ class ReplicationServiceChecks < GroupValidationCheck
       ServiceNameCheck.new(),
       DifferentMasterSlaveCheck.new(),
       THLStorageCheck.new(),
-      MySQLNoMySQLReplicationCheck.new()
+      MySQLNoMySQLReplicationCheck.new(),
+      MySQLApplierServerIDCheck.new()
     )
   end
   

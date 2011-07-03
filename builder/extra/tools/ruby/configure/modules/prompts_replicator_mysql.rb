@@ -108,11 +108,16 @@ class MySQLServerID < MySQLConfigurePrompt
   
   def initialize
     super(REPL_MYSQL_SERVER_ID, "MySQL server ID", 
-      PV_INTEGER)
+      PV_INTEGER, 0)
   end
   
   def get_mysql_default_value
-    get_mysql_value("SHOW VARIABLES LIKE 'server_id'", "Value")
+    server_id = get_mysql_value("SHOW VARIABLES LIKE 'server_id'", "Value")
+    if server_id == nil
+      raise "Unable to determine server_id"
+    end
+    
+    server_id
   end
 end
 

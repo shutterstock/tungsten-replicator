@@ -127,10 +127,32 @@ class MySQLReadableLogsCheck < MySQLValidationCheck
   end
 end
 
+class MySQLApplierServerIDCheck < MySQLValidationCheck
+  def set_vars
+    @title = "MySQL Server ID"
+  end
+  
+  def validate
+    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
+    server_id = @config.getProperty([DATASERVERS, applier, REPL_MYSQL_SERVER_ID])
+    if server_id.to_i <= 0
+      error("The server ID '#{server_id}' for #{get_connection_summary_for(applier)} is invalid")
+    end
+  end
+  
+  def enabled?
+    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
+    if @config.getProperty([DATASERVERS, applier, DBMS_TYPE]) == "mysql"
+      true
+    else
+      false
+    end
+  end
+end
+
 class MySQLSettingsCheck < MySQLValidationCheck
   def set_vars
     @title = "MySQL settings check"
-    @support_remote_fix = true
   end
   
   def validate
