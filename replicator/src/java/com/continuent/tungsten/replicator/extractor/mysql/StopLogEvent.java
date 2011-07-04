@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2009 Continuent Inc.
+ * Copyright (C) 2009-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -30,11 +30,11 @@ package com.continuent.tungsten.replicator.extractor.mysql;
 public class StopLogEvent extends LogEvent
 {
 
-    public StopLogEvent(byte[] buf, int event_len,
-            FormatDescriptionLogEvent description_event)
+    public StopLogEvent(byte[] buffer, int eventLength,
+            FormatDescriptionLogEvent descriptionEvent)
             throws MySQLExtractException
     {
-        super(buf, description_event, MysqlBinlog.STOP_EVENT);
+        super(buffer, descriptionEvent, MysqlBinlog.STOP_EVENT);
     }
 
 }

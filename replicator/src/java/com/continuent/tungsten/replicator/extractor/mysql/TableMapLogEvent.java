@@ -108,7 +108,7 @@ public class TableMapLogEvent extends LogEvent
         return metadata;
     }
 
-    private void buildMetadata(byte[] field_metadata, int pos, int length)
+    private void buildMetadata(byte[] fieldMetadata, int pos, int length)
             throws IOException
     {
         int index = pos;
@@ -125,7 +125,7 @@ public class TableMapLogEvent extends LogEvent
                 case MysqlBinlog.MYSQL_TYPE_DOUBLE :
                 case MysqlBinlog.MYSQL_TYPE_FLOAT :
                     /* These types store a single byte */
-                    metadata[i] = field_metadata[index];
+                    metadata[i] = fieldMetadata[index];
                     index++;
                     break;
 
@@ -145,7 +145,7 @@ public class TableMapLogEvent extends LogEvent
                      * representation of size of the string: 3 or 4.
                      */
                     int x = BigEndianConversion.convert2BytesToInt(
-                            field_metadata, index);
+                            fieldMetadata, index);
                     metadata[i] = x;
                     index += 2;
                     break;
@@ -153,7 +153,7 @@ public class TableMapLogEvent extends LogEvent
                 case MysqlBinlog.MYSQL_TYPE_BIT :
                 {
                     int x = LittleEndianConversion.convert2BytesToInt(
-                            field_metadata, index);
+                            fieldMetadata, index);
                     metadata[i] = x;
                     metadata[i] = x;
                     index += 2;
@@ -165,14 +165,14 @@ public class TableMapLogEvent extends LogEvent
                      * These types store two bytes.
                      */
                     metadata[i] = LittleEndianConversion.convert2BytesToInt(
-                            field_metadata, index);
+                            fieldMetadata, index);
                     index = index + 2;
                     break;
                 }
                 case MysqlBinlog.MYSQL_TYPE_NEWDECIMAL :
                 {
                     int x = BigEndianConversion.convert2bytesToShort(
-                            field_metadata, index);
+                            fieldMetadata, index);
                     metadata[i] = x;
                     index += 2;
                     break;

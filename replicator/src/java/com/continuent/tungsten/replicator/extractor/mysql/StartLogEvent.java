@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2009 Continuent Inc.
+ * Copyright (C) 2009-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -35,9 +35,10 @@ public class StartLogEvent extends LogEvent
         super();
     }
 
-    public StartLogEvent(byte[] buf, FormatDescriptionLogEvent description_event)
+    public StartLogEvent(byte[] buffer,
+            FormatDescriptionLogEvent descriptionEvent)
             throws MySQLExtractException
     {
-        super(buf, description_event, MysqlBinlog.START_EVENT_V3);
+        super(buffer, descriptionEvent, MysqlBinlog.START_EVENT_V3);
     }
 }
