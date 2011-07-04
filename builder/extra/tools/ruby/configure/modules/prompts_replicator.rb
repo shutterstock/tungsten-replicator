@@ -28,7 +28,17 @@ class DataServers < GroupConfigurePrompt
       PostgresConfFile.new(),
       PostgresArchiveTimeout.new(),
       
-      DatabaseInitScript.new()
+      DatabaseInitScript.new(),
+      
+      BackupMethod.new(),
+      BackupStorageDirectory.new(),
+      BackupConfigurePrompt.new(REPL_BACKUP_DUMP_DIR, "Backup temporary dump directory",
+        PV_FILENAME, "/tmp"),
+      BackupConfigurePrompt.new(REPL_BACKUP_RETENTION, "Number of backups to retain", 
+        PV_INTEGER, 3),
+      BackupScriptPathConfigurePrompt.new(),
+      BackupScriptCommandPrefixConfigurePrompt.new(),
+      BackupScriptOnlineConfigurePrompt.new()
     )
   end
 end
@@ -116,7 +126,15 @@ class BackupMethod < ConfigurePrompt
   include GroupConfigurePromptMember
   
   def initialize
-    super(REPL_BACKUP_METHOD, "Database backup method", nil, "none")
+    super(REPL_BACKUP_METHOD, "Database backup method", nil)
+  end
+  
+  def get_default_value
+    if @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
+      "mysqldump"
+    else
+      "pg_dump"
+    end
   end
   
   def get_prompt

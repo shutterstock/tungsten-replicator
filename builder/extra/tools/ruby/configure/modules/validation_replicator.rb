@@ -39,10 +39,18 @@ class BackupMethodAvailableCheck < ConfigureValidationCheck
   end
   
   def validate
-    case @config.getProperty(REPL_BACKUP_METHOD)
+    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
+    case @config.getProperty([DATASERVERS, applier, REPL_BACKUP_METHOD])
     when "mysqldump"
       path = cmd_result("which mysqldump")
       info("mysqldump found at #{path}")
+    when "xtrabackup"
+      begin
+        path = cmd_result("which innobackupex-1.5.1")
+        info("xtrabackup found at #{path}")
+      rescue
+        error("Unable to find the innobackupex-1.5.1 script for backup")
+      end
     when "pg_dump"
       path = cmd_result("which pg_dump")
       info("pg_dump found at #{path}")
@@ -56,6 +64,15 @@ class BackupMethodAvailableCheck < ConfigureValidationCheck
           error("The backup script (#{config.getProperty(REPL_BACKUP_SCRIPT)}) does not exist")
         end
       end
+    end
+  end
+  
+  def enabled?
+    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
+    if @config.getProperty([DATASERVERS, applier, DBMS_TYPE]) == "mysql"
+      true
+    else
+      false
     end
   end
 end
@@ -188,7 +205,8 @@ class ReplicationServiceChecks < GroupValidationCheck
       DifferentMasterSlaveCheck.new(),
       THLStorageCheck.new(),
       MySQLNoMySQLReplicationCheck.new(),
-      MySQLApplierServerIDCheck.new()
+      MySQLApplierServerIDCheck.new(),
+      BackupMethodAvailableCheck.new()
     )
   end
   

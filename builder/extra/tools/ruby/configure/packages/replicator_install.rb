@@ -136,7 +136,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "service-name",
       "rmi-port",
       "user",
-      "svc-parallelization-type"
+      "svc-parallelization-type",
+      "backup-directory"
     ].each{
       |prop_key|
       opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
@@ -204,7 +205,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_DBLOGIN => options.getProperty("slave-user"),
       REPL_DBPASSWORD => options.getProperty("slave-password"),
       DBMS_TYPE => options.getProperty("dbms-type"),
-      REPL_EXTRACTOR_USE_RELAY_LOGS => "true"
+      REPL_EXTRACTOR_USE_RELAY_LOGS => "true",
+      REPL_BACKUP_STORAGE_DIR => options.getPropertyOr("backup-directory", options.getProperty("home-directory") + "/backups")
     })
     
     @config.setProperty(REPL_SERVICES, {})
@@ -268,7 +270,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "channels",
       "service-name",
       "rmi-port",
-      "svc-parallelization-type"
+      "svc-parallelization-type",
+      "backup-directory"
     ].each{
       |prop_key|
       opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
@@ -336,7 +339,8 @@ class ReplicatorInstallPackage < ConfigurePackage
         DBMS_TYPE => options.getProperty("dbms-type"),
         REPL_MYSQL_BINLOGDIR => options.getProperty("datasource-log-directory"),
         REPL_MYSQL_BINLOGPATTERN => options.getProperty("datasource-log-pattern"),
-        REPL_EXTRACTOR_USE_RELAY_LOGS => options.getProperty("use-relay-logs")
+        REPL_EXTRACTOR_USE_RELAY_LOGS => options.getProperty("use-relay-logs"),
+        REPL_BACKUP_STORAGE_DIR => options.getPropertyOr("backup-directory", options.getProperty("home-directory") + "/backups")
       })
       
       service_alias = options.getProperty("service-name") + "_" + host_alias
@@ -397,6 +401,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--channels", "Number of channels for parallel apply", "1")
       output_usage_line("--svc-parallelization-type (disk|memory)", "Method for storing parallel queues", "memory")
       output_usage_line("--rmi-port", "", "10001")
+      output_usage_line("--backup-directory", "Storage directory for database backup files", Configurator.instance.get_base_path() + "/backups")
       output_usage_line("--service-name")
       output_usage_line("--start", "Start the replicator after configuration")
       output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
@@ -426,6 +431,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--channels", "Number of channels for parallel apply", "1")
       output_usage_line("--svc-parallelization-type (disk|memory)", "Method for implementing parallel queues", "memory")
       output_usage_line("--rmi-port", "", "10001")
+      output_usage_line("--backup-directory", "Storage directory for database backup files", Configurator.instance.get_base_path() + "/backups")
       output_usage_line("--service-name")
       output_usage_line("--start", "Start the replicator after configuration")
       output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")

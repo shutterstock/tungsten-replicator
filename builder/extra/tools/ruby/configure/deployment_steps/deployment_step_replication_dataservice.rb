@@ -108,33 +108,19 @@ module ConfigureDeploymentStepReplicationDataservice
 		elsif line =~ /replicator.resourceJdbcUrl/
 			line = line.sub("@HOSTNAME@", service_config.getProperty(REPL_DBHOST) + ":" +
 				service_config.getProperty(REPL_DBPORT))
-		elsif line =~ /replicator.backup.agents/
-			if service_config.getProperty(REPL_BACKUP_METHOD) == "none"
-				"replicator.backup.agents="
-			else
-				"replicator.backup.agents=" + service_config.getPropertyOr(REPL_BACKUP_METHOD, "")
-			end
-		elsif line =~ /replicator.backup.default/
-			if service_config.getProperty(REPL_BACKUP_METHOD) == "none"
-				"replicator.backup.default="
-			else
-				"replicator.backup.default=" + service_config.getPropertyOr(REPL_BACKUP_METHOD, "")
-			end
+		elsif line =~ /replicator.backup.agents/ && service_config.getPropertyOr(REPL_BACKUP_METHOD, "none") != "none"
+			"replicator.backup.agents=" + service_config.getPropertyOr(REPL_BACKUP_METHOD, "")
+		elsif line =~ /replicator.backup.default/ && service_config.getPropertyOr(REPL_BACKUP_METHOD, "none") != "none"
+			"replicator.backup.default=" + service_config.getPropertyOr(REPL_BACKUP_METHOD, "")
 		elsif line =~ /replicator.backup.agent.script.script/ && service_config.getProperty(REPL_BACKUP_METHOD) == "script"
       "replicator.backup.agent.script.script=" + service_config.getProperty(REPL_BACKUP_SCRIPT)
     elsif line =~ /replicator.backup.agent.script.commandPrefix/ && service_config.getProperty(REPL_BACKUP_METHOD) == "script"
       "replicator.backup.agent.script.commandPrefix=" + service_config.getProperty(REPL_BACKUP_COMMAND_PREFIX)
     elsif line =~ /replicator.backup.agent.script.hotBackupEnabled/ && service_config.getProperty(REPL_BACKUP_METHOD) == "script"
       "replicator.backup.agent.script.hotBackupEnabled=" + service_config.getProperty(REPL_BACKUP_ONLINE)
-		elsif line =~ /replicator.storage.agents/
-			if service_config.getProperty(REPL_BACKUP_METHOD) == "none"
-				"replicator.storage.agents="
-			else
-				"replicator.storage.agents=fs"
-			end
-		elsif line =~ /replicator.storage.agent.fs.directory/ && service_config.getProperty(REPL_BACKUP_METHOD) != "none"
+		elsif line =~ /replicator.storage.agent.fs.directory/ && service_config.getProperty(REPL_BACKUP_STORAGE_DIR) != nil
 			"replicator.storage.agent.fs.directory=" + service_config.getProperty(REPL_BACKUP_STORAGE_DIR)
-		elsif line =~ /replicator.storage.agent.fs.retention/ && service_config.getProperty(REPL_BACKUP_METHOD) != "none"
+		elsif line =~ /replicator.storage.agent.fs.retention/ && service_config.getProperty(REPL_BACKUP_RETENTION) != nil
 			"replicator.storage.agent.fs.retention=" + service_config.getProperty(REPL_BACKUP_RETENTION)
 		elsif line =~ /replicator.vipInterface/
 			"replicator.vipInterface=" + service_config.getPropertyOr(REPL_MASTER_VIP_DEVICE, "")

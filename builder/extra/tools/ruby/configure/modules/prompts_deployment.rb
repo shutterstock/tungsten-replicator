@@ -27,16 +27,6 @@ class ClusterHosts < GroupConfigurePrompt
       THLStorageFileSize.new(),
       RelayLogStorageDirectory.new(),
       
-      BackupMethod.new(),
-      BackupStorageDirectory.new(),
-      BackupConfigurePrompt.new(REPL_BACKUP_DUMP_DIR, "Backup temporary dump directory",
-        PV_FILENAME, "/tmp"),
-      BackupConfigurePrompt.new(REPL_BACKUP_RETENTION, "Number of backups to retain", 
-        PV_INTEGER, 3),
-      BackupScriptPathConfigurePrompt.new(),
-      BackupScriptCommandPrefixConfigurePrompt.new(),
-      BackupScriptOnlineConfigurePrompt.new(),
-      
       ReplicationAPI.new(),
       ReplicationAPIHost.new(),
       ReplicationAPIPort.new(),
