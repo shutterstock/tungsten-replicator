@@ -66,6 +66,8 @@ public class RotateLogEvent extends LogEvent
     public RotateLogEvent(byte[] buffer, int eventLength,
             FormatDescriptionLogEvent descriptionEvent) throws MySQLExtractException
     {
+        super(buffer, descriptionEvent, MysqlBinlog.START_EVENT_V3);
+        
         type = MysqlBinlog.ROTATE_EVENT;
 
         int headerSize = descriptionEvent.commonHeaderLength;
