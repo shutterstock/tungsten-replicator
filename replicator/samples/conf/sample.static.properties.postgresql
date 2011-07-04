@@ -86,7 +86,7 @@ replicator.storage.default=fs
 # may be time-consuming for large files; it is recommended if you can afford
 # to check.  (Who really wants to load a bad backup??)
 replicator.storage.agent.fs=com.continuent.tungsten.replicator.backup.FileSystemStorageAgent
-replicator.storage.agent.fs.directory=/mnt/backups
+#replicator.storage.agent.fs.directory=
 replicator.storage.agent.fs.retention=3
 replicator.storage.agent.fs.crcCheckingEnabled=true
 

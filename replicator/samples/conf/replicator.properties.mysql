@@ -109,7 +109,7 @@ replicator.resourceVendor=mysql
 replicator.vipInterface=eth0:0
 replicator.vipAddress=192.168.0.1
 replicator.resourceLogPattern=mysql-bin
-replicator.resourceLogDir=/var/log/mysql
+replicator.resourceLogDir=
 replicator.resourcePort=${replicator.global.db.port}
 replicator.resourceDataServerHost=${replicator.global.db.host}
 
@@ -490,7 +490,7 @@ replicator.filter.colnames=com.continuent.tungsten.replicator.filter.ColumnNameF
 ################################
 
 # List of configured backup agents.  Uncomment appropriately for your site. 
-#replicator.backup.agents=mysqldump,lvm,script
+#replicator.backup.agents=mysqldump,script
 
 # Default backup agent.
 replicator.backup.default=mysqldump
@@ -506,22 +506,22 @@ replicator.backup.agent.mysqldump.mysqldumpOptions=--opt --all-databases --add-d
 replicator.backup.agent.mysqldump.hotBackupEnabled=true
 
 # LVM Snapshot Agent--backup using LVM snapshot and file copy
-replicator.backup.agent.lvm=com.continuent.tungsten.replicator.backup.mysql.MySqlLvmDumpAgent
-replicator.backup.agent.lvm.host=localhost
-replicator.backup.agent.lvm.port=${replicator.global.db.port}
-replicator.backup.agent.lvm.user=${replicator.global.db.user}
-replicator.backup.agent.lvm.password=${replicator.global.db.password}
-replicator.backup.agent.lvm.dumpDir=/tmp
-replicator.backup.agent.lvm.volumeGroup=VolGroup00
-replicator.backup.agent.lvm.logicalVolume=LogVol00
-replicator.backup.agent.lvm.logicalVolumeMount=/
-replicator.backup.agent.lvm.dataDir=/var/lib/mysql
-replicator.backup.agent.lvm.snapshotName=mysqlsnap
-replicator.backup.agent.lvm.snapshotSize=2G
-replicator.backup.agent.lvm.snapshotMount=/mnt/snapshots
-replicator.backup.agent.lvm.commandPrefix=sudo
-replicator.backup.agent.lvm.mysqlStart=/etc/init.d/mysqld start
-replicator.backup.agent.lvm.mysqlStop=/etc/init.d/mysqld stop
+#replicator.backup.agent.lvm=com.continuent.tungsten.replicator.backup.mysql.MySqlLvmDumpAgent
+#replicator.backup.agent.lvm.host=localhost
+#replicator.backup.agent.lvm.port=${replicator.global.db.port}
+#replicator.backup.agent.lvm.user=${replicator.global.db.user}
+#replicator.backup.agent.lvm.password=${replicator.global.db.password}
+#replicator.backup.agent.lvm.dumpDir=/tmp
+#replicator.backup.agent.lvm.volumeGroup=VolGroup00
+#replicator.backup.agent.lvm.logicalVolume=LogVol00
+#replicator.backup.agent.lvm.logicalVolumeMount=/
+#replicator.backup.agent.lvm.dataDir=/var/lib/mysql
+#replicator.backup.agent.lvm.snapshotName=mysqlsnap
+#replicator.backup.agent.lvm.snapshotSize=2G
+#replicator.backup.agent.lvm.snapshotMount=/mnt/snapshots
+#replicator.backup.agent.lvm.commandPrefix=sudo
+#replicator.backup.agent.lvm.mysqlStart=/etc/init.d/mysqld start
+#replicator.backup.agent.lvm.mysqlStop=/etc/init.d/mysqld stop
 
 # Script Agent--Executes a script to backup or restore. 
 replicator.backup.agent.script=com.continuent.tungsten.replicator.backup.generic.ScriptDumpAgent
@@ -560,7 +560,7 @@ replicator.storage.default=fs
 # may be time-consuming for large files; it is recommended if you can afford
 # to check.  (Who really wants to load a bad backup??)
 replicator.storage.agent.fs=com.continuent.tungsten.replicator.backup.FileSystemStorageAgent
-replicator.storage.agent.fs.directory=/mnt/backups
+#replicator.storage.agent.fs.directory=
 replicator.storage.agent.fs.retention=3
 replicator.storage.agent.fs.crcCheckingEnabled=true
 
