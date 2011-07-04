@@ -41,14 +41,15 @@ class ConfigurePackage
   def output_general_usage
     Configurator.instance.write_divider(Logger::ERROR)
     puts "General options:"
-    puts "-a, --advanced      Enable advanced options"
-    puts "-b, --batch         Execute the configuration without interactive prompts"
-    puts "-c, --config file   Sets name of config file (default: tungsten.cfg)"
-    puts "-h, --help          Displays help message"
-    puts "-q, --quiet         Only display error messages"
-    puts "-v, --verbose       Display all messages"
-    puts "--no-validation     Skip all validation checks"
-    puts "--validate-only     Skip all deployment steps"
+    puts "-a, --advanced        Enable advanced options"
+    puts "-b, --batch           Execute the configuration without interactive prompts"
+    puts "-c, --config file     Sets name of config file (default: tungsten.cfg)"
+    puts "-h, --help            Displays help message"
+    puts "-q, --quiet           Only display error messages"
+    puts "-v, --verbose         Display all messages"
+    puts "--no-validation       Skip all validation checks"
+    puts "--validate-only       Skip all deployment steps"
+    puts "--property=key=value  Set the property key to the value in any file that is modified by the configure script"
   end
   
   def output_usage_line(argument, msg = "", default = nil, max_line = 70)

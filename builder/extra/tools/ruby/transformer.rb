@@ -9,6 +9,16 @@ require 'system_require'
 system_require 'date'
 
 class Transformer
+  @@global_replacements = {}
+  
+  def self.add_global_replacement(key, value)
+    if value == nil
+      raise("Unable to make a global replacement using a nil value")
+    end
+    
+    @@global_replacements[key] = value
+  end
+  
   # Initialize with the name of the to -> from files. 
   def initialize(infile, outfile, end_comment)
     @infile = infile
@@ -27,7 +37,13 @@ class Transformer
     output = []
     File.open(@infile) do |file|
       while line = file.gets
-        transformed_line = yield line
+        line_keys = line.scan(/[#]?([a-zA-Z0-9\.]+)=.*/)
+        if line_keys.count() > 0 && @@global_replacements.has_key?(line_keys[0][0])
+          transformed_line = "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}"
+        else
+          transformed_line = yield line
+        end
+        
         output.insert -1, transformed_line
       end
     end
