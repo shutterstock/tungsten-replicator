@@ -116,15 +116,15 @@ public class PrimaryKeyFilter implements Filter
     {
         metadataCache = new Hashtable<String, Hashtable<String, Table>>();
 
-        // Load defaults for connection 
+        // Load defaults for connection
         if (url == null)
             url = context.getJdbcUrl("tungsten_" + context.getServiceName());
         if (user == null)
             user = context.getJdbcUser();
         if (password == null)
             password = context.getJdbcPassword();
-        
-        // Connect. 
+
+        // Connect.
         try
         {
             conn = DatabaseFactory.createDatabase(url, user, password);
@@ -218,7 +218,8 @@ public class PrimaryKeyFilter implements Filter
                     // metadata for the concerned table
                     String name = sqlOperation.getName();
                     String defaultDB = sdata.getDefaultSchema();
-                    removeTableMetadata(name, sqlOperation.getSchema(), defaultDB);
+                    removeTableMetadata(name, sqlOperation.getSchema(),
+                            defaultDB);
                     continue;
                 }
 
@@ -294,11 +295,25 @@ public class PrimaryKeyFilter implements Filter
                         + " - Removing table metadata from cache");
             Table newTable = conn.findTable(orc.getSchemaName(),
                     orc.getTableName());
-            newTable.setTableId(orc.getTableId());
-            dbCache.put(tableName, newTable);
+            if (newTable != null)
+            {
+                newTable.setTableId(orc.getTableId());
+                dbCache.put(tableName, newTable);
+            }
+            else if (logger.isDebugEnabled())
+                logger.debug("Table " + tableName + " not found in "
+                        + orc.getSchemaName());
         }
 
-        Key primaryKey = dbCache.get(tableName).getPrimaryKey();
+        Table table = dbCache.get(tableName);
+        if (table == null)
+        {
+            if (logger.isDebugEnabled())
+                logger.debug("Table " + orc.getSchemaName() + "." + tableName
+                        + " not found in cache");
+            return;
+        }
+        Key primaryKey = table.getPrimaryKey();
         if (primaryKey == null)
         {
             // No primary key -> just return
