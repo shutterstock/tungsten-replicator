@@ -439,11 +439,19 @@ public class DiskLog
                     // with no file beyond it. It is a rare corner case but
                     // we need to handle it or the replicator will not be able
                     // to start writing.
+                    String fileName = logFile.getFile().getName();
+
                     logger.info("Last log file ends on rotate log event: "
-                            + logFile.getFile().getName());
+                            + fileName);
                     logFile.close();
                     if (!readOnly)
+                    {
+                        logFileIndexPos = fileName.lastIndexOf(".");
+                        fileIndex = Long.valueOf(fileName
+                                .substring(logFileIndexPos + 1));
+                        fileIndex = (fileIndex + 1) % Integer.MAX_VALUE;
                         logFile = this.startNewLogFile(maxSeqno + 1);
+                    }
                     break;
                 }
 
