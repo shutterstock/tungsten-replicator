@@ -72,7 +72,7 @@ class MySQLBinlogPattern < MySQLConfigurePrompt
     master_file = get_mysql_value("SHOW MASTER STATUS", "File")
     master_file_parts = master_file.split(".")
     
-    if master_file_parts.count() > 1
+    if master_file_parts.length() > 1
       master_file_parts.pop()
       return master_file_parts.join(".")
     else

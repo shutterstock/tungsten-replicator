@@ -228,7 +228,7 @@ class JavaVersionCheck < ConfigureValidationCheck
         debug "Supported Java found"
         
         java_version = java_out.scan(/java version \"1.6.[0-9_\.]+\"/)
-        unless java_version.count == 1
+        unless java_version.length == 1
           error "Java 1.6 is required to run Tungsten"
         end
       else
