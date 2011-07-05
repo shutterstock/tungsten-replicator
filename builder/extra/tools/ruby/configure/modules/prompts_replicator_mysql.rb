@@ -55,6 +55,17 @@ class MySQLConfigurePrompt < ConfigurePrompt
   end
 end
 
+module MySQLDataservicePrompt
+  def enabled?
+    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
+    if @config.getProperty([DATASERVERS, applier, DBMS_TYPE]) == "mysql"
+      super() && true
+    else
+      super() && false
+    end
+  end
+end
+
 class MySQLAdvancedPrompt < AdvancedPrompt
   def enabled?
     super() && @config.getProperty(DBMS_TYPE) == "mysql"
@@ -140,5 +151,16 @@ class ReplicationServiceUseDrizzle < MySQLAdvancedPrompt
   def initialize
     super(REPL_USE_DRIZZLE, "Use the Drizzle MySQL driver", 
       PV_BOOLEAN, "true")
+  end
+end
+
+class ReplicationServicSlaveTakeover < ConfigurePrompt
+  include NotDeleteServicePrompt
+  include GroupConfigurePromptMember
+  include MySQLDataservicePrompt
+  
+  def initialize
+    super(REPL_SVC_NATIVE_SLAVE_TAKEOVER, "Takeover native MySQL replication",
+      PV_BOOLEAN, "false")
   end
 end

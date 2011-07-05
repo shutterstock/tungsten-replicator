@@ -55,6 +55,8 @@ module ConfigureDeploymentStepMySQL
       "&directory=#{directory}&archive=#{archive}" +
       "&mysqldatadir=#{service_config.getProperty(REPL_MYSQL_DATADIR)}" +
       "&mysql_service_command=#{service_config.getProperty(REPL_BOOT_SCRIPT)}"
+    elsif line =~ /^replicator.nativeSlaveTakeover/
+      "replicator.nativeSlaveTakeover=#{service_config.getPropertyOr(REPL_SVC_NATIVE_SLAVE_TAKEOVER, 'false')}"
 		else
 		  transform_replication_dataservice_line(line, service_name, service_config)
 		end

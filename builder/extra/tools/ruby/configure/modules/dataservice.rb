@@ -261,6 +261,7 @@ class ReplicationServices < GroupConfigurePrompt
       ReplicationShardIDMode.new(),
       ReplicationAllowUnsafeSQL.new(),
       ReplicationAllowAllSQL.new(),
+      ReplicationServicSlaveTakeover.new(),
       
       ReplicationServiceStart.new()
     )

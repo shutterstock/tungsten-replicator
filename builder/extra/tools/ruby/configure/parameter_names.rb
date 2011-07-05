@@ -93,6 +93,7 @@ REPL_SVC_ALLOW_BIDI_UNSAFE = "repl_svc_allow_bidi_unsafe"
 REPL_SVC_ALLOW_ANY_SERVICE = "repl_svc_allow_any_remote_service"
 REPL_SVC_CONFIG_FILE = "repl_svc_config_file"
 REPL_SVC_PARALLELIZATION_TYPE = "repl_svc_parallelization_type"
+REPL_SVC_NATIVE_SLAVE_TAKEOVER = "repl_svc_native_slave_takeover"
 
 REPL_USE_DRIZZLE = "repl_use_drizzle"
 

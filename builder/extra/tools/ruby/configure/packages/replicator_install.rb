@@ -97,7 +97,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       "report-services" => "false",
       "home-directory" => Configurator.instance.get_base_path(),
       "use-relay-logs" => "true",
-      "svc-parallelization-type" => "memory"
+      "svc-parallelization-type" => "memory",
+      "slave-takeover" => "false"
     }
     
     opts = OptionParser.new
@@ -108,6 +109,9 @@ class ReplicatorInstallPackage < ConfigurePackage
     }
     opts.on("--disable-relay-logs") {
       options.setProperty("use-relay-logs", "false")
+    }
+    opts.on("--native-slave-takeover") {
+      options.setProperty("slave-takeover", "true")
     }
     
     [
@@ -220,7 +224,8 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_BUFFER_SIZE => options.getProperty("buffer-size"),
       REPL_SVC_CHANNELS => options.getProperty("channels"),
       REPL_SVC_THL_PORT => options.getProperty("thl-port"),
-      REPL_SVC_PARALLELIZATION_TYPE => options.getProperty("svc-parallelization-type")
+      REPL_SVC_PARALLELIZATION_TYPE => options.getProperty("svc-parallelization-type"),
+      REPL_SVC_NATIVE_SLAVE_TAKEOVER => options.getProperty("slave-takeover")
     })
   end
   
@@ -387,8 +392,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--disable-relay-logs", "Force the replicator to tail the binary log files.  This will reduce performance.")
       output_usage_line("--master-log-directory", "", "/var/lib/mysql")
       output_usage_line("--master-log-pattern", "", "mysql-bin")
-      output_usage_line("--master-log-file", "PENDING")
-      output_usage_line("--master-log-pos", "PENDING")
+      output_usage_line("--native-slave-takeover", "Start replication from the current slave position")
       output_usage_line("--slave-alias")
       output_usage_line("--slave-host", "", Configurator.instance.hostname())
       output_usage_line("--slave-port", "", "3306")
