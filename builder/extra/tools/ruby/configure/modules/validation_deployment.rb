@@ -223,13 +223,13 @@ class JavaVersionCheck < ConfigureValidationCheck
     java_out = cmd_result("java -version")
     if $? == 0
       if java_out =~ /OpenJDK/
-        error "Tungsten does not support using OpenJDK.  Please make sure that the Oracle Java JRE 1.6 is in the current path."
+        error "Tungsten does not support using OpenJDK.  Please make sure that the Oracle Java 1.6 or greater is in the current path."
       elsif java_out =~ /Java|JDK/
         debug "Supported Java found"
         
-        java_version = java_out.scan(/java version \"1.6.[0-9_\.]+\"/)
+        java_version = java_out.scan(/java version \"1.(6|7|8)./)
         unless java_version.length == 1
-          error "Java 1.6 is required to run Tungsten"
+          error "Oracle Java 1.6 or greater is required to run Tungsten"
         end
       else
         error "Unknown Java version"
