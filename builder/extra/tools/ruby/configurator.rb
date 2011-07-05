@@ -367,7 +367,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("--validate-only")        {@options.validate_only = true}
     opts.on("--property String")      {|val|
                                         val_parts = val.split("=")
-                                        if val_parts.count() !=2
+                                        if val_parts.length() !=2
                                           raise "Invalid value #{val} given for '--property'.  There should be a key/value pair joined by a single =."
                                         end
                                         

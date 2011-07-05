@@ -183,8 +183,12 @@ class BackupStorageDirectory < BackupConfigurePrompt
     if @config.getProperty(get_member_key(HOME_DIRECTORY))
       @config.getProperty(get_member_key(HOME_DIRECTORY)) + "/backups"
     else
-      ""
+      nil
     end
+  end
+  
+  def required?
+    false
   end
 end
 
