@@ -155,6 +155,21 @@ public interface Database
             throws SQLException;
 
     /**
+     * Returns true if this implementation supports synchronization of native
+     * slave replication with Tungsten position. (Currently only MySQL supports
+     * this feature.)
+     */
+    public boolean supportsNativeSlaveSync();
+
+    /**
+     * Synchronize the native slave position with Tungsten so that native
+     * replication can start properly after Tungsten goes offline.
+     * 
+     * @param eventId Tungsten event ID containing native log coordinates
+     */
+    public void syncNativeSlave(String eventId) throws SQLException;
+
+    /**
      * Returns true if this implementation supports changing the timestamp value
      * used by functions that return the current time.
      */

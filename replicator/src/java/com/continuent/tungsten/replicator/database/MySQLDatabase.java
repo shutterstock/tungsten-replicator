@@ -41,8 +41,7 @@ import com.continuent.tungsten.replicator.dbms.OneRowChange;
  */
 public class MySQLDatabase extends AbstractDatabase
 {
-    private static Logger logger                        = Logger
-                                                                .getLogger(MySQLDatabase.class);
+    private static Logger logger                        = Logger.getLogger(MySQLDatabase.class);
 
     private boolean       sessionLevelLoggingSuppressed = false;
 
@@ -125,10 +124,8 @@ public class MySQLDatabase extends AbstractDatabase
         }
         catch (SQLException e)
         {
-            logger
-                    .debug("Unable to set wait_timeout to maximum value of 2147483");
-            logger
-                    .debug("Please consider using an explicit JDBC URL setting to avoid connection timeouts");
+            logger.debug("Unable to set wait_timeout to maximum value of 2147483");
+            logger.debug("Please consider using an explicit JDBC URL setting to avoid connection timeouts");
         }
     }
 
@@ -202,6 +199,45 @@ public class MySQLDatabase extends AbstractDatabase
 
             this.sessionLevelLoggingSuppressed = suppressed;
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.AbstractDatabase#supportsNativeSlaveSync()
+     */
+    @Override
+    public boolean supportsNativeSlaveSync()
+    {
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.AbstractDatabase#syncNativeSlave(java.lang.String)
+     */
+    @Override
+    public void syncNativeSlave(String eventId) throws SQLException
+    {
+        // Parse the event ID, which has the following format:
+        // <file>:<offset>[;<session id>]
+        int colonIndex = eventId.indexOf(':');
+        String binlogFile = eventId.substring(0, colonIndex);
+
+        int semicolonIndex = eventId.indexOf(";");
+        int binlogOffset;
+        if (semicolonIndex != -1)
+            binlogOffset = Integer.valueOf(eventId.substring(colonIndex + 1,
+                    semicolonIndex));
+        else
+            binlogOffset = Integer.valueOf(eventId.substring(colonIndex + 1));
+
+        // Create a CHANGE MASTER TO command.
+        String changeMaster = String.format(
+                "CHANGE MASTER TO master_log_file = '%s', master_log_pos = %s",
+                binlogFile, binlogOffset);
+        executeUpdate(changeMaster);
     }
 
     public boolean supportsControlTimestamp()
@@ -360,7 +396,8 @@ public class MySQLDatabase extends AbstractDatabase
         return "now()";
     }
 
-    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue, String typeDesc)
+    public String getPlaceHolder(OneRowChange.ColumnSpec col, Object colValue,
+            String typeDesc)
     {
         return " ? ";
     }

@@ -294,6 +294,27 @@ public abstract class AbstractDatabase implements Database
     }
 
     /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#supportsNativeSlaveSync()
+     */
+    public boolean supportsNativeSlaveSync()
+    {
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#syncNativeSlave(java.lang.String)
+     */
+    public void syncNativeSlave(String eventId) throws SQLException
+    {
+        throw new UnsupportedOperationException(
+                "Native slave synchronization is not supported");
+    }
+
+    /**
      * By default we do not support controlling the timestamp. {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.database.Database#supportsControlTimestamp()

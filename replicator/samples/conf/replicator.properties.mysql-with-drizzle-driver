@@ -32,6 +32,12 @@ replicator.global.extract.db.password=${replicator.global.db.password}
 # for this value--it must be set or the replicator will not go online.
 replicator.role=master
 
+# If the following property is true, we are replacing native slave
+# replication.  We start extraction from the MySQL slave position  
+# and write slave restart coordinates each time the replicator goes
+# offline cleanly.  It should be false in all other cases. 
+replicator.nativeSlaveTakeover=false
+
 # URI to which we connect when this replicator is a slave.   
 replicator.master.connect.uri=thl://masterhost:2112/
 

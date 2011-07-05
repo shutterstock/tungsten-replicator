@@ -103,7 +103,6 @@ public class BinlogPosition implements FilenameFilter, Cloneable
         setDirectory(directory);
         setBaseName(baseName);
         this.bufferSize = bufferSize;
-        openFile();
     }
 
     public BinlogPosition clone()

@@ -80,7 +80,7 @@ public interface PluginContext
 
     /** Cluster name to which replicator belongs. */
     public abstract String getClusterName();
-    
+
     /** Service name to which replication belongs. */
     public abstract String getServiceName();
 
@@ -129,4 +129,7 @@ public interface PluginContext
      * MySQL's log_slave_updates option.
      */
     public boolean logReplicatorUpdates();
+
+    /** Return true if operating in native slave takeover mode. */
+    public boolean nativeSlaveTakeover();
 }

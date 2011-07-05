@@ -349,33 +349,15 @@
     	<antcall target="zipdoc"/>
     </target>
 
-    <target name="deploy" depends="dist"
-            description="--> Deploy built distribution to alternative host/directory">
-        <condition property="deploy.localhost">
-          <equals arg1="localhost" arg2="${deploy.host}"/>
-        </condition>
-        <!-- One of these must work since both depend on deploy.localhost. -->
-        <antcall target="deploy.local"/>
-        <antcall target="deploy.remote"/>
-    </target>
-
-    <!-- Copy tungsten directory to another local directory. -->
-    <target name="deploy.local" if="deploy.localhost">
-        <echo>Deploying to ${deploy.dir}...</echo>
-        <mkdir dir="${deploy.dir}/tungsten-replicator"/>
-        <copy todir="${deploy.dir}/tungsten-replicator">
-            <fileset dir="${dist.dir}" includes="**/*" />
-        </copy>
-    </target>
-
-    <!-- Rsync tungsten directory to another host. -->
-    <target name="deploy.remote" unless="deploy.localhost">
-        <echo>Deploying to ${deploy.host}:${deploy.dir}...</echo>
-        <exec executable="ssh">
-            <arg line="${deploy.host} mkdir -p ${deploy.dir}" />
+    <target name="protos" description="--> [re-]generate protobuf classes for events">
+        <echo message="protoc 2.3.0 must be in path"/>
+        <exec executable="protoc">
+          <arg value="--version"/>
         </exec>
-        <exec executable="rsync">
-            <arg line="-az --checksum --delete-after --rsh=ssh ${dist.dir} ${deploy.host}:${deploy.dir}" />
+        <exec executable="protoc">
+          <arg value="--java_out=${java.src.dir}"/>
+          <arg value="protobuf/TungstenProtobufMessage"/>
         </exec>
     </target>
+
 </project>

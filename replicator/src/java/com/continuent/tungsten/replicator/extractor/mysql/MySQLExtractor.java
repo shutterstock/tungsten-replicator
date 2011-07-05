@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Seppo Jaakola
- * Contributor(s): Alex Yurchenko, Teemu Ollakka, Stephane Giron
+ * Contributor(s): Alex Yurchenko, Teemu Ollakka, Stephane Giron, Robert Hodges
  */
 
 package com.continuent.tungsten.replicator.extractor.mysql;
@@ -119,6 +119,10 @@ public class MySQLExtractor implements RawExtractor
     // Varchar type fields can be retrieved and stored in THL either using
     // String datatype or bytes arrays. By default, using string datatype.
     private boolean                         useBytesForStrings      = false;
+
+    // If true this means we are taking over for MySQL slave replication and can
+    // position from the MySQL slave when starting for the first time.
+    private boolean                         nativeSlaveTakeover     = false;
 
     // Should schema name be prefetched when a Load Data Infile Begin event is
     // extracted ?
@@ -555,9 +559,8 @@ public class MySQLExtractor implements RawExtractor
             long sessionId)
     {
         String fileName = binlogPosition.getFileName();
-        String binlogNumber = fileName.substring(fileName.lastIndexOf('.') + 1);
         String position = getPositionAsString(binlogPosition.getPosition());
-        return String.format("%s:%s;%d", binlogNumber, position, sessionId);
+        return String.format("%s:%s;%d", fileName, position, sessionId);
     }
 
     private static String getPositionAsString(long position)
@@ -620,30 +623,37 @@ public class MySQLExtractor implements RawExtractor
     }
 
     /*
-     * Find current position in MySQL slave relay logs.
+     * Find current position on running MySQL slave, stop the slave, and
+     * position on the master binlog where the slave stopped.
      */
-    private BinlogPosition positionBinlogSlave() throws ExtractorException
+    private BinlogPosition positionFromSlaveStatus() throws ExtractorException
     {
         Database conn = null;
         Statement st = null;
         ResultSet rs = null;
         try
         {
+            // Use local database to ensure we get the right slave information.
+            String url = runtime.getJdbcUrl(null);
+            String user = runtime.getJdbcUser();
+            String password = runtime.getJdbcPassword();
+            logger.info("Establishing connection to local DBMS to get slave info: url="
+                    + url);
             conn = DatabaseFactory.createDatabase(url, user, password);
             conn.connect();
             st = conn.createStatement();
-            // Stop the MySQL SQL Thread if it is currently running.
-            logger.info("Stopping MySQL SQL thread if it is running");
-            st.executeUpdate("STOP SLAVE SQL_THREAD");
+            // Stop the MySQL slave if it is currently running.
+            logger.info("Stopping MySQL slave io and SQL threads if they are running");
+            st.executeUpdate("STOP SLAVE");
 
-            // Look for current relay log position.
+            // Look for current binlog position.
             logger.debug("Seeking position in slave relay logs");
             rs = st.executeQuery("SHOW SLAVE STATUS");
             if (!rs.next())
                 throw new ExtractorException(
-                        "Error getting master status; is the MySQL binlog enabled?");
-            String binlogFile = rs.getString("Relay_Log_File");
-            long binlogOffset = rs.getLong("Relay_Log_Pos");
+                        "Error getting slave status; is MySQL replication enabled?");
+            String binlogFile = rs.getString("Relay_Master_Log_File");
+            long binlogOffset = rs.getLong("Exec_Master_Log_Pos");
 
             logger.info("Starting from position: " + binlogFile + ":"
                     + binlogOffset);
@@ -1259,25 +1269,32 @@ public class MySQLExtractor implements RawExtractor
             else
                 binlogFile = binlogFilePattern + "." + binlogFileIndex;
 
-            // If we are using relay logs make sure that relay logging is
-            // functioning here and we are up to point required by binlog
-            // position.
-            if (useRelayLogs)
-                startRelayLogs(binlogFile, binlogOffset);
-
             // Set the binlog position.
             binlogPosition = new BinlogPosition(binlogOffset, binlogFile,
                     binlogDir, binlogFilePattern, bufferSize);
         }
         else
         {
-            // Position based on the binlog mode.
-            if (MODE_MASTER.equals(binlogMode))
-                binlogPosition = positionBinlogMaster(true);
-            else
-                binlogPosition = positionBinlogSlave();
+            // Try to position on the running slave if native slave takeover is
+            // enabled.
+            if (nativeSlaveTakeover)
+            {
+                binlogPosition = positionFromSlaveStatus();
+            }
 
+            // If that fails or native slave takeover is not enabled, use the
+            // current master position.
+            binlogPosition = positionBinlogMaster(true);
         }
+
+        // If we are using relay logs make sure that relay logging is
+        // functioning here and we are up to point required by binlog
+        // position.
+        startRelayLogs(binlogPosition.getFileName(),
+                binlogPosition.getPosition());
+
+        // Now open the binlog file.
+        binlogPosition.openFile();
     }
 
     /**
@@ -1300,6 +1317,11 @@ public class MySQLExtractor implements RawExtractor
         sb.append(port);
         sb.append("/");
         url = sb.toString();
+
+        // See if we are operating in native slave takeover mode.
+        nativeSlaveTakeover = context.nativeSlaveTakeover();
+        if (nativeSlaveTakeover)
+            logger.info("Native slave takeover is enabled");
 
         // Prepare accordingly based on whether we are replicating from a master
         // or MySQL slave relay logs.
@@ -1333,6 +1355,12 @@ public class MySQLExtractor implements RawExtractor
             logger.info("Reading logs from MySQL slave: binlogMode= "
                     + binlogMode);
             // Check for conflicting settings.
+            if (this.nativeSlaveTakeover)
+                throw new ReplicatorException(
+                        "nativeSlaveTakeover may not be true with this "
+                                + "binlogMode setting: nativeSlaveTakeover="
+                                + nativeSlaveTakeover + " binlogMode="
+                                + binlogMode);
             if (this.useRelayLogs)
             {
                 logger.warn("useRelayLogs setting is incompatible with "

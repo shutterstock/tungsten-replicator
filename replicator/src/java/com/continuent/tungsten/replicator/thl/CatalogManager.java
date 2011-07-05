@@ -120,7 +120,8 @@ public class CatalogManager
 
             // Create commit seqno table.
             commitSeqnoTable = new CommitSeqnoTable(conn, metadataSchema,
-                    runtime.getTungstenTableType());
+                    runtime.getTungstenTableType(),
+                    runtime.nativeSlaveTakeover());
             commitSeqnoTable.prepare(taskId);
 
             // Create consistency table
@@ -132,9 +133,10 @@ public class CatalogManager
             HeartbeatTable heartbeatTable = new HeartbeatTable(metadataSchema,
                     runtime.getTungstenTableType());
             heartbeatTable.initializeHeartbeatTable(conn);
-            
+
             // Create shard table if it does not exist
-            ShardTable shardTable = new ShardTable(metadataSchema, runtime.getTungstenTableType());
+            ShardTable shardTable = new ShardTable(metadataSchema,
+                    runtime.getTungstenTableType());
             shardTable.initializeShardTable(conn);
 
         }

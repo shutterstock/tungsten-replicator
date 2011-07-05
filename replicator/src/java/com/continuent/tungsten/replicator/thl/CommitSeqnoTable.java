@@ -62,6 +62,7 @@ public class CommitSeqnoTable
     // Properties.
     private final String       schema;
     private final Database     database;
+    private final boolean      syncNativeSlaveRequired;
 
     private Table              commitSeqnoTable;
     private Column             commitSeqnoTableTaskId;
@@ -88,11 +89,13 @@ public class CommitSeqnoTable
      * Creates a new instance valid for life of the provided database
      * connection.
      */
-    public CommitSeqnoTable(Database database, String schema, String tableType)
+    public CommitSeqnoTable(Database database, String schema, String tableType,
+            boolean syncNativeSlaveRequired)
     {
         this.database = database;
         this.schema = schema;
         this.tableType = tableType;
+        this.syncNativeSlaveRequired = syncNativeSlaveRequired;
     }
 
     /**
@@ -166,7 +169,7 @@ public class CommitSeqnoTable
             logger.debug("Initializing " + TABLE_NAME + " table");
 
         database.createTable(commitSeqnoTable, false, tableType);
-        
+
         if (database instanceof GreenplumDatabase)
         {
             // Specify distribution column for the table.
@@ -277,6 +280,7 @@ public class CommitSeqnoTable
             allSeqnosQuery = database
                     .prepareStatement("SELECT seqno, fragno, last_frag, source_id, epoch_number, eventid, shard_id, extract_timestamp, task_id from "
                             + schema + "." + TABLE_NAME);
+            String lastEventId = null;
             rs = allSeqnosQuery.executeQuery();
             while (rs.next())
             {
@@ -286,6 +290,11 @@ public class CommitSeqnoTable
                     commonSeqno = header.getSeqno();
                 else if (commonSeqno != header.getSeqno())
                     hasCommonSeqno = false;
+
+                // Store the event ID. This is only used if we reduce, in which
+                // case event IDs on all rows are the same.
+                if (lastEventId == null)
+                    lastEventId = rs.getString(6);
 
                 // Check for task 0.
                 int task_id = rs.getInt(9);
@@ -306,11 +315,27 @@ public class CommitSeqnoTable
             }
             else
             {
+                // Reduce rows.
                 deleteQuery = database.prepareStatement("DELETE FROM " + schema
                         + "." + TABLE_NAME + " WHERE task_id > 0");
                 int reducedRows = deleteQuery.executeUpdate();
                 logger.info("Reduced " + reducedRows + " task entries: "
                         + schema + "." + TABLE_NAME);
+
+                // If appropriate, synchronize native replication.
+                if (syncNativeSlaveRequired && lastEventId != null)
+                {
+                    if (database.supportsNativeSlaveSync())
+                    {
+                        logger.info("Synchronizing native slave replication to current event ID: "
+                                + lastEventId);
+                        database.syncNativeSlave(lastEventId);
+                    }
+                    else
+                    {
+                        logger.warn("Native slave synchronization required but DBMS implementation does not support it");
+                    }
+                }
             }
         }
         finally

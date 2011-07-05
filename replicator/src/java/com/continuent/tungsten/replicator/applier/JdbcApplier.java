@@ -1653,7 +1653,7 @@ public class JdbcApplier implements RawApplier
             // Set up commit seqno table and fetch the last processed event.
             commitSeqnoTable = new CommitSeqnoTable(conn,
                     context.getReplicatorSchemaName(),
-                    runtime.getTungstenTableType());
+                    runtime.getTungstenTableType(), false);
             commitSeqnoTable.prepare(taskId);
             lastProcessedEvent = commitSeqnoTable.lastCommitSeqno(taskId);
 

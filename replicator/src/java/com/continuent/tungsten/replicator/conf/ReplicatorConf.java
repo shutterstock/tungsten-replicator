@@ -38,6 +38,10 @@ public class ReplicatorConf
     static public final String   ROLE_MASTER                           = "master";
     static public final String   ROLE_SLAVE                            = "slave";
 
+    /** Whether we are operating normally or in slave takeover mode. */
+    static public final String   NATIVE_SLAVE_TAKEOVER                 = "replicator.nativeSlaveTakeover";
+    static public final String   NATIVE_SLAVE_TAKEOVER_DEFAULT         = "false";
+    
     /** URI to which we connect. */
     static public final String   MASTER_CONNECT_URI                    = "replicator.master.connect.uri";
 
