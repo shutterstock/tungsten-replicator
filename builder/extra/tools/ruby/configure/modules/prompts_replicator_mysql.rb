@@ -154,7 +154,7 @@ class ReplicationServiceUseDrizzle < MySQLAdvancedPrompt
   end
 end
 
-class ReplicationServicSlaveTakeover < ConfigurePrompt
+class ReplicationServiceSlaveTakeover < ConfigurePrompt
   include NotDeleteServicePrompt
   include GroupConfigurePromptMember
   include MySQLDataservicePrompt

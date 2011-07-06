@@ -227,7 +227,8 @@ class MySQLNoMySQLReplicationCheck < MySQLValidationCheck
   
   def enabled?
     applier = @config.getProperty(get_member_key(REPL_DATASERVER))
-    if @config.getProperty([DATASERVERS, applier, DBMS_TYPE]) == "mysql"
+    if @config.getProperty([DATASERVERS, applier, DBMS_TYPE]) == "mysql" &&
+        @config.getProperty(get_member_key(REPL_SVC_NATIVE_SLAVE_TAKEOVER)) == "false"
       true
     else
       false
