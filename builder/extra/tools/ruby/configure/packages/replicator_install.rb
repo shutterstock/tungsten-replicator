@@ -362,9 +362,16 @@ class ReplicatorInstallPackage < ConfigurePackage
       })
       
       if host == options.getProperty("master-host")
-        @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "master")
+        if options.getPropertyOr("master-thl-port", options.getProperty("thl-port")) == options.getProperty("thl-port")
+          @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "master")
+        else
+          @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "slave")
+        end
       else
         @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "slave")
+      end
+      
+      if @config.getProperty([REPL_SERVICES, service_alias, REPL_ROLE]) == "slave"
         @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], options.getProperty("master-host"))
         @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERPORT], options.getPropertyOr("master-thl-port", options.getProperty("thl-port")))
       end
