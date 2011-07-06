@@ -121,9 +121,27 @@ class ConfirmationValueValidator < PropertyValidator
   end
 end
 
+class BooleanValidator < PropertyValidator
+  def initialize
+    super('true|false|y|yes|n|no', "Value must be true or false")
+  end
+  
+  def validate(value)
+    if value =~ /true|y|yes/i
+      value = "true"
+    elsif value =~ /false|n|no/i
+      value = "false"
+    else
+      raise PropertyValidatorException, @message, caller
+    end
+    
+    return value
+  end
+end
+
 # Define standard validators. 
 PV_INTEGER = PropertyValidator.new('^[0-9]+$', "Value must be an integer")
-PV_BOOLEAN = PropertyValidator.new('true|false', "Value must be true or false")
+PV_BOOLEAN = BooleanValidator.new()
 PV_CONFIRMATION = ConfirmationValueValidator.new()
 PV_IDENTIFIER = PropertyValidator.new('[A-Za-z0-9_]+', 
   "Value must consist only of letters, digits, and underscore (_)")
