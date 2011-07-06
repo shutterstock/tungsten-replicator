@@ -136,7 +136,14 @@ class MySQLApplierServerIDCheck < MySQLValidationCheck
     applier = @config.getProperty(get_member_key(REPL_DATASERVER))
     server_id = @config.getProperty([DATASERVERS, applier, REPL_MYSQL_SERVER_ID])
     if server_id.to_i <= 0
-      error("The server ID '#{server_id}' for #{get_connection_summary_for(applier)} is invalid")
+      error("The server-id '#{server_id}' for #{get_connection_summary_for(applier)} is too small")
+    elsif server_id.to_i > 4294967296
+      error("The server-id '#{server_id}' for #{get_connection_summary_for(applier)} is too large")
+    end
+    
+    retrieved_server_id = get_value("SHOW VARIABLES LIKE 'server_id'", "Value", applier)
+    if server_id.to_i != retrieved_server_id.to_i
+      error("The server-id '#{server_id}' does not match the the server-id from #{get_connection_summary_for(applier)} '#{retrieved_server_id}'")
     end
   end
   
