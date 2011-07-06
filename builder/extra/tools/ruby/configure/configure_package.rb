@@ -44,6 +44,7 @@ class ConfigurePackage
     puts "-a, --advanced        Enable advanced options"
     puts "-b, --batch           Execute the configuration without interactive prompts"
     puts "-c, --config file     Sets name of config file (default: tungsten.cfg)"
+    puts "-f, --force           Do not display confirmation prompts or stop the configure process for errors"
     puts "-h, --help            Displays help message"
     puts "-q, --quiet           Only display error messages"
     puts "-v, --verbose         Display all messages"

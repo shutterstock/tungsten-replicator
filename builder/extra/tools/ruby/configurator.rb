@@ -161,7 +161,10 @@ class Configurator
         unless prompt_handler.is_valid?()
           write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
           prompt_handler.print_errors()
-          exit 1
+          
+          unless forced?()
+            exit 1
+          end
         end
         
         value = ""
@@ -200,7 +203,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       unless prompt_handler.is_valid?()
         write_header("There are errors with the values provided in the configuration file", Logger::ERROR)
         prompt_handler.print_errors()
-        exit 1
+        
+        unless forced?()
+          exit 1
+        end
       end
     end
     
@@ -210,12 +216,16 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     
     # Make sure that basic connectivity to the hosts works
     unless deployment_method.prevalidate()
-      exit 1
+      unless forced?()
+        exit 1
+      end
     end
     
     # Copy over configuration script code and the host configuration file
     unless deployment_method.prepare()
-      exit 1
+      unless forced?()
+        exit 1
+      end
     end
     
     unless @options.force
@@ -223,7 +233,9 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
         write_header("Validation failed", Logger::ERROR)
         deployment_method.get_validation_handler().output_errors()
         
-        exit 1
+        unless forced?()
+          exit 1
+        end
       end
       
       info("")
@@ -236,7 +248,9 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
         write_header("Deployment failed", Logger::ERROR)
         deployment_method.get_deployment_handler().output_errors()
       
-        exit 1
+        unless forced?()
+          exit 1
+        end
       end
     
       info("")
@@ -357,14 +371,14 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     
     opts.on("-a", "--advanced")       {|val| @options.advanced = true}
     opts.on("-b", "--batch")          {|val| @options.interactive = false}
-    opts.on("-i", "--interactive")    {|val| @options.interactive = true}
     opts.on("-c", "--config String")  {|val| @options.config = val }
+    opts.on("-f", "--force")          {@options.force = true}
     opts.on("-h", "--help")           {|val| @options.display_help = true }
-    opts.on("-q", "--quiet")          {@options.output_threshold = Logger::WARN}
+    opts.on("-i", "--interactive")    {|val| @options.interactive = true}
     opts.on("-n", "--info")           {@options.output_threshold = Logger::INFO}
+    opts.on("-q", "--quiet")          {@options.output_threshold = Logger::WARN}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
     opts.on("--no-validation")        {|val| @options.force = true }
-    opts.on("--validate-only")        {@options.validate_only = true}
     opts.on("--configure String")      {|val|
                                         val_parts = val.split("=")
                                         if val_parts.length() !=2
@@ -381,6 +395,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
                                         
                                         Transformer.add_global_replacement(val_parts[0], val_parts[1])
                                       }
+    opts.on("--validate-only")        {@options.validate_only = true}
     
     # Argument used by the validation and deployment handlers
     opts.on("--stream")               {@options.stream_output = true }
@@ -756,6 +771,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   def is_interactive?
     (@options.interactive == true)
+  end
+  
+  def forced?
+    (@options.force == true)
   end
   
   def is_enterprise?

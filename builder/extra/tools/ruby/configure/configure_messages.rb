@@ -166,6 +166,10 @@ class RemoteConfirmation < RemoteError
   end
   
   def is_fatal?
+    if Configurator.instance.forced?()
+      return false
+    end
+    
     case get_confirmation_value().to_s().downcase()
     when "y", "yes"
       return false
