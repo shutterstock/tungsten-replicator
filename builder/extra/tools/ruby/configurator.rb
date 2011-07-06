@@ -365,6 +365,14 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
     opts.on("--no-validation")        {|val| @options.force = true }
     opts.on("--validate-only")        {@options.validate_only = true}
+    opts.on("--configure String")      {|val|
+                                        val_parts = val.split("=")
+                                        if val_parts.length() !=2
+                                          raise "Invalid value #{val} given for '--configure'.  There should be a key/value pair joined by a single =."
+                                        end
+                                        
+                                        ConfigurePrompt.add_global_default(val_parts[0], val_parts[1])
+                                      }
     opts.on("--property String")      {|val|
                                         val_parts = val.split("=")
                                         if val_parts.length() !=2

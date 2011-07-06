@@ -3,6 +3,23 @@
 # in the config object
 class ConfigurePrompt
   include ConfigurePromptInterface
+  @@global_defaults = {}
+  
+  def self.add_global_default(key, value)
+    if value == nil
+      raise("Unable to make a global replacement using a nil value")
+    end
+    
+    @@global_defaults[key] = value
+  end
+  
+  def self.get_global_default(key)
+    if @@global_defaults.has_key?(key)
+      return @@global_defaults[key]
+    else
+      return nil
+    end
+  end
 
   def initialize(name, prompt, validator = nil, default = "")
     @name = name
@@ -90,7 +107,17 @@ class ConfigurePrompt
   def get_value(allow_default = true)
     value = @config.getProperty(get_name())
     if value == nil && allow_default
-      value = get_default_value()
+      global_default = ConfigurePrompt.get_global_default(@name)
+      
+      if global_default == nil
+        value = get_default_value()
+      else
+        begin
+          value = accept?(global_default)
+        rescue
+          value = global_default
+        end
+      end
     end
     
     value

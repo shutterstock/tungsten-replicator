@@ -49,6 +49,7 @@ class ConfigurePackage
     puts "-v, --verbose         Display all messages"
     puts "--no-validation       Skip all validation checks"
     puts "--validate-only       Skip all deployment steps"
+    puts "--configure=key=value Set the default configure script value for the given key to the value"
     puts "--property=key=value  Set the property key to the value in any file that is modified by the configure script"
   end
   
