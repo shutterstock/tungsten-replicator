@@ -351,6 +351,16 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   def parsed_options?(arguments, include_package = true)
     opts=OptionParser.new
     
+    arguments = arguments.map{|arg|
+      newarg = ''
+      arg.split("").each{|b| 
+        unless b[0].to_i< 33 || b[0].to_i>127 then 
+          newarg.concat(b) 
+        end 
+      }
+      newarg
+    }
+    
     # Needed again so that an exception isn't thrown
     opts.on("-p", "--package String") {|klass|
       begin
