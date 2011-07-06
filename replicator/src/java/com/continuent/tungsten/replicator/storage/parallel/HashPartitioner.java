@@ -24,9 +24,11 @@ package com.continuent.tungsten.replicator.storage.parallel;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
+import com.continuent.tungsten.replicator.event.ReplOptionParams;
 
 /**
- * Implements a simple shard partitioner that hashes on the shard name.
+ * Implements a simple shard partitioner that hashes on the shard name. #UNKNOWN
+ * shards are assumed to be critical, hence must be serialized.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
@@ -54,12 +56,20 @@ public class HashPartitioner implements Partitioner
     public PartitionerResponse partition(ReplDBMSHeader event, int taskId)
             throws ReplicatorException
     {
+        String shardId = event.getShardId();
+
+        // Compute the partition.
         if (taskId > availablePartitions)
             throw new ReplicatorException(
                     "Task ID exceeds available partitions: taskId=" + taskId
                             + " availablePartitions=" + availablePartitions);
         int partition = new Integer(Math.abs(event.getShardId().hashCode())
                 % availablePartitions);
-        return new PartitionerResponse(partition, false);
+
+        // Compute whether this is a critical shard.
+        boolean critical = ReplOptionParams.SHARD_ID_UNKNOWN.equals(shardId);
+
+        // Finally, return a response.
+        return new PartitionerResponse(partition, critical);
     }
 }

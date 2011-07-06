@@ -155,24 +155,7 @@ public class THLParallelQueueApplier implements ParallelApplier
     public ReplDBMSHeader getLastEvent() throws ReplicatorException,
             InterruptedException
     {
-        long minSeqno = Long.MAX_VALUE;
-        ReplDBMSHeader minHeader = null;
-        for (int i = 0; i < thlParallelQueue.getPartitions(); i++)
-        {
-            ReplDBMSHeader nextHeader = thlParallelQueue.getLastHeader(i);
-            // Accept only a value header with a real sequence number as
-            // the lowest starting sequence number.
-            if (nextHeader == null)
-                continue;
-            else if (nextHeader.getSeqno() < 0)
-                continue;
-            else if (nextHeader.getSeqno() < minSeqno)
-            {
-                minHeader = nextHeader;
-                minSeqno = minHeader.getSeqno();
-            }
-        }
-        return minHeader;
+        return thlParallelQueue.getMinLastHeader();
     }
 
     /**

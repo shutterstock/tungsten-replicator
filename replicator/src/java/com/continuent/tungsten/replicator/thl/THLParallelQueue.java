@@ -24,7 +24,6 @@ package com.continuent.tungsten.replicator.thl;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
@@ -55,68 +54,54 @@ import com.continuent.tungsten.replicator.util.WatchPredicate;
  */
 public class THLParallelQueue implements ParallelStore
 {
-    private static Logger             logger              = Logger.getLogger(THLParallelQueue.class);
+    private static Logger                                       logger              = Logger.getLogger(THLParallelQueue.class);
 
     // Queue parameters.
-    private String                    name;
-    private int                       maxSize             = 100;
-    private int                       maxControlEvents    = 1000;
-    private int                       partitions          = 1;
-    private boolean                   syncEnabled         = true;
-    private int                       syncInterval        = 2000;
-    private int                       maxCriticalSections = 1000;
-    private String                    thlStoreName        = "thl";
+    private String                                              name;
+    private int                                                 maxSize             = 100;
+    private int                                                 maxControlEvents    = 1000;
+    private int                                                 partitions          = 1;
+    private boolean                                             syncEnabled         = true;
+    private int                                                 syncInterval        = 2000;
+    private String                                              thlStoreName        = "thl";
 
     // THL for which we are implementing a parallel queue.
-    private THL                       thl;
+    private THL                                                 thl;
 
     // Read task control information.
-    private List<THLParallelReadTask> readTasks;
-    private ReplDBMSHeader[]          lastHeaders;
-    private ReplDBMSEvent             lastInsertedEvent;
+    private List<THLParallelReadTask>                           readTasks;
+    private ReplDBMSEvent                                       lastInsertedEvent;
+
+    // Headers used to track the restart position from downstream tasks.
+    private ReplDBMSHeader[]                                    lastHeaders;
+    private int                                                 partitionsReporting = 0;
 
     // Counter of head sequence number.
-    private AtomicCounter             headSeqnoCounter    = new AtomicCounter(0);
-
-    // Class to describe critical sections.
-    class CriticalSection
-    {
-        int  partition;
-        long startSeqno;
-        long endSeqno;
-
-        CriticalSection(int partition, long startSeqno, long endSeqno)
-        {
-            this.partition = partition;
-            this.startSeqno = startSeqno;
-            this.endSeqno = endSeqno;
-        }
-    }
-
-    // Queue of pending critical sections.
-    private BlockingQueue<CriticalSection>                      criticalSections;
-    CriticalSection                                             pendingCriticalSection;
+    private AtomicCounter                                       headSeqnoCounter    = new AtomicCounter(
+                                                                                            -1);
 
     // Partitioner configuration variables.
     private Partitioner                                         partitioner;
-    private String                                              partitionerClass   = SimplePartitioner.class
-                                                                                           .getName();
-    private long                                                transactionCount   = 0;
-    private long                                                serializationCount = 0;
-    private long                                                discardCount       = 0;
+    private String                                              partitionerClass    = SimplePartitioner.class
+                                                                                            .getName();
+    private long                                                transactionCount    = 0;
+    private long                                                serializationCount  = 0;
+    private long                                                discardCount        = 0;
 
     // Queue for predicates belonging to pending wait synchronization requests.
     private LinkedBlockingQueue<WatchPredicate<ReplDBMSHeader>> watchPredicates;
 
     // Flag to insert stop synchronization event at next transaction boundary.
-    private boolean                                             stopRequested      = false;
+    private boolean                                             stopRequested       = false;
 
     // Counter to force synchronization events at intervals so all queues remain
     // up-to-date.
-    private int                                                 syncCounter        = 1;
+    private int                                                 syncCounter         = 1;
 
     // Control information for event serialization to support shard processing.
-    private int                                                 criticalPartition  = -1;
+    private int                                                 criticalPartition   = -1;
+    private AtomicCounter                                       activeSize          = new AtomicCounter(
+                                                                                            0);
 
     public String getName()
     {
@@ -209,23 +194,59 @@ public class THLParallelQueue implements ParallelStore
     public void setLastHeader(int taskId, ReplDBMSHeader header)
             throws ReplicatorException
     {
+        // Check the taskId range and record the header.
         assertTaskIdWithinRange(taskId);
+        lastHeaders[taskId] = header;
+        partitionsReporting++;
 
-        // Position the thread if we have a real header with sequence number.
-        // Otherwise we note nothing and this thread will start at the beginning
-        // of the log.
-        if (header != null)
+        // If all downstream tasks have reported in, we can now set the restart
+        // point. All tasks must start from the same position or we will get
+        // confused about the active size of the queue when restarting after a
+        // crash.
+        if (partitionsReporting == partitions)
         {
-            lastHeaders[taskId] = header;
-            readTasks.get(taskId).setSeqno(header.getSeqno());
+            ReplDBMSHeader restartHeader = getMinLastHeader();
+            if (restartHeader != null)
+            {
+                for (int i = 0; i < partitions; i++)
+                {
+                    readTasks.get(i).setSeqno(restartHeader.getSeqno());
+                }
+            }
         }
     }
 
     /** Returns the last header processed. */
-    public ReplDBMSHeader getLastHeader(int taskId) throws ReplicatorException
+    private ReplDBMSHeader getLastHeader(int taskId) throws ReplicatorException
     {
         assertTaskIdWithinRange(taskId);
         return lastHeaders[taskId];
+    }
+
+    /**
+     * Returns the minimum last header processed in order to handle restart
+     * correctly.
+     */
+    public ReplDBMSHeader getMinLastHeader() throws ReplicatorException
+    {
+        long minSeqno = Long.MAX_VALUE;
+        ReplDBMSHeader minHeader = null;
+        for (int i = 0; i < getPartitions(); i++)
+        {
+            ReplDBMSHeader nextHeader = getLastHeader(i);
+            // Accept only a value header with a real sequence number as
+            // the lowest starting sequence number.
+            if (nextHeader == null)
+                continue;
+            else if (nextHeader.getSeqno() < 0)
+                continue;
+            else if (nextHeader.getSeqno() < minSeqno)
+            {
+                minHeader = nextHeader;
+                minSeqno = minHeader.getSeqno();
+            }
+        }
+        return minHeader;
     }
 
     /**
@@ -249,7 +270,7 @@ public class THLParallelQueue implements ParallelStore
     }
 
     /**
-     * Puts an event in the queue, blocking if it is full.)
+     * Puts an event in the queue, blocking if it is full.
      */
     public synchronized void put(int taskId, ReplDBMSEvent event)
             throws InterruptedException, ReplicatorException
@@ -275,60 +296,48 @@ public class THLParallelQueue implements ParallelStore
             return;
         }
 
-        // Partition the event.
+        // Partition the event. Handle critical sections by "blocking to zero"
+        // under the following circumstances:
+        // 1.) Event is critical and we are not in a critical section.
+        // 2.) We are in a critical section but the shard ID has changed.
+        // 3.) Event is not critical and we are in a critical section.
         PartitionerResponse response = partitioner.partition(event, taskId);
-        if (response.isCritical())
+        if (response.isCritical()
+                && (criticalPartition != response.getPartition()))
         {
+            // Covers cases 1 & 2. We have to serialize here.
             serializationCount++;
-
-            if (pendingCriticalSection == null)
+            blockToZero();
+            criticalPartition = response.getPartition();
+            if (logger.isDebugEnabled())
             {
-                // Case 1: A critical section is starting.
-                pendingCriticalSection = new CriticalSection(
-                        response.getPartition(), event.getSeqno(),
-                        event.getSeqno());
-            }
-            else if (pendingCriticalSection.partition == response
-                    .getPartition())
-            {
-                // Case 2: We are continuing in a critical section. Mark the
-                // current seqno.
-                pendingCriticalSection.endSeqno = event.getSeqno();
-            }
-            else
-            {
-                // Case 3: We are switching between critical sections. Enqueue
-                // previous critical section and start a new one.
-                criticalSections.put(pendingCriticalSection);
-                pendingCriticalSection = new CriticalSection(
-                        response.getPartition(), event.getSeqno(),
-                        event.getSeqno());
+                logger.debug("Enabling critical partition: partition="
+                        + criticalPartition + " seqno=" + event.getSeqno());
             }
         }
-        else
+        else if (!response.isCritical() && criticalPartition >= 0)
         {
-            if (pendingCriticalSection == null)
+            // Covers case 3.
+            blockToZero();
+            criticalPartition = -1;
+            if (logger.isDebugEnabled())
             {
-                // Case 4: Not in a critical section. Just advance the counter.
-            }
-            else
-            {
-                // Case 5: Critical section has ended and we are back to
-                // non-critical processing. Enqueue critical section and advance
-                // counter.
-                criticalSections.put(pendingCriticalSection);
-                pendingCriticalSection = null;
+                logger.debug("Ending critical partition: seqno="
+                        + event.getSeqno());
             }
         }
 
         // Advance the head seqno counter. This allows all eligible threads to
-        // advance.
+        // advance. If we have a new transactions, also update the active size
+        // to show how many transactions are logically in the queue.
+        activeSize.incrAndGetSeqno();
+        headSeqnoCounter.setSeqno(event.getSeqno());
         if (logger.isDebugEnabled())
         {
-            logger.debug("Updating head seqno counter: seqno="
-                    + event.getSeqno());
+            logger.debug("Updating position: headSeqnoCounter="
+                    + headSeqnoCounter.getSeqno() + " activeSize="
+                    + activeSize.getSeqno());
         }
-        headSeqnoCounter.setSeqno(event.getSeqno());
 
         // Record last event handled.
         lastInsertedEvent = event;
@@ -393,6 +402,17 @@ public class THLParallelQueue implements ParallelStore
         }
     }
 
+    // Block until all queues are empty.
+    private void blockToZero() throws InterruptedException
+    {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Blocking to zero: activeSize="
+                    + activeSize.getSeqno());
+        }
+        activeSize.waitSeqnoLessEqual(0);
+    }
+
     // Inserts a control event in all queues.
     private void putControlEvent(int type, ReplDBMSEvent event)
             throws InterruptedException
@@ -412,8 +432,15 @@ public class THLParallelQueue implements ParallelStore
 
         for (THLParallelReadTask readTask : this.readTasks)
         {
+            activeSize.incrAndGetSeqno();
             readTask.putControlEvent(ctrl);
         }
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Added control event: activeSize="
+                    + activeSize.getSeqno());
+        }
+
     }
 
     /**
@@ -423,7 +450,14 @@ public class THLParallelQueue implements ParallelStore
             ReplicatorException
     {
         assertTaskIdWithinRange(taskId);
-        return readTasks.get(taskId).get();
+        ReplEvent event = readTasks.get(taskId).get();
+        activeSize.decrAndGetSeqno();
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Returning event: taskId=" + taskId + " seqno="
+                    + event.getSeqno() + " activeSize=" + activeSize.getSeqno());
+        }
+        return event;
     }
 
     /**
@@ -474,10 +508,6 @@ public class THLParallelQueue implements ParallelStore
         // Allocate queue for watch predicates.
         // TODO: Get this to work.
         watchPredicates = new LinkedBlockingQueue<WatchPredicate<ReplDBMSHeader>>();
-
-        // Allocate queue for critical sections.
-        criticalSections = new LinkedBlockingQueue<CriticalSection>(
-                maxCriticalSections);
     }
 
     /**

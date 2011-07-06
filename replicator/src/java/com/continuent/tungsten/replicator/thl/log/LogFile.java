@@ -690,7 +690,7 @@ public class LogFile
             // Issue flush now.
             flushPrivate();
         }
-        else if (flushIntervalMillis == 0)
+        else if (nextFlushMillis == 0)
         {
             // Delayed fsync enabled but timer has never been set.
             // Initialize but do not fsync. (Ensures consistent

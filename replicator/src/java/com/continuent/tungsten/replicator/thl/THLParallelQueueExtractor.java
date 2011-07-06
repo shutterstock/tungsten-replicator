@@ -192,18 +192,6 @@ public class THLParallelQueueExtractor implements ParallelExtractor
     }
 
     /**
-     * Return the header, which should have been place here by an extractor
-     * during restart.
-     * 
-     * @see com.continuent.tungsten.replicator.applier.Applier#getLastEvent()
-     */
-    public ReplDBMSHeader getLastEvent() throws ReplicatorException,
-            InterruptedException
-    {
-        return thlParallelQueue.getLastHeader(taskId);
-    }
-
-    /**
      * {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.applier.ParallelApplier#setTaskId(int)

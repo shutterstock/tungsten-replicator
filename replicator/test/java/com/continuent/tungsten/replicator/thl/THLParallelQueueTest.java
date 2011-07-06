@@ -123,6 +123,78 @@ public class THLParallelQueueTest extends TestCase
     }
 
     /**
+     * Verify that on-disk queues increment the serialization count each time a
+     * serialized event is processed.
+     */
+    public void testSerialization() throws Exception
+    {
+        logger.info("##### testSerialization #####");
+
+        // Set up and prepare pipeline. We set the channel count to
+        // 1 as we just want to confirm that serialization counts are
+        // increasing.
+        TungstenProperties conf = this.generateTHLParallelPipeline(
+                "testSerialization", 1, 50, 100);
+        ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
+        runtime.configure();
+        runtime.prepare();
+        Pipeline pipeline = runtime.getPipeline();
+        pipeline.start(new EventDispatcher());
+
+        // Fetch references to stores.
+        THL thl = (THL) pipeline.getStore("thl");
+        THLParallelQueue tpq = (THLParallelQueue) pipeline
+                .getStore("thl-queue");
+        InMemoryMultiQueue mq = (InMemoryMultiQueue) pipeline
+                .getStore("multi-queue");
+
+        // Write and read back 99 events where every third event is #UNKNOWN,
+        // hence should be serialized by the HashSerializer class.
+        int serialized = 0;
+        LogConnection conn = thl.connect(false);
+        for (int i = 0; i < 99; i++)
+        {
+            // Get the serialization count from the store.
+            int serializationCount = getSerializationCount(tpq);
+
+            // Insert and read back an event from the end of the pipeline.
+            String shardId = (i % 3 == 0 ? "#UNKNOWN" : "db0");
+            ReplDBMSEvent rde = this.createEvent(i, shardId);
+            THLEvent thlEvent = new THLEvent(rde.getSourceId(), rde);
+            conn.store(thlEvent, false);
+            conn.commit();
+            ReplDBMSEvent rde2 = mq.get(0);
+
+            // Ensure that we got the event back and that the serialization
+            // count incremented by one *only* for #UNKNOWN events.
+            assertEquals("Read back same event", rde.getSeqno(),
+                    rde2.getSeqno());
+            int serializationCount2 = getSerializationCount(tpq);
+            if ("#UNKNOWN".equals(rde.getShardId()))
+            {
+                serialized++;
+                assertEquals("Expect serialization to increment",
+                        serializationCount + 1, serializationCount2);
+            }
+            else
+            {
+                assertEquals("Expect serialization to remain the same",
+                        serializationCount, serializationCount2);
+            }
+        }
+
+        // Ensure we serialized 33 events in total.
+        assertEquals("Serialization total", 33, serialized);
+
+        // Close down pipeline.
+        thl.disconnect(conn);
+        pipeline.shutdown(false);
+        runtime.release();
+    }
+
+    /**
      * Verify that a parallel THL queue with more than one partition assigns
      * each event to the correct channel. This test uses 3 channels with
      * partitioning on shard name. We write and read directly to/from the linked
@@ -134,7 +206,7 @@ public class THLParallelQueueTest extends TestCase
 
         // Set up and prepare pipeline.
         TungstenProperties conf = this.generateTHLParallelPipeline(
-                "testMultiChannelBasic", 3, 50);
+                "testMultiChannelBasic", 3, 50, 100);
         ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
                 new MockOpenReplicatorContext(),
                 ReplicatorMonitor.getInstance());
@@ -192,7 +264,7 @@ public class THLParallelQueueTest extends TestCase
 
         // Set up and prepare pipeline.
         TungstenProperties conf = this.generateTHLParallelPipeline(
-                "testMultiChannelLag", 3, 50);
+                "testMultiChannelLag", 3, 50, 100);
         ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
                 new MockOpenReplicatorContext(),
                 ReplicatorMonitor.getInstance());
@@ -257,6 +329,13 @@ public class THLParallelQueueTest extends TestCase
         runtime.release();
     }
 
+    // Returns the current serialization count from a parallel queue. 
+    private int getSerializationCount(THLParallelQueue tpq)
+    {
+        TungstenProperties props = tpq.status();
+        return props.getInt("serializationCount");
+    }
+    
     // Generate configuration properties for a three stage-pipeline
     // that loads events into a THL then loads a parallel queue. Input
     // is from a dummy extractor.
@@ -313,7 +392,7 @@ public class THLParallelQueueTest extends TestCase
     // Clients use direct calls to the stores to write to and read from the
     // pipeline.
     public TungstenProperties generateTHLParallelPipeline(String schemaName,
-            int partitions, int blockCommit) throws Exception
+            int partitions, int blockCommit, int mqSize) throws Exception
     {
         // Clear the THL log directory.
         prepareLogDir(schemaName);
@@ -340,7 +419,8 @@ public class THLParallelQueueTest extends TestCase
         builder.addProperty("store", "thl-queue", "partitionerClass",
                 HashPartitioner.class.getName());
         builder.addComponent("store", "multi-queue", InMemoryMultiQueue.class);
-        builder.addProperty("store", "multi-queue", "maxSize", "100");
+        builder.addProperty("store", "multi-queue", "maxSize", new Integer(
+                mqSize).toString());
         builder.addProperty("store", "multi-queue", "partitions",
                 partitionsAsString);
 
