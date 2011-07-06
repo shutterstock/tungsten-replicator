@@ -857,7 +857,7 @@ end
 
 def cmd_result(command, ignore_fail = false)
   Configurator.instance.debug("Execute `#{command}`")
-  result = `#{command} 2>&1`.chomp
+  result = `export LANG=en_US; #{command} 2>&1`.chomp
   rc = $?
   
   if rc != 0 && ! ignore_fail

@@ -202,7 +202,7 @@ class ConfigureValidationHandler
     end
     
     debug("Execute `#{command}` on #{host}")
-    result = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; #{command}\" 2>&1`.chomp
+    result = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; export LANG=en_US; #{command}\" 2>&1`.chomp
     rc = $?
     
     if rc != 0 && ! ignore_fail

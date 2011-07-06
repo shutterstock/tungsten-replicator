@@ -9,8 +9,8 @@ class Ifconfig
   # ifconfig = user provided ifconifg output
   # netstat = same, but for netstat -in
   #
-  @@ifcfg_cmd = "/usr/bin/env ifconfig -a"
-  @@netstat_cmd = "/usr/bin/env netstat -in"
+  @@ifcfg_cmd = "export LANG=en_US; /usr/bin/env ifconfig -a"
+  @@netstat_cmd = "export LANG=en_US; /usr/bin/env netstat -in"
   def initialize(ifconfig=nil,netstat=nil,verbose=nil)
     @ifconfig = ifconfig
     @ifconfig ||= IO.popen(@@ifcfg_cmd){ |f| f.readlines.join }
