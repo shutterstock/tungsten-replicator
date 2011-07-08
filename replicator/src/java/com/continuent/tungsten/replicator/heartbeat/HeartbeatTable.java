@@ -83,7 +83,7 @@ public class HeartbeatTable
         hbTable = new Table(schema, TABLE_NAME);
         hbId = new Column("id", Types.BIGINT);
         hbSeqno = new Column("seqno", Types.BIGINT);
-        hbEventId = new Column("eventid", Types.VARCHAR, 32);
+        hbEventId = new Column("eventid", Types.VARCHAR, 128);
         hbSourceTstamp = new Column("source_tstamp", Types.TIMESTAMP);
         hbTargetTstamp = new Column("target_tstamp", Types.TIMESTAMP);
         hbLagMillis = new Column("lag_millis", Types.BIGINT);

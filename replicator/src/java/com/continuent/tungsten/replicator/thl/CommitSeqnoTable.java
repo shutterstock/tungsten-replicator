@@ -177,13 +177,6 @@ public class CommitSeqnoTable
                     commitSeqnoTable.getName(), GREENPLUM_DISTRIBUTED_BY);
         }
 
-        if (database instanceof GreenplumDatabase)
-        {
-            // Specify distribution column for the table.
-            ((GreenplumDatabase) database).setDistributedBy(schema,
-                    commitSeqnoTable.getName(), GREENPLUM_DISTRIBUTED_BY);
-        }
-
         // Check to see if we need to initialize data for this task ID.
         if (lastCommitSeqno(taskId) == null)
         {

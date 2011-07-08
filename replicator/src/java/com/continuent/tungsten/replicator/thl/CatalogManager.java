@@ -72,17 +72,22 @@ public class CatalogManager
      * @param user Database user name
      * @param password Database user password
      * @param metadataSchema Name of replication service schema
+     * @param vendor Used when it's impossible to distinguish correct DBMS
+     *            vendor from URL only. This is especially the case with
+     *            Greenplum, when URL is the same as for PostgreSQL. Thus
+     *            values: "postgresql" for PostgreSQL, "greenplum" for
+     *            Greenplum, null for MySQL.
      * @throws THLException
      */
     public void connect(String url, String user, String password,
-            String metadataSchema) throws THLException
+            String metadataSchema, String vendor) throws THLException
     {
         this.metadataSchema = metadataSchema;
         // Create the database handle
         try
         {
             // Log updates for a remote data service.
-            conn = DatabaseFactory.createDatabase(url, user, password, null);
+            conn = DatabaseFactory.createDatabase(url, user, password, vendor);
             conn.connect(runtime.isRemoteService());
         }
         catch (SQLException e)
