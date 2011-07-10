@@ -1043,46 +1043,189 @@ public class DiskLogTest extends TestCase
      * Confirm that records written to the log do not appear to clients until
      * commit.
      */
-    public void testCommit() throws Exception
+    public void testCommitVisibility() throws Exception
     {
-        // Create the log and write multiple events. For this test s we need an
-        // infinite log timeout or the read thread will timeout during debugging
-        // sessions. We also need to set fsync delay to 0, which will suppress
-        // automatic fsync operations.
-        File logDir = prepareLogDir("testCommit");
+        // Create the log.
+        File logDir = prepareLogDir("testCommitVisibility");
         DiskLog log = new DiskLog();
         log.setLogDir(logDir.getAbsolutePath());
         log.setReadOnly(false);
         log.setLogFileSize(1000000);
         log.setTimeoutMillis(Integer.MAX_VALUE);
-        log.setFlushIntervalMillis(10000);
         log.prepare();
 
         LogConnection conn = log.connect(false);
 
         // Create and start a reader. It will read two events and exit.
         SimpleLogReader reader = new SimpleLogReader(log, LogConnection.FIRST,
-                2);
+                4);
         Thread thread = new Thread(reader);
         thread.start();
 
         // Write but do not commit to the log. Confirm that reader does not see
         // it after 5 seconds.
-        logger.info("Writing uncommitted message");
+        logger.info("Writing message #0, no commit");
         THLEvent e = this.createTHLEvent(0);
         conn.store(e, false);
-        thread.join(1000);
+        reader.lastSeqno.waitSeqnoGreaterEqual(0, 2000);
         assertEquals("Reader does not see", 0, reader.eventsRead);
 
-        // Write but do commit. Confirm that reader now sees both events.
-        logger.info("Writting committed message");
+        // Write with implicit commit. Confirm that reader sees both events
+        // within a very short duration.
+        logger.info("Writing message #1, implicit commit");
         e = this.createTHLEvent(1);
+        long commitStart = System.currentTimeMillis();
         conn.store(e, true);
-        conn.commit();
-        thread.join(5000);
+        reader.lastSeqno.waitSeqnoGreaterEqual(1, 2000);
+        long commitEnd = System.currentTimeMillis();
         assertEquals("Reader does see", 2, reader.eventsRead);
+        logger.info("Saw committed value #1: elapsed millis="
+                + (commitEnd - commitStart));
 
-        // Wait for reader to finish and validate no errors occurred.
+        // Write again with no commit.
+        logger.info("Writing message #2, no commit");
+        e = this.createTHLEvent(2);
+        conn.store(e, false);
+        reader.lastSeqno.waitSeqnoGreaterEqual(2, 2000);
+        assertEquals("Reader does not see uncommitted #2", 2, reader.eventsRead);
+
+        // Finally, write with an explicit commit. Check that it is read very
+        // quickly.
+        logger.info("Writing message #3, explicit commit");
+        e = this.createTHLEvent(3);
+        conn.store(e, false);
+        commitStart = System.currentTimeMillis();
+        conn.commit();
+        commitEnd = System.currentTimeMillis();
+        reader.lastSeqno.waitSeqnoGreaterEqual(3, 5000);
+        assertEquals("Reader sees all events", 4, reader.eventsRead);
+        logger.info("Saw committed value #3: elapsed millis="
+                + (commitEnd - commitStart));
+
+        // Validate reader is done and no errors occurred.
+        assertTrue("Reader is done", reader.waitFinish(1000));
+        if (reader.error != null)
+        {
+            throw new Exception("Reader thread failed with exception after "
+                    + reader.eventsRead + " events", reader.error);
+        }
+
+        // Release the log.
+        log.release();
+    }
+
+    /**
+     * Confirm that committed data are quickly visible to multiple readers.
+     */
+    public void testCommitMultiReader() throws Exception
+    {
+        int numberOfEvents = 25;
+
+        // Create the log.
+        File logDir = prepareLogDir("testCommitMultiReader");
+        DiskLog log = new DiskLog();
+        log.setLogDir(logDir.getAbsolutePath());
+        log.setReadOnly(false);
+        log.prepare();
+
+        LogConnection conn = log.connect(false);
+
+        // Create and start 25 readers.
+        SimpleLogReader[] readers = new SimpleLogReader[25];
+        for (int r = 0; r < readers.length; r++)
+        {
+            readers[r] = new SimpleLogReader(log, LogConnection.FIRST,
+                    numberOfEvents);
+            Thread thread = new Thread(readers[r]);
+            thread.start();
+        }
+
+        // Write to the log multiple times and measure how long it takes for
+        // every reader to get the committed event.
+        long readTotalMillis = 0;
+
+        for (int i = 0; i < numberOfEvents; i++)
+        {
+            // Write an event.
+            THLEvent e = this.createTHLEvent(i);
+            conn.store(e, true);
+
+            // Measure time to read across all readers.
+            long startMillis = System.currentTimeMillis();
+            for (int r = 0; r < readers.length; r++)
+            {
+                boolean found = readers[r].lastSeqno.waitSeqnoGreaterEqual(i,
+                        5000);
+                assertTrue("Found event: reader=" + r + " seqno=" + i, found);
+            }
+            long endMillis = System.currentTimeMillis();
+            long readMillis = endMillis - startMillis;
+            readTotalMillis += readMillis;
+
+            // Report results every 10 records.
+            if (i > 0 && i % 10 == 0)
+            {
+                logger.info("Read subtotals: iteration=" + i + " readMillis="
+                        + readMillis + " avg readMillis=" + readTotalMillis / i);
+            }
+        }
+
+        // Report full average.
+        logger.info("Read totals:  avg readMillis=" + readTotalMillis / 50
+                + " total readMillis=" + readTotalMillis);
+
+        for (int r = 0; r < readers.length; r++)
+        {
+            assertTrue("Reader is done", readers[r].waitFinish(1000));
+            if (readers[r].error != null)
+            {
+                throw new Exception("Reader thread " + r
+                        + " failed with exception after "
+                        + readers[r].eventsRead + " events", readers[r].error);
+            }
+        }
+
+        // Release the log.
+        log.release();
+    }
+
+    /**
+     * Confirm that records written to the log become visible automatically when
+     * implicit commit is enabled by setting the flush interval to a value
+     * greater than zero.
+     */
+    public void testImplicitCommit() throws Exception
+    {
+        // Create the log.
+        File logDir = prepareLogDir("testCommitVisibility");
+        DiskLog log = new DiskLog();
+        log.setLogDir(logDir.getAbsolutePath());
+        log.setReadOnly(false);
+        log.setFlushIntervalMillis(500);
+        log.prepare();
+
+        LogConnection conn = log.connect(false);
+
+        // Create and start a reader. It will read 5 events and exit.
+        SimpleLogReader reader = new SimpleLogReader(log, LogConnection.FIRST,
+                5);
+        new Thread(reader).start();
+
+        // Loop through 5 times writing events without commit. Confirm that the
+        // reader sees the events in due time.
+        for (int i = 0; i < 5; i++)
+        {
+            // Create an event and write without commit.
+            THLEvent e = this.createTHLEvent(i);
+            conn.store(e, false);
+
+            // Confirm that the event becomes visible.
+            boolean visible = reader.lastSeqno.waitSeqnoGreaterEqual(i, 2000);
+            assertTrue("Event is visible: seqno=" + i, visible);
+        }
+
+        // Validate reader is done and no errors occurred.
+        assertTrue("Reader is done", reader.waitFinish(1000));
         if (reader.error != null)
         {
             throw new Exception("Reader thread failed with exception after "

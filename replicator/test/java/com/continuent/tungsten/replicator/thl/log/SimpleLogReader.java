@@ -25,6 +25,7 @@ package com.continuent.tungsten.replicator.thl.log;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.thl.THLEvent;
+import com.continuent.tungsten.replicator.util.AtomicCounter;
 
 /**
  * Implements a log reader task that can be used to test concurrent reading and
@@ -40,7 +41,9 @@ public class SimpleLogReader implements Runnable
     final long            startSeqno;
     final int             howMany;
     volatile int          eventsRead;
+    final AtomicCounter   lastSeqno;
     Throwable             error;
+    Thread                myThread;
 
     /** Store file instance. */
     SimpleLogReader(DiskLog log, long startSeqno, int howMany)
@@ -48,11 +51,13 @@ public class SimpleLogReader implements Runnable
         this.log = log;
         this.startSeqno = startSeqno;
         this.howMany = howMany;
+        this.lastSeqno = new AtomicCounter(-1);
     }
 
     /** Read all records from file. */
     public void run()
     {
+        myThread = Thread.currentThread();
         try
         {
             LogConnection conn = log.connect(true);
@@ -69,6 +74,7 @@ public class SimpleLogReader implements Runnable
                                     + " actual=" + e.getSeqno());
                 }
                 eventsRead++;
+                lastSeqno.setSeqno(e.getSeqno());
 
                 if (eventsRead > 0 && eventsRead % 1000 == 0)
                 {
@@ -84,6 +90,24 @@ public class SimpleLogReader implements Runnable
         catch (Throwable t)
         {
             error = t;
+        }
+    }
+
+    /** Wait until the thread is done or at least try to. */
+    public boolean waitFinish(long timeout)
+    {
+        if (myThread == null)
+            return false;
+        else
+        {
+            try
+            {
+                myThread.join(timeout);
+            }
+            catch (InterruptedException e)
+            {
+            }
+            return !myThread.isAlive();
         }
     }
 }

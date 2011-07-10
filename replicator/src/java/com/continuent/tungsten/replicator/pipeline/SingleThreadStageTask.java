@@ -52,21 +52,21 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class SingleThreadStageTask implements Runnable
 {
-    private static Logger   logger          = Logger.getLogger(SingleThreadStageTask.class);
-    private Stage           stage;
-    private int             taskId;
-    private Extractor       extractor;
-    private List<Filter>    filters;
-    private Applier         applier;
-    private String          loggingPrefix   = "[]";
-    private boolean         usingBlockCommit;
-    private int             blockCommitRowsCount;
-    private EventDispatcher eventDispatcher;
-    private Schedule        schedule;
-    private String          name;
+    private static Logger    logger          = Logger.getLogger(SingleThreadStageTask.class);
+    private Stage            stage;
+    private int              taskId;
+    private Extractor        extractor;
+    private List<Filter>     filters;
+    private Applier          applier;
+    private String           loggingPrefix   = "[]";
+    private boolean          usingBlockCommit;
+    private int              blockCommitRowsCount;
+    private EventDispatcher  eventDispatcher;
+    private Schedule         schedule;
+    private String           name;
 
-    private long            blockEventCount = 0;
-    private TaskProgress    taskProgress;
+    private long             blockEventCount = 0;
+    private TaskProgress     taskProgress;
 
     private volatile boolean cancelled       = false;
 
@@ -222,9 +222,8 @@ public class SingleThreadStageTask implements Runnable
                 event = null;
                 try
                 {
-                    taskProgress.beginInterval();
+                    taskProgress.beginExtractInterval();
                     genericEvent = extractor.extract();
-                    taskProgress.endExtractInterval();
                 }
                 catch (ExtractorException e)
                 {
@@ -241,6 +240,10 @@ public class SingleThreadStageTask implements Runnable
                         logError(message, e);
                         continue;
                     }
+                }
+                finally
+                {
+                    taskProgress.endExtractInterval();
                 }
 
                 // Retry if no event returned; debug logging goes here.
@@ -336,7 +339,7 @@ public class SingleThreadStageTask implements Runnable
                 currentEvent = event;
 
                 // Run filters.
-                taskProgress.beginInterval();
+                taskProgress.beginFilterInterval();
                 for (Filter f : filters)
                 {
                     if ((event = f.filter(event)) == null)
@@ -376,11 +379,10 @@ public class SingleThreadStageTask implements Runnable
                             {
                                 logger.debug("Applying filtered event");
                             }
-                            taskProgress.beginInterval();
+                            taskProgress.beginApplyInterval();
                             applier.apply(new ReplDBMSFilteredEvent(
                                     firstFilteredEvent, lastFilteredEvent),
                                     true, false, syncTHLWithExtractor);
-                            taskProgress.endApplyInterval();
                             firstFilteredEvent = null;
                             lastFilteredEvent = null;
                         }
@@ -403,6 +405,10 @@ public class SingleThreadStageTask implements Runnable
                             {
                                 continue;
                             }
+                        }
+                        finally
+                        {
+                            taskProgress.endApplyInterval();
                         }
                     }
                 }
@@ -484,12 +490,11 @@ public class SingleThreadStageTask implements Runnable
                                 + event.getSeqno() + " fragno="
                                 + event.getFragno() + " doCommit=" + doCommit);
                     }
-                    taskProgress.beginInterval();
+                    taskProgress.beginApplyInterval();
                     // doCommit should be false if doRollback is true, but
                     // anyway, enforcing this here by testing both values
                     applier.apply(event, doCommit, doRollback,
                             syncTHLWithExtractor);
-                    taskProgress.endApplyInterval();
                 }
                 catch (ApplierException e)
                 {
@@ -508,6 +513,10 @@ public class SingleThreadStageTask implements Runnable
                     {
                         continue;
                     }
+                }
+                finally
+                {
+                    taskProgress.endApplyInterval();
                 }
             }
 
@@ -600,7 +609,7 @@ public class SingleThreadStageTask implements Runnable
             logger.debug(loggingPrefix + "Updating position: seqno="
                     + header.getSeqno() + " doCommit=" + doCommit);
         }
-        taskProgress.beginInterval();
+        taskProgress.beginApplyInterval();
         applier.updatePosition(header, doCommit, false);
         taskProgress.endApplyInterval();
     }

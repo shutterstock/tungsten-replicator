@@ -79,9 +79,9 @@ public class AtomicCounter
         notifyAll();
         return seqno;
     }
-    
+
     /**
-     * Decrement seqno and notify waiters, then return value. 
+     * Decrement seqno and notify waiters, then return value.
      */
     public synchronized long decrAndGetSeqno()
     {
@@ -91,7 +91,7 @@ public class AtomicCounter
     }
 
     /**
-     * Wait until seqno is greater than or equal to the desired value. 
+     * Wait until seqno is greater than or equal to the desired value.
      * 
      * @param waitSeqno Sequence number to wait for
      * @throws InterruptedException if somebody cancels the wait
@@ -106,7 +106,40 @@ public class AtomicCounter
     }
 
     /**
-     * Wait until seqno is less than or equal to the desired value. 
+     * Wait until seqno is greater than or equal to the desired value *or* we
+     * exceed the timeout.
+     * 
+     * @param waitSeqno Sequence number to wait for
+     * @param millis Number of milliseconds to wait
+     * @returns True if wait was successful, otherwise false
+     * @throws InterruptedException if somebody cancels the wait
+     */
+    public synchronized boolean waitSeqnoGreaterEqual(long waitSeqno,
+            long millis) throws InterruptedException
+    {
+        if (logger.isDebugEnabled())
+            logger.debug("Waiting for sequence number: " + waitSeqno);
+
+        // Compute end time.
+        long startMillis = System.currentTimeMillis();
+        long endMillis = startMillis + millis;
+
+        // Loop until the end time is met or exceeded.
+        while (waitSeqno > seqno)
+        {
+            this.wait(millis);
+            long currentMillis = System.currentTimeMillis();
+            millis = endMillis - currentMillis;
+            if (millis <= 0)
+                break;
+        }
+
+        // Return true if we achieved the desired sequence number.
+        return (waitSeqno <= seqno);
+    }
+
+    /**
+     * Wait until seqno is less than or equal to the desired value.
      * 
      * @param waitSeqno Sequence number to wait for
      * @throws InterruptedException if somebody cancels the wait

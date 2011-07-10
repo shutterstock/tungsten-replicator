@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-11 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -42,9 +42,14 @@ public class TaskProgress
     private long           totalExtractMillis  = 0;
     private long           totalFilterMillis   = 0;
     private long           totalApplyMillis    = 0;
+    private TaskState      state               = TaskState.other;
 
     // Used to mark the beginning of a timing interval.
     private long           intervalStartMillis = 0;
+
+    // Used to mark the end of the last known interval so we can
+    // accurately compute elapsed time.
+    private long           endMillis           = 0;
 
     /**
      * Defines a new task progress tracker for the given task ID.
@@ -70,9 +75,11 @@ public class TaskProgress
         this.eventCount = other.getEventCount();
         this.lastEvent = other.getLastEvent();
         this.startMillis = other.getStartMillis();
+        this.endMillis = other.getEndMillis();
         this.totalApplyMillis = other.getTotalApplyMillis();
         this.totalExtractMillis = other.getTotalExtractMillis();
         this.totalFilterMillis = other.getTotalFilterMillis();
+        this.state = other.getState();
     }
 
     /**
@@ -82,12 +89,7 @@ public class TaskProgress
     public void begin()
     {
         startMillis = System.currentTimeMillis();
-    }
-
-    /** Start a timing interval. */
-    public void beginInterval()
-    {
-        intervalStartMillis = System.currentTimeMillis();
+        endMillis = startMillis;
     }
 
     public String getStageName()
@@ -163,6 +165,12 @@ public class TaskProgress
         return startMillis;
     }
 
+    /** Returns the current end time for measuring intervals. */
+    public long getEndMillis()
+    {
+        return endMillis;
+    }
+
     /** Returns cumulative extract time in milliseconds. */
     public long getTotalExtractMillis()
     {
@@ -175,10 +183,20 @@ public class TaskProgress
         return getTotalExtractMillis() / 1000.0;
     }
 
+    /** Start an extract interval. */
+    public void beginExtractInterval()
+    {
+        intervalStartMillis = System.currentTimeMillis();
+        endMillis = intervalStartMillis;
+        state = TaskState.extract;
+    }
+
     /** Add time for an extract operation interval. */
     public void endExtractInterval()
     {
-        totalExtractMillis += (System.currentTimeMillis() - intervalStartMillis);
+        endMillis = System.currentTimeMillis();
+        totalExtractMillis += (endMillis - intervalStartMillis);
+        state = TaskState.other;
     }
 
     /** Returns cumulative filter time in milliseconds */
@@ -193,10 +211,20 @@ public class TaskProgress
         return getTotalFilterMillis() / 1000.0;
     }
 
+    /** Start a filter interval. */
+    public void beginFilterInterval()
+    {
+        intervalStartMillis = System.currentTimeMillis();
+        endMillis = intervalStartMillis;
+        state = TaskState.filter;
+    }
+
     /** Add time for a filter operation interval. */
     public void endFilterInterval()
     {
-        totalFilterMillis += (System.currentTimeMillis() - intervalStartMillis);
+        endMillis = System.currentTimeMillis();
+        totalFilterMillis += (endMillis - intervalStartMillis);
+        state = TaskState.other;
     }
 
     /** Returns cumulative extract time in milliseconds. */
@@ -211,17 +239,27 @@ public class TaskProgress
         return getTotalApplyMillis() / 1000.0;
     }
 
+    /** Start an apply interval. */
+    public void beginApplyInterval()
+    {
+        intervalStartMillis = System.currentTimeMillis();
+        endMillis = intervalStartMillis;
+        state = TaskState.apply;
+    }
+
     /** Add time for an apply operation interval. */
     public void endApplyInterval()
     {
-        totalApplyMillis += (System.currentTimeMillis() - intervalStartMillis);
+        endMillis = System.currentTimeMillis();
+        totalApplyMillis += (endMillis - intervalStartMillis);
+        state = TaskState.other;
     }
 
     /** Returns remaining wall-clock time outside of extract/filter/apply. */
     public long getTotalOtherMillis()
     {
-        long remaining = System.currentTimeMillis() - startMillis
-                - totalExtractMillis - totalFilterMillis - totalApplyMillis;
+        long remaining = endMillis - startMillis - totalExtractMillis
+                - totalFilterMillis - totalApplyMillis;
         return remaining;
     }
 
@@ -229,6 +267,12 @@ public class TaskProgress
     public double getTotalOtherSeconds()
     {
         return getTotalOtherMillis() / 1000.0;
+    }
+
+    /** Returns the current task state. */
+    public TaskState getState()
+    {
+        return state;
     }
 
     /**
