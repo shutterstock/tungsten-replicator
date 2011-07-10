@@ -582,6 +582,7 @@ public class MySQLExtractor implements RawExtractor
         ResultSet rs = null;
         try
         {
+            logger.info("Positioning from MySQL master current position");
             conn = DatabaseFactory.createDatabase(url, user, password);
             conn.connect();
             st = conn.createStatement();
@@ -605,8 +606,8 @@ public class MySQLExtractor implements RawExtractor
                 startRelayLogs(binlogFile, binlogOffset);
             }
 
-            logger.info("Starting from position: " + binlogFile + ":"
-                    + binlogOffset);
+            logger.info("Starting from master binlog position: " + binlogFile
+                    + ":" + binlogOffset);
             return new BinlogPosition(binlogOffset, binlogFile, binlogDir,
                     binlogFilePattern, bufferSize);
         }
@@ -633,6 +634,7 @@ public class MySQLExtractor implements RawExtractor
         ResultSet rs = null;
         try
         {
+            logger.info("Positioning from MySQL slave current position");
             // Use local database to ensure we get the right slave information.
             String url = runtime.getJdbcUrl(null);
             String user = runtime.getJdbcUser();
@@ -1244,6 +1246,7 @@ public class MySQLExtractor implements RawExtractor
     {
         if (eventId != null)
         {
+            logger.info("Starting from an explicit event ID: " + eventId);
             int colonIndex = eventId.indexOf(':');
             int semicolonIndex = eventId.indexOf(";");
 
@@ -1275,16 +1278,19 @@ public class MySQLExtractor implements RawExtractor
         }
         else
         {
-            // Try to position on the running slave if native slave takeover is
-            // enabled.
+            logger.info("Inferring event ID to start extraction");
             if (nativeSlaveTakeover)
             {
+                // Try to position on the running slave if native slave takeover
+                // is enabled.
                 binlogPosition = positionFromSlaveStatus();
             }
-
-            // If that fails or native slave takeover is not enabled, use the
-            // current master position.
-            binlogPosition = positionBinlogMaster(true);
+            else
+            {
+                // If native slave takeover is not enabled, use the
+                // current master position.
+                binlogPosition = positionBinlogMaster(true);
+            }
         }
 
         // If we are using relay logs make sure that relay logging is
