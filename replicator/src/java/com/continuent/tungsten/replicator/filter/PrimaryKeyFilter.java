@@ -294,11 +294,25 @@ public class PrimaryKeyFilter implements Filter
                         + " - Removing table metadata from cache");
             Table newTable = conn.findTable(orc.getSchemaName(),
                     orc.getTableName());
-            newTable.setTableId(orc.getTableId());
-            dbCache.put(tableName, newTable);
+            if (newTable != null)
+            {
+                newTable.setTableId(orc.getTableId());
+                dbCache.put(tableName, newTable);
+            }
+            else if (logger.isDebugEnabled())
+                logger.debug("Table " + tableName + " not found in "
+                        + orc.getSchemaName());
         }
 
-        Key primaryKey = dbCache.get(tableName).getPrimaryKey();
+        Table table = dbCache.get(tableName);
+        if (table == null)
+        {
+            if (logger.isDebugEnabled())
+                logger.debug("Table " + orc.getSchemaName() + "." + tableName
+                        + " not found in cache");
+            return;
+        }
+        Key primaryKey = table.getPrimaryKey();
         if (primaryKey == null)
         {
             // No primary key -> just return
