@@ -97,10 +97,13 @@ public class DatabaseTransformFilter implements Filter
         	else if (dataElem instanceof StatementData)
             {
                 StatementData sdata = (StatementData) dataElem;
-                matcher.reset(sdata.getDefaultSchema());
+                String schema = sdata.getDefaultSchema();
+                if(schema == null)
+                    continue;
+                matcher.reset(schema);
                 if (matcher.matches())
                 {
-                    String oldSchema = sdata.getDefaultSchema();
+                    String oldSchema = schema;
                     sdata.setDefaultSchema(matcher.replaceAll(matcher
                             .replaceAll(toRegex)));
                     if (logger.isDebugEnabled())
