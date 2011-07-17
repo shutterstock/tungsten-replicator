@@ -61,8 +61,7 @@ public class THLParallelQueue implements ParallelStore
     private int                                                 maxSize             = 100;
     private int                                                 maxControlEvents    = 1000;
     private int                                                 partitions          = 1;
-    private boolean                                             syncEnabled         = true;
-    private int                                                 syncInterval        = 2000;
+    private int                                                 syncInterval        = 1000;
     private String                                              thlStoreName        = "thl";
 
     // THL for which we are implementing a parallel queue.
@@ -93,10 +92,6 @@ public class THLParallelQueue implements ParallelStore
 
     // Flag to insert stop synchronization event at next transaction boundary.
     private boolean                                             stopRequested       = false;
-
-    // Counter to force synchronization events at intervals so all queues remain
-    // up-to-date.
-    private int                                                 syncCounter         = 1;
 
     // Control information for event serialization to support shard processing.
     private int                                                 criticalPartition   = -1;
@@ -169,25 +164,6 @@ public class THLParallelQueue implements ParallelStore
     public void setSyncInterval(int syncInterval)
     {
         this.syncInterval = syncInterval;
-    }
-
-    /**
-     * Returns true if automatic control events for synchronization are enabled.
-     */
-    public boolean isSyncEnabled()
-    {
-        return syncEnabled;
-    }
-
-    /**
-     * Enables/disables automatic generation of control events to ensure queue
-     * consumers have up-to-date positions in the log.
-     * 
-     * @param syncEnabled If true sync control events are generated
-     */
-    public void setSyncEnabled(boolean syncEnabled)
-    {
-        this.syncEnabled = syncEnabled;
     }
 
     /** Sets the last header processed. This is required for restart. */
@@ -328,8 +304,8 @@ public class THLParallelQueue implements ParallelStore
         }
 
         // Advance the head seqno counter. This allows all eligible threads to
-        // advance. If we have a new transactions, also update the active size
-        // to show how many transactions are logically in the queue.
+        // move forward. Update the active size to show how many events are
+        // logically in the queue.
         activeSize.incrAndGetSeqno();
         headSeqnoCounter.setSeqno(event.getSeqno());
         if (logger.isDebugEnabled())
@@ -372,20 +348,10 @@ public class THLParallelQueue implements ParallelStore
             watchPredicates.removeAll(removeList);
         }
 
-        // See if we need to send a sync event.
-        if (syncEnabled && syncCounter >= syncInterval)
-        {
-            needsSync = true;
-            syncCounter = 1;
-        }
-        else
-            syncCounter++;
-
         // Even if we are not waiting for a heartbeat, these should always
         // generate a sync control event to ensure all tasks receive it.
-        if (!needsSync
-                && event.getDBMSEvent().getMetadataOptionValue(
-                        ReplOptionParams.HEARTBEAT) != null)
+        if (event.getDBMSEvent().getMetadataOptionValue(
+                ReplOptionParams.HEARTBEAT) != null)
         {
             needsSync = true;
         }
@@ -399,6 +365,7 @@ public class THLParallelQueue implements ParallelStore
                 logger.debug("Added sync control event after log event: seqno="
                         + event.getSeqno());
             }
+            needsSync = false;
         }
     }
 
@@ -432,15 +399,8 @@ public class THLParallelQueue implements ParallelStore
 
         for (THLParallelReadTask readTask : this.readTasks)
         {
-            activeSize.incrAndGetSeqno();
             readTask.putControlEvent(ctrl);
         }
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Added control event: activeSize="
-                    + activeSize.getSeqno());
-        }
-
     }
 
     /**
@@ -449,14 +409,18 @@ public class THLParallelQueue implements ParallelStore
     public ReplEvent get(int taskId) throws InterruptedException,
             ReplicatorException
     {
+        // Fetch the event.
         assertTaskIdWithinRange(taskId);
         ReplEvent event = readTasks.get(taskId).get();
-        activeSize.decrAndGetSeqno();
         if (logger.isDebugEnabled())
         {
             logger.debug("Returning event: taskId=" + taskId + " seqno="
                     + event.getSeqno() + " activeSize=" + activeSize.getSeqno());
         }
+
+        // Only decrement for a proper event belonging to a transction.
+        if (event instanceof ReplDBMSEvent)
+            activeSize.decrAndGetSeqno();
         return event;
     }
 
@@ -487,7 +451,6 @@ public class THLParallelQueue implements ParallelStore
     public synchronized void configure(PluginContext context)
             throws ReplicatorException
     {
-
         // Instantiate partitioner class.
         if (partitioner == null)
         {
@@ -506,8 +469,12 @@ public class THLParallelQueue implements ParallelStore
         }
 
         // Allocate queue for watch predicates.
-        // TODO: Get this to work.
         watchPredicates = new LinkedBlockingQueue<WatchPredicate<ReplDBMSHeader>>();
+
+        // Set the sync interval only if sync'ing is enabled.
+        if (syncInterval <= 0)
+            throw new ReplicatorException(
+                    "Sync interval must be greater than 0");
     }
 
     /**
@@ -541,7 +508,8 @@ public class THLParallelQueue implements ParallelStore
         for (int i = 0; i < partitions; i++)
         {
             THLParallelReadTask readTask = new THLParallelReadTask(i, thl,
-                    partitioner, headSeqnoCounter, maxSize, maxControlEvents);
+                    partitioner, headSeqnoCounter, maxSize, maxControlEvents,
+                    syncInterval);
             readTasks.add(readTask);
             readTask.prepare(context);
         }
@@ -631,7 +599,6 @@ public class THLParallelQueue implements ParallelStore
         props.setLong("eventCount", transactionCount);
         props.setLong("discardCount", discardCount);
         props.setInt("queues", partitions);
-        props.setBoolean("syncEnabled", syncEnabled);
         props.setInt("syncInterval", syncInterval);
         props.setBoolean("serialized", this.criticalPartition >= 0);
         props.setLong("serializationCount", serializationCount);

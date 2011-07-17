@@ -191,6 +191,7 @@ replicator.stage.q-to-dbms.blockCommitRowCount=${replicator.global.buffer.size}
 replicator.pipeline.direct=d-binlog-to-q,d-q-to-thl,d-thl-to-pq,d-pq-to-dbms
 replicator.pipeline.direct.stores=queue,thl,parallel-queue
 replicator.pipeline.direct.autoSync=true
+replicator.pipeline.direct.syncTHLWithExtractor=false
 
 # Extract from binlog into queue. 
 replicator.stage.d-binlog-to-q=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask

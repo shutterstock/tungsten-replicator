@@ -297,7 +297,7 @@ public class LogConnection
                     (short) THLEvent.REPL_DBMS_EVENT,
                     eventReader.getEpochNumber(), new Timestamp(
                             System.currentTimeMillis()), new Timestamp(
-                            eventReader.getSourceTStamp()), null,
+                            eventReader.getSourceTStamp()),
                     eventReader.getEventId(), eventReader.getShardId(), null);
         }
 

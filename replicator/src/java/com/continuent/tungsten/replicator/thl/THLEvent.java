@@ -62,7 +62,6 @@ public class THLEvent implements Serializable
     private final long        epochNumber;
     private final Timestamp   sourceTstamp;
     private final Timestamp   localEnqueueTstamp;
-    private final Timestamp   processedTstamp;
     private String            comment;
     private final String      eventId;
     private final String      shardId;
@@ -84,7 +83,6 @@ public class THLEvent implements Serializable
         this.epochNumber = event.getEpochNumber();
         this.localEnqueueTstamp = null;
         this.sourceTstamp = event.getDBMSEvent().getSourceTstamp();
-        this.processedTstamp = null;
         this.comment = null;
         this.eventId = eventId;
         this.shardId = event.getShardId();
@@ -108,8 +106,7 @@ public class THLEvent implements Serializable
     public THLEvent(long seqno, short fragno, boolean lastFrag,
             String sourceId, short type, long epochNumber,
             Timestamp localEnqueueTstamp, Timestamp sourceTstamp,
-            Timestamp processedTstamp, String eventId, String shardId,
-            ReplEvent event)
+            String eventId, String shardId, ReplEvent event)
     {
         this.seqno = seqno;
         this.fragno = fragno;
@@ -119,7 +116,6 @@ public class THLEvent implements Serializable
         this.epochNumber = epochNumber;
         this.localEnqueueTstamp = localEnqueueTstamp;
         this.sourceTstamp = sourceTstamp;
-        this.processedTstamp = processedTstamp;
         this.eventId = eventId;
         this.shardId = shardId;
         this.event = event;
@@ -206,16 +202,6 @@ public class THLEvent implements Serializable
     }
 
     /**
-     * Get processed timestamp.
-     * 
-     * @return Processed timestamp
-     */
-    public Timestamp getProcessedTstamp()
-    {
-        return processedTstamp;
-    }
-
-    /**
      * Get event comment.
      * 
      * @return Comment
@@ -270,7 +256,6 @@ public class THLEvent implements Serializable
         ret += " type=" + type;
         ret += " localEnqueueTstamp=" + localEnqueueTstamp;
         ret += " sourceTstamp=" + sourceTstamp;
-        ret += " processedTstamp=" + processedTstamp;
         ret += " eventId=" + eventId;
         ret += " shardId=" + getShardId();
         ret += " event=" + event.toString();

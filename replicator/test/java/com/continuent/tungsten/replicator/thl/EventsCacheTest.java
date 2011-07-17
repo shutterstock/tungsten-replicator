@@ -101,6 +101,6 @@ public class EventsCacheTest extends TestCase
     private THLEvent makeTHLEvent(long seqno)
     {
         return new THLEvent(seqno, (short) 0, true, "test", (short) 0, 0, null,
-                null, null, new Long(seqno).toString(), "#UNKNOWN", null);
+                null, new Long(seqno).toString(), "#UNKNOWN", null);
     }
 }
