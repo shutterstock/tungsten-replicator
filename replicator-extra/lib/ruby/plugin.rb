@@ -29,7 +29,7 @@ class Plugin
 
     # Define command name and location. 
     @cmd_basename = File.basename(cmd)
-    @cmd_expanded = File.expand_path(cmd)
+    @cmd_expanded = File.expand_path(cmd + '/..')
     @replicator_bin = File.dirname(@cmd_expanded)
     @replicator_home = File.dirname(@replicator_bin)
 

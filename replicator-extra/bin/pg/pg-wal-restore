@@ -14,7 +14,7 @@ fi
 
 # Find our home to ensure we can see libraries.
 BIN_HOME=`dirname $0`
-export REPLICATOR_HOME=$BIN_HOME/..
+export REPLICATOR_HOME=$BIN_HOME/../..
 
 # Run the WAL Mgr script.
 $RUBY -I$REPLICATOR_HOME/lib/ruby -I$REPLICATOR_HOME/../cluster-home/lib/ruby $REPLICATOR_HOME/lib/ruby/pg-wal-restore.rb `basename $0` $*

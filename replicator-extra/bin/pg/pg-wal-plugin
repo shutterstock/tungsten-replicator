@@ -14,7 +14,7 @@ fi
 
 # Make sure we are in the Tungsten Replicator directory. 
 BINDIR=`dirname $0`
-REPLICATOR_HOME=`cd $BINDIR/..; pwd`
+REPLICATOR_HOME=`cd $BINDIR/../..; pwd`
 
 # Run the WAL Mgr script. 
 $RUBY -I$REPLICATOR_HOME/lib/ruby -I$REPLICATOR_HOME/../cluster-home/lib/ruby $REPLICATOR_HOME/lib/ruby/pg-wal-wrapper.rb $0 $*
