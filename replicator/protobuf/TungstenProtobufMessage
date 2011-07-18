@@ -106,6 +106,7 @@ message ProtobufEventOption {
 message ProtobufRowIdData
 {
   required int64 id = 1;
+  optional int32 type = 2;
 }
 
 message ProtobufLoadDataFileFragment {

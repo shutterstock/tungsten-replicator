@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2009 Continuent Inc.
+ * Copyright (C) 2009-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -82,7 +82,7 @@ public class IntvarLogEvent extends LogEvent
         try
         {
             type = LittleEndianConversion.convert1ByteToInt(buffer, offset);
-            offset = offset + MysqlBinlog.I_VAL_OFFSET;
+            offset += MysqlBinlog.I_VAL_OFFSET;
             value = LittleEndianConversion.convert8BytesToLong(buffer, offset);
 
         }

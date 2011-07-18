@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s):
+ * Contributor(s):Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.applier;
@@ -47,7 +47,7 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 /**
  * Stub applier class that automatically constructs url from Oracle-specific
  * properties like host, port, and service.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -93,7 +93,7 @@ public class MySQLApplier extends JdbcApplier
     /**
      * Generate URL suitable for MySQL and then delegate remaining configuration
      * to superclass.
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(PluginContext
      *      context)
      */
@@ -124,7 +124,23 @@ public class MySQLApplier extends JdbcApplier
 
     protected void applyRowIdData(RowIdData data) throws ApplierException
     {
-        String query = "SET INSERT_ID = " + data.getRowId();
+        String query = "SET ";
+        
+        switch (data.getType())
+        {
+            case RowIdData.LAST_INSERT_ID :
+                query += "LAST_INSERT_ID";
+                break;
+            case RowIdData.INSERT_ID:
+                query+= "INSERT_ID";
+                break;
+            default :
+                // Old behavior
+                query+= "INSERT_ID";
+                break;
+        }
+        query += " = " + data.getRowId();
+        
         try
         {
             try
@@ -153,7 +169,7 @@ public class MySQLApplier extends JdbcApplier
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.applier.JdbcApplier#addColumn(java.sql.ResultSet,
      *      java.lang.String)
      */
@@ -176,7 +192,7 @@ public class MySQLApplier extends JdbcApplier
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.applier.JdbcApplier#setObject(java.sql.PreparedStatement,
      *      int, com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnVal,
      *      com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec)
@@ -253,7 +269,7 @@ public class MySQLApplier extends JdbcApplier
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.applier.JdbcApplier#applyStatementData(com.continuent.tungsten.replicator.dbms.StatementData)
      */
     @Override

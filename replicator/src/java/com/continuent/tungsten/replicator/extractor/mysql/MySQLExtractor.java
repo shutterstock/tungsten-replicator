@@ -940,16 +940,19 @@ public class MySQLExtractor implements RawExtractor
                 }
                 else if (logEvent.getClass() == IntvarLogEvent.class)
                 {
-                    logger.debug("INTVAR_EVENT detected, value: "
-                            + ((IntvarLogEvent) logEvent).getValue());
+                    IntvarLogEvent intvarLogEvent = (IntvarLogEvent) logEvent;
+                    if (logger.isDebugEnabled())
+                        logger.debug("INTVAR_EVENT detected, value: "
+                                + intvarLogEvent.getValue() + " / type : "
+                                + intvarLogEvent.getType());
                     /*
                      * For MySQL applying, we could have following SET
                      * statement: dataArray.add(new StatementData( "SET
                      * INSERT_ID= " + ((Intvar_log_event)
                      * logEvent).getValue()));
                      */
-                    dataArray.add(new RowIdData(((IntvarLogEvent) logEvent)
-                            .getValue()));
+                    dataArray.add(new RowIdData(intvarLogEvent.getValue(),
+                            intvarLogEvent.getType()));
                 }
                 else if (logEvent.getClass() == XidLogEvent.class)
                 {
@@ -1716,10 +1719,9 @@ public class MySQLExtractor implements RawExtractor
             String binlogFile = rs.getString(1);
             long binlogOffset = rs.getLong(2);
 
-            String eventId = binlogFile
-                    + ":"
+            String eventId = binlogFile + ":"
                     + getPositionAsString(binlogOffset);
-            
+
             return eventId;
         }
         catch (SQLException e)

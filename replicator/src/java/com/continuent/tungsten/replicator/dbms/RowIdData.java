@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s): Robert Hodges
+ * Contributor(s): Robert Hodges, Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.dbms;
@@ -31,21 +31,25 @@ package com.continuent.tungsten.replicator.dbms;
 public class RowIdData extends DBMSData
 {
     private static final long serialVersionUID = 1L;
+
+    public static final int LAST_INSERT_ID = 1;
+    public static final int INSERT_ID = 2;
     
     private long rowId;
+    private int type;
   
-    public RowIdData()
-    {
-    	super();
-        this.rowId = -1;
-    }
-
+    @Deprecated
     public RowIdData(long rowId)
     {
-    	super();
-        this.rowId = rowId;
+        this(rowId, INSERT_ID);
     }
     
+    public RowIdData(long value, int type)
+    {
+        this.rowId = value;
+        this.type = type;
+    }
+
     /**
      * Returns the SQL statement that must be replicated. 
      */
@@ -54,8 +58,14 @@ public class RowIdData extends DBMSData
         return rowId;
     }
 
-    public void setRowId(long rowId)
+    /**
+     * Returns the type value.
+     * 
+     * @return Returns the type.
+     */
+    public int getType()
     {
-        this.rowId = rowId;
-    }   
+        return type;
+    }
+
 }

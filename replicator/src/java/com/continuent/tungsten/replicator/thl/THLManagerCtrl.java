@@ -519,14 +519,27 @@ public class THLManagerCtrl
             RowIdData rowid, String lastSchema, boolean pureSQL, int sqlIndex)
     {
         // Output actual DML/DDL statement.
+        String type;
+        switch (rowid.getType())
+        {
+            case RowIdData.LAST_INSERT_ID :
+                type = "LAST_INSERT_ID";
+                break;
+            case RowIdData.INSERT_ID :
+                type = "INSERT_ID";
+                break;
+            default :
+                type = "INSERT_ID";
+                return lastSchema;
+        }
         if (pureSQL)
         {
-            println(stringBuilder, "SET INSERT_ID=" + rowid.getRowId());
+            println(stringBuilder, "SET " + type + " = " + rowid.getRowId());
         }
         else
         {
-            println(stringBuilder, "- SQL(" + sqlIndex + ") = "
-                    + "SET INSERT_ID=" + rowid.getRowId());
+            println(stringBuilder, "- SQL(" + sqlIndex + ") = " + "SET " + type
+                    + " = " + rowid.getRowId());
         }
         return lastSchema;
     }

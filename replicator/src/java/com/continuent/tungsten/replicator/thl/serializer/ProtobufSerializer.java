@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -81,8 +81,7 @@ import com.google.protobuf.Message;
  */
 public class ProtobufSerializer implements Serializer
 {
-    static Logger        logger           = Logger
-                                                  .getLogger(ProtobufSerializer.class);
+    static Logger        logger           = Logger.getLogger(ProtobufSerializer.class);
 
     private int          deserializeCount = 0;
     private long         globalDeserTime  = 0;
@@ -129,10 +128,10 @@ public class ProtobufSerializer implements Serializer
 
                 DBMSEvent dbmsEvent = new DBMSEvent(header.getEventId(), null,
                         data, sourceTstamp);
-                event = new ReplDBMSEvent(header.getSeqno(), (short) header
-                        .getFragno(), header.getLastFrag(), header
-                        .getSourceId(), header.getEpochNumber(), sourceTstamp,
-                        dbmsEvent);
+                event = new ReplDBMSEvent(header.getSeqno(),
+                        (short) header.getFragno(), header.getLastFrag(),
+                        header.getSourceId(), header.getEpochNumber(),
+                        sourceTstamp, dbmsEvent);
 
                 for (ProtobufEventOption protobufEventOption : protobufReplDBMSEvent
                         .getMetadataList())
@@ -278,7 +277,12 @@ public class ProtobufSerializer implements Serializer
         }
         else if (protobufOneChange.getType() == ProtobufOneChange.Type.ROW_ID_DATA)
         {
-            return new RowIdData(protobufOneChange.getRowId().getId());
+            ProtobufRowIdData rowId = protobufOneChange.getRowId();
+            // Using type 2 as default (INSERT_ID -- this is the old incorrect
+            // behavior) in case no type is found in THL
+            return new RowIdData(rowId.getId(), (rowId.hasType()
+                    ? rowId.getType()
+                    : RowIdData.INSERT_ID));
         }
         else if (protobufOneChange.getType() == ProtobufOneChange.Type.ROW_DATA)
         {
@@ -306,11 +310,12 @@ public class ProtobufSerializer implements Serializer
             ProtobufLoadDataFileQuery fileQuery)
     {
         ProtobufStatementData statement = fileQuery.getStatement();
-        LoadDataFileQuery loadFileQuery = new LoadDataFileQuery(statement
-                .getQuery(), statement.getTimestamp(), (statement
-                .hasDefaultSchema() ? statement.getDefaultSchema() : null),
-                fileQuery.getFileId(), fileQuery.getFilenameStartPos(),
-                fileQuery.getFilenameEndPos());
+        LoadDataFileQuery loadFileQuery = new LoadDataFileQuery(
+                statement.getQuery(), statement.getTimestamp(),
+                (statement.hasDefaultSchema()
+                        ? statement.getDefaultSchema()
+                        : null), fileQuery.getFileId(),
+                fileQuery.getFilenameStartPos(), fileQuery.getFilenameEndPos());
         loadFileQuery.setErrorCode(statement.getErrorCode());
         for (ProtobufEventOption statementDataOption : statement
                 .getOptionsList())
@@ -736,8 +741,8 @@ public class ProtobufSerializer implements Serializer
         List<ProtobufOneRowChange> rowChangeList = rows.getRowChangeList();
         for (ProtobufOneRowChange oneRowChange : rowChangeList)
         {
-            OneRowChange rowChange = new OneRowChange(oneRowChange
-                    .getSchemaName(), oneRowChange.getTableName(),
+            OneRowChange rowChange = new OneRowChange(
+                    oneRowChange.getSchemaName(), oneRowChange.getTableName(),
                     RowChangeData.ActionType.valueOf(oneRowChange.getAction()
                             .name()));
             if (oneRowChange.hasTableId())
@@ -927,9 +932,11 @@ public class ProtobufSerializer implements Serializer
 
     private StatementData deserializeStatement(ProtobufStatementData statement)
     {
-        StatementData statementData = new StatementData(null, (statement
-                .hasTimestamp() ? statement.getTimestamp() : null), (statement
-                .hasDefaultSchema() ? statement.getDefaultSchema() : null));
+        StatementData statementData = new StatementData(null,
+                (statement.hasTimestamp() ? statement.getTimestamp() : null),
+                (statement.hasDefaultSchema()
+                        ? statement.getDefaultSchema()
+                        : null));
         if (statement.hasQuery())
             statementData.setQuery(statement.getQuery());
         else if (statement.hasQueryBytes())
@@ -952,6 +959,7 @@ public class ProtobufSerializer implements Serializer
         oneChangeBuilder.setType(ProtobufOneChange.Type.ROW_ID_DATA);
         ProtobufRowIdData.Builder rowIdBuilder = ProtobufRowIdData.newBuilder();
         rowIdBuilder.setId(data.getRowId());
+        rowIdBuilder.setType(data.getType());
         oneChangeBuilder.setRowId(rowIdBuilder);
     }
 
