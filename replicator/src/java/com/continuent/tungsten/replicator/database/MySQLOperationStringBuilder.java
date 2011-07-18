@@ -71,7 +71,8 @@ public class MySQLOperationStringBuilder
                     // Look ahead to ensure we have a bang comment.
                     String nextChars = peek(7);
                     boolean haveBangComment = false;
-                    if (nextChars.length() == 7)
+                    // Peek returns null if there is not enough data to be read.
+                    if (nextChars != null && nextChars.length() == 7)
                     {
                         haveBangComment = true;
                         for (int i = 2; i < nextChars.length(); i++)
