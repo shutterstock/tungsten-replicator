@@ -1717,10 +1717,9 @@ public class MySQLExtractor implements RawExtractor
             long binlogOffset = rs.getLong(2);
 
             String eventId = binlogFile
-                    .substring(binlogFile.lastIndexOf('.') + 1)
                     + ":"
                     + getPositionAsString(binlogOffset);
-
+            
             return eventId;
         }
         catch (SQLException e)
