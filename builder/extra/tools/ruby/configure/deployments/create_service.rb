@@ -12,9 +12,14 @@ class CreateServiceDeployment < ConfigureDeployment
   def get_deployment_object_modules(config)
     modules = [
       ConfigureDeploymentStepReplicationDataservice,
-      DeploymentStepCreateService,
-      ConfigureDeploymentStepMySQL
+      DeploymentStepCreateService
     ]
+    
+    DatabaseTypeDeploymentStep.submodules().each{
+      |klass|
+      
+      modules << klass
+    }
 
     modules
   end

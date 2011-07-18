@@ -11,7 +11,7 @@ class ConfigurePackageCluster < ConfigurePackage
         PV_IDENTIFIER, "default"),
       ClusterHosts.new(),
       DeploymentHost.new(),
-      DataServers.new(),
+      Dataservers.new(),
       repl_services
     ]
   end
@@ -34,18 +34,5 @@ class ConfigurePackageCluster < ConfigurePackage
       DataserversChecks.new(),
       ReplicationServiceChecks.new()
     ]
-  end
-  
-  def self.services_list(config)
-    config.getPropertyOr(REPL_SERVICES, "").split(",")
-  end
-  
-  def self.each_service(config, &f)
-    self.services_list(config).each{
-      |service_name|
-      parent_name = Configurator::SERVICE_CONFIG_PREFIX + service_name
-      
-      f.call(parent_name, service_name, config.getProperty(parent_name))
-    }
   end
 end

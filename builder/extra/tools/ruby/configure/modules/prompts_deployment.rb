@@ -3,139 +3,21 @@ class ClusterHosts < GroupConfigurePrompt
     super(HOSTS, "Enter host information for @value", 
       "host", "hosts")
       
-    self.add_prompts(
-      HostPrompt.new(),
-      UserIDPrompt.new(),
-      HomeDirectoryPrompt.new(),
-      BaseDirectoryPrompt.new(),
-      TempDirectoryPrompt.new(),
-      JavaMemorySize.new(),
-      ReplicationRMIPort.new(),
-      
-      ShellStartupScriptPrompt.new(),
-      RootCommandPrefixPrompt.new(),
-      InstallServicesPrompt.new(),
-      StartServicesPrompt.new(),
-      ReportServicesPrompt.new(),
-        
-      THLStorageType.new(),
-      THLStorageDirectory.new(),
-      THLStorageChecksum.new(),
-      THLStorageConnectionTimeout.new(),
-      THLStorageRetention.new(),
-      THLStorageConsistency.new(),
-      THLStorageFileSize.new(),
-      RelayLogStorageDirectory.new(),
-      
-      ReplicationAPI.new(),
-      ReplicationAPIHost.new(),
-      ReplicationAPIPort.new(),
-      ReplicationAPIUser.new(),
-      ReplicationAPIPassword.new()
-    )
+    ClusterHostPrompt.subclasses().each{
+      |klass|
+      self.add_prompt(klass.new())
+    }
   end
 end
 
-class DBMSTypePrompt < ConfigurePrompt
-  def initialize
-    super(DBMS_TYPE, "Database type (mysql, or postgresql)", PV_DBMSTYPE)
+module ClusterHostPrompt
+  def self.included(subclass)
+    @subclasses ||= []
+    @subclasses << subclass
   end
-  
-  def get_default_value
-    case Configurator.instance.whoami()
-    when "postgres"
-      return "postgresql"
-    when "enterprisedb"
-      return "postgresql"
-    else
-      return "mysql"
-    end
-  end
-end
 
-class JavaMemorySize < AdvancedPrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(REPL_JAVA_MEM_SIZE, "Replicator Java heap memory size in Mb (min 128)",
-      PV_JAVA_MEM_SIZE, 512)
-  end
-end
-
-class HomeDirectoryPrompt < ConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(HOME_DIRECTORY, "Installation directory", PV_FILENAME)
-  end
-  
-  def get_default_value
-    begin
-      unless Configurator.instance.is_localhost?(@config.getProperty(get_member_key(HOST)))
-        return ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
-      end
-    rescue => e
-    end
-    
-    if Configurator.instance.is_full_tungsten_package?()
-      Configurator.instance.get_base_path()
-    else
-      ENV['HOME']
-    end
-  end
-  
-  def allow_group_default
-    false
-  end
-end
-
-class BaseDirectoryPrompt < AdvancedPrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(CURRENT_RELEASE_DIRECTORY, "Directory for the latest release", PV_FILENAME)
-  end
-  
-  def get_default_value
-    "#{@config.getProperty(get_member_key(HOME_DIRECTORY))}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
-  end
-  
-  def allow_group_default
-    false
-  end
-end
-
-class HostPrompt < ConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(HOST, "DNS hostname", PV_HOSTNAME)
-  end
-  
-  def get_default_value
-    get_member()
-  end
-  
-  def allow_group_default
-    false
-  end
-end
-
-class UserIDPrompt < ConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(USERID, "System User", 
-      PV_IDENTIFIER, Configurator.instance.whoami())
-  end
-end
-
-class TempDirectoryPrompt < ConfigurePrompt
-  include GroupConfigurePromptMember
-  
-  def initialize
-    super(TEMP_DIRECTORY, "Temporary Directory",
-      PV_FILENAME, "/tmp")
+  def self.subclasses
+    @subclasses || []
   end
 end
 
@@ -157,7 +39,9 @@ class DeploymentTypePrompt < ConfigurePrompt
   end
 end
 
-class DeploymentServicePrompt < AdvancedPrompt
+class DeploymentServicePrompt < ConfigurePrompt
+  include AdvancedPromptModule
+  
   def initialize
     super(DEPLOYMENT_SERVICE, "Deployment Service", 
       PV_ANY, DISTRIBUTED_DEPLOYMENT_NAME)
@@ -195,8 +79,96 @@ class DeployPackageURIPrompt < ConfigurePrompt
   end
 end
 
+class JavaMemorySize < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(REPL_JAVA_MEM_SIZE, "Replicator Java heap memory size in Mb (min 128)",
+      PV_JAVA_MEM_SIZE, 512)
+  end
+end
+
+class HostPrompt < ConfigurePrompt
+  include ClusterHostPrompt
+  
+  def initialize
+    super(HOST, "DNS hostname", PV_HOSTNAME)
+  end
+  
+  def get_default_value
+    get_member()
+  end
+  
+  def allow_group_default
+    false
+  end
+end
+
+class UserIDPrompt < ConfigurePrompt
+  include ClusterHostPrompt
+  
+  def initialize
+    super(USERID, "System User", 
+      PV_IDENTIFIER, Configurator.instance.whoami())
+  end
+end
+
+class HomeDirectoryPrompt < ConfigurePrompt
+  include ClusterHostPrompt
+  
+  def initialize
+    super(HOME_DIRECTORY, "Installation directory", PV_FILENAME)
+  end
+  
+  def get_default_value
+    begin
+      unless Configurator.instance.is_localhost?(@config.getProperty(get_member_key(HOST)))
+        return ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
+      end
+    rescue => e
+    end
+    
+    if Configurator.instance.is_full_tungsten_package?()
+      Configurator.instance.get_base_path()
+    else
+      ENV['HOME']
+    end
+  end
+  
+  def allow_group_default
+    false
+  end
+end
+
+class BaseDirectoryPrompt < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(CURRENT_RELEASE_DIRECTORY, "Directory for the latest release", PV_FILENAME)
+  end
+  
+  def get_default_value
+    "#{@config.getProperty(get_member_key(HOME_DIRECTORY))}/#{Configurator::CURRENT_RELEASE_DIRECTORY}"
+  end
+  
+  def allow_group_default
+    false
+  end
+end
+
+class TempDirectoryPrompt < ConfigurePrompt
+  include ClusterHostPrompt
+  
+  def initialize
+    super(TEMP_DIRECTORY, "Temporary Directory",
+      PV_FILENAME, "/tmp")
+  end
+end
+
 class InstallServicesPrompt < ConfigurePrompt
-  include GroupConfigurePromptMember
+  include ClusterHostPrompt
   
   def initialize
     super(SVC_INSTALL, "Install service start scripts", 
@@ -211,7 +183,7 @@ class InstallServicesPrompt < ConfigurePrompt
 end
 
 class StartServicesPrompt < ConfigurePrompt
-  include GroupConfigurePromptMember
+  include ClusterHostPrompt
   
   def initialize
     super(SVC_START, "Start services after configuration", 
@@ -235,8 +207,9 @@ class StartServicesPrompt < ConfigurePrompt
   end
 end
 
-class ReportServicesPrompt < AdvancedPrompt
-  include GroupConfigurePromptMember
+class ReportServicesPrompt < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
   
   def initialize
     super(SVC_REPORT, "Report services after configuration", 
@@ -244,8 +217,9 @@ class ReportServicesPrompt < AdvancedPrompt
   end
 end
 
-class ShellStartupScriptPrompt < AdvancedPrompt
-  include GroupConfigurePromptMember
+class ShellStartupScriptPrompt < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
   
   def initialize
     super(SHELL_STARTUP_SCRIPT, "Filename for the system user shell startup script", 
@@ -257,8 +231,9 @@ class ShellStartupScriptPrompt < AdvancedPrompt
   end
 end
 
-class RootCommandPrefixPrompt < AdvancedPrompt
-  include GroupConfigurePromptMember
+class RootCommandPrefixPrompt < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
   
   def initialize
     super(ROOT_PREFIX, "Run root commands using sudo", 
@@ -270,8 +245,19 @@ class RootCommandPrefixPrompt < AdvancedPrompt
   end
 end
 
-class THLStorageType < ConstantValuePrompt
-  include GroupConfigurePromptMember
+class ReplicationRMIPort < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(REPL_RMI_PORT, "Replication RMI port", 
+      PV_INTEGER, 10000)
+  end
+end
+
+class THLStorageType < ConfigurePrompt
+  include ClusterHostPrompt
+  include ConstantValueModule
   
   def initialize
     super(REPL_LOG_TYPE, "Replicator event log storage (dbms|disk)",
@@ -284,6 +270,7 @@ class THLStorageType < ConstantValuePrompt
 end
 
 class THLStorageDirectory < ConfigurePrompt
+  include ClusterHostPrompt
   include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
@@ -305,7 +292,7 @@ class THLStorageDirectory < ConfigurePrompt
 end
 
 class RelayLogStorageDirectory < ConfigurePrompt
-  include GroupConfigurePromptMember
+  include ClusterHostPrompt
   
   def initialize
     super(REPL_RELAY_LOG_DIR, "Enter the local-disk directory into which the relay-logs will be stored",
@@ -321,7 +308,9 @@ class RelayLogStorageDirectory < ConfigurePrompt
   end
 end
 
-class THLStorageChecksum < AdvancedPrompt
+class THLStorageChecksum < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
   include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
@@ -335,7 +324,9 @@ class THLStorageChecksum < AdvancedPrompt
   end
 end
 
-class THLStorageConnectionTimeout < AdvancedPrompt
+class THLStorageConnectionTimeout < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
   include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
@@ -349,7 +340,9 @@ class THLStorageConnectionTimeout < AdvancedPrompt
   end
 end
 
-class THLStorageRetention < AdvancedPrompt
+class THLStorageRetention < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
   include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
@@ -363,7 +356,9 @@ class THLStorageRetention < AdvancedPrompt
   end
 end
 
-class THLStorageConsistency < AdvancedPrompt
+class THLStorageConsistency < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
   include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
@@ -377,7 +372,9 @@ class THLStorageConsistency < AdvancedPrompt
   end
 end
 
-class THLStorageFileSize < AdvancedPrompt
+class THLStorageFileSize < ConfigurePrompt
+  include ClusterHostPrompt
+  include AdvancedPromptModule
   include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
@@ -391,7 +388,9 @@ class THLStorageFileSize < AdvancedPrompt
   end
 end
 
-class DeploymentHost < AdvancedPrompt
+class DeploymentHost < ConfigurePrompt
+  include AdvancedPromptModule
+  
   def initialize
     super(DEPLOYMENT_HOST, "Host alias for the host to be deployed here", PV_ANY)
   end

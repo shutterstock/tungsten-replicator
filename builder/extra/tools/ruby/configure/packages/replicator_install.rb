@@ -1,7 +1,6 @@
 class ReplicatorInstallPackage < ConfigurePackage
   def get_prompts
     ConfigurePackageCluster.new(@config).get_prompts() + [
-      ReplicationServices.new()
     ]
   end
   
@@ -92,13 +91,10 @@ class ReplicatorInstallPackage < ConfigurePackage
       "slave-user" => Configurator.instance.whoami(),
       "thl-mode" => "disk",
       "thl-port" => "2112",
-      "rmi-port" => "10000",
       "svc-start" => "false",
       "report-services" => "false",
       "home-directory" => Configurator.instance.get_base_path(),
-      "use-relay-logs" => "true",
-      "svc-parallelization-type" => "memory",
-      "slave-takeover" => "false"
+      "use-relay-logs" => "true"
     }
     
     opts = OptionParser.new
@@ -111,7 +107,18 @@ class ReplicatorInstallPackage < ConfigurePackage
       options.setProperty("use-relay-logs", "false")
     }
     opts.on("--native-slave-takeover") {
-      options.setProperty("slave-takeover", "true")
+      ConfigurePrompt.add_global_default(REPL_SVC_NATIVE_SLAVE_TAKEOVER, "true")
+    }
+    
+    {
+      'rmi-port' => REPL_RMI_PORT,
+      'user' => USERID,
+      'buffer-size' => REPL_BUFFER_SIZE,
+      'channels' => REPL_SVC_CHANNELS,
+      'svc-parallelization-type' => REPL_SVC_PARALLELIZATION_TYPE
+    }.each{
+      |arg, prop_key|
+      opts.on("--#{arg} String") {|val| ConfigurePrompt.add_global_default(prop_key, val)}
     }
     
     [
@@ -135,16 +142,11 @@ class ReplicatorInstallPackage < ConfigurePackage
       "thl-directory",
       "thl-port",
       "relay-directory",
-      "buffer-size",
-      "channels",
       "service-name",
-      "rmi-port",
-      "user",
-      "svc-parallelization-type",
       "backup-directory"
     ].each{
-      |prop_key|
-      opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
+      |arg|
+      opts.on("--#{arg} String")  {|val| options.setProperty(arg, val)}
     }
     
     remainder = Configurator.instance.run_option_parser(opts, arguments, false, "invalid option for --direct")
@@ -184,12 +186,10 @@ class ReplicatorInstallPackage < ConfigurePackage
       SVC_START => options.getProperty('svc-start'),
       SVC_REPORT => options.getProperty('svc-report'),
       HOST => options.getProperty("host"),
-      USERID => options.getProperty("user"),
       HOME_DIRECTORY => options.getProperty("home-directory"),
       CURRENT_RELEASE_DIRECTORY => options.getProperty("current-release-directory"),
       REPL_LOG_DIR => options.getPropertyOr("thl-directory", options.getProperty("home-directory") + "/thl"),
-      REPL_RELAY_LOG_DIR => options.getPropertyOr("relay-directory", options.getProperty("home-directory") + "/relay"),
-      REPL_RMI_PORT => options.getProperty("rmi-port")
+      REPL_RELAY_LOG_DIR => options.getPropertyOr("relay-directory", options.getProperty("home-directory") + "/relay")
     })
     
     @config.setProperty(DATASERVERS, nil)
@@ -221,11 +221,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       REPL_ROLE => "direct",
       REPL_EXTRACTOR_DATASERVER => master_alias,
       REPL_DATASERVER => slave_alias,
-      REPL_BUFFER_SIZE => options.getProperty("buffer-size"),
-      REPL_SVC_CHANNELS => options.getProperty("channels"),
-      REPL_SVC_THL_PORT => options.getProperty("thl-port"),
-      REPL_SVC_PARALLELIZATION_TYPE => options.getProperty("svc-parallelization-type"),
-      REPL_SVC_NATIVE_SLAVE_TAKEOVER => options.getProperty("slave-takeover")
+      REPL_SVC_THL_PORT => options.getProperty("thl-port")
     })
   end
   
@@ -235,12 +231,10 @@ class ReplicatorInstallPackage < ConfigurePackage
       "datasource-port" => "3306",
       "datasource-user" => Configurator.instance.whoami(),
       "thl-port" => "2112",
-      "rmi-port" => "10000",
       "svc-start" => "false",
       "svc-report" => "false",
       "home-directory" => Configurator.instance.get_base_path(),
-      "use-relay-logs" => "true",
-      "svc-parallelization-type" => "memory"
+      "use-relay-logs" => "true"
     }
     
     opts = OptionParser.new
@@ -249,8 +243,20 @@ class ReplicatorInstallPackage < ConfigurePackage
       options.setProperty("svc-start", "true")
       options.setProperty("svc-report", "true")
     }
+    
     opts.on("--disable-relay-logs") {
       options.setProperty("use-relay-logs", "false")
+    }
+    
+    {
+      'rmi-port' => REPL_RMI_PORT,
+      'user' => USERID,
+      'buffer-size' => REPL_BUFFER_SIZE,
+      'channels' => REPL_SVC_CHANNELS,
+      'svc-parallelization-type' => REPL_SVC_PARALLELIZATION_TYPE
+    }.each{
+      |arg, prop_key|
+      opts.on("--#{arg} String") {|val| ConfigurePrompt.add_global_default(prop_key, val)}
     }
 
     [
@@ -258,7 +264,6 @@ class ReplicatorInstallPackage < ConfigurePackage
       "cluster-hosts",
       "master-host",
       "master-thl-port",
-      "user",
       "home-directory",
       "datasource-port",
       "datasource-user",
@@ -271,11 +276,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       "thl-directory",
       "thl-port",
       "relay-directory",
-      "buffer-size",
-      "channels",
       "service-name",
-      "rmi-port",
-      "svc-parallelization-type",
       "backup-directory"
     ].each{
       |prop_key|
@@ -328,12 +329,10 @@ class ReplicatorInstallPackage < ConfigurePackage
       @config.setProperty([HOSTS, host_alias], {
         SVC_REPORT => options.getProperty('svc-report'),
         HOST => host,
-        USERID => options.getProperty("user"),
         HOME_DIRECTORY => options.getProperty("home-directory"),
         CURRENT_RELEASE_DIRECTORY => options.getProperty("current-release-directory"),
         REPL_LOG_DIR => options.getProperty("thl-directory"),
-        REPL_RELAY_LOG_DIR => options.getProperty("relay-directory"),
-        REPL_RMI_PORT => options.getProperty("rmi-port")
+        REPL_RELAY_LOG_DIR => options.getProperty("relay-directory")
       })
       
       @config.setProperty([DATASERVERS, host_alias], {
@@ -355,10 +354,7 @@ class ReplicatorInstallPackage < ConfigurePackage
         DSNAME => options.getProperty("service-name"),
         DEPLOYMENT_SERVICE => options.getProperty("service-name"),
         REPL_DATASERVER => host_alias,
-        REPL_BUFFER_SIZE => options.getProperty("buffer-size"),
-        REPL_SVC_CHANNELS => options.getProperty("channels"),
         REPL_SVC_THL_PORT => options.getProperty("thl-port"),
-        REPL_SVC_PARALLELIZATION_TYPE => options.getProperty("svc-parallelization-type")
       })
       
       if host == options.getProperty("master-host")
@@ -411,7 +407,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
       output_usage_line("--channels", "Number of channels for parallel apply", "1")
       output_usage_line("--svc-parallelization-type (disk|memory)", "Method for storing parallel queues", "memory")
-      output_usage_line("--rmi-port", "", "10001")
+      output_usage_line("--rmi-port", "", "10000")
       output_usage_line("--backup-directory", "Storage directory for database backup files", Configurator.instance.get_base_path() + "/backups")
       output_usage_line("--service-name")
       output_usage_line("--start", "Start the replicator after configuration")
@@ -441,7 +437,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
       output_usage_line("--channels", "Number of channels for parallel apply", "1")
       output_usage_line("--svc-parallelization-type (disk|memory)", "Method for implementing parallel queues", "memory")
-      output_usage_line("--rmi-port", "", "10001")
+      output_usage_line("--rmi-port", "", "10000")
       output_usage_line("--backup-directory", "Storage directory for database backup files", Configurator.instance.get_base_path() + "/backups")
       output_usage_line("--service-name")
       output_usage_line("--start", "Start the replicator after configuration")

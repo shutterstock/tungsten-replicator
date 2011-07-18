@@ -197,3 +197,14 @@ class ConfigureDeployment
     @subclasses
   end
 end
+
+module DatabaseTypeDeploymentStep
+  def self.included(subclass)
+    @submodules ||= []
+    @submodules << subclass
+  end
+
+  def self.submodules
+    @submodules || []
+  end
+end

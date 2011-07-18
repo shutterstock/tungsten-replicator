@@ -418,13 +418,18 @@ class DeleteGroupMemberPrompt < TemporaryPrompt
   def run
     value = super()
     
-    if value != nil && value.downcase() =~ /[true|yes|y]/
+    if value != nil && value.downcase().strip() =~ /^(true|yes|y)$/
+      puts "#{@parent_group.singular.capitalize} #{get_member()}: Removing this #{@parent_group.singular}"
       raise DeleteGroupMember
     end
   end
   
   def enabled?
     super() && @config.getProperty([@parent_group.name, get_member()]) != nil
+  end
+  
+  def get_value
+    "no"
   end
 end
 

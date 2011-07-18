@@ -43,7 +43,13 @@ class RegularConfigureDeployment < ConfigureDeployment
     
     modules << ConfigureDeploymentStepReplicator
     modules << ConfigureDeploymentStepReplicationDataservice
-    modules << ConfigureDeploymentStepMySQL
+    
+    DatabaseTypeDeploymentStep.submodules().each{
+      |klass|
+      
+      modules << klass
+    }
+    
     modules << ConfigureDeploymentStepServices
 
     modules

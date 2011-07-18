@@ -12,9 +12,14 @@ class DeleteServiceDeployment < ConfigureDeployment
   def get_deployment_object_modules(config)
     modules = [
       ConfigureDeploymentStepReplicationDataservice,
-      DeploymentStepDeleteService,
-      ConfigureDeploymentStepMySQL
+      DeploymentStepDeleteService
     ]
+    
+    DatabaseTypeDeploymentStep.submodules().each{
+      |klass|
+      
+      modules << klass
+    }
 
     modules
   end

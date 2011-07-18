@@ -78,6 +78,9 @@ end
 Dir[File.dirname(__FILE__) + '/configure/deployments/*.rb'].each do |file| 
   require File.dirname(file) + '/' + File.basename(file, File.extname(file))
 end
+Dir[File.dirname(__FILE__) + '/configure/dbms_types/*.rb'].each do |file| 
+  require File.dirname(file) + '/' + File.basename(file, File.extname(file))
+end
 
 # Manages top-level configuration.
 class Configurator

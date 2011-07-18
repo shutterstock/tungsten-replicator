@@ -1,39 +1,62 @@
 require 'socket'
-class VIPInterfaceAvailableCheck < ConfigureValidationCheck
-  def set_vars
-    @title = "VIP interface availability check"
-  end
-  
-  def validate
-    iface = @config.getProperty(REPL_MASTER_VIP_DEVICE)
+
+class DataserversChecks < GroupValidationCheck
+  def initialize
+    super(DATASERVERS, "dataserver", "dataservers")
     
-    begin
-      sock = UDPSocket.new()
-   		buf = [iface,""].pack('a16h16')
-  		sock.ioctl(0x8915, buf);
-  		sock.close
-  		iface_addr = buf[20..24].unpack("CCCC").join(".")
-  		
-  		if iface_addr == @config.getProperty(REPL_MASTER_VIP)
-  		  info("#{iface} is already assigned as the VIP address on this host")
-  		  
-  		  if @config.getProperty(HOST) != @config.getProperty(REPL_MASTERHOST)
-  		    error("The VIP address is assigned to this host that is not the master")
-  		  end
-  		else
-  		  error("#{iface} is in use with a different IP address on this host")
-  		end
-  	rescue
-  	  info("#{iface} is usable on this host")
-  	end
+    DataserverValidationCheck.submodules().each{
+      |klass|
+      
+      self.add_check(klass.new())
+    }
   end
   
-  def enabled?
-    (@config.getProperty(REPL_MASTER_VIP_DEVICE) != nil)
+  def set_vars
+    @title = "Dataserver checks"
+  end
+end
+
+module DataserverValidationCheck
+  def self.included(subclass)
+    @submodules ||= []
+    @submodules << subclass
+  end
+
+  def self.submodules
+    @submodules || []
+  end
+end
+
+class ReplicationServiceChecks < GroupValidationCheck
+  def initialize
+    super(REPL_SERVICES, "replication service", "replication services")
+    
+    ReplicationServiceValidationCheck.submodules().each{
+      |klass|
+      
+      self.add_check(klass.new())
+    }
+  end
+  
+  def set_vars
+    @title = "Replication service checks"
+  end
+end
+
+module ReplicationServiceValidationCheck
+  def self.included(subclass)
+    @submodules ||= []
+    @submodules << subclass
+  end
+
+  def self.submodules
+    @submodules || []
   end
 end
 
 class BackupMethodAvailableCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  
   def set_vars
     @title = "Backup method availability check"
   end
@@ -78,6 +101,8 @@ class BackupMethodAvailableCheck < ConfigureValidationCheck
 end
 
 class THLStorageCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  
   def set_vars
     @title = "THL storage check"
   end
@@ -121,6 +146,8 @@ class TransferredLogStorageCheck < ConfigureValidationCheck
   end
   
   def validate
+    # TODO
+    
     if @config.getProperty(REPL_RELAY_LOG_DIR)
       if File.exists?(@config.getProperty(REPL_RELAY_LOG_DIR)) && !File.directory?(@config.getProperty(REPL_RELAY_LOG_DIR))
         error("Transferred log directory #{@config.getProperty(REPL_RELAY_LOG_DIR)} already exists as a file")
@@ -150,7 +177,8 @@ class NoHiddenServicesCheck < ConfigureValidationCheck
   end
   
   def validate
-    config_services = ConfigurePackageCluster.services_list(@config)
+    # TODO - Update this check
+    config_services = []
     
     current_services = []
     Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
@@ -170,53 +198,8 @@ class NoHiddenServicesCheck < ConfigureValidationCheck
   end
 end
 
-class DataserversChecks < GroupValidationCheck
-  def initialize
-    super(DATASERVERS, "dataserver", "dataservers")
-    
-    add_checks(
-      MySQLClientCheck.new(),
-      MySQLLoginCheck.new(),
-      MySQLPermissionsCheck.new(),
-      MySQLReadableLogsCheck.new(),
-      MySQLSettingsCheck.new(),
-      ConnectorUserMySQLCheck.new(),
-      PostgreSQLSystemUserCheck.new(),
-      PostgreSQLClientCheck.new(),
-      PostgreSQLLoginCheck.new(),
-      PostgreSQLPermissionsCheck.new(),
-      PostgreSQLStandbyCheck.new(),
-      PostgreSQLSettingsCheck.new(),
-      ConnectorUserPostgreSQLCheck.new()
-    )
-  end
-  
-  def set_vars
-    @title = "Dataserver checks"
-  end
-end
-
-class ReplicationServiceChecks < GroupValidationCheck
-  def initialize
-    super(REPL_SERVICES, "replication service", "replication services")
-    
-    add_checks(
-      ServiceNameCheck.new(),
-      DifferentMasterSlaveCheck.new(),
-      THLStorageCheck.new(),
-      MySQLNoMySQLReplicationCheck.new(),
-      MySQLApplierServerIDCheck.new(),
-      BackupMethodAvailableCheck.new()
-    )
-  end
-  
-  def set_vars
-    @title = "Replication service checks"
-  end
-end
-
 class ServiceNameCheck < ConfigureValidationCheck
-  include GroupValidationCheckMember
+  include ReplicationServiceValidationCheck
   
   def set_vars
     @title = "Service name check"
@@ -253,7 +236,7 @@ class ServiceNameCheck < ConfigureValidationCheck
 end
 
 class DifferentMasterSlaveCheck < ConfigureValidationCheck
-  include GroupValidationCheckMember
+  include ReplicationServiceValidationCheck
   
   def set_vars
     @title = "Different master/slave datasource check"

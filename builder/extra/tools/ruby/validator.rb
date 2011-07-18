@@ -151,8 +151,6 @@ PV_SCRIPTNAME = PropertyValidator.new('[A-Za-z0-9_\.]+',
   "Value must be a valid script filename")
 PV_HOSTNAME = PropertyValidator.new('[A-Za-z0-9_.]+', 
   "Value must consist only of letters, digits, underscore (_) and periods")
-PV_DBMSTYPE = PropertyValidator.new("mysql|postgresql", 
-  "Value must be a database (mysql, or postgresql)")
 PV_LOGTYPE = PropertyValidator.new("dbms|disk", 
   "Value must be a supported replicator log type:  dbms (store in db) or disk")
 PV_DBMSROLE = PropertyValidator.new("master|slave", 

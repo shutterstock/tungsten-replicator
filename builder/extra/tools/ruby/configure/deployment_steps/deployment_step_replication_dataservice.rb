@@ -24,23 +24,12 @@ module ConfigureDeploymentStepReplicationDataservice
     end
     
     # Configure replicator.properties.service.template
-		transformer = Transformer.new(
+    transformer = Transformer.new(
 		  get_replication_dataservice_template(service_config),
 			service_config.getProperty(REPL_SVC_CONFIG_FILE), "#")
 			
-		case service_config.getProperty([DATASERVERS, service_config.getProperty(REPL_DATASERVER), DBMS_TYPE])
-		when "mysql"
-		  transform_func = lambda do |line, service_name, service_config|
-		    transform_my_my_replication_dataservice_line(line, service_name, service_config)
-		  end
-		when "postgresql"
-		  transform_func = lambda do |line, service_name, service_config|
-		    transform_pg_pg_replication_dataservice_line(line, service_name, service_config)
-		  end
-		end
-		
 		transformer.transform { |line|
-		  transform_func.call(line, service_name, service_config)
+		  transform_replication_dataservice_line(line, service_name, service_config)
 		}
 		
 		if service_config.getProperty(REPL_SVC_START) == "true"
@@ -151,12 +140,12 @@ module ConfigureDeploymentStepReplicationDataservice
     elsif line =~ /replicator.global.apply.channels=/
       "replicator.global.apply.channels=" + service_config.getProperty(REPL_SVC_CHANNELS)
     elsif line =~ /replicator.store.parallel-queue=/ then
-          # Switch between disk and in-memory parallelization.
-          if service_config.getProperty(REPL_SVC_PARALLELIZATION_TYPE) == "memory"
-            "replicator.store.parallel-queue=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueStore"
-          else
-            "replicator.store.parallel-queue=com.continuent.tungsten.replicator.thl.THLParallelQueue"
-          end
+      # Switch between disk and in-memory parallelization.
+      if service_config.getProperty(REPL_SVC_PARALLELIZATION_TYPE) == "memory"
+        "replicator.store.parallel-queue=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueStore"
+      else
+        "replicator.store.parallel-queue=com.continuent.tungsten.replicator.thl.THLParallelQueue"
+      end
     elsif line =~ /replicator.extractor.parallel-q-extractor=/ then
       if service_config.getProperty(REPL_SVC_PARALLELIZATION_TYPE) == "memory"
         "replicator.extractor.parallel-q-extractor=com.continuent.tungsten.replicator.storage.parallel.ParallelQueueExtractor"
@@ -183,19 +172,28 @@ module ConfigureDeploymentStepReplicationDataservice
 	end
 	
 	def get_replication_dataservice_template(service_config)
-    dbms_type = service_config.getProperty([DATASERVERS, service_config.getProperty(REPL_DATASERVER), DBMS_TYPE])
-    
-    case dbms_type
-    when "mysql"
-      if service_config.getProperty(REPL_USE_DRIZZLE) == "true"
-  			"#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.mysql-with-drizzle-driver"
-  		else
-  		  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.mysql"
-  		end
-  	when "postgresql"
-  	  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.static.properties.postgresql"
-  	else
-  	  error("Unable to determine the replicator properties template for #{dbms_type}")
-  	end
+    raise "Unable to determine the replicator properties template for #{get_applier_dbms_type(service_config)}"
+	end
+	
+	def get_extractor_dbms_type(service_config)
+	  extractor_dataserver = service_config.getProperty(REPL_EXTRACTOR_DATASERVER)
+	  
+	  if extractor_dataserver != nil
+	    return service_config.getProperty([DATASERVERS, extractor_dataserver, DBMS_TYPE])
+	  else
+	    return get_applier_dbms_type(service_config)
+	  end
+	end
+	
+	def is_extractor(service_config, type)
+	  (get_applier_dbms_type(service_config) == type)
+	end
+	
+	def get_applier_dbms_type(service_config)
+	  return service_config.getProperty([DATASERVERS, service_config.getProperty(REPL_DATASERVER), DBMS_TYPE])
+	end
+	
+	def is_applier(service_config, type)
+	  (get_applier_dbms_type(service_config) == type)
 	end
 end

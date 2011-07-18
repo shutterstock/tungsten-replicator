@@ -215,13 +215,21 @@ module AdvancedPromptModule
   end
 end
 
-class AdvancedPrompt < ConfigurePrompt
-  include AdvancedPromptModule
-end
-
-class ConstantValuePrompt < AdvancedPrompt
+module ConstantValueModule
   def enabled?
     false
+  end
+  
+  def enabled_for_config?
+    true
+  end
+  
+  def get_disabled_value
+    if enabled_for_config?
+      get_value()
+    else
+      nil
+    end
   end
 end
 
