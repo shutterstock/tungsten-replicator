@@ -63,7 +63,7 @@ function filter(event)
         if(d instanceof com.continuent.tungsten.replicator.dbms.StatementData)
         {
             // It's a SQL statement event.
-            if(d.getDefaultSchema().compareTo(sourceName)==0)
+            if(d.getDefaultSchema() != null && d.getDefaultSchema().compareTo(sourceName)==0)
             {
                 logger.debug("dbrename: renaming schema from \"" + sourceName + "\" to \"" + targetName);
                 d.setDefaultSchema(targetName);
