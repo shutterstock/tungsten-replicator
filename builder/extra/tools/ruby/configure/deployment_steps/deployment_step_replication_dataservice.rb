@@ -186,7 +186,7 @@ module ConfigureDeploymentStepReplicationDataservice
 	end
 	
 	def is_extractor(service_config, type)
-	  (get_applier_dbms_type(service_config) == type)
+	  (get_extractor_dbms_type(service_config) == type)
 	end
 	
 	def get_applier_dbms_type(service_config)

@@ -271,7 +271,6 @@ end
 
 class THLStorageDirectory < ConfigurePrompt
   include ClusterHostPrompt
-  include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
   def initialize
@@ -311,7 +310,6 @@ end
 class THLStorageChecksum < ConfigurePrompt
   include ClusterHostPrompt
   include AdvancedPromptModule
-  include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
   def initialize
@@ -327,7 +325,6 @@ end
 class THLStorageConnectionTimeout < ConfigurePrompt
   include ClusterHostPrompt
   include AdvancedPromptModule
-  include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
   def initialize
@@ -343,7 +340,6 @@ end
 class THLStorageRetention < ConfigurePrompt
   include ClusterHostPrompt
   include AdvancedPromptModule
-  include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
   def initialize
@@ -359,7 +355,6 @@ end
 class THLStorageConsistency < ConfigurePrompt
   include ClusterHostPrompt
   include AdvancedPromptModule
-  include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
   def initialize
@@ -375,7 +370,6 @@ end
 class THLStorageFileSize < ConfigurePrompt
   include ClusterHostPrompt
   include AdvancedPromptModule
-  include GroupConfigurePromptMember
   include IsReplicatorPrompt
   
   def initialize

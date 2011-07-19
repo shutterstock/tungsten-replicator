@@ -115,6 +115,7 @@ class ConfigureServicePackage < ConfigurePackage
     output_usage_line("--local-service-name name", "Replicator service that owns master")
     output_usage_line("--master-host host_name", "Replicator remote master host name")
     output_usage_line("--master-port #", "Replicator remote master THL port")
+    output_usage_line("--direct-datasource alias", "Configuration alias for the datasource to extract events from")
     output_usage_line("--role [master|slave|direct]", "Replicator role", "slave")
     output_usage_line("--datasource alias", "Configuration alias of the datasource to use when applying events")
     output_usage_line("--service-type [local|remote]", "Replicator service type", "local")

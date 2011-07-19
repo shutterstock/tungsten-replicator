@@ -1,5 +1,3 @@
-require 'configure/modules/prompts_deployment.rb'
-
 REPL_ROLE_M = "master"
 REPL_ROLE_S = "slave"
 REPL_ROLE_DI = "direct"
