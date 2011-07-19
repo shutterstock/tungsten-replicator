@@ -69,6 +69,33 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class EnumToStringFilter implements Filter
 {
+    private class TableWithEnums
+    {
+        Table                      table           = null;
+        HashMap<Integer, String[]> enumDefinitions = null;
+
+        TableWithEnums(Table table)
+        {
+            this.table = table;
+        }
+
+        public Table getTable()
+        {
+            return this.table;
+        }
+
+        public HashMap<Integer, String[]> getEnumDefinitions()
+        {
+            return this.enumDefinitions;
+        }
+
+        public void setEnumDefinitions(
+                HashMap<Integer, String[]> enumDefinitions)
+        {
+            this.enumDefinitions = enumDefinitions;
+        }
+    }
+    
     private static Logger                               logger               = Logger.getLogger(EnumToStringFilter.class);
 
     // Metadata cache is a hashtable indexed by the database name and each
@@ -76,7 +103,7 @@ public class EnumToStringFilter implements Filter
     // order to be able to drop all table definitions at once if a DROP DATABASE
     // is trapped). Filling metadata cache is done in a lazy way. It will be
     // updated only when a table is used for the first time by a row event.
-    private Hashtable<String, Hashtable<String, Table>> metadataCache;
+    private Hashtable<String, Hashtable<String, TableWithEnums>> metadataCache;
 
     Database                                            conn                 = null;
 
@@ -125,7 +152,7 @@ public class EnumToStringFilter implements Filter
      */
     public void prepare(PluginContext context) throws ReplicatorException
     {
-        metadataCache = new Hashtable<String, Hashtable<String, Table>>();
+        metadataCache = new Hashtable<String, Hashtable<String, TableWithEnums>>();
 
         // Load defaults for connection 
         if (url == null)
@@ -243,7 +270,7 @@ public class EnumToStringFilter implements Filter
     {
         if (schemaName != null)
         {
-            Hashtable<String, Table> tableCache = metadataCache.get(schemaName);
+            Hashtable<String, TableWithEnums> tableCache = metadataCache.get(schemaName);
             if (tableCache != null && tableCache.remove(tableName) != null)
             {
                 if (logger.isDebugEnabled())
@@ -256,7 +283,7 @@ public class EnumToStringFilter implements Filter
         }
         else
         {
-            Hashtable<String, Table> tableCache = metadataCache.get(defaultDB);
+            Hashtable<String, TableWithEnums> tableCache = metadataCache.get(defaultDB);
             if (tableCache != null && tableCache.remove(tableName) != null)
                 logger.info("ALTER TABLE detected - Removing table metadata for '"
                         + defaultDB + "." + tableName + "'");
@@ -299,10 +326,24 @@ public class EnumToStringFilter implements Filter
         return enumElements;
     }
 
+    /**
+     * Connects to the MySQL database, executes SHOW COLUMNS for a defined table
+     * and parses out allowed ENUM values to their corresponding String
+     * representations.
+     * 
+     * @param schemaTable String in form of "schema.table" to execute SHOW
+     *            COLUMNS against.
+     * @param column ENUM type column to retrieve values about.
+     * @return Array of allowed ENUM values for the column. NOTE: index, as in
+     *         arrays, starts from zero (0), but MySQL ENUM values' numeric
+     *         representation starts from one (1) - thus, make sure you retrieve
+     *         the correct value from this array by shifting the key by one,
+     *         i.e.: [MySQLENUMValueNumeric - 1]
+     * @throws SQLException
+     */
     private String[] retrieveEnumeration(String schemaTable, String column)
             throws SQLException
     {
-        // TODO: cache possible enum values in metadata.
         String[] enumElements = null;
 
         // Get the allowed enum values.
@@ -350,14 +391,16 @@ public class EnumToStringFilter implements Filter
         return enumElements;
     }
 
-	/**
-	 * Checks for enum columns in the event. If found, transforms values from
-	 * integers to corresponding strings.
-	 */
-    private void checkForEnum(OneRowChange orc) throws SQLException
+    /**
+     * Checks for enum columns in the event. If found, transforms values from
+     * integers to corresponding strings.
+     */
+    private void checkForEnum(OneRowChange orc) throws SQLException,
+            ReplicatorException
     {
         String tableName = orc.getTableName();
 
+        // Check only a specific list of tables?
         if (schemas != null
                 && (!schemas.contains(orc.getSchemaName().toUpperCase()) && !tables
                         .contains((orc.getSchemaName() + "." + tableName)
@@ -373,14 +416,17 @@ public class EnumToStringFilter implements Filter
         {
             // Nothing defined yet in this database
             metadataCache.put(orc.getSchemaName(),
-                    new Hashtable<String, Table>());
+                    new Hashtable<String, TableWithEnums>());
         }
 
-        Hashtable<String, Table> dbCache = metadataCache.get(orc
+        Hashtable<String, TableWithEnums> dbCache = metadataCache.get(orc
                 .getSchemaName());
 
-        if (!dbCache.containsKey(tableName) || orc.getTableId() == -1
-                || dbCache.get(tableName).getTableId() != orc.getTableId())
+        if (!dbCache.containsKey(tableName)
+                || orc.getTableId() == -1
+                || dbCache.get(tableName).getTable() == null
+                || dbCache.get(tableName).getTable().getTableId() != orc
+                        .getTableId())
         {
             // This table was not processed yet or schema changed since it was
             // cached : fetch information about its primary key
@@ -391,49 +437,74 @@ public class EnumToStringFilter implements Filter
             Table newTable = conn.findTable(orc.getSchemaName(),
                     orc.getTableName());
             newTable.setTableId(orc.getTableId());
-            dbCache.put(tableName, newTable);
+            dbCache.put(tableName, new TableWithEnums(newTable));
         }
 
         // Is there any enum columns in this table? If so, retrieve enum
-        // definitions of each enum column.
-        HashMap<Integer, String[]> enumDefinitions = new HashMap<Integer, String[]>();
-        Table table = dbCache.get(tableName);
-        for(Column col : table.getAllColumns())
+        // definitions of each enum column.        
+        TableWithEnums table = dbCache.get(tableName);
+        // Have we already cached enum definitions?
+        HashMap<Integer, String[]> enumDefinitions = table.getEnumDefinitions();
+        if (enumDefinitions != null)
         {
-            if (col.getTypeDescription() != null)
-            {
-                if (col.getTypeDescription().compareTo("ENUM") == 0)
-                {
-                    if (logger.isDebugEnabled())
-                        logger.debug("ENUM @ " + col.getPosition() + " : "
-                                + table.getSchema() + "." + table.getName()
-                                + "." + col.getName());
-                    String[] enumDefinition = retrieveEnumeration(
-                            table.getSchema() + "." + table.getName(),
-                            col.getName());
-                    if (enumDefinition == null)
-                    {
-                        logger.error("Failed to retrieve enumeration definition for "
-                                + table.getSchema()
-                                + "."
-                                + table.getName()
-                                + "." + col.getName());
-                        return;
-                    }
-                    else
-                        enumDefinitions.put(col.getPosition(), enumDefinition);
-                }
-            }
-            else
-                logger.error("Column type description is null for "
-                        + table.getName() + "." + col.getName());
+            if (logger.isDebugEnabled())
+                logger.debug("Using ENUM cache (columns: "
+                        + enumDefinitions.size() + ") @ "
+                        + table.getTable().getSchema() + "."
+                        + table.getTable().getName());
         }
-
+        else
+        {
+            // Enum definitions not in cache, retrieve & cache.
+            enumDefinitions = new HashMap<Integer, String[]>();
+            for (Column col : table.getTable().getAllColumns())
+            {
+                if (col.getTypeDescription() != null)
+                {
+                    if (col.getTypeDescription().compareTo("ENUM") == 0)
+                    {
+                        if (logger.isDebugEnabled())
+                            logger.debug("ENUM @ " + col.getPosition() + " : "
+                                    + table.getTable().getSchema() + "."
+                                    + table.getTable().getName() + "."
+                                    + col.getName());
+                        String[] enumDefinition = retrieveEnumeration(table
+                                .getTable().getSchema()
+                                + "."
+                                + table.getTable().getName(), col.getName());
+                        if (enumDefinition == null)
+                        {
+                            logger.error("Failed to retrieve enumeration definition for "
+                                    + table.getTable().getSchema()
+                                    + "."
+                                    + table.getTable().getName()
+                                    + "."
+                                    + col.getName());
+                            return;
+                        }
+                        else
+                            enumDefinitions.put(col.getPosition(),
+                                    enumDefinition);
+                    }
+                }
+                else
+                    logger.error("Column type description is null for "
+                            + table.getTable().getName() + "." + col.getName());
+            }
+            // Cache the retrieved definitions.
+            if (logger.isDebugEnabled())
+                logger.debug("Saving ENUM definitions (columns: "
+                        + enumDefinitions.size() + ") to cache @ "
+                        + table.getTable().getSchema() + "."
+                        + table.getTable().getName());
+            table.setEnumDefinitions(enumDefinitions);
+        }
         if (enumDefinitions.size() == 0)
         {
             if (logger.isDebugEnabled())
-                logger.debug("No ENUM columns @ " + table.getSchema() + "."
-                        + table.getName());
+                logger.debug("No ENUM columns @ "
+                        + table.getTable().getSchema() + "."
+                        + table.getTable().getName());
             return;
         }
 
@@ -451,6 +522,7 @@ public class EnumToStringFilter implements Filter
     private void transformColumns(ArrayList<ColumnSpec> columns,
             ArrayList<ArrayList<ColumnVal>> columnValues,
             HashMap<Integer, String[]> enumDefinitions, String typeCaption)
+            throws ReplicatorException
     {
         // Looping through all and checking the real underlying index of each,
         // because there might be gaps as an outcome of some other filters.
@@ -462,7 +534,8 @@ public class EnumToStringFilter implements Filter
                 if (logger.isDebugEnabled())
                     logger.debug("Transforming " + typeCaption + "("
                             + colSpec.getIndex() + ")");
-                if (colSpec.getType() == java.sql.Types.OTHER /* ENUM */)
+                if (colSpec.getType() == java.sql.Types.OTHER /* ENUM */
+                        || colSpec.getType() == java.sql.Types.NULL)
                 {
                     // Change the underlying type in the event.
                     colSpec.setType(java.sql.Types.VARCHAR);
@@ -473,13 +546,39 @@ public class EnumToStringFilter implements Filter
                         // ColumnVal keyValue = keyValues.get(row).get(k);
                         ColumnVal colValue = columnValues.get(row).get(c);
                         // It must be integer at this point.
-                        int currentValue = (Integer) colValue.getValue();
-                        String newValue = enumDefinitions.get(colSpec
-                                .getIndex())[currentValue - 1];
-                        colValue.setValue(newValue);
-                        if (logger.isDebugEnabled())
-                            logger.debug("Row " + row + ": " + currentValue
-                                    + " -> " + newValue);
+                        if (colValue.getValue() != null)
+                        {
+                            int currentValue = (Integer) colValue.getValue();
+                            String enumDefs[] = enumDefinitions.get(colSpec
+                                    .getIndex());
+                            String newValue = null;
+                            if (currentValue > enumDefs.length)
+                            {
+                                throw new ReplicatorException("MySQL value ("
+                                        + currentValue + ") for ENUM @ Col "
+                                        + colSpec.getIndex() + " Row " + row
+                                        + " is greater than available values ("
+                                        + enumDefs.length + ")");
+                            }
+                            else if (currentValue == 0)
+                            {
+                                // MySQL stores an empty string in enum 0:
+                                newValue = "";
+                            }
+                            else
+                                newValue = enumDefs[currentValue - 1];
+                            colValue.setValue(newValue);
+                            if (logger.isDebugEnabled())
+                                logger.debug("Col " + colSpec.getIndex()
+                                        + " Row " + row + ": " + currentValue
+                                        + " -> " + newValue);
+                        }
+                        else
+                        {
+                            if (logger.isDebugEnabled())
+                                logger.debug("Col " + colSpec.getIndex()
+                                        + " Row " + row + ": null");
+                        }
                     }
                 }
                 else if (colSpec.getType() == java.sql.Types.VARCHAR)

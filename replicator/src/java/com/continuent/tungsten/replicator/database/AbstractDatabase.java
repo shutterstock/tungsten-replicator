@@ -878,6 +878,8 @@ public abstract class AbstractDatabase implements Database
                 Column column = new Column(colName, colType, colLength,
                         isNotNull, valueString);
                 column.setPosition(rsc.getInt("ORDINAL_POSITION"));
+                column.setTypeDescription(rsc.getString("TYPE_NAME")
+                        .toUpperCase());
                 table.AddColumn(column);
                 cm.put(column.getName(), column);
             }

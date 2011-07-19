@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,12 +17,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): Linas Virbalas
  */
 
 package com.continuent.tungsten.replicator.applier;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.Types;
@@ -34,11 +35,13 @@ import oracle.sql.CLOB;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.database.DBMS;
 import com.continuent.tungsten.replicator.database.AdditionalTypes;
 import com.continuent.tungsten.replicator.database.JdbcURL;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnVal;
+import com.continuent.tungsten.replicator.extractor.mysql.SerialBlob;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 public class OracleApplier extends JdbcApplier
@@ -134,25 +137,82 @@ public class OracleApplier extends JdbcApplier
             ColumnVal value, ColumnSpec columnSpec) throws SQLException
     {
         int type = columnSpec.getType();
-        if (value.getValue() == null)
-            prepStatement.setNull(bindLoc, type);
-        else if (type == Types.FLOAT)
-            ((OraclePreparedStatement) prepStatement).setBinaryFloat(bindLoc,
-                    ((Float) value.getValue()).floatValue());
-        else if (type == Types.DOUBLE)
-            ((OraclePreparedStatement) prepStatement).setBinaryDouble(bindLoc,
-                    ((Double) value.getValue()).doubleValue());
-        else if (type == AdditionalTypes.XML)
+        try
         {
-            CLOB clob = getCLOB((String) (value.getValue()));
-            ((OraclePreparedStatement) prepStatement).setObject(bindLoc, clob);
+            if (value.getValue() == null)
+                prepStatement.setObject(bindLoc, null);
+                /*prepStatement.setNull(bindLoc, type);
+            else if (type == Types.FLOAT)
+                ((OraclePreparedStatement) prepStatement).setBinaryFloat(
+                        bindLoc, ((Float) value.getValue()).floatValue());
+            else if (type == Types.DOUBLE)
+                ((OraclePreparedStatement) prepStatement).setBinaryDouble(
+                        bindLoc, ((Double) value.getValue()).doubleValue());*/
+            else if (type == AdditionalTypes.XML)
+            {
+                CLOB clob = getCLOB((String) (value.getValue()));
+                ((OraclePreparedStatement) prepStatement).setObject(bindLoc,
+                        clob);
+            }
+            else if (type == Types.DATE
+                    && !(value.getValue() instanceof java.sql.Date))
+            { // TENT-311 - no conversion is needed if the underlying value is
+              // Date.
+                Timestamp ts = new Timestamp((Long) (value.getValue()));
+                ((OraclePreparedStatement) prepStatement)
+                        .setObject(bindLoc, ts);
+            }
+            else if (type == Types.BLOB
+                    || (type == Types.NULL && value.getValue() instanceof SerialBlob))
+            { // ______^______
+              // Blob in the incoming event masked as NULL,
+              // though this happens with a non-NULL value!
+              // Case targeted with this: MySQL.TEXT -> Oracle.VARCHARx
+              // TODO: investigate why isn't the column of Types.BLOB as
+              // expected (related to TENT-323?).
+
+                SerialBlob blob = (SerialBlob) value.getValue();
+
+                if (columnSpec.isBlob())
+                {
+                    // Blob in the incoming event and in Oracle table.
+                    // IMPORTANT: the bellow way only fixes INSERTs.
+                    // TODO: implement Oracle BLOB support for key lookups (i.e.
+                    // DELETE, UPDATE).
+                    prepStatement.setBytes(bindLoc,
+                            blob.getBytes(1, (int) blob.length()));
+                    logger.warn("BLOB support in Oracle is only for INSERT currently; key lookup during DELETE/UPDATE will result in an error");
+                }
+                else
+                {
+                    // Blob in the incoming event, but not in Oracle.
+                    // Case targeted with this: MySQL.TEXT -> Oracle.VARCHARx
+                    String toString = null;
+                    if (blob != null)
+                        toString = new String(blob.getBytes(1,
+                                (int) blob.length()));
+                    prepStatement.setString(bindLoc, toString);
+                }
+            }
+            else
+                prepStatement.setObject(bindLoc, value.getValue());
         }
-        else if (type == Types.DATE)
+        catch (SQLException e)
         {
-            Timestamp ts = new Timestamp((Long)(value.getValue()));
-            ((OraclePreparedStatement) prepStatement).setObject(bindLoc, ts);
+            logger.error("Binding column (bindLoc=" + bindLoc + ", type="
+                    + type + ") failed:");
+            throw e;
         }
-        else
-            prepStatement.setObject(bindLoc, value.getValue());
+    }
+    
+    @Override
+    protected Column addColumn(ResultSet rs, String columnName)
+            throws SQLException
+    {
+        Column column = super.addColumn(rs, columnName);
+        int type = column.getType();
+        column.setBlob(type == Types.BLOB || type == Types.BINARY
+                || type == Types.VARBINARY || type == Types.LONGVARBINARY);
+        return column;
     }
 }
