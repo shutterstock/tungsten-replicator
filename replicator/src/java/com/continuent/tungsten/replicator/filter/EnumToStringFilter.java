@@ -461,7 +461,7 @@ public class EnumToStringFilter implements Filter
             {
                 if (col.getTypeDescription() != null)
                 {
-                    if (col.getTypeDescription().compareTo("ENUM") == 0)
+                    if (col.getTypeDescription().startsWith("ENUM"))
                     {
                         if (logger.isDebugEnabled())
                             logger.debug("ENUM @ " + col.getPosition() + " : "
