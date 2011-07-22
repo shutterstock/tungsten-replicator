@@ -213,7 +213,7 @@ replicator.stage.d-thl-to-pq.blockCommitRowCount=${replicator.global.buffer.size
 replicator.stage.d-pq-to-dbms=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.d-pq-to-dbms.extractor=parallel-q-extractor
 replicator.stage.d-pq-to-dbms.applier=oracle
-replicator.stage.d-pq-to-dbms.filters=nocreatedbifnotexists,dbupper,tosingledb,pkey,truncatetext
+replicator.stage.d-pq-to-dbms.filters=nocreatedbifnotexists,dbupper,tosingledb,pkey
 replicator.stage.d-pq-to-dbms.taskCount=${replicator.global.apply.channels}
 replicator.stage.d-pq-to-dbms.blockCommitRowCount=${replicator.global.buffer.size}
 
