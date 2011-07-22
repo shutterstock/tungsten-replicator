@@ -156,6 +156,7 @@ replicator.stage.binlog-to-q.applier=queue
 replicator.stage.q-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.q-to-thl.extractor=queue
 replicator.stage.q-to-thl.applier=thl-applier
+replicator.stage.q-to-thl.filters=
 replicator.stage.q-to-thl.blockCommitRowCount=${replicator.global.buffer.size}
 
 # SLAVE PIPELINE:  three stages:  extract from remote THL to local THL;
@@ -202,6 +203,7 @@ replicator.stage.d-binlog-to-q.applier=queue
 replicator.stage.d-q-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.d-q-to-thl.extractor=queue
 replicator.stage.d-q-to-thl.applier=thl-applier
+replicator.stage.d-q-to-thl.filters=
 
 # Extract from Tungsten log to parallel queue. 
 replicator.stage.d-thl-to-pq=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
@@ -491,6 +493,10 @@ replicator.filter.pkey=com.continuent.tungsten.replicator.filter.PrimaryKeyFilte
 # required for MySQL row replication if you have logic that requires column
 # names. 
 replicator.filter.colnames=com.continuent.tungsten.replicator.filter.ColumnNameFilter
+
+# Transform enum's int to string before it reaches THL.
+replicator.filter.enumtostringfilter=com.continuent.tungsten.replicator.filter.EnumToStringFilter
+replicator.filter.enumtostringfilter.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_${service.name}
 
 ################################
 # BACKUP/RESTORE CONFIGURATION #
