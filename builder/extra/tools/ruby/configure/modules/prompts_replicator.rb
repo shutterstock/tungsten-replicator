@@ -91,9 +91,9 @@ class DatabasePort < ConfigurePrompt
   
   def get_default_value
     if @config.getProperty(get_member_key(DBMS_TYPE)) == "mysql"
-      3306
+      "3306"
     else
-      5432
+      "5432"
     end
   end
 end

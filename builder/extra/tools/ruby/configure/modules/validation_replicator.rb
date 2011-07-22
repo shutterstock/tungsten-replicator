@@ -132,10 +132,8 @@ class THLStorageCheck < ConfigureValidationCheck
       if schemas != ""
         error("THL schema #{thl_schema} already exists at #{get_connection_summary_for(datasource_alias)}")
       end
-    when "postgresql"
-      warn("Currently unable to check for the THL schema in PostgreSQL")
     else
-      error("An invalid database type (#{@config.getProperty([DATASERVERS, datasource_alias, DBMS_TYPE])}) is specified for replication service: #{get_member()}")
+      warn("Currently unable to check for the THL schema in #{@config.getProperty([DATASERVERS, datasource_alias, DBMS_TYPE])}")
     end
   end
 end

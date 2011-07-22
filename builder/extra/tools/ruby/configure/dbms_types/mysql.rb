@@ -1,4 +1,5 @@
 DBMSTypePrompt.add_dbms_type(DBMS_MYSQL)
+REPL_MYSQL_ENABLE_ENUMTOSTRING = "repl_mysql_enable_enumtostring"
 
 #
 # Prompts
@@ -155,6 +156,29 @@ class ReplicationServiceUseDrizzle < MySQLAdvancedPrompt
   def initialize
     super(REPL_USE_DRIZZLE, "Use the Drizzle MySQL driver", 
       PV_BOOLEAN, "true")
+  end
+end
+
+class MySQLEnableEnumToString < ConfigurePrompt
+  include ReplicationServicePrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(REPL_MYSQL_ENABLE_ENUMTOSTRING, "Use the MySQL enumtostring filter", 
+      PV_BOOLEAN, "false")
+  end
+  
+  def enabled?
+    extractor = @config.getProperty(get_member_key(REPL_EXTRACTOR_DATASERVER))
+    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
+    
+    if extractor
+      dbms_type = @config.getProperty([DATASERVERS, extractor, DBMS_TYPE])
+    else
+      dbms_type = @config.getProperty([DATASERVERS, applier, DBMS_TYPE])
+    end
+    
+    super() && (dbms_type == DBMS_MYSQL)
   end
 end
 
@@ -473,6 +497,12 @@ module ConfigureDeploymentStepMySQL
 		    is_extractor(service_config, DBMS_MYSQL) && 
 		    service_config.getProperty(REPL_EXTRACTOR_USE_RELAY_LOGS) == "true"
 		  "replicator.extractor.mysql.serverId=#{service_config.getProperty(REPL_MYSQL_SERVER_ID)}"
+		elsif line =~ /replicator.stage.q-to-thl.filters=/ &&
+		    service_config.getProperty(REPL_MYSQL_ENABLE_ENUMTOSTRING) == "true"
+		  "replicator.stage.q-to-thl.filters=enumtostring"
+		elsif line =~ /replicator.stage.d-q-to-thl.filters=/ &&
+  		  service_config.getProperty(REPL_MYSQL_ENABLE_ENUMTOSTRING) == "true"
+		  "replicator.stage.d-q-to-thl.filters=enumtostring"
 		elsif line =~ /^replicator.backup.agent.xtrabackup.options/ && 
 		    service_config.getPropertyOr(REPL_BACKUP_METHOD) == "xtrabackup"
       directory = service_config.getProperty(REPL_BACKUP_DUMP_DIR) + "/innobackup"
