@@ -69,16 +69,16 @@ OS_ARCH_UNKNOWN = "unknown"
 DISTRIBUTED_DEPLOYMENT_NAME = "regular"
 DIRECT_DEPLOYMENT_HOST_ALIAS = "local"
 
-Dir[File.dirname(__FILE__) + '/configure/packages/*.rb'].each do |file| 
+Dir[File.dirname(__FILE__) + '/configure/packages/*.rb'].sort().each do |file| 
   require File.dirname(file) + '/' + File.basename(file, File.extname(file))
 end
-Dir[File.dirname(__FILE__) + '/configure/modules/*.rb'].each do |file| 
+Dir[File.dirname(__FILE__) + '/configure/modules/*.rb'].sort().each do |file| 
   require File.dirname(file) + '/' + File.basename(file, File.extname(file))
 end
-Dir[File.dirname(__FILE__) + '/configure/deployments/*.rb'].each do |file| 
+Dir[File.dirname(__FILE__) + '/configure/deployments/*.rb'].sort().each do |file| 
   require File.dirname(file) + '/' + File.basename(file, File.extname(file))
 end
-Dir[File.dirname(__FILE__) + '/configure/dbms_types/*.rb'].each do |file| 
+Dir[File.dirname(__FILE__) + '/configure/dbms_types/*.rb'].sort().each do |file| 
   require File.dirname(file) + '/' + File.basename(file, File.extname(file))
 end
 
