@@ -71,16 +71,7 @@ public class BinlogPosition implements FilenameFilter, Cloneable
      */
     public BinlogPosition(String directory, String baseName, int bufferSize)
     {
-        fIS = null;
-        dIS = null;
-        bIS = null;
-
-        setPosition(0);
-        this.eventID = 0;
-        setFileName(null);
-        setDirectory(directory);
-        setBaseName(baseName);
-        this.bufferSize = bufferSize;
+        this(0, null, directory, baseName, bufferSize);
     }
 
     /*
@@ -91,7 +82,7 @@ public class BinlogPosition implements FilenameFilter, Cloneable
      * @param baseName file name pattern for binlog files: basenName001.bin
      */
     public BinlogPosition(long position, String fileName, String directory,
-            String baseName, int bufferSize) throws MySQLExtractException
+            String baseName, int bufferSize)
     {
         fIS = null;
         dIS = null;

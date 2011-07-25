@@ -37,6 +37,7 @@ public class TaskProgress
     private ReplDBMSHeader lastEvent           = null;
     private boolean        cancelled           = false;
     private long           eventCount          = 0;
+    private long           blockCount          = 0;
     private long           applyLatencyMillis  = 0;
     private long           startMillis;
     private long           totalExtractMillis  = 0;
@@ -73,6 +74,7 @@ public class TaskProgress
         this.applyLatencyMillis = other.getApplyLatencyMillis();
         this.cancelled = other.isCancelled();
         this.eventCount = other.getEventCount();
+        this.blockCount = other.getBlockCount();
         this.lastEvent = other.getLastEvent();
         this.startMillis = other.getStartMillis();
         this.endMillis = other.getEndMillis();
@@ -135,6 +137,21 @@ public class TaskProgress
     public void incrementEventCount()
     {
         this.eventCount++;
+    }
+
+    public long getBlockCount()
+    {
+        return blockCount;
+    }
+
+    public void setBlockCount(long blockCount)
+    {
+        this.blockCount = blockCount;
+    }
+
+    public void incrementBlockCount()
+    {
+        this.blockCount++;
     }
 
     /** Return apply latency in milliseconds. Sub-zero values are rounded to 0. */

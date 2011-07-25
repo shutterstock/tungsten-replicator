@@ -847,6 +847,15 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                             Boolean.toString(progress.isCancelled()));
                     props.put("eventCount",
                             Long.toString(progress.getEventCount()));
+                    long blockCount = progress.getBlockCount();
+                    double avgBlock;
+                    if (blockCount > 0)
+                        avgBlock = (double) progress.getEventCount()
+                                / blockCount;
+                    else
+                        avgBlock = 0.0;
+                    props.put("averageBlockSize",
+                            String.format("%-10.3f", avgBlock));
                     props.put("appliedLatency",
                             Double.toString(progress.getApplyLatencySeconds()));
                     props.put("extractTime",

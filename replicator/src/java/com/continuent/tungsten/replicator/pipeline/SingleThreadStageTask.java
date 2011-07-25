@@ -282,6 +282,7 @@ public class SingleThreadStageTask implements Runnable
                             }
                             applier.commit();
                             blockEventCount = 0;
+                            taskProgress.incrementBlockCount();
                         }
                         else
                         {
@@ -383,6 +384,8 @@ public class SingleThreadStageTask implements Runnable
                             applier.apply(new ReplDBMSFilteredEvent(
                                     firstFilteredEvent, lastFilteredEvent),
                                     true, false, syncTHLWithExtractor);
+                            blockEventCount = 0;
+                            taskProgress.incrementBlockCount();
                             firstFilteredEvent = null;
                             lastFilteredEvent = null;
                         }
@@ -425,6 +428,7 @@ public class SingleThreadStageTask implements Runnable
                     // Starting a new fragmented transaction
                     applier.commit();
                     blockEventCount = 0;
+                    taskProgress.incrementBlockCount();
                 }
                 else
                 {
@@ -440,6 +444,7 @@ public class SingleThreadStageTask implements Runnable
                         // back
                         applier.commit();
                         blockEventCount = 0;
+                        taskProgress.incrementBlockCount();
                         doRollback = true;
                     }
                     else if (unsafeForBlockCommit)
@@ -448,7 +453,7 @@ public class SingleThreadStageTask implements Runnable
                         // afterwards.
                         applier.commit();
                         blockEventCount = 0;
-
+                        taskProgress.incrementBlockCount();
                     }
 
                 }
@@ -473,7 +478,6 @@ public class SingleThreadStageTask implements Runnable
                                     .hasMoreEvents()))
                     {
                         doCommit = true;
-                        blockEventCount = 0;
                     }
                 }
                 else
@@ -495,6 +499,11 @@ public class SingleThreadStageTask implements Runnable
                     // anyway, enforcing this here by testing both values
                     applier.apply(event, doCommit, doRollback,
                             syncTHLWithExtractor);
+                    if (doCommit)
+                    {
+                        blockEventCount = 0;
+                        taskProgress.incrementBlockCount();
+                    }
                 }
                 catch (ApplierException e)
                 {
@@ -592,7 +601,6 @@ public class SingleThreadStageTask implements Runnable
             {
                 // Commit if we are at the end of the block.
                 doCommit = true;
-                blockEventCount = 0;
             }
             else
             {
@@ -612,6 +620,11 @@ public class SingleThreadStageTask implements Runnable
         taskProgress.beginApplyInterval();
         applier.updatePosition(header, doCommit, false);
         taskProgress.endApplyInterval();
+        if (doCommit)
+        {
+            blockEventCount = 0;
+            taskProgress.incrementBlockCount();
+        }
     }
 
     // Utility routine to log error event with exception handling.
