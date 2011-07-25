@@ -44,6 +44,7 @@ class ServiceConfigurator
   REPL_SVC_EXTRACT_DB_USER = "repl_svc_extract_db_user"
   REPL_SVC_EXTRACT_DB_PASSWORD = "repl_svc_extract_db_password"
   REPL_SVC_PARALLELIZATION_TYPE = "repl_svc_parallelization_type"
+  REPL_SVC_NATIVE_SLAVE_TAKEOVER = "repl_svc_native_slave_takeover"
 
   # Initialize configuration arguments.
   def initialize(arguments, stdin)
@@ -158,6 +159,8 @@ class ServiceConfigurator
       @config_overrides.setProperty(REPL_SVC_SHARD_DEFAULT_DB, val)}
     opts.on("--parallelization-type String") {|val|
       @config_overrides.setProperty(REPL_SVC_PARALLELIZATION_TYPE, val)}
+    opts.on("--native-slave-takeover String") {|val|
+      @config_overrides.setProperty(REPL_SVC_NATIVE_SLAVE_TAKEOVER, val)}
     opts.on("--allow-bidi-unsafe String") {|val|
       @config_overrides.setProperty(REPL_SVC_ALLOW_BIDI_UNSAFE, val)}
     opts.on("--allow-any-remote-service String") {|val|
@@ -248,6 +251,8 @@ class ServiceConfigurator
       output_param(cfg_loaded, REPL_MASTERHOST)
     printf "--master-port      Replicator remote master port [%s]\n", 
       output_param(cfg_loaded, REPL_SVC_MASTERPORT)
+    printf "--native-slave-takeover Replacing native slave replication [%s]\n", 
+      output_param(cfg_loaded, REPL_SVC_NATIVE_SLAVE_TAKEOVER)
     printf "--parallelization-type Parallelization method (disk|memory) [%s]\n", 
       output_param(cfg_loaded, REPL_SVC_PARALLELIZATION_TYPE)
     printf "--relay-log-dir    Directory for relay log files [%s]\n", 
@@ -301,6 +306,7 @@ class ServiceConfigurator
     @config.setProperty(REPL_SVC_ALLOW_BIDI_UNSAFE, "false")
     @config.setProperty(REPL_SVC_ALLOW_ANY_SERVICE, "false")
     @config.setProperty(REPL_SVC_PARALLELIZATION_TYPE, "memory")
+    @config.setProperty(REPL_SVC_NATIVE_SLAVE_TAKEOVER, "false")
 
     # Apply override values. 
     @config_overrides.hash().keys.each {|key| 
@@ -547,6 +553,12 @@ class ServiceConfigurator
         end
       elsif line =~ /replicator.role=/ then
         "replicator.role=" + @config.props[REPL_ROLE]
+      elsif line =~ /replicator.nativeSlaveTakeover=/ then
+        if @config.props[REPL_SVC_NATIVE_SLAVE_TAKEOVER] == "true"
+          "replicator.nativeSlaveTakeover=true"
+        else
+          "replicator.nativeSlaveTakeover=false"
+        end
       elsif line =~ /local.service.name=/ then
         "local.service.name=" + @config.props[GLOBAL_DSNAME]
       elsif line =~ /service.name=/ then
