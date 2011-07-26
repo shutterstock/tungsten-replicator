@@ -107,11 +107,10 @@ public class THLParallelReadQueue
                         + readSeqno + " lastFrag=" + lastFrag);
             }
             eventQueue.put(controlEvent);
-            sync(controlEvent.getSeqno(), true);
         }
         else
         {
-            // TODO: Potential deadlock!
+            // TODO: Potential deadlock if the controlQueue is full!
             if (logger.isDebugEnabled())
             {
                 logger.debug("Buffering control event for future handling:  seqno="
@@ -121,7 +120,7 @@ public class THLParallelReadQueue
                         + " readSeqno="
                         + readSeqno + " lastFrag=" + lastFrag);
             }
-            this.controlQueue.put(controlEvent);
+            controlQueue.put(controlEvent);
         }
     }
 
@@ -142,7 +141,31 @@ public class THLParallelReadQueue
         else
             header = ((ReplControlEvent) replEvent).getHeader();
 
+        // Post the event we received.
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Adding event to parallel queue:  seqno="
+                    + replEvent.getSeqno());
+        }
+        eventQueue.put(replEvent);
+
+        // Sync our position.
         sync(header.getSeqno(), header.getLastFrag());
+    }
+
+    /**
+     * Synchronizes the current position of the queue by storing the sequence
+     * number and whether we are in a fragmented transaction. Automatically
+     * posts any pending control events, if these are present. This method must
+     * be called whenever we read even if there is no event to post so that
+     * control events are correctly folded into event stream fed to clients.
+     */
+    public synchronized void sync(long seqno, boolean lastFrag)
+            throws InterruptedException
+    {
+        // Update our position.
+        this.readSeqno = seqno;
+        this.lastFrag = lastFrag;
 
         // If there is a pending out-of-band control event and we are at the end
         // of the transaction, post that event now.
@@ -160,25 +183,6 @@ public class THLParallelReadQueue
             controlEvent = controlQueue.take();
             eventQueue.put(controlEvent);
         }
-
-        // Post the event we received.
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Adding event to parallel queue:  seqno="
-                    + replEvent.getSeqno());
-        }
-        eventQueue.put(replEvent);
-    }
-
-    /**
-     * Synchronizes the current position of the queue by storing the sequence
-     * number and whether we are in a fragmented transaction. This must be
-     * updated whenever we read even if there is no event to post.
-     */
-    public synchronized void sync(long seqno, boolean lastFrag)
-    {
-        this.readSeqno = seqno;
-        this.lastFrag = lastFrag;
     }
 
     /**
