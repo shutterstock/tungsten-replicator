@@ -103,10 +103,11 @@ class Configurator
   def initialize()
     # Set instance variables.
     @remote_messages = []
-    @package = ConfigurePackageCluster.new(@config)
     
     # This is the configuration object that will be stored
     @config = Properties.new
+    
+    @package = ConfigurePackageCluster.new(@config)
 
     # Set command line argument defaults.
     @options = OpenStruct.new
@@ -385,6 +386,9 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("-a", "--advanced")       {|val| @options.advanced = true}
     opts.on("-b", "--batch")          {|val| @options.interactive = false}
     opts.on("-c", "--config String")  {|val| @options.config = val }
+    opts.on("--config-file-help")          {
+      @options.display_help = true
+      @options.display_config_file_help = true }
     opts.on("-f", "--force")          {@options.force = true}
     opts.on("-h", "--help")           {|val| @options.display_help = true }
     opts.on("-i", "--interactive")    {|val| @options.interactive = true}
@@ -434,6 +438,12 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     
     if display_help?()
       output_help
+      
+      if display_config_file_help?()
+        write_header('Config File Options')
+        display_config_file_help()
+      end
+      
       exit 0
     end
     
@@ -537,12 +547,25 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     write_from_file(filename)
   end
   
+  def display_config_file_help
+    prompt_handler = ConfigurePromptHandler.new(@config)
+    prompt_handler.output_config_file_usage()
+  end
+  
   def display_help?(enabled = nil)
     if enabled != nil
       @options.display_help = enabled
     end
     
     return @options.display_help
+  end
+  
+  def display_config_file_help?(enabled = nil)
+    if enabled != nil
+      @options.display_config_file_help = enabled
+    end
+    
+    return @options.display_config_file_help
   end
   
   # Write a header
@@ -708,6 +731,19 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       File.expand_path(File.dirname(__FILE__) + "/../../")
     else
       File.expand_path(File.dirname(__FILE__) + "/../")
+    end
+  end
+  
+  def get_package_path
+    if is_full_tungsten_package?()
+      get_base_path()
+    else
+      runtime_path = File.expand_path(get_base_path() + "/.runtime/" + get_release_name())
+      if File.exists?(runtime_path)
+        return runtime_path
+      else
+        return nil
+      end
     end
   end
   
@@ -899,6 +935,42 @@ def cmd_result(command, ignore_fail = false)
   end
   
   return result
+end
+
+def output_usage_line(argument, msg = "", default = nil, max_line = 70)
+  if msg.is_a?(String)
+    msg = msg.split("\n").join(" ")
+  end
+  
+  if default.to_s() != ""
+    if msg != ""
+      msg += " "
+    end
+    
+    msg += "[#{default}]"
+  end
+  
+  if argument.length > 28 || (argument.length + msg.length > max_line)
+    puts argument
+    
+    words = msg.split(' ')
+    
+    force_add_word = true
+    line = format("%-29s", " ")
+    while words.length() > 0
+      if !force_add_word && line.length() + words[0].length() > max_line
+        puts line
+        line = format("%-29s", " ")
+        force_add_word = true
+      else
+        line += " " + words.shift()
+        force_add_word = false
+      end
+    end
+    puts line
+  else
+    puts format("%-29s", argument) + " " + msg
+  end
 end
 
 # The user has requested to save all current configuration values and exit

@@ -287,6 +287,7 @@ class GroupConfigurePrompt
       
       block.call(prompt)
     }
+    self
   end
   
   # Loop over each member-prompt combination to execute &block
@@ -320,6 +321,15 @@ class GroupConfigurePrompt
     else
       true
     end
+  end
+  
+  def output_config_file_usage
+    puts ""
+    output_usage_line(@name + ".<alias>", @prompt)
+    each_prompt{
+      |p|
+      p.output_config_file_usage()
+    }
   end
 end
 
@@ -401,6 +411,10 @@ module GroupConfigurePromptMember
   # Build the description filename based on the basic config key
   def get_prompt_description_filename()
     "#{get_interface_text_directory()}/prompt_#{@name}"
+  end
+  
+  def output_config_file_usage
+    output_usage_line("  ." + @name, get_prompt(), get_default_value())
   end
 end
 

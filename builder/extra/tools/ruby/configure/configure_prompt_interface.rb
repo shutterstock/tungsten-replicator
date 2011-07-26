@@ -154,6 +154,10 @@ module ConfigurePromptInterface
     return description
   end
   
+  def output_config_file_usage
+    output_usage_line(get_name(), get_prompt(), get_default_value())
+  end
+  
   def ssh_result(command, ignore_fail = false, host = nil, user = nil)
     if (user == nil)
       user = @config.getProperty(USERID)
@@ -177,5 +181,10 @@ module ConfigurePromptInterface
     end
     
     return result
+  end
+  
+  def each_prompt(&block)
+    block.call(self)
+    self
   end
 end

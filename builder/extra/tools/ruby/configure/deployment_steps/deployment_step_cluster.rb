@@ -11,6 +11,7 @@ module ConfigureDeploymentStepDeployment
     symlink_source = false
     unless @config.getProperty(HOME_DIRECTORY) == Configurator.instance.get_base_path() || ("#{@config.getProperty(HOME_DIRECTORY)}/releases/#{Configurator.instance.get_basename()}" == Configurator.instance.get_base_path())
       if @config.getProperty(DEPLOY_CURRENT_PACKAGE) == "true"
+        package_path = Configurator.instance.get_package_path()
         if @config.getProperty(HOME_DIRECTORY) == get_deployment_basedir()
           destination = get_deployment_basedir()
           mkdir_if_absent(File.dirname(destination))
@@ -18,11 +19,11 @@ module ConfigureDeploymentStepDeployment
         else
           destination = "#{@config.getProperty(HOME_DIRECTORY)}/releases"
           mkdir_if_absent(destination)
-          symlink_source = "#{destination}/#{Configurator.instance.get_basename()}"
+          symlink_source = "#{destination}/#{File.basename(package_path)}"
         end
         
-        debug("Copy #{Configurator.instance.get_base_path()} to #{destination}")
-        cmd_result("cp -rf #{Configurator.instance.get_base_path()} #{destination}")
+        debug("Copy #{package_path} to #{destination}")
+        cmd_result("cp -rf #{package_path} #{destination}")
       else
         destination = "#{@config.getProperty(HOME_DIRECTORY)}/releases"
         mkdir_if_absent(destination)

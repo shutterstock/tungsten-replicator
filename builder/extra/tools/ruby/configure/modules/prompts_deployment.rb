@@ -59,7 +59,7 @@ class DeployCurrentPackagePrompt < ConfigurePrompt
   
   def enabled?
     Configurator.instance.get_deployment().require_package_uri() && 
-      Configurator.instance.is_full_tungsten_package?()
+      (Configurator.instance.get_package_path() != nil)
   end
 end
 

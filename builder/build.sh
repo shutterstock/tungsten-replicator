@@ -514,3 +514,28 @@ if [ "$SKIP_SOURCE" = 0 ]; then
 else
   echo "### Skipping source code release generation"
 fi
+
+##########################################################################
+# Create tools build if desired.
+##########################################################################
+
+if [ ${SKIP_TOOLS} -eq 0 ]
+then
+  printHeader "Creating tools release"
+
+  reldir_tools=${reldir}-tools
+  echo "### Creating tools release directory: ${reldir_tools}"
+  rm -rf ${reldir_tools}
+  mkdir -p ${reldir_tools}
+  mkdir -p ${reldir_tools}/.runtime
+  
+  cp $extra_tools/configure $reldir_tools
+  cp $extra_tools/tungsten-installer $reldir_tools
+  rsync -Ca $extra_tools/ruby $reldir_tools
+  rsync -Ca $extra_tools/ruby-tools-only/* $reldir_tools/ruby/
+  
+  cp -rf ${reldir} ${reldir_tools}/.runtime
+  cp -rf ${reldir}/.man* ${reldir_tools}
+else
+  echo "### Skipping tools release generation"
+fi

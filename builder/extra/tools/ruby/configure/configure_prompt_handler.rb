@@ -220,6 +220,21 @@ class ConfigurePromptHandler
     filename = File.dirname(__FILE__) + "/interface_text/configure_prompt_handler_run"
     Configurator.instance.write_from_file(filename)
   end
+  
+  def each_prompt(&block)
+    @prompts.each{
+      |x|
+      x.each_prompt(&block)
+    }
+    self
+  end
+  
+  def output_config_file_usage
+    @prompts.each{
+      |prompt|
+      prompt.output_config_file_usage()
+    }
+  end
 end
 
 class ConfigurePromptError < StandardError

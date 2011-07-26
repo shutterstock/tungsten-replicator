@@ -1,5 +1,4 @@
 DBMSTypePrompt.add_dbms_type(DBMS_MYSQL)
-REPL_MYSQL_ENABLE_ENUMTOSTRING = "repl_mysql_enable_enumtostring"
 
 #
 # Prompts
@@ -161,11 +160,24 @@ end
 
 class MySQLEnableEnumToString < ConfigurePrompt
   include ReplicationServicePrompt
-  include AdvancedPromptModule
   
   def initialize
-    super(REPL_MYSQL_ENABLE_ENUMTOSTRING, "Use the MySQL enumtostring filter", 
-      PV_BOOLEAN, "false")
+    super(REPL_MYSQL_ENABLE_ENUMTOSTRING, "Expand ENUM values into their text values?", 
+      PV_BOOLEAN)
+  end
+  
+  def get_default_value
+    extractor = @config.getProperty(get_member_key(REPL_EXTRACTOR_DATASERVER))
+    
+    if extractor
+      applier = @config.getProperty(get_member_key(REPL_DATASERVER))
+      if @config.getProperty([DATASERVERS, extractor, DBMS_TYPE]) != 
+          dbms_type = @config.getProperty([DATASERVERS, applier, DBMS_TYPE])
+        return "true"
+      end
+    end
+    
+    return "false"
   end
   
   def enabled?

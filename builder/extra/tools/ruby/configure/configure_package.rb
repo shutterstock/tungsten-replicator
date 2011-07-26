@@ -41,49 +41,17 @@ class ConfigurePackage
   def output_general_usage
     Configurator.instance.write_divider(Logger::ERROR)
     puts "General options:"
-    puts "-a, --advanced        Enable advanced options"
-    puts "-b, --batch           Execute the configuration without interactive prompts"
-    puts "-c, --config file     Sets name of config file (default: tungsten.cfg)"
-    puts "-f, --force           Do not display confirmation prompts or stop the configure process for errors"
-    puts "-h, --help            Displays help message"
-    puts "-q, --quiet           Only display error messages"
-    puts "-v, --verbose         Display all messages"
-    puts "--no-validation       Skip all validation checks"
-    puts "--validate-only       Skip all deployment steps"
-    puts "--configure=key=value Set the default configure script value for the given key to the value"
-    puts "--property=key=value  Set the property key to the value in any file that is modified by the configure script"
-  end
-  
-  def output_usage_line(argument, msg = "", default = nil, max_line = 70)
-    if default.to_s() != ""
-      if msg != ""
-        msg += " "
-      end
-      
-      msg += "[#{default}]"
-    end
-    
-    if argument.length > 28 || (argument.length + msg.length > max_line)
-      puts argument
-      
-      words = msg.split(' ')
-      
-      force_add_word = true
-      line = format("%-29s", " ")
-      while words.length() > 0
-        if !force_add_word && line.length() + words[0].length() > max_line
-          puts line
-          line = format("%-29s", " ")
-          force_add_word = true
-        else
-          line += " " + words.shift()
-          force_add_word = false
-        end
-      end
-      puts line
-      
-    else
-      puts format("%-29s", argument) + " " + msg
-    end
+    output_usage_line("-a, --advanced", "Enabled advanced options")
+    output_usage_line("-b, --batch", "Execute the configuration without interactive prompts")
+    output_usage_line("-c, --config file", "Sets name of config file (default: tungsten.cfg)")
+    output_usage_line("--config-file-help", "Display help information for content of the config file")
+    output_usage_line("-f, --force", "Do not display confirmation prompts or stop the configure process for errors")
+    output_usage_line("-h, --help", "Displays help message")
+    output_usage_line("-q, --quiet", "Only display error messages")
+    output_usage_line("-v, --verbose", "Display all messages")
+    output_usage_line("--no-validation", "Skip all validation checks")
+    output_usage_line("--validate-only", "Skip all deployment steps")
+    output_usage_line("--configure=key=value", "Set the default configure script value for the given key to the value")
+    output_usage_line("--property=key=value", "Set the property key to the value in any file that is modified by the configure script")
   end
 end
