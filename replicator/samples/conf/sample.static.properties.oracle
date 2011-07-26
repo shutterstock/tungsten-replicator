@@ -107,7 +107,7 @@ replicator.global.apply.channels=1
 replicator.shard.default.db=stringent
 
 # Used by manager to create datasources dynamically
-replicator.resourceJdbcUrl=jdbc:oracle:thin:${replicator.global.db.host}:${replicator.global.db.port}:${DBNAME}
+replicator.resourceJdbcUrl=jdbc:oracle:thin:@${replicator.global.db.host}:${replicator.global.db.port}:${DBNAME}
 replicator.resourceJdbcDriver=oracle.jdbc.driver.OracleDriver
 replicator.resourceVendor=oracle
 replicator.resourcePrecedence=99
@@ -238,7 +238,7 @@ replicator.stage.binlog-to-dummy.applier=dummy
 replicator.store.thl=com.continuent.tungsten.replicator.thl.THL
 
 # All THL implementations require database access to store metadata. 
-replicator.store.thl.url=jdbc:oracle:thin:${replicator.global.db.host}:${replicator.global.db.port}:${replicator.applier.oracle.service}
+replicator.store.thl.url=jdbc:oracle:thin:@${replicator.global.db.host}:${replicator.global.db.port}:${replicator.applier.oracle.service}
 #TODO: add support for: oracle.jdbc.RetainV9LongBindBehavior=true
 replicator.store.thl.user=${replicator.global.db.user}
 replicator.store.thl.password=${replicator.global.db.password}
@@ -495,7 +495,7 @@ replicator.filter.ignoreserver.server_ids=3,7
 # Primary key filter.  This filter is required for MySQL row replication to 
 # reduce the number of columns used in comparisons for updates and deletes. 
 replicator.filter.pkey=com.continuent.tungsten.replicator.filter.PrimaryKeyFilter
-replicator.filter.pkey.url=jdbc:oracle:thin:@localhost:${replicator.global.db.port}:${replicator.applier.oracle.service}
+replicator.filter.pkey.url=jdbc:oracle:thin:@${replicator.global.db.host}:${replicator.global.db.port}:${replicator.applier.oracle.service}
 
 # Column name filter.  Adds column name metadata to row updates.  This is 
 # required for MySQL row replication if you have logic that requires column
@@ -519,8 +519,8 @@ replicator.filter.nocreatedbifnotexists=com.continuent.tungsten.replicator.filte
 replicator.filter.nocreatedbifnotexists.script=${replicator.home.dir}/samples/extensions/javascript/nocreatedbifnotexists.js
 
 # Transform enum's int to string before it reaches THL.
-replicator.filter.enumtostringfilter=com.continuent.tungsten.replicator.filter.EnumToStringFilter
-replicator.filter.enumtostringfilter.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_${service.name}
+replicator.filter.enumtostring=com.continuent.tungsten.replicator.filter.EnumToStringFilter
+replicator.filter.enumtostring.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_${service.name}
 
 ################################
 # BACKUP/RESTORE CONFIGURATION #

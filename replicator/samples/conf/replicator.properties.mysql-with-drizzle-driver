@@ -495,8 +495,8 @@ replicator.filter.pkey=com.continuent.tungsten.replicator.filter.PrimaryKeyFilte
 replicator.filter.colnames=com.continuent.tungsten.replicator.filter.ColumnNameFilter
 
 # Transform enum's int to string before it reaches THL.
-replicator.filter.enumtostringfilter=com.continuent.tungsten.replicator.filter.EnumToStringFilter
-replicator.filter.enumtostringfilter.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_${service.name}
+replicator.filter.enumtostring=com.continuent.tungsten.replicator.filter.EnumToStringFilter
+replicator.filter.enumtostring.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_${service.name}
 
 ################################
 # BACKUP/RESTORE CONFIGURATION #
