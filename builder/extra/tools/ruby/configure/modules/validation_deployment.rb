@@ -33,7 +33,7 @@ class WriteableTempDirectoryCheck < ConfigureValidationCheck
   end
   
   def validate
-    validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
+    validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}/"
     debug "Checking #{validation_temp_directory}"
     
     begin

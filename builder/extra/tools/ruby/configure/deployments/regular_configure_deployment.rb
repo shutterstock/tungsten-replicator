@@ -27,7 +27,7 @@ class RegularConfigureDeployment < ConfigureDeployment
       
       if !(Configurator.instance.is_localhost?(@config.getProperty([HOSTS, host_alias, HOST]))) && @config.getProperty(REPL_MYSQL_CONNECTOR_PATH)
         config_obj.setProperty(GLOBAL_REPL_MYSQL_CONNECTOR_PATH, config_obj.getProperty(REPL_MYSQL_CONNECTOR_PATH))
-        config_obj.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{@config.getProperty([HOSTS, host_alias, TEMP_DIRECTORY])}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/#{File.basename(config_obj.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
+        config_obj.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{@config.getProperty([HOSTS, host_alias, TEMP_DIRECTORY])}/#{Configurator.instance.get_unique_basename()}/#{File.basename(config_obj.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
       end
     
       config_objs.push(config_obj)

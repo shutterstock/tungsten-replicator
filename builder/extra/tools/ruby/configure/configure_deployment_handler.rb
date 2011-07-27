@@ -22,7 +22,7 @@ class ConfigureDeploymentHandler
     @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
     
     unless Configurator.instance.is_localhost?(@config.getProperty(HOST))
-      validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}/"
+      validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}/"
       
       # Transfer validation code
       debug("Transfer configuration code to #{@config.getProperty(HOST)}")
@@ -74,7 +74,7 @@ class ConfigureDeploymentHandler
       Configurator.instance.write ""
       Configurator.instance.write_header "Remote deploy #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
       
-      deployment_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator::TEMP_DEPLOY_DIRECTORY}/#{Configurator.instance.get_basename()}"
+      deployment_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}"
       command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options.join(' ')}"
       debug(command)
       
@@ -91,16 +91,7 @@ class ConfigureDeploymentHandler
         end
         ssh.close()
       else
-        user = @config.getProperty(USERID)
-        host = @config.getProperty(HOST)
-        result_dump = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; #{command}\" 2>/dev/null`.chomp
-        rc = $?
-
-        if rc != 0
-          raise "Failed: #{command}, RC: #{rc}, Result: #{result_dump}"
-        else
-          Configurator.instance.debug("RC: #{rc}, Result: #{result_dump}")
-        end
+        result_dump = ssh_result(command)
       end
       
       begin
@@ -116,7 +107,49 @@ class ConfigureDeploymentHandler
     end
   end
   
+  def cleanup(configs)
+    reset_errors()
+    configs.each{
+      |config|
+      
+      @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+      begin
+        unless Configurator.instance.is_localhost?(@config.getProperty(HOST))
+          ssh_result("rm -rf #{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}", true)
+        end
+      rescue
+      end
+    }
+    
+    is_valid?()
+  end
+  
   def get_message_hostname
     @config.getProperty(HOST)
+  end
+  
+  def ssh_result(command, ignore_fail = false, host = nil, user = nil)
+    if (user == nil)
+      user = @config.getProperty(USERID)
+    end
+    if (host == nil)
+      host = @config.getProperty(HOST)
+    end
+    
+    if Configurator.instance.is_localhost?(host) && user == Configurator.instance.whoami()
+      return cmd_result(command, ignore_fail)
+    end
+    
+    debug("Execute `#{command}` on #{host}")
+    result = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; export LANG=en_US; #{command}\" 2>&1`.chomp
+    rc = $?
+    
+    if rc != 0 && ! ignore_fail
+      raise RemoteCommandError.new(user, host, command, rc, result)
+    else
+      debug("RC: #{rc}, Result: #{result}")
+    end
+    
+    return result
   end
 end

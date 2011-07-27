@@ -140,6 +140,10 @@ class ConfigureDeployment
     obj.deploy()
   end
   
+  def cleanup
+    get_deployment_handler().cleanup(get_deployment_configurations())
+  end
+  
   def get_validation_handler_class
     ConfigureValidationHandler
   end

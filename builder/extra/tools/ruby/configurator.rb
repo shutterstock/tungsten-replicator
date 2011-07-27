@@ -93,7 +93,6 @@ class Configurator
   
   CLUSTER_CONFIG = "cluster.cfg"
   HOST_CONFIG = "tungsten.cfg"
-  TEMP_DEPLOY_DIRECTORY = "tungsten_configure"
   TEMP_DEPLOY_HOST_CONFIG = ".tungsten.cfg"
   CURRENT_RELEASE_DIRECTORY = "tungsten"
   
@@ -225,41 +224,48 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       end
     end
     
-    # Copy over configuration script code and the host configuration file
-    unless deployment_method.prepare()
-      unless forced?()
-        exit 1
+    begin
+      # Copy over configuration script code and the host configuration file
+      unless deployment_method.prepare()
+        unless forced?()
+          raise
+        end
       end
-    end
     
-    unless @options.force
-      unless deployment_method.validate()
-        write_header("Validation failed", Logger::ERROR)
-        deployment_method.get_validation_handler().output_errors()
+      unless @options.force
+        unless deployment_method.validate()
+          write_header("Validation failed", Logger::ERROR)
+          deployment_method.get_validation_handler().output_errors()
         
-        unless forced?()
-          exit 1
+          unless forced?()
+            raise
+          end
+        end
+      
+        info("")
+        info("Validation finished")
+      end
+    
+      unless @options.validate_only
+        # Execute the deployment of each configuration object for the deployment
+        unless deployment_method.deploy()
+          write_header("Deployment failed", Logger::ERROR)
+          deployment_method.get_deployment_handler().output_errors()
+      
+          unless forced?()
+            raise
+          end
         end
       end
       
-      info("")
-      info("Validation finished")
+      deployment_method.cleanup()
+    rescue
+      deployment_method.cleanup()
+      exit 1
     end
     
-    unless @options.validate_only
-      # Execute the deployment of each configuration object for the deployment
-      unless deployment_method.deploy()
-        write_header("Deployment failed", Logger::ERROR)
-        deployment_method.get_deployment_handler().output_errors()
-      
-        unless forced?()
-          exit 1
-        end
-      end
-    
-      info("")
-      info("Deployment finished")
-    end
+    info("")
+    info("Deployment finished")
   end
   
   # Handle the remote side of the validation_handler->run function
@@ -757,6 +763,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   def get_basename
     File.basename(get_base_path())
+  end
+  
+  def get_unique_basename
+    get_basename() + "_pid#{Process.pid}"
   end
   
   def has_tty?
