@@ -264,6 +264,7 @@ public class StageProgressTracker
         }
         shardProgress.setLastSeqno(replEvent.getSeqno());
         shardProgress.setLastEventId(replEvent.getEventId());
+        shardProgress.setApplyLatencyMillis(applyLatencyMillis);
         shardProgress.incrementEventCount();
 
         // Log last processed event if greater than stored sequence number.
