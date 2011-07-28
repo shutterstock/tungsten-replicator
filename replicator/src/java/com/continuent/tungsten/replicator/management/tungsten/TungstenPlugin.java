@@ -502,7 +502,9 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
     }
 
     /**
-     * Puts the replicator into the offline state, which turns off replication.
+     * Puts the replicator immediately into the offline state, which turns off
+     * replication. This operation is a hard shutdown that does no clean-up. If
+     * clean-up is required, call deferredShutdown() instead.
      */
     public void offline(TungstenProperties params) throws Exception
     {
@@ -528,7 +530,8 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
     }
 
     /**
-     * {@inheritDoc}
+     * Performs a deferred shutdown. All deferred operations then enqueue a
+     * GoOfflineEvent to do a hard shutdown.
      * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#offlineDeferred(com.continuent.tungsten.commons.config.TungstenProperties)
      */
@@ -585,10 +588,13 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                         + formatter.format(toDate));
                 pipeline.shutdownAfterTimestamp(ts);
             }
+
+            // If there is no parameter provided, just enqueue an event to
+            // perform a hard shutdown.
             else
             {
-                throw new ReplicatorException(
-                        "No criterion for provided for offline request");
+                logger.info("Initiating immediate pipeline shutdown");
+                context.getEventDispatcher().handleEvent(new GoOfflineEvent());
             }
         }
         catch (ReplicatorException e)

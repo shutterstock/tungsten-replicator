@@ -97,7 +97,7 @@ import com.continuent.tungsten.replicator.shard.ShardManager;
  * This class provides overall management for the replication and is the
  * starting class for a Tungsten Replicator instance. Replication logic is
  * encapsulated in a replicator plugin.
- *
+ * 
  * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
  * @version 1.0
  */
@@ -169,7 +169,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Main method for ReplicatorManager.
-     *
+     * 
      * @param argv
      */
     public static void main(String argv[])
@@ -201,7 +201,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Creates a new <code>ReplicatorManager</code> object
-     *
+     * 
      * @param serviceName name of the current replication service
      * @throws Exception
      */
@@ -321,8 +321,10 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
                 null, end));
 
         // OFFLINE:NORMAL can transition to any of the following states.
-        stmap.addTransition(new Transition("OFFLINE-SHUTDOWN-1",
-                goOfflineGuard, offlineNormal, null, offlineNormal));
+        stmap.addTransition(new Transition("OFFLINE-OFFLINE-1", goOfflineGuard,
+                offlineNormal, null, offlineNormal));
+        stmap.addTransition(new Transition("OFFLINE-OFFLINE-2",
+                deferredOfflineGuard, offlineNormal, null, offlineNormal));
         stmap.addTransition(new Transition("OFFLINE-CONFIGURE-1",
                 configureGuard, offlineNormal, configureAction,
                 offlineConfiguring));
@@ -341,23 +343,27 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         stmap.addTransition(new Transition("OFFLINE-SETROLE", setRoleGuard,
                 offlineNormal, setRoleAction, offlineNormal));
 
-        // configured to normal transition
-        stmap.addTransition(new Transition("OFFLINE-CONFIGURED",
+        // OFFLINE:CONFIGURING can transition back to following states.
+        stmap.addTransition(new Transition("CONFIGURE-OFFLINE",
                 configuredGuard, offlineConfiguring, null, offlineNormal));
 
         // OFFLINE:ERROR can transition to any of the following states.
-        stmap.addTransition(new Transition("OFFLINE-SHUTDOWN-2",
-                goOfflineGuard, offlineError, null, offlineNormal));
-        stmap.addTransition(new Transition("OFFLINE-CONFIGURE-2",
-                configureGuard, offlineError, configureAction, offlineNormal));
-        stmap.addTransition(new Transition("OFFLINE-CLEAR-DYNAMIC-2",
+        stmap.addTransition(new Transition("ERROR-NORMAL-1", goOfflineGuard,
+                offlineError, null, offlineNormal));
+        stmap.addTransition(new Transition("ERROR-NORMAL-1",
+                deferredOfflineGuard, offlineError, null, offlineNormal));
+        stmap.addTransition(new Transition("ERROR-CONFIGURE", configureGuard,
+                offlineError, configureAction, offlineNormal));
+        stmap.addTransition(new Transition("ERROR-CLEAR-DYNAMIC-2",
                 clearDynamicGuard, offlineError, clearDynamicPropertiesAction,
                 offlineNormal));
-        stmap.addTransition(new Transition("OFFLINE-GO-ONLINE-2",
-                goOnlineGuard, offlineError, offlineToSynchronizingAction,
+        stmap.addTransition(new Transition("ERROR-GO-ONLINE", goOnlineGuard,
+                offlineError, offlineToSynchronizingAction,
                 goingonlineSynchronizing));
-        stmap.addTransition(new Transition("OFFLINE-BACKUP-2", backupGuard,
+        stmap.addTransition(new Transition("ERROR-BACKUP", backupGuard,
                 offlineError, backupAction, offlineError));
+        stmap.addTransition(new Transition("ERROR-RESTORE", restoreGuard,
+                offlineNormal, restoreAction, goingonlineRestoring));
 
         // OFFLINE:BACKUP can transition to the following state(s).
         stmap.addTransition(new Transition("BACKUP-OFFLINE",
@@ -379,6 +385,9 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         stmap.addTransition(new Transition("SYNCHRONIZING-SHUTDOWN",
                 goOfflineGuard, goingonlineSynchronizing, goOfflineAction,
                 goingoffline));
+        stmap.addTransition(new Transition("ONLINE-SHUTDOWN",
+                deferredOfflineGuard, goingonlineSynchronizing,
+                deferredOfflineAction, goingonlineSynchronizing));
         stmap.addTransition(new Transition("SYNCHRONIZING-ONLINE",
                 inSequenceGuard, goingonlineSynchronizing, null, online));
 
@@ -470,7 +479,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Log state changes coming from the state machine. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.commons.patterns.fsm.StateChangeListener#stateChanged(com.continuent.tungsten.commons.patterns.fsm.Entity,
      *      com.continuent.tungsten.commons.patterns.fsm.State,
      *      com.continuent.tungsten.commons.patterns.fsm.State)
@@ -492,7 +501,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     /**
      * Event listener interface. This drives all processing manager by turning
      * events into appropriate state machine changes. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.EventListener#onEvent(com.continuent.tungsten.commons.patterns.fsm.Event)
      */
     public void onEvent(Event event) throws ReplicatorException
@@ -1449,7 +1458,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorContext#getEventDispatcher()
      */
     public EventDispatcher getEventDispatcher()
@@ -1459,7 +1468,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorContext#registerMBean(Object,
      *      Class, String)
      */
@@ -1646,7 +1655,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Clear dynamic properties. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#clearDynamicProperties()
      */
     public void clearDynamicProperties() throws Exception
@@ -1665,7 +1674,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Return a copy of current dynamic properties. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#getDynamicProperties()
      */
     @MethodDesc(description = "Gets the current dynamically-set properties.", usage = "getDynamicProperties")
@@ -1685,7 +1694,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Sets the replicator role. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#setRole(java.lang.String,
      *      java.lang.String)
      */
@@ -1717,7 +1726,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Gets status variables from replicator. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#status()
      */
     @MethodDesc(description = "Gets the replicator's detailed status information.", usage = "status")
@@ -1750,8 +1759,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
                     getSimpleServiceName());
             pluginStatus.put(Replicator.MASTER_CONNECT_URI,
                     getMasterConnectUri());
-            pluginStatus.put(Replicator.MASTER_LISTEN_URI,
-                    getMasterListenUri());
+            pluginStatus
+                    .put(Replicator.MASTER_LISTEN_URI, getMasterListenUri());
             pluginStatus.put(Replicator.SOURCEID, getSourceId());
             pluginStatus.put(Replicator.CLUSTERNAME, clusterName);
             pluginStatus.put(Replicator.ROLE, getRole());
@@ -1759,13 +1768,14 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
                     properties.getString(ReplicatorConf.REPLICATOR_HOST));
             pluginStatus.put(Replicator.DATASERVER_HOST, properties
                     .getString(ReplicatorConf.RESOURCE_DATASERVER_HOST));
-            pluginStatus
-                    .put(Replicator.UPTIME_SECONDS, Double.toString(getUptimeSeconds()));
+            pluginStatus.put(Replicator.UPTIME_SECONDS,
+                    Double.toString(getUptimeSeconds()));
             pluginStatus.put(Replicator.TIME_IN_STATE_SECONDS,
                     Double.toString(getTimeInStateSeconds()));
             pluginStatus.put(Replicator.STATE, getState());
 
-            pluginStatus.put(Replicator.RMI_PORT, Integer.toString(getRmiPort()));
+            pluginStatus.put(Replicator.RMI_PORT,
+                    Integer.toString(getRmiPort()));
             pluginStatus.put(Replicator.PENDING_EXCEPTION_MESSAGE,
                     (getPendingExceptionMessage() == null
                             ? "NONE"
@@ -1803,8 +1813,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     // Convert property from old to new name by removing old and re-inserting
     // with new name.
-    private void convertOldValue(Map<String, String> pluginStatus, String newName,
-            String oldName)
+    private void convertOldValue(Map<String, String> pluginStatus,
+            String newName, String oldName)
     {
         String value = pluginStatus.get(oldName);
         if (value != null)
@@ -1816,7 +1826,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Returns detailed status in a single call. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#getStatus()
      */
     public TungstenProperties getStatus() throws Exception
@@ -1826,7 +1836,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#statusList(java.lang.String)
      */
     @MethodDesc(description = "Provides a list of individual components", usage = "statusList name")
@@ -1868,19 +1878,21 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     }
 
     @Override
-    public void startShardManager(String serviceName) throws ReplicatorException
+    public void startShardManager(String serviceName)
+            throws ReplicatorException
     {
-      try
-      {
-          ShardManager sManager = new ShardManager(serviceName, openReplicator.getReplicatorRuntime());
-          sManager.advertiseInternal();
-      }
-      catch (Exception e)
-      {
-          throw new ReplicatorException(String.format(
-                  "Unable to instantiate shard manager service '%s'",
-                  serviceName), e);
-      }        
+        try
+        {
+            ShardManager sManager = new ShardManager(serviceName,
+                    openReplicator.getReplicatorRuntime());
+            sManager.advertiseInternal();
+        }
+        catch (Exception e)
+        {
+            throw new ReplicatorException(String.format(
+                    "Unable to instantiate shard manager service '%s'",
+                    serviceName), e);
+        }
     }
 
     /**
@@ -1908,7 +1920,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#online()
      */
     @MethodDesc(description = "Transitions the replicator into the online state.", usage = "online")
@@ -1919,7 +1931,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#online()
      */
     @MethodDesc(description = "Transitions the replicator into the online state.", usage = "online2")
@@ -1943,7 +1955,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Sends the replicator into the offline state. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#offline()
      */
     @MethodDesc(description = "Transitions the replicator into the offline state.", usage = "offline")
@@ -1965,7 +1977,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#online()
      */
     @MethodDesc(description = "Requests replicator to go offline", usage = "offlineDeferred")
@@ -1991,7 +2003,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     /**
      * Creates a flush event, which in turn causes us to wait for the database
      * to synchronize with THL. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#flush(long)
      */
     @MethodDesc(description = "Synchronizes the replicator log with the database as of the returned sequence number", usage = "flush")
@@ -2029,7 +2041,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Inserts a heartbeat event. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#heartbeat(Map)
      */
     @MethodDesc(description = "Waits for replicator to achieve a particular state.", usage = "waitForState <stateName> <timeToWait>")
@@ -2068,7 +2080,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Waits for replicator to achieve a particular state. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#waitForState(java.lang.String,
      *      long)
      */
@@ -2130,7 +2142,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#waitForAppliedSequenceNumber(java.lang.String,
      *      long)
      */
@@ -2155,7 +2167,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#backup(java.lang.String,
      *      java.lang.String, long)
      */
@@ -2201,7 +2213,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#restore(java.lang.String,
      *      long)
      */
@@ -2244,7 +2256,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManager#createHelper()
      */
     @MethodDesc(description = "Returns a DynamicMBeanHelper to facilitate dynamic JMX calls", usage = "createHelper")
@@ -2255,7 +2267,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManager#createHelper()
      */
     @MethodDesc(description = "Returns an MBean for a replicator extension", usage = "getExtensionMBean")
@@ -2271,7 +2283,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#listExtensionMBeans()
      */
     @MethodDesc(description = "Returns a list of all extension MBean names", usage = "listExtensionMBeans")
@@ -2282,7 +2294,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Provisions current database from a donor. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#provision(java.lang.String,
      *      long)
      */
@@ -2309,7 +2321,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#consistencyCheck(java.lang.String,
      *      java.lang.String, java.lang.String, int, int)
      */
@@ -2341,7 +2353,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#signal(int,
      *      java.lang.String)
      */
@@ -2385,7 +2397,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorManagerMBean#capabilities()
      */
     @MethodDesc(description = "Gets the replicator capabilities", usage = "getCapabilities")
@@ -2514,7 +2526,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     /**
      * Process configuration properties and instantiate/configure all plug-ins.
      * This method must be called before the configuration is usable.
-     *
+     * 
      * @throws ReplicatorException Thrown if configuration fails
      */
     protected void doConfigure() throws ReplicatorException
@@ -2691,7 +2703,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Returns the listen port used by a master pipeline
-     *
+     * 
      * @return the listen port as an integer
      */
     public int getMasterListenPort()
@@ -2714,7 +2726,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Returns the doneLatch value.
-     *
+     * 
      * @return Returns the doneLatch.
      */
     public CountDownLatch getDoneLatch()
@@ -2724,7 +2736,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Sets the doneLatch value.
-     *
+     * 
      * @param doneLatch The doneLatch to set.
      */
     public void setDoneLatch(CountDownLatch doneLatch)
@@ -2734,7 +2746,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Returns the rmiPort value.
-     *
+     * 
      * @return Returns the rmiPort.
      */
     public int getRmiPort()
@@ -2744,7 +2756,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Sets the rmiPort value.
-     *
+     * 
      * @param rmiPort The rmiPort to set.
      */
     public void setRmiPort(int rmiPort)

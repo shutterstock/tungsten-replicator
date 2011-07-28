@@ -251,10 +251,6 @@ public class Pipeline implements ReplicatorPlugin
             throws ReplicatorException
     {
         logger.info("Starting pipeline: " + name);
-
-        // If we have an initial event ID, set it now to override any other
-        // value.
-
         for (Stage stage : stages)
             stage.start(eventDispatcher);
     }
