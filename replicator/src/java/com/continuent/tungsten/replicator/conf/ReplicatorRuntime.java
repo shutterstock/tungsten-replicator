@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
+import org.apache.log4j.MDC;
 
 import com.continuent.tungsten.commons.config.PropertyException;
 import com.continuent.tungsten.commons.config.TungstenProperties;
@@ -186,6 +187,7 @@ public class ReplicatorRuntime implements PluginContext
 
         // Ensure service name is available.
         serviceName = assertPropertySet(ReplicatorConf.SERVICE_NAME);
+        MDC.put("serviceName", serviceName);
 
         // Ensure we have a valid service type.
         String serviceType = assertPropertyDefault(ReplicatorConf.SERVICE_TYPE,
