@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="lib" path="conf"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.16.jar" sourcepath="lib/log4j-1.2.16-sources.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/fsm"/>
 	<classpathentry kind="src" path="src/java"/>
 	<classpathentry kind="src" path="test/java"/>
 	<classpathentry kind="lib" path="lib-test/junit-4.4.jar" sourcepath="lib-test/junit-4.4-src.zip"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar" sourcepath="lib/apache-log4j-1.2.15_src.zip"/>
 	<classpathentry kind="lib" path="lib/jgroups-all.jar"/>
 	<classpathentry kind="lib" path="lib/jline-0.9.94.jar"/>
 	<classpathentry kind="lib" path="lib/jbosscache-core.jar"/>
