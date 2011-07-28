@@ -3,7 +3,6 @@
 	<classpathentry kind="src" path="test/java"/>
 	<classpathentry excluding="com/continuent/tungsten/replicator/sqlParser/grammars/test.java|com/continuent/tungsten/replicator/sqlParser/parsers/" kind="src" path="src/java"/>
 	<classpathentry kind="lib" path="lib-ext/derby.jar"/>
-	<classpathentry kind="lib" path="/commons/lib/log4j-1.2.15.jar" sourcepath="/commons/lib/apache-log4j-1.2.15_src.zip"/>
 	<classpathentry kind="lib" path="/commons/lib-test/junit-4.4.jar" sourcepath="/commons/lib-test/junit-4.4-src.zip"/>
 	<classpathentry kind="lib" path="conf"/>
 	<classpathentry kind="lib" path="lib/classes12.jar"/>
@@ -15,5 +14,6 @@
 	<classpathentry kind="lib" path="lib/drizzle-jdbc-0.91-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="lib/protobuf-java-2.3.0.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/fsm"/>
+	<classpathentry kind="lib" path="/commons/lib/log4j-1.2.16.jar" sourcepath="/commons/lib/log4j-1.2.16-sources.jar"/>
 	<classpathentry kind="output" path="build/java/classes"/>
 </classpath>
