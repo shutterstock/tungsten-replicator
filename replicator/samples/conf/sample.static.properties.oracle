@@ -522,6 +522,10 @@ replicator.filter.nocreatedbifnotexists.script=${replicator.home.dir}/samples/ex
 replicator.filter.enumtostring=com.continuent.tungsten.replicator.filter.EnumToStringFilter
 replicator.filter.enumtostring.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_${service.name}
 
+# Remove comments from a SQL string and drop the event if the result is empty
+replicator.filter.dropcomments=com.continuent.tungsten.replicator.filter.JavaScriptFilter                                  
+replicator.filter.dropcomments.script=${replicator.home.dir}/samples/extensions/javascript/dropcomments.js
+
 ################################
 # BACKUP/RESTORE CONFIGURATION #
 ################################
