@@ -32,6 +32,7 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 
 /**
@@ -141,7 +142,7 @@ public class GreenplumDatabase extends AbstractDatabase
         // in the new path, i.e.: $search_path = $schema, $search_path
         return "SET search_path TO " + schema + ", \"$user\"";
     }
-    
+
     public boolean supportsCreateDropSchema()
     {
         return true;
@@ -160,7 +161,7 @@ public class GreenplumDatabase extends AbstractDatabase
             String SQL = "CREATE SCHEMA " + schema;
             execute(SQL);
         }
-        else
+        else if (logger.isDebugEnabled())
             logger.debug("Schema already exists, thus not recreating it: "
                     + schema);
     }
@@ -178,13 +179,15 @@ public class GreenplumDatabase extends AbstractDatabase
             String SQL = "DROP SCHEMA " + schema;
             execute(SQL);
         }
-        else
+        else if (logger.isDebugEnabled())
             logger.debug("Schema does not exist, thus not dropping it: "
                     + schema);
     }
-    
+
     /**
-     * Checks whether the given table exists in the currently connected database. Check is made against "schema.table".
+     * Checks whether the given table exists in the currently connected
+     * database. Check is made against "schema.table".
+     * 
      * @return true, if table exists, false, if not.
      */
     private boolean tableExists(Table t) throws SQLException
@@ -218,7 +221,7 @@ public class GreenplumDatabase extends AbstractDatabase
             // If table already exists, do nothing. This behavior is a mimic of
             // MySQLDatabase for initial configuration to work. For some reason,
             // Replicator is trying to create Tungsten tables more than once.
-            if(tableExists(t))
+            if (tableExists(t))
                 return;
         }
 
@@ -374,7 +377,7 @@ public class GreenplumDatabase extends AbstractDatabase
     protected ResultSet getTablesResultSet(DatabaseMetaData md,
             String schemaName, boolean baseTablesOnly) throws SQLException
     {
-        // TODO:  Implement ability to return base tables only. 
+        // TODO: Implement ability to return base tables only.
         return md.getTables(schemaName, null, null, null);
     }
 
@@ -422,7 +425,7 @@ public class GreenplumDatabase extends AbstractDatabase
     {
         return false;
     }
-    
+
     /**
      * {@inheritDoc}
      * 
@@ -435,7 +438,7 @@ public class GreenplumDatabase extends AbstractDatabase
     {
         return resultSet.getBytes(column);
     }
-    
+
     /**
      * {@inheritDoc}
      * 
@@ -446,14 +449,14 @@ public class GreenplumDatabase extends AbstractDatabase
     {
         return "\"" + name + "\"";
     }
-    
+
     /**
      * {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#getSqlNameMatcher()
      */
     @Override
-    public SqlOperationMatcher getSqlNameMatcher() throws DatabaseException
+    public SqlOperationMatcher getSqlNameMatcher() throws ReplicatorException
     {
         // TODO: Develop matcher for Drizzle dialect.
         return new MySQLOperationMatcher();

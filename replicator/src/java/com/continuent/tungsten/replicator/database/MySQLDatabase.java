@@ -32,6 +32,7 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 
 /**
@@ -124,8 +125,11 @@ public class MySQLDatabase extends AbstractDatabase
         }
         catch (SQLException e)
         {
-            logger.debug("Unable to set wait_timeout to maximum value of 2147483");
-            logger.debug("Please consider using an explicit JDBC URL setting to avoid connection timeouts");
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Unable to set wait_timeout to maximum value of 2147483");
+                logger.debug("Please consider using an explicit JDBC URL setting to avoid connection timeouts");
+            }
         }
     }
 
@@ -510,7 +514,7 @@ public class MySQLDatabase extends AbstractDatabase
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#getSqlNameMatcher()
      */
     @Override
-    public SqlOperationMatcher getSqlNameMatcher() throws DatabaseException
+    public SqlOperationMatcher getSqlNameMatcher() throws ReplicatorException
     {
         return new MySQLOperationMatcher();
     }

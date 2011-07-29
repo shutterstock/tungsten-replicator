@@ -30,6 +30,7 @@ import java.sql.Connection;
 import java.sql.Statement;
 import java.util.ArrayList;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.consistency.ConsistencyCheck;
 import com.continuent.tungsten.replicator.consistency.ConsistencyException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
@@ -51,9 +52,9 @@ public interface Database
      * Returns a SQL name matcher for this database type. You can get a matcher
      * without calling connect() first.
      * 
-     * @throws DatabaseException
+     * @throws ReplicatorException
      */
-    public SqlOperationMatcher getSqlNameMatcher() throws DatabaseException;
+    public SqlOperationMatcher getSqlNameMatcher() throws ReplicatorException;
 
     /** Sets the JDBC URL used for database connections. */
     public void setUrl(String url);

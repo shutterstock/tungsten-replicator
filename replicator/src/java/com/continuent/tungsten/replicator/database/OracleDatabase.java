@@ -33,11 +33,12 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 
 /**
  * Defines an interface to the Oracle database
- *
+ * 
  * @author <a href="mailto:scott.martin@continuent.com">Scott Martin</a>
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
  */
@@ -58,11 +59,11 @@ public class OracleDatabase extends AbstractDatabase
      * In Oracle, to support timestamp with local time zone replication we need
      * to set the session level time zone to be the same as the database time
      * zone. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#getSqlNameMatcher()
      */
     @Override
-    public SqlOperationMatcher getSqlNameMatcher() throws DatabaseException
+    public SqlOperationMatcher getSqlNameMatcher() throws ReplicatorException
     {
         // TODO: Develop matcher for Oracle dialect.
         throw new DatabaseException(
@@ -73,7 +74,7 @@ public class OracleDatabase extends AbstractDatabase
      * In Oracle, to support timestamp with local time zone replication we need
      * to set the session level time zone to be the same as the database time
      * zone. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#connect(boolean)
      */
     @Override
@@ -93,9 +94,11 @@ public class OracleDatabase extends AbstractDatabase
                 timeZone = res.getString("dbtimezone");
             }
             String SQL = "alter session set TIME_ZONE='" + timeZone + "'";
-            logger.debug("Setting timezone to " + timeZone);
-            logger.debug("With the following SQL : " + SQL);
-
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Setting timezone to " + timeZone);
+                logger.debug("With the following SQL : " + SQL);
+            }
             executeUpdate(SQL);
         }
         catch (SQLException e)
@@ -402,7 +405,7 @@ public class OracleDatabase extends AbstractDatabase
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#findTable(int,
      *      java.lang.String)
      */

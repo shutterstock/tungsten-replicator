@@ -23,6 +23,8 @@
 
 package com.continuent.tungsten.replicator.database;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 /**
  * This class defines a JdbcURL DBMS URL generator
  * 
@@ -94,7 +96,7 @@ public class JdbcURL
         return sb.toString();
     }
     
-    public static DBMS string2DBMS (String driver_spec) throws DatabaseException
+    public static DBMS string2DBMS (String driver_spec) throws ReplicatorException
     {
         if (driver_spec.toLowerCase().matches("mysql")) return DBMS.MYSQL;
         if (driver_spec.toLowerCase().matches("drizzle")) return DBMS.DRIZZLE;        

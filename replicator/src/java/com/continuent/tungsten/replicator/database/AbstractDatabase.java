@@ -38,6 +38,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.consistency.ConsistencyCheck;
 import com.continuent.tungsten.replicator.consistency.ConsistencyException;
 import com.continuent.tungsten.replicator.consistency.ConsistencyTable;
@@ -89,7 +90,7 @@ public abstract class AbstractDatabase implements Database
     }
 
     public abstract SqlOperationMatcher getSqlNameMatcher()
-            throws DatabaseException;
+            throws ReplicatorException;
 
     public void setUrl(String dbUri)
     {
@@ -381,7 +382,8 @@ public abstract class AbstractDatabase implements Database
         try
         {
             sqlStatement = dbConn.createStatement();
-            logger.debug(SQL);
+            if (logger.isDebugEnabled())
+                logger.debug(SQL);
             sqlStatement.execute(SQL);
         }
         finally
@@ -403,7 +405,8 @@ public abstract class AbstractDatabase implements Database
         try
         {
             sqlStatement = dbConn.createStatement();
-            logger.debug(SQL);
+            if (logger.isDebugEnabled())
+                logger.debug(SQL);
             sqlStatement.executeUpdate(SQL);
         }
         finally
@@ -650,7 +653,8 @@ public abstract class AbstractDatabase implements Database
     public PreparedStatement prepareStatement(String statement)
             throws SQLException
     {
-        logger.debug("prepareStatement" + statement);
+        if (logger.isDebugEnabled())
+            logger.debug("prepareStatement" + statement);
         return dbConn.prepareStatement(statement);
     }
 
@@ -661,7 +665,8 @@ public abstract class AbstractDatabase implements Database
      */
     public Statement createStatement() throws SQLException
     {
-        logger.debug("createStatement");
+        if (logger.isDebugEnabled())
+            logger.debug("createStatement");
         return dbConn.createStatement();
     }
 
@@ -672,7 +677,8 @@ public abstract class AbstractDatabase implements Database
      */
     public void commit() throws SQLException
     {
-        logger.debug("commit");
+        if (logger.isDebugEnabled())
+            logger.debug("commit");
         dbConn.commit();
     }
 
@@ -683,7 +689,8 @@ public abstract class AbstractDatabase implements Database
      */
     public void rollback() throws SQLException
     {
-        logger.debug("rollback");
+        if (logger.isDebugEnabled())
+            logger.debug("rollback");
         dbConn.rollback();
     }
 
@@ -775,7 +782,8 @@ public abstract class AbstractDatabase implements Database
         }
         catch (SQLException e)
         {
-            logger.debug("Unable to drop table; this may be expected", e);
+            if (logger.isDebugEnabled())
+                logger.debug("Unable to drop table; this may be expected", e);
         }
     }
 

@@ -27,6 +27,8 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 
 /**
  * Implements DBMS-specific operations for the Derby database. 
@@ -48,7 +50,7 @@ public class DerbyDatabase extends AbstractDatabase
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#getSqlNameMatcher()
      */
     @Override
-    public SqlOperationMatcher getSqlNameMatcher() throws DatabaseException
+    public SqlOperationMatcher getSqlNameMatcher() throws ReplicatorException
     {
         // TODO: Develop matcher for Drizzle dialect.
         return new MySQLOperationMatcher();

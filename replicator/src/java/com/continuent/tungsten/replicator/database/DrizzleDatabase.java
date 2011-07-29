@@ -32,6 +32,8 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 /**
  * Implements DBMS-specific operations for MySQL.
  * 
@@ -58,7 +60,7 @@ public class DrizzleDatabase extends AbstractDatabase
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#getSqlNameMatcher()
      */
     @Override
-    public SqlOperationMatcher getSqlNameMatcher() throws DatabaseException
+    public SqlOperationMatcher getSqlNameMatcher() throws ReplicatorException
     {
         // TODO: Develop matcher for Drizzle dialect.
         return new MySQLOperationMatcher();
