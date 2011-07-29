@@ -46,21 +46,21 @@ import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
  */
 public class Connector implements ReplicatorPlugin
 {
-    private static Logger logger        = Logger.getLogger(Connector.class);
+    private static Logger   logger        = Logger.getLogger(Connector.class);
 
     protected PluginContext pluginContext = null;
     protected String        host          = null;
     protected int           port          = 2112;
-    private SocketChannel channel       = null;
-    private long          minSeqNo      = -1;
-    private long          maxSeqNo      = -1;
-    private Protocol      protocol      = null;
-    
+    private SocketChannel   channel       = null;
+    private long            minSeqNo      = -1;
+    private long            maxSeqNo      = -1;
+    private Protocol        protocol      = null;
+
     protected int           resetPeriod;
     protected long          lastSeqno;
     protected long          lastEpochNumber;
 
-    private String        remoteURI     = null;
+    private String          remoteURI     = null;
 
     /**
      * Creates a new <code>Connector</code> object
@@ -75,10 +75,10 @@ public class Connector implements ReplicatorPlugin
      * 
      * @param remoteURI URI string pointing to remote host
      * @param resetPeriod output stream resetting period
-     * @throws THLException
+     * @throws ReplicatorException
      */
     public Connector(PluginContext context, String remoteURI, int resetPeriod,
-            long lastSeqno, long lastEpochNumber) throws THLException
+            long lastSeqno, long lastEpochNumber) throws ReplicatorException
     {
         this.pluginContext = context;
         this.lastSeqno = lastSeqno;
@@ -100,12 +100,13 @@ public class Connector implements ReplicatorPlugin
     /**
      * TODO: connect definition.
      * 
-     * @throws THLException
+     * @throws ReplicatorException
      * @throws IOException
      */
-    public void connect() throws THLException, IOException
+    public void connect() throws ReplicatorException, IOException
     {
-        logger.debug("Connecting to " + host + ":" + port);
+        if (logger.isDebugEnabled())
+            logger.debug("Connecting to " + host + ":" + port);
         try
         {
             channel = SocketChannel.open(new InetSocketAddress(host, port));
@@ -161,13 +162,15 @@ public class Connector implements ReplicatorPlugin
      * 
      * @param seqNo
      * @return ReplEvent
-     * @throws THLException
+     * @throws ReplicatorException
      * @throws IOException
      */
-    public ReplEvent requestEvent(long seqNo) throws THLException, IOException
+    public ReplEvent requestEvent(long seqNo) throws ReplicatorException,
+            IOException
     {
         ReplEvent retval;
-        logger.debug("Requesting event " + seqNo);
+        if (logger.isDebugEnabled())
+            logger.debug("Requesting event " + seqNo);
         retval = protocol.requestReplEvent(seqNo);
         if (logger.isDebugEnabled() && retval instanceof ReplDBMSEvent)
         {

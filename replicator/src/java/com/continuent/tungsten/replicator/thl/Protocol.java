@@ -32,6 +32,7 @@ import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
@@ -142,9 +143,9 @@ public class Protocol
      * TODO: readMessage definition.
      * 
      * @throws IOException
-     * @throws THLException
+     * @throws ReplicatorException
      */
-    protected ProtocolMessage readMessage() throws IOException, THLException
+    protected ProtocolMessage readMessage() throws IOException, ReplicatorException
     {
         long metricID = 0L;
         if (ois == null)
@@ -198,12 +199,12 @@ public class Protocol
      * 
      * @param minSeqNo
      * @param maxSeqNo
-     * @throws THLException
+     * @throws ReplicatorException
      * @throws IOException
      * @throws InterruptedException
      */
     public void serverHandshake(ProtocolHandshakeResponseValidator validator,
-            long minSeqNo, long maxSeqNo) throws THLException, IOException,
+            long minSeqNo, long maxSeqNo) throws ReplicatorException, IOException,
             InterruptedException
     {
         writeMessage(new ProtocolHandshake());
@@ -237,11 +238,11 @@ public class Protocol
      * TODO: clientHandshake definition.
      * 
      * @return seqno range
-     * @throws THLException
+     * @throws ReplicatorException
      * @throws IOException
      */
     public SeqNoRange clientHandshake(long lastEpochNumber, long lastSeqno)
-            throws THLException, IOException
+            throws ReplicatorException, IOException
     {
         ProtocolMessage handshake = readMessage();
         if (handshake instanceof ProtocolHandshake == false)
@@ -271,11 +272,11 @@ public class Protocol
      * 
      * @param seqNo
      * @return sql event
-     * @throws THLException
+     * @throws ReplicatorException
      * @throws IOException
      */
     @SuppressWarnings("unchecked")
-    public ReplEvent requestReplEvent(long seqNo) throws THLException,
+    public ReplEvent requestReplEvent(long seqNo) throws ReplicatorException,
             IOException
     {
         ReplEvent ret = null;
@@ -356,10 +357,10 @@ public class Protocol
      * TODO: waitReplicationDBMSEventRequest definition.
      * 
      * @return protocol event request
-     * @throws THLException
+     * @throws ReplicatorException
      * @throws IOException
      */
-    public ProtocolReplEventRequest waitReplEventRequest() throws THLException,
+    public ProtocolReplEventRequest waitReplEventRequest() throws ReplicatorException,
             IOException
     {
         ProtocolMessage msg = readMessage();

@@ -35,6 +35,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 import com.continuent.tungsten.replicator.plugin.PluginLoader;
@@ -66,7 +67,7 @@ public class Server implements Runnable
      * Creates a new <code>Server</code> object
      */
     public Server(PluginContext context, AtomicCounter sequencer, THL thl)
-            throws THLException
+            throws ReplicatorException
     {
         this.context = context;
         this.thl = thl;

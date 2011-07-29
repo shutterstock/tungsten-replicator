@@ -125,7 +125,7 @@ public class THLParallelReadTask implements Runnable
      * run().
      */
     public synchronized void prepare(PluginContext context)
-            throws THLException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         // Set up the read queue.
         this.readQueue = new THLParallelReadQueue(eventQueue, maxControlEvents,
@@ -140,7 +140,7 @@ public class THLParallelReadTask implements Runnable
         LogEventReadFilter filter = new LogEventReadFilter()
         {
             public boolean accept(LogEventReplReader reader)
-                    throws THLException
+                    throws ReplicatorException
             {
                 ReplDBMSHeaderData header = new ReplDBMSHeaderData(
                         reader.getSeqno(), reader.getFragno(),

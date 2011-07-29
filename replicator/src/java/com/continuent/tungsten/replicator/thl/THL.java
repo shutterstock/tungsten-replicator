@@ -391,7 +391,7 @@ public class THL implements Store
      * @param readonly If true, this is a readonly connection
      * @return A disk log client
      */
-    public LogConnection connect(boolean readonly) throws THLException
+    public LogConnection connect(boolean readonly) throws ReplicatorException
     {
         return diskLog.connect(readonly);
     }
@@ -401,9 +401,9 @@ public class THL implements Store
      * avoid leaks.
      * 
      * @param client a Disk log client to be disconnected
-     * @throws THLException
+     * @throws ReplicatorException
      */
-    public void disconnect(LogConnection client) throws THLException
+    public void disconnect(LogConnection client) throws ReplicatorException
     {
         client.release();
     }
@@ -413,9 +413,9 @@ public class THL implements Store
      * the catalog is disabled we do nothing, which allows us to run unit tests
      * easily without a DBMS present.
      * 
-     * @throws THLException Thrown if update is unsuccessful
+     * @throws ReplicatorException Thrown if update is unsuccessful
      */
-    public void updateCommitSeqno(THLEvent thlEvent) throws THLException
+    public void updateCommitSeqno(THLEvent thlEvent) throws ReplicatorException
     {
         if (catalog == null)
         {
@@ -454,7 +454,7 @@ public class THL implements Store
      * 
      * @return An event header or null if log is newly initialized
      * @throws InterruptedException
-     * @throws THLException
+     * @throws ReplicatorException
      */
     public ReplDBMSHeader getLastAppliedEvent() throws ReplicatorException,
             InterruptedException

@@ -137,7 +137,7 @@ public class THLManagerCtrl
     /**
      * Connect to the underlying database containing THL.
      * 
-     * @throws THLException
+     * @throws ReplicatorException
      */
     public void connect(boolean readOnly) throws ReplicatorException,
             InterruptedException
@@ -175,9 +175,9 @@ public class THLManagerCtrl
      * Queries THL for summary information.
      * 
      * @return Info holder
-     * @throws THLException
+     * @throws ReplicatorException
      */
-    public InfoHolder getInfo() throws THLException
+    public InfoHolder getInfo() throws ReplicatorException
     {
         long minSeqno = diskLog.getMinSeqno();
         long maxSeqno = diskLog.getMaxSeqno();
@@ -274,11 +274,11 @@ public class THLManagerCtrl
      *            otherwise.
      * @param charset character set name to be used to decode byte arrays in row
      *            replication
-     * @throws THLException
+     * @throws ReplicatorException
      * @throws InterruptedException
      */
     public void listEvents(Long low, Long high, Long by, boolean pureSQL,
-            String charset) throws THLException, InterruptedException
+            String charset) throws ReplicatorException, InterruptedException
     {
         // Make sure range is OK.
         if (low != null && high != null && low > high)
@@ -682,9 +682,9 @@ public class THLManagerCtrl
      *            null to start from the very beginning of the table.
      * @param high Sequence number specifying the end of the range. Leave null
      *            to end at the very end of the table.
-     * @throws THLException
+     * @throws ReplicatorException
      */
-    public void purgeEvents(Long low, Long high) throws THLException
+    public void purgeEvents(Long low, Long high) throws ReplicatorException
     {
         LogConnection conn = diskLog.connect(false);
         try

@@ -26,6 +26,7 @@ import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.consistency.ConsistencyTable;
 import com.continuent.tungsten.replicator.database.Database;
@@ -58,9 +59,9 @@ public class CatalogManager
      * Creates a new Catalog manager.
      * 
      * @param runtime runtime
-     * @throws THLException
+     * @throws ReplicatorException
      */
-    public CatalogManager(ReplicatorRuntime runtime) throws THLException
+    public CatalogManager(ReplicatorRuntime runtime) throws ReplicatorException
     {
         this.runtime = runtime;
     }
@@ -77,10 +78,10 @@ public class CatalogManager
      *            Greenplum, when URL is the same as for PostgreSQL. Thus
      *            values: "postgresql" for PostgreSQL, "greenplum" for
      *            Greenplum, null for MySQL.
-     * @throws THLException
+     * @throws ReplicatorException
      */
     public void connect(String url, String user, String password,
-            String metadataSchema, String vendor) throws THLException
+            String metadataSchema, String vendor) throws ReplicatorException
     {
         this.metadataSchema = metadataSchema;
         // Create the database handle
@@ -99,9 +100,9 @@ public class CatalogManager
     /**
      * Prepare catalog schema schema.
      * 
-     * @throws THLException thrown on failure
+     * @throws ReplicatorException thrown on failure
      */
-    public void prepareSchema() throws THLException
+    public void prepareSchema() throws ReplicatorException
     {
         try
         {
@@ -190,9 +191,9 @@ public class CatalogManager
      * Return the last applied event as stored in the CommitSeqnoTable.
      * 
      * @return the last applied event, or null if nothing was found
-     * @throws THLException
+     * @throws ReplicatorException
      */
-    public ReplDBMSHeader getLastEvent() throws THLException
+    public ReplDBMSHeader getLastEvent() throws ReplicatorException
     {
         if (commitSeqnoTable == null)
             return null;

@@ -69,10 +69,10 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
          * validate that the last epoch number and seqno match our log.
          * 
          * @param handshakeResponse Response from client
-         * @throws THLException Thrown if logs appear to diverge
+         * @throws ReplicatorException Thrown if logs appear to diverge
          */
         public void validateResponse(ProtocolHandshakeResponse handshakeResponse)
-                throws InterruptedException, THLException
+                throws InterruptedException, ReplicatorException
         {
             logger.info("New THL client connection from source ID: "
                     + handshakeResponse.getSourceId());
@@ -193,7 +193,8 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                 // Get the client request.
                 request = protocol.waitReplEventRequest();
                 long seqno = request.getSeqNo();
-                logger.debug("Request " + seqno);
+                if (logger.isDebugEnabled())
+                    logger.debug("Request " + seqno);
                 long prefetchRange = request.getPrefetchRange();
                 short fragno = 0;
 
@@ -203,8 +204,8 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                     connection = thl.connect(true);
                     if (!connection.seek(seqno))
                     {
-                        String message = "Requested event (#" + seqno
-                                + " / " + fragno + ") not found in database";
+                        String message = "Requested event (#" + seqno + " / "
+                                + fragno + ") not found in database";
                         logger.warn(message);
                         sendError(protocol, message);
                         return;
@@ -217,12 +218,13 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                     // Get the next event from the log, waiting if necessary.
                     THLEvent event = connection.next();
 
-                    // Peel off and process the underlying replication event. 
+                    // Peel off and process the underlying replication event.
                     ReplEvent revent = event.getReplEvent();
                     if (revent instanceof ReplDBMSEvent
                             && ((ReplDBMSEvent) revent).getDBMSEvent() instanceof DBMSEmptyEvent)
                     {
-                        logger.debug("Got an empty event");
+                        if (logger.isDebugEnabled())
+                            logger.debug("Got an empty event");
                         sendEvent(protocol, revent,
                                 (seqno + i >= thl.getMaxCommittedSeqno()));
                         i++;
@@ -268,7 +270,8 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                         }
                         else
                         {
-                            logger.debug("Got " + revent.getClass());
+                            if (logger.isDebugEnabled())
+                                logger.debug("Got " + revent.getClass());
                             i++;
                             fragno = 0;
                         }
@@ -292,7 +295,7 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
         {
             // The EOF exception happens on a slave being promoted to master
             if (logger.isDebugEnabled())
-                logger.info(
+                logger.debug(
                         "Connector handler terminated by java.io.EOFException",
                         e);
             else

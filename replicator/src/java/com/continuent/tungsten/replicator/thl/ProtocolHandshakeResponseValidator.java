@@ -22,6 +22,8 @@
 
 package com.continuent.tungsten.replicator.thl;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 /**
  * Denotes a class that validates client responses to the protocol handshake.
  * 
@@ -34,8 +36,8 @@ public interface ProtocolHandshakeResponseValidator
      * Executes implementation-defined logic to validate the client response.
      * 
      * @param handshakeResponse Response received from client
-     * @throws THLException Thrown if validation fails
+     * @throws ReplicatorException Thrown if validation fails
      */
     public void validateResponse(ProtocolHandshakeResponse handshakeResponse)
-            throws THLException, InterruptedException;
+            throws ReplicatorException, InterruptedException;
 }
