@@ -22,7 +22,6 @@
 
 package com.continuent.tungsten.replicator.extractor;
 
-import com.continuent.tungsten.replicator.ReplicatorException;
 
 /**
  * Denotes an extractor that extends normal Extractor capabilities to allow
@@ -38,11 +37,9 @@ public interface ParallelExtractor extends Extractor
      * to invoking the configure() method.
      * 
      * @param id Task ID
-     * @throws ExtractorException Thrown if the task ID exceeds the number of
-     *             tasks allowed by the extractor
      * @see #configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
-    public void setTaskId(int id) throws ReplicatorException;
+    public void setTaskId(int id);
 
     /**
      * Returns the store name on which this extractor operates. This is used to
