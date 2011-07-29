@@ -1556,9 +1556,9 @@ public class OpenReplicatorManagerCtrl
 
                 StringBuffer buf = new StringBuffer();
                 buf.append("#");
-                buf.append(ShardTable.SHARD_MASTER_COL);
-                buf.append("\t");
                 buf.append(ShardTable.SHARD_ID_COL);
+                buf.append("\t");
+                buf.append(ShardTable.SHARD_MASTER_COL);
                 buf.append("\t");
                 buf.append(ShardTable.SHARD_CRIT_COL);
                 buf.append("\t");
@@ -1570,9 +1570,9 @@ public class OpenReplicatorManagerCtrl
                 {
                     Map<String, String> map = (Map<String, String>) iterator
                             .next();
-                    buf.append(map.get(ShardTable.SHARD_MASTER_COL));
-                    buf.append("\t");
                     buf.append(map.get(ShardTable.SHARD_ID_COL));
+                    buf.append("\t");
+                    buf.append(map.get(ShardTable.SHARD_MASTER_COL));
                     buf.append("\t");
                     buf.append(map.get(ShardTable.SHARD_CRIT_COL));
                     buf.append("\t");
