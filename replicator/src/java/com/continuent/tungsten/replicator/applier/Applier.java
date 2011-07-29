@@ -89,7 +89,7 @@ public interface Applier extends ReplicatorPlugin
      * Return header information corresponding to last committed transaction.
      * 
      * @return Header data for last committed transaction
-     * @throws ApplierException Thrown if getting sequence number fails
+     * @throws ReplicatorException Thrown if getting sequence number fails
      * @throws InterruptedException Thrown if the applier is interrupted
      */
     public ReplDBMSHeader getLastEvent() throws ReplicatorException,
