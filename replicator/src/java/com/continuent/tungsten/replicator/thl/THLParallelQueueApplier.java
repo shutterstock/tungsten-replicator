@@ -23,7 +23,6 @@
 package com.continuent.tungsten.replicator.thl;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
-import com.continuent.tungsten.replicator.applier.ApplierException;
 import com.continuent.tungsten.replicator.applier.ParallelApplier;
 import com.continuent.tungsten.replicator.consistency.ConsistencyException;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
@@ -132,7 +131,7 @@ public class THLParallelQueueApplier implements ParallelApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.Applier#commit()
      */
-    public void commit() throws ApplierException, InterruptedException
+    public void commit() throws ReplicatorException, InterruptedException
     {
     }
 
@@ -163,7 +162,7 @@ public class THLParallelQueueApplier implements ParallelApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.ParallelApplier#setTaskId(int)
      */
-    public void setTaskId(int id) throws ApplierException
+    public void setTaskId(int id)
     {
         this.taskId = id;
     }
