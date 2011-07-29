@@ -123,7 +123,7 @@ public class THLStoreExtractor implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#extract()
      */
-    public ReplEvent extract() throws ExtractorException,
+    public ReplEvent extract() throws ReplicatorException,
             InterruptedException
     {
         // If we did not position for the first time yet, do so now.
@@ -193,7 +193,7 @@ public class THLStoreExtractor implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#getCurrentResourceEventId()
      */
-    public String getCurrentResourceEventId() throws ExtractorException,
+    public String getCurrentResourceEventId() throws ReplicatorException,
             InterruptedException
     {
         return null;
@@ -215,7 +215,7 @@ public class THLStoreExtractor implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEvent(com.continuent.tungsten.replicator.event.ReplDBMSHeader)
      */
-    public void setLastEvent(ReplDBMSHeader event) throws ExtractorException
+    public void setLastEvent(ReplDBMSHeader event) throws ReplicatorException
     {
         // Remember where we were.
         if (event == null)
@@ -246,7 +246,7 @@ public class THLStoreExtractor implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEventId(java.lang.String)
      */
-    public void setLastEventId(String eventId) throws ExtractorException
+    public void setLastEventId(String eventId) throws ReplicatorException
     {
         logger.warn("Attempt to set last event ID on THL storage: " + eventId);
     }
