@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.thl.THLException;
 
 /**
@@ -54,7 +55,7 @@ public class LogCursorManager
     /**
      * Create a new log cursor manager.
      */
-    public LogCursorManager() throws THLException
+    public LogCursorManager() throws ReplicatorException
     {
         nextTimeoutCheck = lastTimeoutCheck + timeoutMillis;
     }
@@ -92,7 +93,7 @@ public class LogCursorManager
      * @return A cursor. This must be returned using returnLogConnection().
      */
     public synchronized LogCursor getLogCursor(LogConnection client,
-            long nextSeqno) throws THLException
+            long nextSeqno) throws ReplicatorException
     {
         assertNotDone(client);
 
@@ -184,7 +185,7 @@ public class LogCursorManager
      * @return A cursor. This must be returned using returnLogConnection().
      */
     public synchronized LogCursor createAndGetLogCursor(LogConnection client,
-            LogFile logFile, long lastSeqno) throws THLException
+            LogFile logFile, long lastSeqno) throws ReplicatorException
     {
         assertNotDone(client);
 
@@ -243,7 +244,7 @@ public class LogCursorManager
     }
 
     // Ensure that log is still accessible.
-    private void assertNotDone(LogConnection client) throws THLException
+    private void assertNotDone(LogConnection client) throws ReplicatorException
     {
         if (done)
         {

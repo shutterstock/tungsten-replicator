@@ -25,6 +25,7 @@ package com.continuent.tungsten.replicator.thl.log;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.thl.THLException;
 
 /**
@@ -42,7 +43,7 @@ public class LogEventRotateWriter
      * Instantiate the writer.
      */
     public LogEventRotateWriter(long index, boolean checkCRC)
-            throws THLException
+            throws ReplicatorException
     {
         this.index = index;
         this.checkCRC = checkCRC;
@@ -51,7 +52,7 @@ public class LogEventRotateWriter
     /**
      * Write and return the log record.
      */
-    public LogRecord write() throws THLException
+    public LogRecord write() throws ReplicatorException
     {
         LogRecord logRecord = new LogRecord(-1, checkCRC);
         try

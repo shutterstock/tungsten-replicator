@@ -28,6 +28,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.thl.THLEvent;
 import com.continuent.tungsten.replicator.thl.THLException;
 
@@ -41,7 +42,7 @@ public class JavaSerializer implements Serializer
      * 
      * @see com.continuent.tungsten.replicator.thl.serializer.Serializer#deserializeEvent(java.io.InputStream)
      */
-    public THLEvent deserializeEvent(InputStream inStream) throws THLException,
+    public THLEvent deserializeEvent(InputStream inStream) throws ReplicatorException,
             IOException
     {
         ObjectInputStream oIS = new ObjectInputStream(inStream);

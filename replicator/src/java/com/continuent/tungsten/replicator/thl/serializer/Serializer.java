@@ -26,8 +26,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.thl.THLEvent;
-import com.continuent.tungsten.replicator.thl.THLException;
 
 /**
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
@@ -38,5 +38,5 @@ public interface Serializer
     public void serializeEvent(THLEvent replEvent, OutputStream outStream)
             throws IOException;
 
-    public THLEvent deserializeEvent(InputStream inStream) throws IOException, THLException;
+    public THLEvent deserializeEvent(InputStream inStream) throws IOException, ReplicatorException;
 }

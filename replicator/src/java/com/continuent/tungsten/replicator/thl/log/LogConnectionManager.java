@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.thl.THLException;
 
 /**
@@ -59,7 +60,7 @@ public class LogConnectionManager
      * Stores a new connection.
      */
     public synchronized void store(LogConnection connection)
-            throws THLException
+            throws ReplicatorException
     {
         // Ensure we are still open for business.
         assertNotDone(connection);
@@ -148,7 +149,7 @@ public class LogConnectionManager
     }
 
     // Ensure that log is still accessible.
-    private void assertNotDone(LogConnection client) throws THLException
+    private void assertNotDone(LogConnection client) throws ReplicatorException
     {
         if (done)
         {

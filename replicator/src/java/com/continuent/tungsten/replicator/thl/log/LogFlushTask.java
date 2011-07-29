@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
-import com.continuent.tungsten.replicator.thl.THLException;
+import com.continuent.tungsten.replicator.ReplicatorException;
 
 /**
  * This class implements a task to issue asynchronous flush calls on active log
@@ -99,7 +99,7 @@ public class LogFlushTask implements Runnable
     /**
      * Issue a synchronization call.
      */
-    private void processSync() throws THLException, IOException,
+    private void processSync() throws ReplicatorException, IOException,
             InterruptedException
     {
         Collection<LogFile> logFiles = logFileMap.values();

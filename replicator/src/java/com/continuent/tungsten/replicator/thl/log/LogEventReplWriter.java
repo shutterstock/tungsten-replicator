@@ -25,9 +25,10 @@ package com.continuent.tungsten.replicator.thl.log;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import com.continuent.tungsten.replicator.thl.serializer.Serializer;
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.thl.THLEvent;
 import com.continuent.tungsten.replicator.thl.THLException;
+import com.continuent.tungsten.replicator.thl.serializer.Serializer;
 
 /**
  * This class encapsulates operations to write a log record header and
@@ -46,7 +47,7 @@ public class LogEventReplWriter
      * Instantiate the writer. 
      */
     public LogEventReplWriter(THLEvent event, Serializer serializer,
-            boolean checkCRC) throws THLException
+            boolean checkCRC) throws ReplicatorException
     {
         this.event = event;
         this.serializer = serializer;
@@ -56,7 +57,7 @@ public class LogEventReplWriter
     /**
      * Write and return the log record. 
      */
-    public LogRecord write() throws THLException
+    public LogRecord write() throws ReplicatorException
     {
         LogRecord logRecord = new LogRecord(-1, checkCRC);
         try

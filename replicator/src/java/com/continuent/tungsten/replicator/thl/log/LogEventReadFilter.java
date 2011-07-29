@@ -22,7 +22,7 @@
 
 package com.continuent.tungsten.replicator.thl.log;
 
-import com.continuent.tungsten.replicator.thl.THLException;
+import com.continuent.tungsten.replicator.ReplicatorException;
 
 /**
  * Denotes a class that decides whether to accept and deserialize the next
@@ -36,5 +36,5 @@ public interface LogEventReadFilter
     /**
      * Returns true if the reader contains an event that should be deserialized.
      */
-    public boolean accept(LogEventReplReader reader) throws THLException;
+    public boolean accept(LogEventReplReader reader) throws ReplicatorException;
 }

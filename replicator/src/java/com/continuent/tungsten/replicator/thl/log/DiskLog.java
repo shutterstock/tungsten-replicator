@@ -666,7 +666,7 @@ public class DiskLog
      *            write at any given time.
      * @return A new log client.
      */
-    public LogConnection connect(boolean readonly) throws THLException
+    public LogConnection connect(boolean readonly) throws ReplicatorException
     {
         // Allocate, store, and return the connection.
         LogConnection client = new LogConnection(this, readonly);
@@ -697,7 +697,7 @@ public class DiskLog
      * @seqno Sequence number of first event in new file
      */
     LogFile rotate(LogFile dataFile, long seqno) throws IOException,
-            THLException, InterruptedException
+            ReplicatorException, InterruptedException
     {
         // Increment the log index here.
         fileIndex = (fileIndex + 1) % Integer.MAX_VALUE;
@@ -775,11 +775,11 @@ public class DiskLog
      * 
      * @param newFileName Name of the file.
      * @return Opens log file.
-     * @throws THLException If file cannot be found or opened
+     * @throws ReplicatorException If file cannot be found or opened
      * @throws InterruptedException Thrown if we are interrupted
      */
-    LogFile getLogFileForReading(String newFileName) throws THLException,
-            InterruptedException
+    LogFile getLogFileForReading(String newFileName)
+            throws ReplicatorException, InterruptedException
     {
         LogFile logFile = new LogFile(logDir, newFileName);
         logFile.setBufferSize(bufferSize);
@@ -806,10 +806,10 @@ public class DiskLog
      *            null to start from the current beginning of the log.
      * @param high Sequence number specifying the end of the range. Leave null
      *            to delete to the end of the log.
-     * @throws THLException Thrown if delete fails
+     * @throws ReplicatorException Thrown if delete fails
      */
     public void delete(LogConnection client, Long low, Long high)
-            throws THLException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         // Ensure the log is writable.
         if (readOnly || !writeLock.isLocked())
@@ -870,7 +870,7 @@ public class DiskLog
 
     // Truncates the file at a particular sequence number.
     private void truncateFile(LogConnection client, LogIndexEntry entry,
-            long seqno) throws THLException, InterruptedException
+            long seqno) throws ReplicatorException, InterruptedException
     {
         LogFile logFile = null;
         try
@@ -1005,7 +1005,7 @@ public class DiskLog
      * 
      * @seqno Sequence number of first event in the file
      */
-    private LogFile startNewLogFile(long seqno) throws THLException,
+    private LogFile startNewLogFile(long seqno) throws ReplicatorException,
             IOException, InterruptedException
     {
         // Open new log file and update index. TODO: did this get updated?

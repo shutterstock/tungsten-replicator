@@ -154,10 +154,10 @@ public class LogConnection
      * @param fragno Desired fragment
      * @return True if seek is successful and next() may be called; false if
      *         event does not exist
-     * @throws THLException thrown if log cannot be read
+     * @throws ReplicatorException thrown if log cannot be read
      */
     public synchronized boolean seek(long seqno, short fragno)
-            throws THLException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         assertNotDone();
 
@@ -276,7 +276,7 @@ public class LogConnection
 
     // Deserialize the event we just found. This takes into consideration
     // the read filter, if present.
-    private THLEvent deserialize(LogRecord logRecord) throws THLException
+    private THLEvent deserialize(LogRecord logRecord) throws ReplicatorException
     {
         LogEventReplReader eventReader = new LogEventReplReader(logRecord,
                 eventSerializer, doChecksum);
@@ -311,9 +311,9 @@ public class LogConnection
      * @param seqno Desired sequence number
      * @return True if seek is successful and next() may be called; false if
      *         event does not exist
-     * @throws THLException thrown if log cannot be read
+     * @throws ReplicatorException thrown if log cannot be read
      */
-    public synchronized boolean seek(long seqno) throws THLException,
+    public synchronized boolean seek(long seqno) throws ReplicatorException,
             InterruptedException
     {
         return seek(seqno, (short) 0);
@@ -325,11 +325,11 @@ public class LogConnection
      * 
      * @param name The short name of a current log file
      * @return True if seek is successful and next() may be called
-     * @throws THLException Thrown if the log cannot be read
+     * @throws ReplicatorException Thrown if the log cannot be read
      * @throws IOException Thrown if file cannot be found
      * @throws InterruptedException
      */
-    public synchronized boolean seek(String name) throws THLException,
+    public synchronized boolean seek(String name) throws ReplicatorException,
             IOException, InterruptedException
     {
         assertNotDone();
@@ -376,7 +376,7 @@ public class LogConnection
      * @param block If true, read blocks until next event is available
      * @return A THLEvent or null if we are non-blocking
      */
-    public synchronized THLEvent next(boolean block) throws THLException,
+    public synchronized THLEvent next(boolean block) throws ReplicatorException,
             InterruptedException
     {
         assertNotDone();
@@ -484,7 +484,7 @@ public class LogConnection
      * 
      * @return A THLEvent or null if we are non-blocking
      */
-    public synchronized THLEvent next() throws THLException,
+    public synchronized THLEvent next() throws ReplicatorException,
             InterruptedException
     {
         return next(true);
@@ -497,7 +497,7 @@ public class LogConnection
      * @param commit If true, flush to storage
      */
     public synchronized void store(THLEvent event, boolean commit)
-            throws THLException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         assertWritable();
 
@@ -573,7 +573,7 @@ public class LogConnection
     /**
      * Commit transactions stored in the log.
      */
-    public synchronized void commit() throws THLException, InterruptedException
+    public synchronized void commit() throws ReplicatorException, InterruptedException
     {
         assertWritable();
 
@@ -601,7 +601,7 @@ public class LogConnection
     /**
      * Rollback transactions stored in the log.
      */
-    public synchronized void rollback() throws THLException
+    public synchronized void rollback() throws ReplicatorException
     {
         // TODO: Implement rollback.
         assertWritable();
@@ -610,7 +610,7 @@ public class LogConnection
     /**
      * Delete a range of events from the log.
      */
-    public synchronized void delete(Long low, Long high) throws THLException,
+    public synchronized void delete(Long low, Long high) throws ReplicatorException,
             InterruptedException
     {
         assertWritable();
@@ -618,7 +618,7 @@ public class LogConnection
     }
 
     // Ensure this is a writable connection.
-    private void assertWritable() throws THLException
+    private void assertWritable() throws ReplicatorException
     {
         assertNotDone();
         if (readonly)
@@ -634,7 +634,7 @@ public class LogConnection
     }
 
     // Ensure we are not released.
-    private void assertNotDone() throws THLException
+    private void assertNotDone() throws ReplicatorException
     {
         if (done)
             throw new THLException("Attempt to use released connection");

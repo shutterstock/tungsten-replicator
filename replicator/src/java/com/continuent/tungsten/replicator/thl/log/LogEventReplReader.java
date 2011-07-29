@@ -25,6 +25,7 @@ package com.continuent.tungsten.replicator.thl.log;
 import java.io.DataInputStream;
 import java.io.IOException;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.thl.THLEvent;
 import com.continuent.tungsten.replicator.thl.THLException;
 import com.continuent.tungsten.replicator.thl.serializer.Serializer;
@@ -62,7 +63,7 @@ public class LogEventReplReader
      * Instantiate the reader and load header information.
      */
     public LogEventReplReader(LogRecord logRecord, Serializer serializer,
-            boolean checkCRC) throws THLException
+            boolean checkCRC) throws ReplicatorException
     {
         this.logRecord = logRecord;
         this.serializer = serializer;
@@ -80,7 +81,7 @@ public class LogEventReplReader
     }
 
     // Load header fields.
-    private void load() throws THLException, IOException
+    private void load() throws ReplicatorException, IOException
     {
         // Check CRC if requested.
         if (checkCRC)
@@ -162,7 +163,7 @@ public class LogEventReplReader
     }
 
     /** Deserialize and return the event. */
-    public THLEvent deserializeEvent() throws THLException
+    public THLEvent deserializeEvent() throws ReplicatorException
     {
         try
         {

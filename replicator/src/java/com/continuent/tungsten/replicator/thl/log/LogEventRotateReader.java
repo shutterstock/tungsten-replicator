@@ -25,6 +25,7 @@ package com.continuent.tungsten.replicator.thl.log;
 import java.io.DataInputStream;
 import java.io.IOException;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.thl.THLException;
 
 /**
@@ -49,7 +50,7 @@ public class LogEventRotateReader
      * Instantiate the reader and load header information.
      */
     public LogEventRotateReader(LogRecord logRecord, boolean checkCRC)
-            throws THLException, IOException
+            throws ReplicatorException, IOException
     {
         this.logRecord = logRecord;
         this.checkCRC = checkCRC;
@@ -57,7 +58,7 @@ public class LogEventRotateReader
     }
 
     // Load header fields.
-    private void load() throws THLException, IOException
+    private void load() throws ReplicatorException, IOException
     {
         // Check CRC if requested.
         if (checkCRC)
