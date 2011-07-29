@@ -30,7 +30,6 @@ import org.apache.log4j.Logger;
 import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.database.Database;
-import com.continuent.tungsten.replicator.database.DatabaseException;
 import com.continuent.tungsten.replicator.database.DatabaseFactory;
 import com.continuent.tungsten.replicator.database.Table;
 import com.continuent.tungsten.replicator.management.OpenReplicatorManager;
@@ -74,7 +73,7 @@ public class VersionManager
     }
 
     public VersionManager(TungstenProperties properties) throws SQLException,
-            DatabaseException
+            ReplicatorException
     {
         this.metadataSchema = properties
                 .getString(ReplicatorConf.METADATA_SCHEMA);
@@ -105,8 +104,7 @@ public class VersionManager
         try
         {
             statement.setFetchSize(1);
-            ret = Version.getVersionFromDB(statement, metadataSchema,
-                    module);
+            ret = Version.getVersionFromDB(statement, metadataSchema, module);
         }
         finally
         {
@@ -116,15 +114,13 @@ public class VersionManager
         return ret;
     }
 
-    public void setVersion(String module, Version version)
-            throws SQLException
+    public void setVersion(String module, Version version) throws SQLException
     {
         connect(url, user, password);
 
         try
         {
-            Version.saveVersionToDB(statement, metadataSchema, module,
-                    version);
+            Version.saveVersionToDB(statement, metadataSchema, module, version);
         }
         finally
         {
@@ -150,9 +146,7 @@ public class VersionManager
     }
 
     /**
-     * 
      * TODO: checks tungsten module versions
-     * 
      */
     public void check() throws SQLException
     {
