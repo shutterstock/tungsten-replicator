@@ -71,7 +71,7 @@ public class THLParallelQueueExtractor implements ParallelExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#extract()
      */
-    public ReplEvent extract() throws ExtractorException, InterruptedException
+    public ReplEvent extract() throws ReplicatorException, InterruptedException
     {
         // Make sure the queue is started. This cannot happen earlier or the
         // queue might not have the right position for restart.
@@ -99,7 +99,7 @@ public class THLParallelQueueExtractor implements ParallelExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#getCurrentResourceEventId()
      */
-    public String getCurrentResourceEventId() throws ExtractorException,
+    public String getCurrentResourceEventId() throws ReplicatorException,
             InterruptedException
     {
         try
@@ -196,7 +196,7 @@ public class THLParallelQueueExtractor implements ParallelExtractor
      * 
      * @see com.continuent.tungsten.replicator.applier.ParallelApplier#setTaskId(int)
      */
-    public void setTaskId(int id) throws ExtractorException
+    public void setTaskId(int id)
     {
         this.taskId = id;
     }
