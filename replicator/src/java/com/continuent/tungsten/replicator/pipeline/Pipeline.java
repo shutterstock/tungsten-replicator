@@ -47,7 +47,6 @@ import com.continuent.tungsten.replicator.management.events.GoOfflineEvent;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
 import com.continuent.tungsten.replicator.storage.Store;
-import com.continuent.tungsten.replicator.thl.THLException;
 
 /**
  * Stores the information related to a replication pipeline, which is a set of
@@ -558,7 +557,7 @@ public class Pipeline implements ReplicatorPlugin
      * @return A Future on the ReplDBMSEvent that has this eventId or a greater
      *         one.
      * @throws InterruptedException
-     * @throws THLException
+     * @throws ReplicatorException
      */
     public Future<ReplDBMSHeader> flush() throws InterruptedException,
             ReplicatorException
