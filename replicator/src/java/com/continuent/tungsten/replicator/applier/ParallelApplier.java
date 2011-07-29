@@ -22,6 +22,7 @@
 
 package com.continuent.tungsten.replicator.applier;
 
+
 /**
  * Denotes an applier that extends normal Applier capabilities to allow parallel
  * operation.
@@ -35,8 +36,6 @@ public interface ParallelApplier extends Applier
      * Sets the ID of the task using this applier.
      * 
      * @param id Task ID
-     * @throws ApplierException Thrown if the task ID exceeds the number of
-     *             tasks allowed by the extractor
      */
-    public void setTaskId(int id) throws ApplierException;
+    public void setTaskId(int id);
 }
