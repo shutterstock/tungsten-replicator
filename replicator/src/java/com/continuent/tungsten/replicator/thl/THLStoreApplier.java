@@ -121,7 +121,7 @@ public class THLStoreApplier implements Applier
      *      boolean, boolean, boolean)
      */
     public void apply(ReplDBMSEvent event, boolean doCommit,
-            boolean doRollback, boolean syncTHL) throws ApplierException,
+            boolean doRollback, boolean syncTHL) throws ReplicatorException,
             InterruptedException
     {
         THLEvent thlEvent = new THLEvent(event.getEventId(), event);
@@ -132,7 +132,8 @@ public class THLStoreApplier implements Applier
             {
                 thl.updateCommitSeqno(thlEvent);
             }
-            logger.debug("Stored event " + event.getSeqno());
+            if (logger.isDebugEnabled())
+                logger.debug("Stored event " + event.getSeqno());
         }
         catch (THLException e)
         {
@@ -158,7 +159,7 @@ public class THLStoreApplier implements Applier
      * 
      * @see com.continuent.tungsten.replicator.applier.Applier#commit()
      */
-    public void commit() throws ApplierException, InterruptedException
+    public void commit() throws ReplicatorException, InterruptedException
     {
         try
         {
