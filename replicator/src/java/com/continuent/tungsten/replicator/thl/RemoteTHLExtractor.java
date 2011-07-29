@@ -117,7 +117,7 @@ public class RemoteTHLExtractor implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#extract()
      */
-    public ReplDBMSEvent extract() throws ExtractorException,
+    public ReplDBMSEvent extract() throws ReplicatorException,
             InterruptedException
     {
         // Open the connector if it is not yet open.
@@ -178,7 +178,7 @@ public class RemoteTHLExtractor implements Extractor
     }
 
     /** Does not make sense for this extractor type. */
-    public String getCurrentResourceEventId() throws ExtractorException,
+    public String getCurrentResourceEventId() throws ReplicatorException,
             InterruptedException
     {
         return null;
@@ -189,7 +189,7 @@ public class RemoteTHLExtractor implements Extractor
         return false;
     }
 
-    public void setLastEvent(ReplDBMSHeader event) throws ExtractorException
+    public void setLastEvent(ReplDBMSHeader event) throws ReplicatorException
     {
         lastEvent = event;
     }
@@ -199,7 +199,7 @@ public class RemoteTHLExtractor implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEventId(java.lang.String)
      */
-    public void setLastEventId(String eventId) throws ExtractorException
+    public void setLastEventId(String eventId) throws ReplicatorException
     {
         logger.warn("Attempt to set last event ID on remote THL extractor: "
                 + eventId);
@@ -253,7 +253,7 @@ public class RemoteTHLExtractor implements Extractor
     }
 
     // Reconnect a failed connection.
-    private void reconnect() throws InterruptedException, THLException
+    private void reconnect() throws InterruptedException, ReplicatorException
     {
         // Reconnect after lost connection.
         logger.info("Connection to remote thl lost; reconnecting");
@@ -263,7 +263,7 @@ public class RemoteTHLExtractor implements Extractor
     }
 
     // Open up the connector here.
-    private void openConnector() throws THLException, InterruptedException
+    private void openConnector() throws ReplicatorException, InterruptedException
     {
         // Connect to remote THL.
         logger.info("Opening connection to master: " + connectUri);
