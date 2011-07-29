@@ -26,12 +26,10 @@ import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.applier.Applier;
-import com.continuent.tungsten.replicator.applier.ApplierException;
 import com.continuent.tungsten.replicator.consistency.ConsistencyException;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.extractor.Extractor;
-import com.continuent.tungsten.replicator.extractor.ExtractorException;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
@@ -69,7 +67,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
      *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#extract()
      */
-    public ReplDBMSEvent extract() throws ExtractorException,
+    public ReplDBMSEvent extract() throws ReplicatorException,
             InterruptedException
     {
         return queueStore.get();
@@ -80,7 +78,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
      *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#getCurrentResourceEventId()
      */
-    public String getCurrentResourceEventId() throws ExtractorException,
+    public String getCurrentResourceEventId() throws ReplicatorException,
             InterruptedException
     {
         ReplDBMSEvent event = queueStore.peek();
@@ -106,7 +104,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
      *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEvent(com.continuent.tungsten.replicator.event.ReplDBMSHeader)
      */
-    public void setLastEvent(ReplDBMSHeader header) throws ExtractorException
+    public void setLastEvent(ReplDBMSHeader header) throws ReplicatorException
     {
         queueStore.setLastHeader(header);
     }
@@ -116,7 +114,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
      *
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEventId(java.lang.String)
      */
-    public void setLastEventId(String eventId) throws ExtractorException
+    public void setLastEventId(String eventId) throws ReplicatorException
     {
         logger.warn("Attempt to set last event ID on queue storage: " + eventId);
     }
@@ -170,7 +168,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
      *      boolean, boolean, boolean)
      */
     public void apply(ReplDBMSEvent event, boolean doCommit, boolean doRollback, boolean syncTHL)
-            throws ApplierException, ConsistencyException, InterruptedException
+            throws ReplicatorException, ConsistencyException, InterruptedException
     {
         queueStore.put(event);
     }
@@ -193,7 +191,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
      *
      * @see com.continuent.tungsten.replicator.applier.Applier#commit()
      */
-    public void commit() throws ApplierException, InterruptedException
+    public void commit() throws ReplicatorException, InterruptedException
     {
     }
 
@@ -213,7 +211,7 @@ public class InMemoryQueueAdapter implements Extractor, Applier
      *
      * @see com.continuent.tungsten.replicator.applier.Applier#getLastEvent()
      */
-    public ReplDBMSHeader getLastEvent() throws ApplierException,
+    public ReplDBMSHeader getLastEvent() throws ReplicatorException,
             InterruptedException
     {
         return queueStore.getLastHeader();

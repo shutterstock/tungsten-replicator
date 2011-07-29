@@ -70,7 +70,7 @@ public class ParallelQueueExtractor implements ParallelExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#extract()
      */
-    public ReplEvent extract() throws ExtractorException, InterruptedException
+    public ReplEvent extract() throws ReplicatorException, InterruptedException
     {
         try
         {
@@ -89,7 +89,7 @@ public class ParallelQueueExtractor implements ParallelExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#getCurrentResourceEventId()
      */
-    public String getCurrentResourceEventId() throws ExtractorException,
+    public String getCurrentResourceEventId() throws ReplicatorException,
             InterruptedException
     {
         try
@@ -192,7 +192,7 @@ public class ParallelQueueExtractor implements ParallelExtractor
      * 
      * @see com.continuent.tungsten.replicator.applier.ParallelApplier#setTaskId(int)
      */
-    public void setTaskId(int id) throws ExtractorException
+    public void setTaskId(int id)
     {
         this.taskId = id;
     }

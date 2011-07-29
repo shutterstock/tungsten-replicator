@@ -23,7 +23,6 @@
 package com.continuent.tungsten.replicator.storage;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
-import com.continuent.tungsten.replicator.applier.ApplierException;
 import com.continuent.tungsten.replicator.applier.ParallelApplier;
 import com.continuent.tungsten.replicator.consistency.ConsistencyException;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
@@ -110,7 +109,7 @@ public class InMemoryMultiQueueApplier implements ParallelApplier
      *      boolean, boolean, boolean)
      */
     public void apply(ReplDBMSEvent event, boolean doCommit,
-            boolean doRollback, boolean syncTHL) throws ApplierException,
+            boolean doRollback, boolean syncTHL) throws ReplicatorException,
             ConsistencyException, InterruptedException
     {
         queueStore.put(taskId, event);
@@ -134,7 +133,7 @@ public class InMemoryMultiQueueApplier implements ParallelApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.Applier#commit()
      */
-    public void commit() throws ApplierException, InterruptedException
+    public void commit() throws ReplicatorException, InterruptedException
     {
     }
 
@@ -160,7 +159,7 @@ public class InMemoryMultiQueueApplier implements ParallelApplier
     }
 
     @Override
-    public void setTaskId(int id) throws ApplierException
+    public void setTaskId(int id)
     {
         this.taskId = id;
     }
