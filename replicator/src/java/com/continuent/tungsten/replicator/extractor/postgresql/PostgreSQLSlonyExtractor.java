@@ -50,23 +50,23 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class PostgreSQLSlonyExtractor implements RawExtractor
 {
-    private static Logger                   logger                = Logger.getLogger(PostgreSQLSlonyExtractor.class);
+    private static Logger     logger      = Logger.getLogger(PostgreSQLSlonyExtractor.class);
 
-    private ReplicatorRuntime               runtime               = null;
-    private String                          host                  = "localhost";
-    private int                             port                  = 5432;
-    private String                          database              = null;
-    private String                          user                  = "postgres";
-    private String                          password              = "";
+    private ReplicatorRuntime runtime     = null;
+    private String            host        = "localhost";
+    private int               port        = 5432;
+    private String            database    = null;
+    private String            user        = "postgres";
+    private String            password    = "";
 
-    private String                          slonySchema           = "_slonytest";
+    private String            slonySchema = "_slonytest";
 
-    private String                          url;
+    private String            url;
 
-    Database                                conn                  = null;
+    Database                  conn        = null;
 
     /** Cursor to current Slony log position. */
-    private String                          currentTxId           = null;
+    private String            currentTxId = null;
 
     public String getHost()
     {
@@ -131,10 +131,10 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
      *            query).
      * @param tableSchemaName Fully qualified table name (with schema).
      * @return Executable SQL statement.
-     * @throws ExtractorException If unrecognized cmdType is hit.
+     * @throws ReplicatorException If unrecognized cmdType is hit.
      */
     private String rebuildSlonyQuery(String cmdType, String cmdData,
-            String tableSchemaName) throws ExtractorException
+            String tableSchemaName) throws ReplicatorException
     {
         StringBuffer sb = new StringBuffer();
 
@@ -164,15 +164,15 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
 
         return sb.toString();
     }
-    
+
     /**
      * Retrieves log_txid of the next event after afterTxId.
      * 
      * @param afterTxId log_txid of the transaction to see for an event after.
      * @return log_txid if there is an event; null, if there is not.
-     * @throws ExtractorException If SQLException happened.
+     * @throws ReplicatorException If SQLException happened.
      */
-    private Long getNextEventId(String afterTxId) throws ExtractorException
+    private Long getNextEventId(String afterTxId) throws ReplicatorException
     {
         Statement st = null;
         ResultSet rs = null;
@@ -226,8 +226,8 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
      * 
      * @param afterTxId log_txid of the event to extract *after*.
      */
-    private DBMSEvent extractEvent(String afterTxId) throws ExtractorException,
-            InterruptedException
+    private DBMSEvent extractEvent(String afterTxId)
+            throws ReplicatorException, InterruptedException
     {
         DBMSEvent dbmsEvent = null;
         ArrayList<DBMSData> dataArray = new ArrayList<DBMSData>();
@@ -378,7 +378,7 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#extract()
      */
     public synchronized DBMSEvent extract() throws InterruptedException,
-            ExtractorException
+            ReplicatorException
     {
         return extractEvent(currentTxId);
     }
@@ -389,7 +389,7 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#extract(java.lang.String)
      */
     public DBMSEvent extract(String eventId) throws InterruptedException,
-            ExtractorException
+            ReplicatorException
     {
         setLastEventId(eventId);
         return extract();
@@ -400,7 +400,7 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#setLastEventId(java.lang.String)
      */
-    public void setLastEventId(String eventId) throws ExtractorException
+    public void setLastEventId(String eventId) throws ReplicatorException
     {
         if (eventId != null)
         {
@@ -446,7 +446,7 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
         }
         return conn;
     }
-    
+
     /**
      * {@inheritDoc}
      * 
@@ -504,7 +504,7 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#getCurrentResourceEventId()
      */
-    public String getCurrentResourceEventId() throws ExtractorException
+    public String getCurrentResourceEventId() throws ReplicatorException
     {
         Database conn = null;
         Statement st = null;
@@ -515,7 +515,8 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
             conn.connect();
             st = conn.createStatement();
 
-            logger.debug("Determining last position in Slony log");
+            if (logger.isDebugEnabled())
+                logger.debug("Determining last position in Slony log");
             rs = st.executeQuery("SELECT MAX(max_log_txid) FROM ("
                     + "SELECT MAX(log_txid) AS max_log_txid FROM "
                     + getSlLogTable(1) + " UNION ALL "
