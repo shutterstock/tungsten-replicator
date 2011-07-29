@@ -39,6 +39,7 @@ import org.apache.log4j.Logger;
 import com.continuent.tungsten.commons.mysql.MySQLConstants;
 import com.continuent.tungsten.commons.mysql.MySQLIOs;
 import com.continuent.tungsten.commons.mysql.MySQLPacket;
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
 
 /**
@@ -52,8 +53,7 @@ import com.continuent.tungsten.replicator.extractor.ExtractorException;
  */
 public class RelayLogClient
 {
-    private static Logger    logger       = Logger
-                                                  .getLogger(RelayLogClient.class);
+    private static Logger    logger       = Logger.getLogger(RelayLogClient.class);
 
     // Magic number for MySQL binlog files.
     private static byte[]    magic        = {(byte) 0xfe, 0x62, 0x69, 0x6e};
@@ -166,7 +166,7 @@ public class RelayLogClient
     {
         this.autoClean = autoClean;
     }
-    
+
     public void setServerId(int serverId)
     {
         this.serverId = serverId;
@@ -229,8 +229,9 @@ public class RelayLogClient
         }
         catch (Exception e)
         {
-            logger.fatal("Relay client failed with unexpected exception: "
-                    + e.getMessage(), e);
+            logger.fatal(
+                    "Relay client failed with unexpected exception: "
+                            + e.getMessage(), e);
         }
         finally
         {
@@ -259,7 +260,7 @@ public class RelayLogClient
      * Connect to database and set up relay log transfer. If successful we are
      * ready to transfer binlogs.
      */
-    public void connect() throws ExtractorException
+    public void connect() throws ReplicatorException
     {
         try
         {
@@ -352,8 +353,7 @@ public class RelayLogClient
     /**
      * Process next event packet from MySQL.
      */
-    public void processEvent() throws ExtractorException,
-            InterruptedException
+    public void processEvent() throws ReplicatorException, InterruptedException
     {
         MySQLPacket packet = MySQLPacket.readPacket(input);
         int length = packet.getDataLength();
@@ -486,7 +486,8 @@ public class RelayLogClient
             sb.append(" event_length=").append(eventLength);
             sb.append(" next_position=").append(nextPosition);
             sb.append(" flags=").append(flags);
-            logger.debug(sb.toString());
+            if (logger.isDebugEnabled())
+                logger.debug(sb.toString());
         }
 
         if (typeCode == MysqlBinlog.ROTATE_EVENT)
@@ -500,7 +501,8 @@ public class RelayLogClient
                 StringBuffer sb2 = new StringBuffer("ROTATE_EVENT:");
                 sb2.append(" next_start_offset=").append(offset);
                 sb2.append(" next_binlog_name=").append(binlog);
-                logger.debug(sb2.toString());
+                if (logger.isDebugEnabled())
+                    logger.debug(sb2.toString());
             }
 
             // Write rotate_log event only if we have an open relay log file.
@@ -583,8 +585,9 @@ public class RelayLogClient
         }
         catch (FileNotFoundException e)
         {
-            logger.error("Unable to open file for output: "
-                    + relayLog.getAbsolutePath(), e);
+            logger.error(
+                    "Unable to open file for output: "
+                            + relayLog.getAbsolutePath(), e);
             return;
         }
 

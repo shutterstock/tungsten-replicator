@@ -26,6 +26,7 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.BigEndianConversion;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndianConversion;
 
@@ -189,7 +190,7 @@ public class TableMapLogEvent extends LogEvent
 
     public TableMapLogEvent(byte[] buffer, int eventLength,
             FormatDescriptionLogEvent descriptionEvent)
-            throws MySQLExtractException
+            throws ReplicatorException
     {
         super(buffer, descriptionEvent, MysqlBinlog.TABLE_MAP_EVENT);
 

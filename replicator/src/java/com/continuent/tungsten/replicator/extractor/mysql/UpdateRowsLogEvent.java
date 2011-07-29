@@ -22,9 +22,9 @@
 
 package com.continuent.tungsten.replicator.extractor.mysql;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 import com.continuent.tungsten.replicator.dbms.RowChangeData;
-import com.continuent.tungsten.replicator.extractor.ExtractorException;
 
 /**
  * @author <a href="mailto:seppo.jaakola@continuent.com">Seppo Jaakola</a>
@@ -36,7 +36,7 @@ public class UpdateRowsLogEvent extends RowsLogEvent
 
     public UpdateRowsLogEvent(byte[] buffer, int eventLength,
             FormatDescriptionLogEvent descriptionEvent,
-            boolean useBytesForString) throws MySQLExtractException
+            boolean useBytesForString) throws ReplicatorException
     {
         super(buffer, eventLength, descriptionEvent,
                 MysqlBinlog.UPDATE_ROWS_EVENT, useBytesForString);
@@ -50,7 +50,7 @@ public class UpdateRowsLogEvent extends RowsLogEvent
      */
     @Override
     public void processExtractedEvent(RowChangeData rowChanges,
-            TableMapLogEvent map) throws ExtractorException
+            TableMapLogEvent map) throws ReplicatorException
     {
         /**
          * For UPDATE_ROWS_LOG_EVENT, a row matching the first row-image is
@@ -94,11 +94,8 @@ public class UpdateRowsLogEvent extends RowsLogEvent
                         usedColumnsForUpdate, bufferIndex, packedRowsBuffer,
                         map, false);
             }
-            catch (ExtractorException e)
+            catch (ReplicatorException e)
             {
-                logger.error(
-                        "Failure while processing extracted update row event",
-                        e);
                 throw (e);
             }
             rowIndex++;

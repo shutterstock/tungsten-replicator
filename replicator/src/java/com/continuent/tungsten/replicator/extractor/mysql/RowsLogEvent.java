@@ -33,11 +33,12 @@ import java.util.Calendar;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.database.DatabaseHelper;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
-import com.continuent.tungsten.replicator.dbms.RowChangeData;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnVal;
+import com.continuent.tungsten.replicator.dbms.RowChangeData;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.BigEndianConversion;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.GeneralConversion;
@@ -110,7 +111,7 @@ public abstract class RowsLogEvent extends LogEvent
 
     public RowsLogEvent(byte[] buffer, int eventLength,
             FormatDescriptionLogEvent descriptionEvent, int eventType,
-            boolean useBytesForString) throws MySQLExtractException
+            boolean useBytesForString) throws ReplicatorException
     {
         super(buffer, descriptionEvent, eventType);
         this.useBytesForString = useBytesForString;
@@ -229,7 +230,7 @@ public abstract class RowsLogEvent extends LogEvent
     }
 
     public abstract void processExtractedEvent(RowChangeData rowChanges,
-            TableMapLogEvent map) throws ExtractorException;
+            TableMapLogEvent map) throws ReplicatorException;
 
     public int getEventSize()
     {
@@ -373,7 +374,7 @@ public abstract class RowsLogEvent extends LogEvent
 
     protected int extractValue(ColumnSpec spec, ColumnVal value, byte[] row,
             int rowPos, int type, int meta) throws IOException,
-            ExtractorException
+            ReplicatorException
     {
         int length = 0;
 
@@ -832,7 +833,7 @@ public abstract class RowsLogEvent extends LogEvent
     }
 
     private byte[] processStringAsBytes(byte[] buffer, int pos, int length)
-            throws ExtractorException
+            throws ReplicatorException
     {
         byte[] output = new byte[length];
         System.arraycopy(buffer, pos, output, 0, length);
@@ -840,14 +841,14 @@ public abstract class RowsLogEvent extends LogEvent
     }
 
     protected String processString(byte[] buffer, int pos, int length)
-            throws ExtractorException
+            throws ReplicatorException
     {
         return new String(buffer, pos, length);
     }
 
     protected int processExtractedEventRow(OneRowChange oneRowChange,
             int rowIndex, BitSet cols, int rowPos, byte[] row,
-            TableMapLogEvent map, boolean isKeySpec) throws ExtractorException
+            TableMapLogEvent map, boolean isKeySpec) throws ReplicatorException
     {
         int startIndex = rowPos;
 

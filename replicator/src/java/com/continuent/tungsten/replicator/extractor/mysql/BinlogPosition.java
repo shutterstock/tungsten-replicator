@@ -34,6 +34,8 @@ import java.io.InputStream;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 /**
  * Position inside binlog file
  * 
@@ -116,7 +118,7 @@ public class BinlogPosition implements FilenameFilter, Cloneable
     /*
      * @brief resets binlog position, but leaves directory and base name intact
      */
-    public void reset() throws MySQLExtractException
+    public void reset() throws ReplicatorException
     {
         try
         {
@@ -138,7 +140,7 @@ public class BinlogPosition implements FilenameFilter, Cloneable
         setFileName(null);
     }
 
-    void openFile() throws MySQLExtractException
+    void openFile() throws ReplicatorException
     {
         try
         {
@@ -194,7 +196,7 @@ public class BinlogPosition implements FilenameFilter, Cloneable
         }
     }
 
-    public void read(byte[] buf) throws IOException, MySQLExtractException
+    public void read(byte[] buf) throws IOException, ReplicatorException
     {
         int pos = 0;
         int remaining = buf.length;
@@ -209,7 +211,8 @@ public class BinlogPosition implements FilenameFilter, Cloneable
             catch (EOFException e)
             {
                 // writer has not finished yet
-                logger.debug("got EOF during binlog read");
+                if (logger.isDebugEnabled())
+                    logger.debug("got EOF during binlog read");
             }
             catch (IOException e)
             {
@@ -218,7 +221,8 @@ public class BinlogPosition implements FilenameFilter, Cloneable
             remaining -= readLen;
             if (remaining > 0)
             {
-                logger.debug("could not read full buffer");
+                if (logger.isDebugEnabled())
+                    logger.debug("could not read full buffer");
                 pos += readLen;
 
                 try
@@ -228,7 +232,7 @@ public class BinlogPosition implements FilenameFilter, Cloneable
                 catch (InterruptedException e)
                 {
                     logger.error("sleep failed during binlog reading" + e);
-                    throw (new MySQLExtractException("binlog read failure"));
+                    throw new MySQLExtractException("binlog read failure");
                 }
             }
         }

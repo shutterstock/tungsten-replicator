@@ -24,6 +24,7 @@ package com.continuent.tungsten.replicator.extractor.mysql;
 
 import java.io.IOException;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndianConversion;
 
 /**
@@ -37,7 +38,7 @@ public class DeleteFileLogEvent extends LogEvent
 
     public DeleteFileLogEvent(byte[] buffer, int eventLength,
             FormatDescriptionLogEvent descriptionEvent)
-            throws MySQLExtractException
+            throws ReplicatorException
     {
         super(buffer, descriptionEvent, MysqlBinlog.DELETE_FILE_EVENT);
 

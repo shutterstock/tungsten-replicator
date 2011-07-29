@@ -24,6 +24,7 @@ package com.continuent.tungsten.replicator.extractor.mysql;
 
 import java.io.IOException;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndianConversion;
 
 /**
@@ -38,7 +39,7 @@ public class AppendBlockLogEvent extends LogEvent
 
     public AppendBlockLogEvent(byte[] buffer, int eventLength,
             FormatDescriptionLogEvent descriptionEvent)
-            throws MySQLExtractException
+            throws ReplicatorException
     {
         super(buffer, descriptionEvent, MysqlBinlog.APPEND_BLOCK_EVENT);
 
@@ -74,7 +75,7 @@ public class AppendBlockLogEvent extends LogEvent
         }
         catch (IOException e)
         {
-            logger.error("AppendBlockLogEvent parsing failed : ", e);
+            logger.error("AppendBlockLogEvent parsing failed", e);
         }
     }
 

@@ -313,7 +313,7 @@ public class MySQLExtractor implements RawExtractor
      * Read binlog file header and verify it.
      */
     private void check_header(BinlogPosition position)
-            throws MySQLExtractException
+            throws ReplicatorException
     {
 
         byte header[] = new byte[MysqlBinlog.BIN_LOG_HEADER_SIZE];
@@ -468,7 +468,7 @@ public class MySQLExtractor implements RawExtractor
     }
 
     private LogEvent processFile(BinlogPosition position)
-            throws ExtractorException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         try
         {
@@ -575,7 +575,7 @@ public class MySQLExtractor implements RawExtractor
      * flushing as well
      */
     private BinlogPosition positionBinlogMaster(boolean flush)
-            throws ExtractorException
+            throws ReplicatorException
     {
         Database conn = null;
         Statement st = null;
@@ -627,7 +627,7 @@ public class MySQLExtractor implements RawExtractor
      * Find current position on running MySQL slave, stop the slave, and
      * position on the master binlog where the slave stopped.
      */
-    private BinlogPosition positionFromSlaveStatus() throws ExtractorException
+    private BinlogPosition positionFromSlaveStatus() throws ReplicatorException
     {
         Database conn = null;
         Statement st = null;
@@ -679,7 +679,7 @@ public class MySQLExtractor implements RawExtractor
      * given position does not point in the middle of transaction.
      */
     private DBMSEvent extractEvent(BinlogPosition position)
-            throws ExtractorException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
 
         boolean inTransaction = fragmentedTransaction;
@@ -1191,9 +1191,13 @@ public class MySQLExtractor implements RawExtractor
         }
         catch (ExtractorException e)
         {
-            logger.error("Failed to extract from " + position, e);
+            ExtractorException exception = new ExtractorException(
+                    "Failed to extract from " + position, e);
             if (runtime.getExtractorFailurePolicy() == FailurePolicy.STOP)
-                throw e;
+                throw exception;
+            else
+                logger.error("Failed to extract from " + position, e);
+
         }
         catch (InterruptedException e)
         {
@@ -1218,7 +1222,7 @@ public class MySQLExtractor implements RawExtractor
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#extract()
      */
     public synchronized DBMSEvent extract() throws InterruptedException,
-            ExtractorException
+            ReplicatorException
     {
         // If we are using relay logs make sure that relay logging is
         // functioning.
@@ -1234,7 +1238,7 @@ public class MySQLExtractor implements RawExtractor
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#extract(java.lang.String)
      */
     public DBMSEvent extract(String id) throws InterruptedException,
-            ExtractorException
+            ReplicatorException
     {
         setLastEventId(id);
         return extract();
@@ -1245,7 +1249,7 @@ public class MySQLExtractor implements RawExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#setLastEventId(java.lang.String)
      */
-    public void setLastEventId(String eventId) throws ExtractorException
+    public void setLastEventId(String eventId) throws ReplicatorException
     {
         if (eventId != null)
         {
@@ -1447,7 +1451,7 @@ public class MySQLExtractor implements RawExtractor
     }
 
     // Fetch the database version.
-    private String getDatabaseVersion(Database conn) throws ExtractorException
+    private String getDatabaseVersion(Database conn) throws ReplicatorException
     {
         String version = null;
         Statement st = null;
@@ -1478,7 +1482,7 @@ public class MySQLExtractor implements RawExtractor
     }
 
     // Fetch mysql 'max_binlog_size' setting.
-    private void getMaxBinlogSize(Database conn) throws ExtractorException
+    private void getMaxBinlogSize(Database conn) throws ReplicatorException
     {
         Statement st = null;
         ResultSet rs = null;
@@ -1505,7 +1509,7 @@ public class MySQLExtractor implements RawExtractor
         }
     }
 
-    private void checkInnoDBSupport(Database conn) throws ExtractorException
+    private void checkInnoDBSupport(Database conn) throws ReplicatorException
     {
         Statement st = null;
         ResultSet rs = null;
@@ -1535,7 +1539,7 @@ public class MySQLExtractor implements RawExtractor
 
     /** Starts relay logs. */
     private synchronized void startRelayLogs(String fileName, long offset)
-            throws ExtractorException
+            throws ReplicatorException
     {
         // Avoid pointless or harmful work.
         if (!useRelayLogs)
@@ -1639,7 +1643,7 @@ public class MySQLExtractor implements RawExtractor
 
     /** Starts relay logs and ensures they are running. */
     private synchronized void assertRelayLogsEnabled()
-            throws ExtractorException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         // Start the relay log task if it has not been started.
         if (useRelayLogs)
@@ -1700,7 +1704,7 @@ public class MySQLExtractor implements RawExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#getCurrentResourceEventId()
      */
-    public String getCurrentResourceEventId() throws ExtractorException,
+    public String getCurrentResourceEventId() throws ReplicatorException,
             InterruptedException
     {
         Database conn = null;

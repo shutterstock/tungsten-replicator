@@ -22,6 +22,7 @@
 
 package com.continuent.tungsten.replicator.extractor.mysql;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 import com.continuent.tungsten.replicator.dbms.RowChangeData;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
@@ -36,7 +37,7 @@ public class DeleteRowsLogEvent extends RowsLogEvent
 
     public DeleteRowsLogEvent(byte[] buffer, int eventLength,
             FormatDescriptionLogEvent descriptionEvent,
-            boolean useBytesForString) throws MySQLExtractException
+            boolean useBytesForString) throws ReplicatorException
     {
         super(buffer, eventLength, descriptionEvent,
                 MysqlBinlog.DELETE_ROWS_EVENT, useBytesForString);
@@ -50,11 +51,10 @@ public class DeleteRowsLogEvent extends RowsLogEvent
      */
     @Override
     public void processExtractedEvent(RowChangeData rowChanges,
-            TableMapLogEvent map) throws ExtractorException
+            TableMapLogEvent map) throws ReplicatorException
     {
         if (map == null)
         {
-            logger.error("Delete row event for unknown table");
             throw new MySQLExtractException(
                     "Delete row event for unknown table");
         }
@@ -77,9 +77,6 @@ public class DeleteRowsLogEvent extends RowsLogEvent
             }
             catch (ExtractorException e)
             {
-                logger.error(
-                        "Failure while processing extracted delete row event",
-                        e);
                 throw (e);
             }
             rowIndex++;
@@ -89,7 +86,5 @@ public class DeleteRowsLogEvent extends RowsLogEvent
             i += length;
         }
         rowChanges.appendOneRowChange(oneRowChange);
-
     }
-
 }

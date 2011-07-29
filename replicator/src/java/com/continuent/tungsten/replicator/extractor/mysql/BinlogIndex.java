@@ -33,6 +33,8 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 /**
  * Reads and lists binlog files in the binlog index
  * 
@@ -56,10 +58,10 @@ public class BinlogIndex
      * @param directory Binlog directory
      * @param baseName Binlog base name pattern
      * @param readIndex If true, read the index immediately
-     * @throws MySQLExtractException Throw if there is any kind of error
+     * @throws ReplicatorException Throw if there is any kind of error
      */
     public BinlogIndex(String directory, String baseName, boolean readIndex)
-            throws MySQLExtractException
+            throws ReplicatorException
     {
         this.binlogDirectory = new File(directory);
         if (!binlogDirectory.canRead())
@@ -84,10 +86,10 @@ public class BinlogIndex
     /**
      * Refreshes the list of binlog files from current index contents.
      * 
-     * @throws MySQLExtractException Thrown if there is an error when reading
+     * @throws ReplicatorException Thrown if there is an error when reading
      *             the file
      */
-    public void readIndex() throws MySQLExtractException
+    public void readIndex() throws ReplicatorException
     {
         if (logger.isDebugEnabled())
             logger

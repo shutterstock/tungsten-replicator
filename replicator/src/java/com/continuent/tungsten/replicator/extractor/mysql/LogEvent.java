@@ -29,6 +29,7 @@ import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndianConversion;
@@ -59,7 +60,7 @@ public abstract class LogEvent
     }
 
     public LogEvent(byte[] buffer, FormatDescriptionLogEvent descriptionEvent,
-            int eventType) throws MySQLExtractException
+            int eventType) throws ReplicatorException
     {
         type = eventType;
 
@@ -170,7 +171,7 @@ public abstract class LogEvent
     private static LogEvent readLogEvent(boolean parseStatements,
             byte[] buffer, int eventLength,
             FormatDescriptionLogEvent descriptionEvent,
-            boolean useBytesForString) throws MySQLExtractException
+            boolean useBytesForString) throws ReplicatorException
     {
         LogEvent event = null;
 
@@ -202,34 +203,30 @@ public abstract class LogEvent
                 // description_event);
                 break;
             case MysqlBinlog.APPEND_BLOCK_EVENT :
-                logger.debug("reading APPEND_BLOCK_EVENT");
+                if (logger.isDebugEnabled())
+                    logger.debug("reading APPEND_BLOCK_EVENT");
                 event = new AppendBlockLogEvent(buffer, eventLength,
                         descriptionEvent);
-                // ev = new Append_block_log_event(buf, event_len,
-                // description_event);
                 break;
             case MysqlBinlog.DELETE_FILE_EVENT :
-                logger.debug("reading DELETE_FILE_EVENT");
+                if (logger.isDebugEnabled())
+                    logger.debug("reading DELETE_FILE_EVENT");
                 event = new DeleteFileLogEvent(buffer, eventLength,
                         descriptionEvent);
-                // ev = new Delete_file_log_event(buf, event_len,
-                // description_event);
                 break;
             case MysqlBinlog.EXEC_LOAD_EVENT :
                 logger.warn("Skipping unsupported EXEC_LOAD_EVENT");
-                // ev = new Execute_load_log_event(buf, event_len,
-                // description_event);
                 break;
             case MysqlBinlog.START_EVENT_V3 :
                 /* this is sent only by MySQL <=4.x */
                 logger.warn("Skipping unsupported START_EVENT_V3");
-                // ev = new Start_log_event_v3(buf, description_event);
                 break;
             case MysqlBinlog.STOP_EVENT :
                 event = new StopLogEvent(buffer, eventLength, descriptionEvent);
                 break;
             case MysqlBinlog.INTVAR_EVENT :
-                logger.debug("extracting INTVAR_EVENT");
+                if (logger.isDebugEnabled())
+                    logger.debug("extracting INTVAR_EVENT");
                 event = new IntvarLogEvent(buffer, eventLength,
                         descriptionEvent);
                 break;
@@ -263,39 +260,44 @@ public abstract class LogEvent
                 // description_event);
                 break;
             case MysqlBinlog.WRITE_ROWS_EVENT :
-                logger.debug("reading WRITE_ROWS_EVENT");
+                if (logger.isDebugEnabled())
+                    logger.debug("reading WRITE_ROWS_EVENT");
                 event = new WriteRowsLogEvent(buffer, eventLength,
                         descriptionEvent, useBytesForString);
                 break;
             case MysqlBinlog.UPDATE_ROWS_EVENT :
-                logger.debug("reading UPDATE_ROWS_EVENT");
+                if (logger.isDebugEnabled())
+                    logger.debug("reading UPDATE_ROWS_EVENT");
                 event = new UpdateRowsLogEvent(buffer, eventLength,
                         descriptionEvent, useBytesForString);
                 break;
             case MysqlBinlog.DELETE_ROWS_EVENT :
-                logger.debug("reading DELETE_ROWS_EVENT");
+                if (logger.isDebugEnabled())
+                    logger.debug("reading DELETE_ROWS_EVENT");
                 event = new DeleteRowsLogEvent(buffer, eventLength,
                         descriptionEvent, useBytesForString);
                 break;
             case MysqlBinlog.TABLE_MAP_EVENT :
-                logger.debug("reading TABLE_MAP_EVENT");
+                if (logger.isDebugEnabled())
+                    logger.debug("reading TABLE_MAP_EVENT");
                 event = new TableMapLogEvent(buffer, eventLength,
                         descriptionEvent);
                 break;
             case MysqlBinlog.BEGIN_LOAD_QUERY_EVENT :
-                logger.debug("reading BEGIN_LOAD_QUERY_EVENT");
+                if (logger.isDebugEnabled())
+                    logger.debug("reading BEGIN_LOAD_QUERY_EVENT");
                 event = new BeginLoadQueryLogEvent(buffer, eventLength,
                         descriptionEvent);
                 break;
             case MysqlBinlog.EXECUTE_LOAD_QUERY_EVENT :
-                logger.debug("reading EXECUTE_LOAD_QUERY_EVENT");
+                if (logger.isDebugEnabled())
+                    logger.debug("reading EXECUTE_LOAD_QUERY_EVENT");
                 event = new ExecuteLoadQueryLogEvent(buffer, eventLength,
                         descriptionEvent, parseStatements);
                 break;
             case MysqlBinlog.INCIDENT_EVENT :
-                logger.warn("Skipping unsupported INCIDENT_EVENT");
-                // ev = new Incident_log_event(buf, event_len,
-                // description_event);
+                if (logger.isDebugEnabled())
+                    logger.warn("Skipping unsupported INCIDENT_EVENT");
                 break;
             default :
                 logger.warn("Skipping unrecognized binlog event type "
@@ -308,7 +310,7 @@ public abstract class LogEvent
             BinlogPosition position,
             FormatDescriptionLogEvent descriptionEvent,
             boolean parseStatements, boolean useBytesForString,
-            boolean prefetchSchemaNameLDI) throws MySQLExtractException
+            boolean prefetchSchemaNameLDI) throws ReplicatorException
     {
         DataInputStream dis = position.getDataInputStream();
         int eventLength = 0;
@@ -397,7 +399,6 @@ public abstract class LogEvent
                                     .getFileID())
                             {
                                 if (logger.isDebugEnabled())
-
                                     logger.debug("Found corresponding Execute Load Query Event - Schema is "
                                             + execLoadQueryEvent.getDefaultDb());
                                 beginLoadEvent.setSchemaName(execLoadQueryEvent
@@ -446,12 +447,12 @@ public abstract class LogEvent
      * @param timeout Maximum time to wait for data to be available
      * @param monitorType Monitoring type
      * @throws IOException if an error occurs while reading from the stream
-     * @throws MySQLExtractException if the timeout is reached
+     * @throws ReplicatorException if the timeout is reached
      */
     private static void readDataFromBinlog(ReplicatorRuntime runtime,
             DataInputStream dis, byte[] data, int offset, int length,
             int timeout, int monitorType) throws IOException,
-            MySQLExtractException
+            ReplicatorException
     {
         long metricID = 0L;
         if (runtime.getMonitor().getDetailEnabled())

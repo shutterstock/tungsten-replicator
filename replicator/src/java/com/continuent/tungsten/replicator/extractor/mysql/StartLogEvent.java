@@ -22,6 +22,8 @@
 
 package com.continuent.tungsten.replicator.extractor.mysql;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 /**
  * @author <a href="mailto:seppo.jaakola@continuent.com">Seppo Jaakola</a>
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
@@ -37,7 +39,7 @@ public class StartLogEvent extends LogEvent
 
     public StartLogEvent(byte[] buffer,
             FormatDescriptionLogEvent descriptionEvent)
-            throws MySQLExtractException
+            throws ReplicatorException
     {
         super(buffer, descriptionEvent, MysqlBinlog.START_EVENT_V3);
     }

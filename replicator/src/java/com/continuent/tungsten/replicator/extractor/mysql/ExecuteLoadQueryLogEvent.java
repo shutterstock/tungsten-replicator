@@ -24,6 +24,7 @@ package com.continuent.tungsten.replicator.extractor.mysql;
 
 import java.io.IOException;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndianConversion;
 
 /**
@@ -55,7 +56,7 @@ public class ExecuteLoadQueryLogEvent extends QueryLogEvent
 
     public ExecuteLoadQueryLogEvent(byte[] buffer, int eventLength,
             FormatDescriptionLogEvent descriptionEvent, boolean parseStatements)
-            throws MySQLExtractException
+            throws ReplicatorException
     {
         super(buffer, descriptionEvent, MysqlBinlog.EXECUTE_LOAD_QUERY_EVENT);
 

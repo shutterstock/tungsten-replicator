@@ -24,6 +24,8 @@ package com.continuent.tungsten.replicator.extractor.mysql;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 /**
  * @author <a href="mailto:seppo.jaakola@continuent.com">Seppo Jaakola</a>
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
@@ -61,10 +63,10 @@ public class RotateLogEvent extends LogEvent
     /**
      * Creates a new <code>Rotate_log_event</code> object read normally from
      * log.
-     * @throws MySQLExtractException 
+     * @throws ReplicatorException 
      */
     public RotateLogEvent(byte[] buffer, int eventLength,
-            FormatDescriptionLogEvent descriptionEvent) throws MySQLExtractException
+            FormatDescriptionLogEvent descriptionEvent) throws ReplicatorException
     {
         super(buffer, descriptionEvent, MysqlBinlog.START_EVENT_V3);
         
