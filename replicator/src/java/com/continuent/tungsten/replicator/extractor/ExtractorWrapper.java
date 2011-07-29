@@ -89,7 +89,7 @@ public class ExtractorWrapper implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#extract()
      */
-    public ReplDBMSEvent extract() throws ExtractorException,
+    public ReplDBMSEvent extract() throws ReplicatorException,
             InterruptedException
     {
         DBMSEvent dbmsEvent = extractor.extract();
@@ -136,7 +136,7 @@ public class ExtractorWrapper implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#getCurrentResourceEventId()
      */
-    public String getCurrentResourceEventId() throws ExtractorException,
+    public String getCurrentResourceEventId() throws ReplicatorException,
             InterruptedException
     {
         return extractor.getCurrentResourceEventId();
@@ -201,7 +201,7 @@ public class ExtractorWrapper implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEventId(java.lang.String)
      */
-    public void setLastEventId(String eventId) throws ExtractorException
+    public void setLastEventId(String eventId) throws ReplicatorException
     {
         extractor.setLastEventId(eventId);
     }

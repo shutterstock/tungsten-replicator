@@ -25,6 +25,7 @@ package com.continuent.tungsten.replicator.extractor;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.DBMSData;
 import com.continuent.tungsten.replicator.dbms.StatementData;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
@@ -162,7 +163,7 @@ public class DummyExtractor implements RawExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#setLastEventId(java.lang.String)
      */
-    public void setLastEventId(String eventId) throws ExtractorException
+    public void setLastEventId(String eventId) throws ReplicatorException
     {
         if (eventId == null)
         {
@@ -184,7 +185,7 @@ public class DummyExtractor implements RawExtractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#getCurrentResourceEventId()
      */
-    public String getCurrentResourceEventId() throws ExtractorException,
+    public String getCurrentResourceEventId() throws ReplicatorException,
             InterruptedException
     {
         return new Integer(trxIndex - 1).toString();

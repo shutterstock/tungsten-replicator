@@ -41,7 +41,7 @@ public interface Extractor extends ReplicatorPlugin
      * extract() is called.
      * 
      * @param header Last event we extracted
-     * @throws ExtractorException
+     * @throws ReplicatorException
      */
     public void setLastEvent(ReplDBMSHeader header) throws ReplicatorException;
 
@@ -52,7 +52,7 @@ public interface Extractor extends ReplicatorPlugin
      * ignored by other extractors that do not read from a data source.
      * 
      * @param eventId Event ID at which to begin extracting
-     * @throws ExtractorException
+     * @throws ReplicatorException
      */
     public void setLastEventId(String eventId) throws ReplicatorException;
 
@@ -88,7 +88,7 @@ public interface Extractor extends ReplicatorPlugin
      * @return A current event ID that can be compared with event IDs in
      *         DBMSEvent or null if this type of extractor does not extract from
      *         a database
-     * @throws ExtractorException
+     * @throws ReplicatorException
      * @throws InterruptedException
      */
     public String getCurrentResourceEventId() throws ReplicatorException,

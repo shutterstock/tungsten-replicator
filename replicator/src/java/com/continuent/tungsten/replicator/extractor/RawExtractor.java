@@ -22,6 +22,7 @@
 
 package com.continuent.tungsten.replicator.extractor;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
 
@@ -41,16 +42,16 @@ public interface RawExtractor extends ReplicatorPlugin
      * the next time extract() is called.
      * 
      * @param eventId Event ID at which to begin extracting
-     * @throws ExtractorException
+     * @throws ReplicatorException
      */
-    public void setLastEventId(String eventId) throws ExtractorException;
+    public void setLastEventId(String eventId) throws ReplicatorException;
 
     /**
      * Extract the next available DBMSEvent from the database log.
      * 
      * @return next DBMSEvent found in the logs
      */
-    public DBMSEvent extract() throws ExtractorException, InterruptedException;
+    public DBMSEvent extract() throws ReplicatorException, InterruptedException;
 
     /**
      * Extract starting after the event ID provided as an argument. This is
@@ -58,10 +59,10 @@ public interface RawExtractor extends ReplicatorPlugin
      * 
      * @param eventId Event ID at which to begin extracting
      * @return DBMSEvent corresponding to the id
-     * @throws ExtractorException Thrown if extractor processing fails
+     * @throws ReplicatorException Thrown if extractor processing fails
      * @throws InterruptedException Thrown if the applier is interrupted
      */
-    public DBMSEvent extract(String eventId) throws ExtractorException,
+    public DBMSEvent extract(String eventId) throws ReplicatorException,
             InterruptedException;
 
     /**
@@ -81,9 +82,9 @@ public interface RawExtractor extends ReplicatorPlugin
      * 
      * @return A current event ID that can be compared with event IDs in
      *         DBMSEvent
-     * @throws ExtractorException
+     * @throws ReplicatorException
      * @throws InterruptedException
      */
-    public String getCurrentResourceEventId() throws ExtractorException,
+    public String getCurrentResourceEventId() throws ReplicatorException,
             InterruptedException;
 }
