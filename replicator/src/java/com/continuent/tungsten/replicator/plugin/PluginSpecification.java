@@ -23,6 +23,7 @@
 package com.continuent.tungsten.replicator.plugin;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.filter.FilterManualProperties;
 
 /**
@@ -73,7 +74,7 @@ public class PluginSpecification
      * 
      * @throws PluginException Thrown if instantiation fails
      */
-    public ReplicatorPlugin instantiate(int id) throws PluginException
+    public ReplicatorPlugin instantiate(int id) throws ReplicatorException
     {
         ReplicatorPlugin plugin = PluginLoader.load(pluginClass.getName());
         if (plugin instanceof FilterManualProperties)

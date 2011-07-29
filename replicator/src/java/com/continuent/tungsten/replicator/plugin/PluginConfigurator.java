@@ -24,6 +24,8 @@ package com.continuent.tungsten.replicator.plugin;
 
 import java.lang.reflect.Method;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 /**
  * This class defines a PluginConfigurator
  * 
@@ -39,10 +41,10 @@ public class PluginConfigurator
      * @param plugin ReplicatorPlugin instance
      * @param name The name of the setter method to be called
      * @param value Argument to be passed for setter method
-     * @throws PluginException
+     * @throws ReplicatorException
      */
     static public void setParameter(ReplicatorPlugin plugin, String name,
-            Object value) throws PluginException
+            Object value) throws ReplicatorException
     {
         Method[] methods = plugin.getClass().getMethods();
         for (Method m : methods)
@@ -73,10 +75,10 @@ public class PluginConfigurator
      * @param plugin ReplicatorPlugin instance
      * @param name The name of the getter method to be called
      * @return Return value of getter method
-     * @throws PluginException
+     * @throws ReplicatorException
      */
     static public Object getParameter(ReplicatorPlugin plugin, String name)
-            throws PluginException
+            throws ReplicatorException
     {
         Method[] methods = plugin.getClass().getMethods();
         for (Method m : methods)

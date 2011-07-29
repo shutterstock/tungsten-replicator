@@ -22,6 +22,8 @@
 
 package com.continuent.tungsten.replicator.plugin;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
+
 /**
  * 
  * This class defines a PluginLoader
@@ -36,12 +38,12 @@ public class PluginLoader
      * 
      * @param name The name of the plugin implementation class to be loaded.
      * @return new plugin
-     * @throws PluginException
+     * @throws ReplicatorException
      */
-    static public ReplicatorPlugin load(String name) throws PluginException
+    static public ReplicatorPlugin load(String name) throws ReplicatorException
     {
         if (name == null)
-            throw new PluginException("null");
+            throw new PluginException("Unable to load plugin with null name");
         try
         {
             return (ReplicatorPlugin) Class.forName(name).newInstance();
@@ -57,12 +59,12 @@ public class PluginLoader
      * 
      * @param name The name of the plugin implementation class to be loaded.
      * @return new plugin class
-     * @throws PluginException
+     * @throws ReplicatorException
      */
-    static public Class<?> loadClass(String name) throws PluginException
+    static public Class<?> loadClass(String name) throws ReplicatorException
     {
         if (name == null)
-            throw new PluginException("null");
+            throw new PluginException("Unable to load plugin with null name");
         try
         {
             return (Class<?>) Class.forName(name);
