@@ -146,6 +146,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     // Monitoring and management
     private static Logger           logger                  = Logger.getLogger(OpenReplicatorManager.class);
+    private static Logger           endUserLog              = Logger.getLogger("tungsten.userLog");
 
     public static final int         REPL                    = 1;
     public static final int         FLUSH                   = 2;
@@ -496,6 +497,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         stateChangeTimeMillis = System.currentTimeMillis();
         logger.info("Sent State Change Notification " + oldState.getName()
                 + " -> " + newState.getName());
+        endUserLog.info("State changed " + oldState.getName() + " -> "
+                + newState.getName());
     }
 
     /**
@@ -506,13 +509,16 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
      */
     public void onEvent(Event event) throws ReplicatorException
     {
-        logger.debug("ReplEvent: " + event.getClass().getSimpleName());
+        if (logger.isDebugEnabled())
+            logger.debug("ReplEvent: " + event.getClass().getSimpleName());
 
         // Process next event.
         try
         {
             sm.applyEvent(event);
-            logger.debug("Applied event: " + event.getClass().getSimpleName());
+            if (logger.isDebugEnabled())
+                logger.debug("Applied event: "
+                        + event.getClass().getSimpleName());
         }
         catch (TransitionNotFoundException e)
         {
@@ -524,6 +530,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             msg.append(" event=");
             msg.append(e.getEvent().getClass().getSimpleName());
             logger.warn(msg.toString());
+            endUserLog.warn(msg.toString());
             throw new ReplicatorStateException(
                     "Operation irrelevant in current state");
         }
@@ -930,6 +937,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         {
             // Log the error condition.
             ErrorNotification en = (ErrorNotification) event;
+            endUserLog.error("Received error notification: "
+                    + displayErrorMessages(en));
             logger.error(
                     "Received error notification, shutting down services: "
                             + en.getUserMessage(), en.getThrowable());
@@ -939,6 +948,21 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             pendingExceptionMessage = en.getThrowable().getMessage();
             pendingErrorSeqno = en.getSeqno();
             pendingErrorEventId = en.getEventId();
+        }
+
+        private String displayErrorMessages(ErrorNotification event)
+        {
+            StringBuffer errorMsg = new StringBuffer(event.getUserMessage());
+            Throwable exception = event.getThrowable();
+            while (exception != null)
+            {
+                errorMsg.append('\n');
+                errorMsg.append("Caused by : ");
+                errorMsg.append(exception.getMessage());
+                exception = exception.getCause();
+            }
+
+            return errorMsg.toString();
         }
     }
 
@@ -1094,7 +1118,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             }
             catch (Exception e)
             {
-                logger.debug("Unable to set role", e);
+                if (logger.isDebugEnabled())
+                    logger.debug("Unable to set role", e);
                 throw new TransitionRollbackException("Unable to set role: "
                         + e.getMessage(), event, entity, transition,
                         actionType, e);
@@ -1133,7 +1158,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             }
             catch (ReplicatorException e)
             {
-                logger.debug("Unable to set dynamic properties", e);
+                if (logger.isDebugEnabled())
+                    logger.debug("Unable to set dynamic properties", e);
                 throw new TransitionRollbackException(
                         "Failed to set dynamic proeprties: " + e.getMessage(),
                         event, entity, transition, actionType, e);
@@ -1799,7 +1825,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             pluginStatus.put(Replicator.CURRENT_TIME_MILLIS,
                     Long.toString(System.currentTimeMillis()));
 
-            logger.debug("plugin status: " + pluginStatus.toString());
+            if (logger.isDebugEnabled())
+                logger.debug("plugin status: " + pluginStatus.toString());
 
             // Return the finalized status values.
             return pluginStatus;
@@ -1970,8 +1997,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         }
         catch (Exception e)
         {
-            logger.error("Online operation failed", e);
-            throw new Exception("Online operation failed: " + e.toString());
+            logger.error("Offline operation failed", e);
+            throw new Exception("Offline operation failed: " + e.toString());
         }
     }
 
@@ -2101,8 +2128,10 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         else if (timeout < 0 || timeout > 1800)
             throw new Exception("Limit must be between 0 and 1800 seconds: "
                     + timeout);
-        logger.debug("Waiting for state: state=" + desiredState + " seconds="
-                + timeout);
+
+        if (logger.isDebugEnabled())
+            logger.debug("Waiting for state: state=" + desiredState
+                    + " seconds=" + timeout);
 
         StateTransitionLatch latch = sm.createStateTransitionLatch(
                 desiredState, true);
@@ -2114,28 +2143,32 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         }
         catch (TimeoutException e)
         {
-            logger.debug("Timed out waiting for state: " + stateName);
+            if (logger.isDebugEnabled())
+                logger.debug("Timed out waiting for state: " + stateName);
             return false;
         }
 
         if (latch.isExpected() || desiredState.equals(finalState))
         {
-            logger.debug("Wait operation concluded successfully; found expected state: "
-                    + stateName);
+            if (logger.isDebugEnabled())
+                logger.debug("Wait operation concluded successfully; found expected state: "
+                        + stateName);
             return true;
         }
         else if (latch.isError())
         {
             String message = "Replicator failed and is in error state: "
                     + finalState.getName();
-            logger.debug(message);
+            if (logger.isDebugEnabled())
+                logger.debug(message);
             throw new Exception(message);
         }
         else
         {
             String message = "Replication reached unexpected state: "
                     + finalState.getName();
-            logger.debug(message);
+            if (logger.isDebugEnabled())
+                logger.debug(message);
             throw new Exception(message);
         }
     }
@@ -2656,7 +2689,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         }
         catch (ReplicatorException e)
         {
-            logger.debug("Unable to load properties", e);
+            if (logger.isDebugEnabled())
+                logger.debug("Unable to load properties", e);
             throw new TransitionRollbackException(
                     "Unable to load properties file: " + e.getMessage(), event,
                     entity, transition, actionType, e);
