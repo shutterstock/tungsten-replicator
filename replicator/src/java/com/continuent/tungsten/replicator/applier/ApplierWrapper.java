@@ -65,7 +65,7 @@ public class ApplierWrapper implements ParallelApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.ParallelApplier#setTaskId(int)
      */
-    public void setTaskId(int id) throws ApplierException
+    public void setTaskId(int id)
     {
         applier.setTaskId(id);
     }
@@ -77,7 +77,7 @@ public class ApplierWrapper implements ParallelApplier
      *      boolean, boolean, boolean)
      */
     public void apply(ReplDBMSEvent event, boolean doCommit,
-            boolean doRollback, boolean syncTHL) throws ApplierException,
+            boolean doRollback, boolean syncTHL) throws ReplicatorException,
             ConsistencyException, InterruptedException
     {
         DBMSEvent myEvent = event.getDBMSEvent();
@@ -119,7 +119,7 @@ public class ApplierWrapper implements ParallelApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.Applier#commit()
      */
-    public void commit() throws ApplierException, InterruptedException
+    public void commit() throws ReplicatorException, InterruptedException
     {
         applier.commit();
     }
@@ -139,7 +139,7 @@ public class ApplierWrapper implements ParallelApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.Applier#getLastEvent()
      */
-    public ReplDBMSHeader getLastEvent() throws ApplierException,
+    public ReplDBMSHeader getLastEvent() throws ReplicatorException,
             InterruptedException
     {
         return applier.getLastEvent();

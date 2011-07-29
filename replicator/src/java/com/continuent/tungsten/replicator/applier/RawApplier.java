@@ -22,6 +22,7 @@
 
 package com.continuent.tungsten.replicator.applier;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.consistency.ConsistencyException;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
@@ -41,10 +42,8 @@ public interface RawApplier extends ReplicatorPlugin
      * Sets the ID of the task using this raw applier.
      * 
      * @param id Task ID
-     * @throws ApplierException Thrown if the ID exceeds the number of tasks
-     *             allowed by the applier
      */
-    public void setTaskId(int id) throws ApplierException;
+    public void setTaskId(int id);
 
     /**
      * Apply the proffered event to the replication target.
@@ -55,23 +54,23 @@ public interface RawApplier extends ReplicatorPlugin
      *            multi-part event
      * @param doRollback Boolean flag indicating whether this transaction should
      *            rollback
-     * @throws ApplierException Thrown if applier processing fails
+     * @throws ReplicatorException Thrown if applier processing fails
      * @throws ConsistencyException Thrown if the applier detects that a
      *             consistency check has failed
      * @throws InterruptedException Thrown if the applier is interrupted
      */
     public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit,
-            boolean doRollback) throws ApplierException, ConsistencyException,
-            InterruptedException;
+            boolean doRollback) throws ReplicatorException,
+            ConsistencyException, InterruptedException;
 
     /**
      * Commits current open transaction to ensure data applied up to current
      * point are durable.
      * 
-     * @throws ApplierException Thrown if applier processing fails
+     * @throws ReplicatorException Thrown if applier processing fails
      * @throws InterruptedException Thrown if the applier is interrupted
      */
-    public void commit() throws ApplierException, InterruptedException;
+    public void commit() throws ReplicatorException, InterruptedException;
 
     /**
      * Rolls back any current work.
@@ -84,9 +83,9 @@ public interface RawApplier extends ReplicatorPlugin
      * Return header information corresponding to last committed event.
      * 
      * @return Header data for last committed event.
-     * @throws ApplierException Thrown if getting sequence number fails
+     * @throws ReplicatorException Thrown if getting sequence number fails
      * @throws InterruptedException Thrown if the applier is interrupted
      */
-    public ReplDBMSHeader getLastEvent() throws ApplierException,
+    public ReplDBMSHeader getLastEvent() throws ReplicatorException,
             InterruptedException;
 }

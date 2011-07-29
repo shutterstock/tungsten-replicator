@@ -37,6 +37,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.drizzle.jdbc.DrizzleStatement;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.LoadDataFileQuery;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnVal;
@@ -57,7 +58,7 @@ public class MySQLDrizzleApplier extends MySQLApplier
     private boolean alreadyLogged = false;
 
     @Override
-    public void configure(PluginContext context) throws ApplierException
+    public void configure(PluginContext context) throws ReplicatorException
     {
         if (url == null)
         {
@@ -82,7 +83,7 @@ public class MySQLDrizzleApplier extends MySQLApplier
 
     @Override
     protected void applyStatementData(StatementData data)
-            throws ApplierException
+            throws ReplicatorException
     {
         if (!(statement instanceof DrizzleStatement))
         {
@@ -171,8 +172,9 @@ public class MySQLDrizzleApplier extends MySQLApplier
                 for (int i = 0; i < updateCount.length; cnt += updateCount[i], i++)
                     ;
 
-                logger.debug("Applied event (update count " + cnt + "): "
-                        + data.toString());
+                if (logger.isDebugEnabled())
+                    logger.debug("Applied event (update count " + cnt + "): "
+                            + data.toString());
             }
         }
         catch (SQLException e)
@@ -185,7 +187,7 @@ public class MySQLDrizzleApplier extends MySQLApplier
 
     @Override
     protected void applyLoadDataLocal(LoadDataFileQuery data, File temporaryFile)
-            throws ApplierException
+            throws ReplicatorException
     {
         try
         {

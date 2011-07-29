@@ -24,6 +24,7 @@ package com.continuent.tungsten.replicator.applier;
 
 import java.util.ArrayList;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.DBMSData;
 import com.continuent.tungsten.replicator.dbms.StatementData;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
@@ -49,7 +50,7 @@ public class DummyApplier implements RawApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.RawApplier#setTaskId(int)
      */
-    public void setTaskId(int id) throws ApplierException
+    public void setTaskId(int id)
     {
         taskId = 0;
     }
@@ -61,7 +62,7 @@ public class DummyApplier implements RawApplier
      *      com.continuent.tungsten.replicator.event.ReplDBMSHeader, boolean, boolean)
      */
     public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit, boolean doRollback)
-            throws ApplierException
+            throws ReplicatorException
     {
         ArrayList<DBMSData> data = event.getData();
         eventCount++;
@@ -91,7 +92,7 @@ public class DummyApplier implements RawApplier
         // does nothing for now...
     }
 
-    public ReplDBMSHeader getLastEvent() throws ApplierException,
+    public ReplDBMSHeader getLastEvent() throws ReplicatorException,
             InterruptedException
     {
         return lastHeader;

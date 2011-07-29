@@ -89,7 +89,7 @@ public class MongoApplier implements RawApplier
      */
     @Override
     public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit, boolean doRollback)
-            throws ApplierException, ConsistencyException, InterruptedException
+            throws ReplicatorException, ConsistencyException, InterruptedException
     {
         ArrayList<DBMSData> dbmsDataValues = event.getData();
 
@@ -278,7 +278,7 @@ public class MongoApplier implements RawApplier
      * @see com.continuent.tungsten.replicator.applier.RawApplier#commit()
      */
     @Override
-    public void commit() throws ApplierException, InterruptedException
+    public void commit() throws ReplicatorException, InterruptedException
     {
         // If we don't have a last header, there is nothing to be done.
         if (latestHeader == null)
@@ -328,7 +328,7 @@ public class MongoApplier implements RawApplier
      * @see com.continuent.tungsten.replicator.applier.RawApplier#getLastEvent()
      */
     @Override
-    public ReplDBMSHeader getLastEvent() throws ApplierException,
+    public ReplDBMSHeader getLastEvent() throws ReplicatorException,
             InterruptedException
     {
         // Connect to the schema and collection.
@@ -388,7 +388,7 @@ public class MongoApplier implements RawApplier
      * @see com.continuent.tungsten.replicator.applier.RawApplier#setTaskId(int)
      */
     @Override
-    public void setTaskId(int id) throws ApplierException
+    public void setTaskId(int id)
     {
         this.taskId = id;
     }

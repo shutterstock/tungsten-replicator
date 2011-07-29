@@ -35,6 +35,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.dbms.LoadDataFileQuery;
 import com.continuent.tungsten.replicator.dbms.OneRowChange.ColumnSpec;
@@ -97,7 +98,7 @@ public class MySQLApplier extends JdbcApplier
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(PluginContext
      *      context)
      */
-    public void configure(PluginContext context) throws ApplierException
+    public void configure(PluginContext context) throws ReplicatorException
     {
         if (url == null)
         {
@@ -122,25 +123,25 @@ public class MySQLApplier extends JdbcApplier
         super.configure(context);
     }
 
-    protected void applyRowIdData(RowIdData data) throws ApplierException
+    protected void applyRowIdData(RowIdData data) throws ReplicatorException
     {
         String query = "SET ";
-        
+
         switch (data.getType())
         {
             case RowIdData.LAST_INSERT_ID :
                 query += "LAST_INSERT_ID";
                 break;
-            case RowIdData.INSERT_ID:
-                query+= "INSERT_ID";
+            case RowIdData.INSERT_ID :
+                query += "INSERT_ID";
                 break;
             default :
                 // Old behavior
-                query+= "INSERT_ID";
+                query += "INSERT_ID";
                 break;
         }
         query += " = " + data.getRowId();
-        
+
         try
         {
             try
@@ -227,7 +228,8 @@ public class MySQLApplier extends JdbcApplier
                 {
                     case 1 :
                         valToInsert = TINYINT_MAX_VALUE + 1 + extractedVal;
-                        logger.debug("Inserting " + valToInsert);
+                        if (logger.isDebugEnabled())
+                            logger.debug("Inserting " + valToInsert);
                         break;
                     case 2 :
                         valToInsert = SMALLINT_MAX_VALUE + 1 + extractedVal;
@@ -274,7 +276,7 @@ public class MySQLApplier extends JdbcApplier
      */
     @Override
     protected void applyLoadDataLocal(LoadDataFileQuery data, File temporaryFile)
-            throws ApplierException
+            throws ReplicatorException
     {
         try
         {

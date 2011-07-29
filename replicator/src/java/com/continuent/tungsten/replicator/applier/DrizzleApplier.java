@@ -27,23 +27,24 @@ import java.sql.SQLWarning;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.RowIdData;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
  * Stub applier class that automatically constructs url from Drizzle-specific
  * properties like host, port, and service.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @author Marcus Eriksson
  * @version 1.0
  */
 public class DrizzleApplier extends JdbcApplier
 {
-    private static Logger logger  = Logger.getLogger(DrizzleApplier.class);
+    private static Logger logger     = Logger.getLogger(DrizzleApplier.class);
 
-    protected String      host    = "localhost";
-    protected int         port    = 4427;
+    protected String      host       = "localhost";
+    protected int         port       = 4427;
     protected String      urlOptions = null;
 
     /**
@@ -71,13 +72,13 @@ public class DrizzleApplier extends JdbcApplier
     }
 
     /**
-     * Generate URL suitable for Drizzle and then delegate remaining configuration
-     * to superclass.
-     *
+     * Generate URL suitable for Drizzle and then delegate remaining
+     * configuration to superclass.
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext
      *      context)
      */
-    public void configure(PluginContext context) throws ApplierException
+    public void configure(PluginContext context) throws ReplicatorException
     {
         if (url == null)
         {
@@ -96,12 +97,11 @@ public class DrizzleApplier extends JdbcApplier
             url = sb.toString();
         }
         else
-            logger
-                    .info("Property url already set; ignoring host and port properties");
+            logger.info("Property url already set; ignoring host and port properties");
         super.configure(context);
     }
 
-    protected void applyRowIdData(RowIdData data) throws ApplierException
+    protected void applyRowIdData(RowIdData data) throws ReplicatorException
     {
         String query = "SET INSERT_ID = " + data.getRowId();
         try

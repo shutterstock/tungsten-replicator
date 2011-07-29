@@ -35,6 +35,7 @@ import oracle.sql.CLOB;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.database.DBMS;
 import com.continuent.tungsten.replicator.database.AdditionalTypes;
@@ -74,7 +75,7 @@ public class OracleApplier extends JdbcApplier
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(PluginContext
      *      context)
      */
-    public void configure(PluginContext context) throws ApplierException
+    public void configure(PluginContext context) throws ReplicatorException
     {
         if (url == null)
         {

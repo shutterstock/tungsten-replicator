@@ -144,7 +144,7 @@ public class JdbcApplier implements RawApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.RawApplier#setTaskId(int)
      */
-    public void setTaskId(int id) throws ApplierException
+    public void setTaskId(int id)
     {
         this.taskId = id;
         logger.info("Set task id: id=" + taskId);
@@ -212,7 +212,8 @@ public class JdbcApplier implements RawApplier
         String this_crc = null, master_crc;
 
         String select = consistencySelect + where;
-        logger.debug("ConsistencyTable row SELECT: " + select);
+        if (logger.isDebugEnabled())
+            logger.debug("ConsistencyTable row SELECT: " + select);
 
         ResultSet res = null;
         ResultSet ccres = null;
@@ -248,7 +249,8 @@ public class JdbcApplier implements RawApplier
                                 method,
                                 runtime.isConsistencyCheckColumnNames(),
                                 runtime.isConsistencyCheckColumnTypes());
-                logger.debug("Got consistency check: " + cc.toString());
+                if (logger.isDebugEnabled())
+                    logger.debug("Got consistency check: " + cc.toString());
 
                 // perform local consistency check
                 ccres = cc.performConsistencyCheck(conn);
@@ -274,7 +276,8 @@ public class JdbcApplier implements RawApplier
                     update.append(this_crc);
                     update.append("' ");
                     update.append(where);
-                    logger.debug(update.toString());
+                    if (logger.isDebugEnabled())
+                        logger.debug(update.toString());
                     statement.executeUpdate(update.toString());
                 }
                 else
@@ -402,8 +405,8 @@ public class JdbcApplier implements RawApplier
      */
     protected int fillColumnNames(OneRowChange data) throws SQLException
     {
-        Table t = tableMetadataCache.retrieve(data.getSchemaName(), data
-                .getTableName());
+        Table t = tableMetadataCache.retrieve(data.getSchemaName(),
+                data.getTableName());
         if (t == null)
         {
             // Not yet in cache
@@ -529,13 +532,13 @@ public class JdbcApplier implements RawApplier
         prepStatement.setObject(bindLoc, value.getValue());
     }
 
-    protected void applyRowIdData(RowIdData data) throws ApplierException
+    protected void applyRowIdData(RowIdData data) throws ReplicatorException
     {
         logger.warn("No applier for rowid data specified");
     }
 
     protected void applyStatementData(StatementData data)
-            throws ApplierException
+            throws ReplicatorException
     {
         /*
          * TODO: This was mentioned in code review about batch updates: if one
@@ -615,8 +618,9 @@ public class JdbcApplier implements RawApplier
                 for (int i = 0; i < updateCount.length; cnt += updateCount[i], i++)
                     ;
 
-                logger.debug("Applied event (update count " + cnt + "): "
-                        + data.toString());
+                if (logger.isDebugEnabled())
+                    logger.debug("Applied event (update count " + cnt + "): "
+                            + data.toString());
             }
         }
         catch (SQLException e)
@@ -774,8 +778,9 @@ public class JdbcApplier implements RawApplier
         }
         catch (Exception e)
         {
-            logger.debug("logFailedStatementSQL failed to log, because: "
-                    + e.getMessage());
+            if (logger.isDebugEnabled())
+                logger.debug("logFailedStatementSQL failed to log, because: "
+                        + e.getMessage());
         }
     }
 
@@ -910,7 +915,7 @@ public class JdbcApplier implements RawApplier
     }
 
     protected void applyOneRowChangePrepared(OneRowChange oneRowChange)
-            throws ApplierException
+            throws ReplicatorException
     {
         PreparedStatement prepStatement = null;
 
@@ -925,7 +930,6 @@ public class JdbcApplier implements RawApplier
         catch (SQLException e1)
         {
             logger.error("column name information could not be retrieved");
-            e1.printStackTrace();
         }
         StringBuffer stmt = null;
 
@@ -1085,13 +1089,14 @@ public class JdbcApplier implements RawApplier
         }
         catch (Exception e)
         {
-            logger.debug("logFailedRowChangeSQL failed to log, because: "
-                    + e.getMessage());
+            if (logger.isDebugEnabled())
+                logger.debug("logFailedRowChangeSQL failed to log, because: "
+                        + e.getMessage());
         }
     }
 
     protected void applyRowChangeData(RowChangeData data,
-            List<ReplOption> options) throws ApplierException
+            List<ReplOption> options) throws ReplicatorException
     {
         if (options != null)
         {
@@ -1126,7 +1131,8 @@ public class JdbcApplier implements RawApplier
      *      boolean)
      */
     public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit,
-            boolean doRollback) throws ApplierException, ConsistencyException
+            boolean doRollback) throws ReplicatorException,
+            ConsistencyException
     {
         boolean transactionCommitted = false;
         boolean consistencyCheckFailure = false;
@@ -1303,7 +1309,8 @@ public class JdbcApplier implements RawApplier
                         updateCommitSeqno(lastProcessedEvent, appliedLatency);
                         // And commit
                         commitTransaction();
-                        transactionCommitted = true;                    }
+                        transactionCommitted = true;
+                    }
                     else if (doCommit)
                     {
                         commitTransaction();
@@ -1349,7 +1356,7 @@ public class JdbcApplier implements RawApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.RawApplier#commit()
      */
-    public void commit() throws ApplierException, InterruptedException
+    public void commit() throws ReplicatorException, InterruptedException
     {
         // If there's nothing to commit, go back.
         if (this.lastProcessedEvent == null || !this.transactionStarted)
@@ -1398,7 +1405,7 @@ public class JdbcApplier implements RawApplier
         }
     }
 
-    private void applyDeleteFile(int fileID) throws ApplierException
+    private void applyDeleteFile(int fileID) throws ReplicatorException
     {
         if (logger.isDebugEnabled())
             logger.debug("Dropping file id: " + fileID);
@@ -1411,7 +1418,7 @@ public class JdbcApplier implements RawApplier
     }
 
     private void applyLoadFile(LoadDataFileQuery fileQuery)
-            throws ApplierException
+            throws ReplicatorException
     {
         int fileID = fileQuery.getFileID();
         File temporaryFile = fileTable.remove(Integer.valueOf(fileID));
@@ -1445,17 +1452,17 @@ public class JdbcApplier implements RawApplier
      * @param data The LoadDataFileQuery containing the query that has to be
      *            executed
      * @param temporaryFile The file containing data to be loaded
-     * @throws ApplierException if an error occurs
+     * @throws ReplicatorException if an error occurs
      */
     protected void applyLoadDataLocal(LoadDataFileQuery data, File temporaryFile)
-            throws ApplierException
+            throws ReplicatorException
     {
         data.setLocalFile(temporaryFile);
         applyStatementData(data);
     }
 
     private void applyFileFragment(LoadDataFileFragment fileFrag)
-            throws ApplierException
+            throws ReplicatorException
     {
         Integer fileId = Integer.valueOf(fileFrag.getFileID());
         File temporaryFile = fileTable.get(fileId);
@@ -1475,7 +1482,7 @@ public class JdbcApplier implements RawApplier
             }
             fileTable.put(fileId, temporaryFile);
         }
-        else
+        else if (logger.isDebugEnabled())
         {
             logger.debug("Appending data to temporary file: fileId=" + fileId
                     + " path=" + temporaryFile);
@@ -1509,7 +1516,7 @@ public class JdbcApplier implements RawApplier
      * 
      * @see com.continuent.tungsten.replicator.applier.RawApplier#getLastEvent()
      */
-    public ReplDBMSHeader getLastEvent() throws ApplierException
+    public ReplDBMSHeader getLastEvent() throws ReplicatorException
     {
         if (commitSeqnoTable == null)
             return null;
@@ -1671,7 +1678,7 @@ public class JdbcApplier implements RawApplier
      * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
-    public void configure(PluginContext context) throws ApplierException
+    public void configure(PluginContext context) throws ReplicatorException
     {
         runtime = (ReplicatorRuntime) context;
         metadataSchema = context.getReplicatorSchemaName();

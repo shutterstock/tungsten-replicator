@@ -29,6 +29,7 @@ import java.sql.Types;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.database.DBMS;
 import com.continuent.tungsten.replicator.database.JdbcURL;
@@ -61,7 +62,7 @@ public class PostgreSQLApplier extends JdbcApplier
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(PluginContext
      *      context)
      */
-    public void configure(PluginContext context) throws ApplierException
+    public void configure(PluginContext context) throws ReplicatorException
     {
         if (url == null)
         {
