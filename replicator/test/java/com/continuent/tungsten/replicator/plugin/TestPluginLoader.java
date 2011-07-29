@@ -25,6 +25,7 @@ package com.continuent.tungsten.replicator.plugin;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
+
 import junit.framework.Assert;
 import junit.framework.TestCase;
 

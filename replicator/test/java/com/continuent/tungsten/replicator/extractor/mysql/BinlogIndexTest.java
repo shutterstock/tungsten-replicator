@@ -29,6 +29,7 @@ import junit.framework.TestCase;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
+
 /**
  * This class performs a unit test on the BinlogIndex class to ensure we can
  * read MySQL binlog index files accurately. It requires a MySQL binlog index

@@ -32,10 +32,10 @@ import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 
+import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.thl.THLEvent;
-import com.continuent.tungsten.replicator.thl.THLException;
 
 /**
  * Tests concurrency operations on the disk log. This test is an extension of
@@ -229,7 +229,7 @@ public class DiskLogExtendedTest extends TestCase
     
     // Write a prescribed number of events to the log starting at zero.
     private void writeEventsToLog(DiskLog log, int howMany)
-            throws THLException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         writeEventsToLog(log, 0, howMany);
     }
@@ -237,7 +237,7 @@ public class DiskLogExtendedTest extends TestCase
     // Write a prescribed number of events to the log starting at a
     // specified sequence number. Last event will be committed.
     private void writeEventsToLog(DiskLog log, long seqno, int howMany)
-            throws THLException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         // Should match incremented seqno on the final iteration.
         long lastSeqno = seqno + howMany;

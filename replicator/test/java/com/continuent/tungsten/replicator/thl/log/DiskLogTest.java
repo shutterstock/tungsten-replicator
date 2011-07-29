@@ -1266,7 +1266,7 @@ public class DiskLogTest extends TestCase
         LogEventReadFilter filter1 = new LogEventReadFilter()
         {
             public boolean accept(LogEventReplReader reader)
-                    throws THLException
+                    throws ReplicatorException
             {
                 long seqno = reader.getSeqno();
                 return seqno >= 10 && seqno <= 19;
@@ -1355,7 +1355,7 @@ public class DiskLogTest extends TestCase
 
     // Write a prescribed number of events to the log starting at zero.
     private void writeEventsToLog(DiskLog log, int howMany)
-            throws THLException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         writeEventsToLog(log, 0, howMany);
     }
@@ -1363,7 +1363,7 @@ public class DiskLogTest extends TestCase
     // Write a prescribed number of events to the log starting at a
     // specified sequence number. Last event will be committed.
     private void writeEventsToLog(DiskLog log, long seqno, int howMany)
-            throws THLException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         // Should match incremented seqno on the final iteration.
         long lastSeqno = seqno + howMany;
@@ -1386,7 +1386,7 @@ public class DiskLogTest extends TestCase
 
     // Read back a prescribed number of events.
     private void readBackStoredEvents(DiskLog log, long fromSeqno, long count)
-            throws THLException, InterruptedException
+            throws ReplicatorException, InterruptedException
     {
         // Read back events from the log.
         LogConnection conn = log.connect(true);
