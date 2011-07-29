@@ -58,7 +58,6 @@ public class SingleThreadStageTask implements Runnable
     private Extractor        extractor;
     private List<Filter>     filters;
     private Applier          applier;
-    private String           loggingPrefix   = "[]";
     private boolean          usingBlockCommit;
     private int              blockCommitRowsCount;
     private EventDispatcher  eventDispatcher;
@@ -74,7 +73,6 @@ public class SingleThreadStageTask implements Runnable
     {
         this.taskId = taskId;
         this.name = stage.getName() + "-" + taskId;
-        this.loggingPrefix = "[" + name + "] ";
         this.stage = stage;
         this.blockCommitRowsCount = stage.getBlockCommitRowCount();
         this.usingBlockCommit = (blockCommitRowsCount > 1);
@@ -227,8 +225,7 @@ public class SingleThreadStageTask implements Runnable
                 }
                 catch (ExtractorException e)
                 {
-                    String message = "Event extraction failed: "
-                            + e.getMessage();
+                    String message = "Event extraction failed";
                     if (context.getExtractorFailurePolicy() == FailurePolicy.STOP)
                     {
                         eventDispatcher.handleEvent(new ErrorNotification(
@@ -250,8 +247,7 @@ public class SingleThreadStageTask implements Runnable
                 if (genericEvent == null)
                 {
                     if (logger.isDebugEnabled())
-                        logger.debug(loggingPrefix
-                                + "No event extracted, retrying...");
+                        logger.debug("No event extracted, retrying...");
                     currentEvent = null;
                     continue;
                 }
@@ -334,8 +330,8 @@ public class SingleThreadStageTask implements Runnable
                 event = (ReplDBMSEvent) genericEvent;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug(loggingPrefix + "Extracted event: seqno="
-                            + event.getSeqno() + " fragno=" + event.getFragno());
+                    logger.debug("Extracted event: seqno=" + event.getSeqno()
+                            + " fragno=" + event.getFragno());
                 }
                 currentEvent = event;
 
@@ -347,8 +343,7 @@ public class SingleThreadStageTask implements Runnable
                     {
                         if (logger.isDebugEnabled())
                         {
-                            logger.debug(loggingPrefix
-                                    + "Event discarded by filter: name="
+                            logger.debug("Event discarded by filter: name="
                                     + f.getClass().toString());
                         }
                         break;
@@ -490,7 +485,7 @@ public class SingleThreadStageTask implements Runnable
                 {
                     if (logger.isDebugEnabled())
                     {
-                        logger.debug(loggingPrefix + "Applying event: seqno="
+                        logger.debug("Applying event: seqno="
                                 + event.getSeqno() + " fragno="
                                 + event.getFragno() + " doCommit=" + doCommit);
                     }
@@ -536,8 +531,7 @@ public class SingleThreadStageTask implements Runnable
         catch (InterruptedException e)
         {
             if (!schedule.isCancelled())
-                logger.warn(loggingPrefix
-                        + "Received unexpected interrupt in stage task: "
+                logger.warn("Received unexpected interrupt in stage task: "
                         + stage.getName());
             // Roll back to release locks and clear partial work.
             try
@@ -614,8 +608,8 @@ public class SingleThreadStageTask implements Runnable
         // Finally, update!
         if (logger.isDebugEnabled())
         {
-            logger.debug(loggingPrefix + "Updating position: seqno="
-                    + header.getSeqno() + " doCommit=" + doCommit);
+            logger.debug("Updating position: seqno=" + header.getSeqno()
+                    + " doCommit=" + doCommit);
         }
         taskProgress.beginApplyInterval();
         applier.updatePosition(header, doCommit, false);
@@ -643,28 +637,25 @@ public class SingleThreadStageTask implements Runnable
     // Utility routines to print log messages with stage names.
     private void logInfo(String message, Throwable e)
     {
-        String prefixedMessage = loggingPrefix + message;
         if (e == null)
-            logger.info(prefixedMessage);
+            logger.info(message);
         else
-            logger.info(prefixedMessage, e);
+            logger.info(message, e);
     }
 
     private void logWarn(String message, Throwable e)
     {
-        String prefixedMessage = loggingPrefix + message;
         if (e == null)
-            logger.warn(prefixedMessage);
+            logger.warn(message);
         else
-            logger.warn(prefixedMessage, e);
+            logger.warn(message, e);
     }
 
     private void logError(String message, Throwable e)
     {
-        String prefixedMessage = loggingPrefix + message;
         if (e == null)
-            logger.error(prefixedMessage);
+            logger.error(message);
         else
-            logger.error(prefixedMessage, e);
+            logger.error(message, e);
     }
 }
