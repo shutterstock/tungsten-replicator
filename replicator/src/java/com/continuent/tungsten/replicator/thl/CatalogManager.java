@@ -175,7 +175,10 @@ public class CatalogManager
         // Reduce tasks in task table if possible.
         try
         {
-            commitSeqnoTable.reduceTasks();
+            // Check if table is null (this happens if database is not
+            // available)
+            if (commitSeqnoTable != null)
+                commitSeqnoTable.reduceTasks();
         }
         catch (SQLException e)
         {
@@ -183,7 +186,8 @@ public class CatalogManager
         }
 
         // Clean up JDBC connection.
-        conn.close();
+        if (conn != null)
+            conn.close();
         conn = null;
     }
 
