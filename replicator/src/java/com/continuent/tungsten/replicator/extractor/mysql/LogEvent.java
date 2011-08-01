@@ -153,8 +153,7 @@ public abstract class LogEvent
         }
         catch (IOException e)
         {
-            logger.error("Cannot create log event: " + e);
-            throw new MySQLExtractException("log event create failed");
+            throw new MySQLExtractException("log event create failed", e);
         }
     }
 

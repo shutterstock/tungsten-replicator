@@ -58,7 +58,6 @@ public class UpdateRowsLogEvent extends RowsLogEvent
          */
         if (map == null)
         {
-            logger.error("Update row event for unknown table");
             throw new MySQLExtractException(
                     "Update row event for unknown table");
         }

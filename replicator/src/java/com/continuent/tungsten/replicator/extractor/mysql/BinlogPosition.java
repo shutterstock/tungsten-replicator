@@ -146,7 +146,6 @@ public class BinlogPosition implements FilenameFilter, Cloneable
         {
             if (getFileName() == null)
             {
-                logger.error("binlog filename not specified, cannot open");
                 throw new MySQLExtractException("No binlog file specified");
             }
 
@@ -181,18 +180,15 @@ public class BinlogPosition implements FilenameFilter, Cloneable
         }
         catch (FileNotFoundException e)
         {
-            logger.error("unable to open binlog file: " + e);
-            throw new MySQLExtractException("unable to open binlog file:" + e);
+            throw new MySQLExtractException("unable to open binlog file", e);
         }
         catch (IOException e)
         {
-            logger.error("unable to scan binlog file: " + e);
-            throw new MySQLExtractException("unable to scan binlog file:" + e);
+            throw new MySQLExtractException("unable to scan binlog file", e);
         }
         catch (InterruptedException e)
         {
-            logger.error("unable to open binlog file: " + e);
-            throw new MySQLExtractException("unable to open binlog file");
+            throw new MySQLExtractException("unable to open binlog file", e);
         }
     }
 
@@ -231,8 +227,8 @@ public class BinlogPosition implements FilenameFilter, Cloneable
                 }
                 catch (InterruptedException e)
                 {
-                    logger.error("sleep failed during binlog reading" + e);
-                    throw new MySQLExtractException("binlog read failure");
+                    throw new MySQLExtractException(
+                            "sleep failed during binlog reading", e);
                 }
             }
         }

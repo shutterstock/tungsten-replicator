@@ -76,7 +76,6 @@ public class IntvarLogEvent extends LogEvent
          */
         if (eventLength < offset)
         {
-            logger.error("INTVAR event length is too short");
             throw new MySQLExtractException("INTVAR event length is too short");
         }
 

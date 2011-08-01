@@ -876,9 +876,9 @@ public abstract class RowsLogEvent extends LogEvent
 
         if (columns == null)
         {
-            logger.error("column value list empty for row: "
-                    + oneRowChange.toString());
-            throw new ExtractorException("Row data corrupted");
+            throw new ExtractorException(
+                    "Row data corrupted : column value list empty for row "
+                            + oneRowChange.toString());
         }
         rowPos += (usedColumnsCount + 7) / 8;
 
@@ -947,9 +947,8 @@ public abstract class RowsLogEvent extends LogEvent
                 }
                 catch (IOException e)
                 {
-                    logger.error("Failed to process row", e);
                     throw new ExtractorException(
-                            "Row column value parsing failure");
+                            "Row column value parsing failure", e);
                 }
                 if (size == 0)
                 {

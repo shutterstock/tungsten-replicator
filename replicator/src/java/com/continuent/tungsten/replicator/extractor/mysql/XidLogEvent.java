@@ -48,9 +48,7 @@ public class XidLogEvent extends LogEvent
         }
         catch (IOException e)
         {
-            logger.error("could not extract trx id: " + e);
-            throw new MySQLExtractException(
-                    "problem in extracting xid_log_event");
+            throw new MySQLExtractException("could not extract trx id", e);
         }
     }
 

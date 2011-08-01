@@ -326,8 +326,8 @@ public class MySQLExtractor implements RawExtractor
         {
             if (position.getFileInputStream().read(header) != header.length)
             {
-                logger.error("Failed reading header;  Probably an empty file");
-                throw new MySQLExtractException("could not read binlog header");
+                throw new MySQLExtractException(
+                        "Failed reading header;  Probably an empty file");
             }
             tmp_pos = header.length;
         }
@@ -339,10 +339,10 @@ public class MySQLExtractor implements RawExtractor
 
         if (!Arrays.equals(header, MysqlBinlog.BINLOG_MAGIC))
         {
-            logger.error("File is not a binary log file - found : "
-                    + LogEvent.hexdump(header) + " / expected : "
-                    + LogEvent.hexdump(MysqlBinlog.BINLOG_MAGIC));
-            throw new MySQLExtractException("binlog file header mismatch");
+            throw new MySQLExtractException(
+                    "File is not a binary log file - found : "
+                            + LogEvent.hexdump(header) + " / expected : "
+                            + LogEvent.hexdump(MysqlBinlog.BINLOG_MAGIC));
         }
 
         /*
@@ -398,11 +398,11 @@ public class MySQLExtractor implements RawExtractor
                     if (new_description_event == null)
                     /* EOF can't be hit here normally, so it's a real error */
                     {
-                        logger.error("Could not read a Format_description_log_event event "
-                                + "at offset "
-                                + tmp_pos
-                                + "this could be a log format error or read error");
-                        throw new MySQLExtractException("binlog format error");
+                        throw new MySQLExtractException(
+                                "Could not read a Format_description_log_event event "
+                                        + "at offset "
+                                        + tmp_pos
+                                        + "this could be a log format error or read error");
                     }
                     description_event = new_description_event;
                     logger.debug("Setting description_event");
@@ -420,11 +420,12 @@ public class MySQLExtractor implements RawExtractor
                     if (ev == null)
                     /* EOF can't be hit here normally, so it's a real error */
                     {
-                        logger.error("Could not read a Rotate_log_event event "
-                                + "at offset " + tmp_pos
-                                + " this could be a log format error or "
-                                + "read error");
-                        throw new MySQLExtractException("binlog format error");
+                        throw new MySQLExtractException(
+                                "Could not read a Rotate_log_event event "
+                                        + "at offset "
+                                        + tmp_pos
+                                        + " this could be a log format error or "
+                                        + "read error");
                     }
                 }
                 else
@@ -452,9 +453,9 @@ public class MySQLExtractor implements RawExtractor
             }
             catch (IOException e)
             {
-                logger.error("Could not read entry at offset " + tmp_pos
-                        + " : Error in log format or read error");
-                throw new MySQLExtractException("binlog read error" + e);
+                throw new MySQLExtractException(
+                        "Could not read entry at offset " + tmp_pos
+                                + " : Error in log format or read error", e);
             }
         }
         try
@@ -540,13 +541,11 @@ public class MySQLExtractor implements RawExtractor
             }
             else
             {
-                logger.error("binlog file channel not open");
                 throw new MySQLExtractException("binlog file channel not open");
             }
         }
         catch (IOException e)
         {
-            logger.error("binlog file read error");
             throw new MySQLExtractException("binlog file read error", e);
         }
     }
@@ -1191,10 +1190,9 @@ public class MySQLExtractor implements RawExtractor
         }
         catch (ExtractorException e)
         {
-            ExtractorException exception = new ExtractorException(
-                    "Failed to extract from " + position, e);
             if (runtime.getExtractorFailurePolicy() == FailurePolicy.STOP)
-                throw exception;
+                throw new ExtractorException("Failed to extract from "
+                        + position, e);
             else
                 logger.error("Failed to extract from " + position, e);
 
@@ -1206,12 +1204,14 @@ public class MySQLExtractor implements RawExtractor
         }
         catch (Exception e)
         {
-            logger.error("Unexpected failure while extracting event "
-                    + position, e);
             if (runtime.getExtractorFailurePolicy() == FailurePolicy.STOP)
                 throw new ExtractorException(
                         "Unexpected failure while extracting event " + position,
                         e);
+            else
+                logger.error("Unexpected failure while extracting event "
+                        + position, e);
+
         }
         return null;
     }
@@ -1439,9 +1439,8 @@ public class MySQLExtractor implements RawExtractor
         catch (SQLException e)
         {
             String message = "Unable to connect to MySQL server while preparing extractor; is server available?";
-            logger.error(message);
-            logger.info("url: " + url + " user: " + user
-                    + " password: *********");
+            message += "\n(url: " + url + " user: " + user
+                    + " password: *********)";
             throw new ExtractorException(message, e);
         }
         finally
@@ -1468,9 +1467,8 @@ public class MySQLExtractor implements RawExtractor
         catch (SQLException e)
         {
             String message = "Unable to connect to MySQL server to check version; is server available?";
-            logger.error(message);
-            logger.info("url: " + url + " user: " + user
-                    + " password: *********");
+            message += "\n(url: " + url + " user: " + user
+                    + " password: *********)";
             throw new ExtractorException(message, e);
         }
         finally
@@ -1498,9 +1496,8 @@ public class MySQLExtractor implements RawExtractor
         catch (SQLException e)
         {
             String message = "Unable to connect to MySQL server to get max_binlog_size setting; is server available?";
-            logger.error(message);
-            logger.info("url: " + url + " user: " + user
-                    + " password: *********");
+            message += "\n(url: " + url + " user: " + user
+                    + " password: *********)";
             throw new ExtractorException(message, e);
         }
         finally
@@ -1526,9 +1523,8 @@ public class MySQLExtractor implements RawExtractor
         catch (SQLException e)
         {
             String message = "Unable to connect to MySQL server to check have_innodb setting; is server available?";
-            logger.error(message);
-            logger.info("url: " + url + " user: " + user
-                    + " password: *********");
+            message += "\n(url: " + url + " user: " + user
+                    + " password: *********)";
             throw new ExtractorException(message, e);
         }
         finally

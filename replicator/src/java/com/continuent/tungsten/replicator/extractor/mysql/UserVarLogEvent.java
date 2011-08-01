@@ -105,7 +105,6 @@ public class UserVarLogEvent extends LogEvent
 
         if (eventLength < offset)
         {
-            logger.error("user var event length is too short");
             throw new MySQLExtractException(
                     "user var event length is too short");
         }

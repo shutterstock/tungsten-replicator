@@ -81,7 +81,6 @@ public class RandLogEvent extends LogEvent
          */
         if (eventLength < offset)
         {
-            logger.error("rand event length is too short");
             throw new MySQLExtractException("rand event length is too short");
         }
 

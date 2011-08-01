@@ -54,7 +54,6 @@ public class WriteRowsLogEvent extends RowsLogEvent
     {
         if (map == null)
         {
-            logger.error("Write row event for unknown table");
             throw new MySQLExtractException("Write row event for unknown table");
         }
         OneRowChange oneRowChange = new OneRowChange();

@@ -596,8 +596,8 @@ public class QueryLogEvent extends LogEvent
             }
             catch (IOException e)
             {
-                logger.error("IO exception while reading query event parameters");
-                throw new MySQLExtractException("query event reading failed");
+                throw new MySQLExtractException(
+                        "IO exception while reading query event parameters");
             }
         }
         return pos;
