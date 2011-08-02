@@ -121,7 +121,7 @@ public class OpenReplicatorManagerCtrl
         println("  offline          - Set replicator to OFFLINE state");
         println("  offline-deferred [-seqno seqno] [-event event] [-heartbeat [name]] [-time YYYY-MM-DD_hh:mm:ss]");
         println("                   - Set replicator OFFLINE at future point");
-        println("  online [-from-event event] [-skip N] [-skip-seqno x,y,z] [-seqno seqno] [-event event] [-heartbeat [name]] [-time YYYY-MM-DD_hh:mm:ss]");
+        println("  online [-from-event event] [-skip-seqno x,y,z] [-seqno seqno] [-event event] [-heartbeat [name]] [-time YYYY-MM-DD_hh:mm:ss]");
         println("                   - Set Replicator to ONLINE with start and stop points");
         println("  reset            - Deletes the replicator service");
         println("  restore [-uri uri] [-limit s]  - Restore database");
@@ -625,7 +625,10 @@ public class OpenReplicatorManagerCtrl
                 else if ("-from-event".equals(curArg))
                     fromEvent = argvIterator.next();
                 else if ("-skip".equals(curArg))
-                    skip = Long.parseLong(argvIterator.next());
+                {
+                    fatal("The -skip flag is now longer supported; use -skip-seqno instead",
+                            null);
+                }
                 else if ("-event".equals(curArg))
                     toEvent = argvIterator.next();
                 else if ("-seqno".equals(curArg))
