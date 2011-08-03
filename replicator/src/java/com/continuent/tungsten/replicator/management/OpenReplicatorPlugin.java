@@ -169,7 +169,7 @@ public interface OpenReplicatorPlugin
      *            for role (e.g., a slave typically points to a master)
      * @throws Exception
      */
-    public void setRole(String role, String uri) throws Exception;
+    public void setRole(String role, String uri) throws ReplicatorException;
 
     /**
      * Initiates consistency check transaction on a given table.

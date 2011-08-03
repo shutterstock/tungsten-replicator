@@ -959,7 +959,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
      * @see com.continuent.tungsten.replicator.management.OpenReplicatorPlugin#setRole(java.lang.String,
      *      java.lang.String)
      */
-    public void setRole(String role, String uri) throws Exception
+    public void setRole(String role, String uri) throws ReplicatorException
     {
         // No action required. We can ready properties when we restart.
     }
