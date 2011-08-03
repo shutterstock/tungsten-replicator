@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -36,6 +36,7 @@ import com.continuent.tungsten.replicator.event.ReplEvent;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
 import com.continuent.tungsten.replicator.thl.log.LogConnection;
+import com.continuent.tungsten.replicator.thl.log.LogTimeoutException;
 
 /**
  * This class defines a ConnectorHandler
@@ -51,6 +52,7 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
     private SocketChannel    channel   = null;
     private THL              thl       = null;
     private int              resetPeriod;
+    private int              heartbeatMillis;
     private volatile boolean cancelled = false;
     private volatile boolean finished  = false;
 
@@ -74,9 +76,17 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
         public void validateResponse(ProtocolHandshakeResponse handshakeResponse)
                 throws InterruptedException, ReplicatorException
         {
-            logger.info("New THL client connection from source ID: "
-                    + handshakeResponse.getSourceId());
+            // Get the heartbeat interval and check it.
+            heartbeatMillis = handshakeResponse.getHeartbeatMillis();
+            logger.info("New THL client connection: sourceID="
+                    + handshakeResponse.getSourceId() + " heartbeatMillis="
+                    + heartbeatMillis);
+            if (heartbeatMillis <= 0)
+                throw new THLException(
+                        "Client heartbeat requests must be greater than zero: "
+                                + heartbeatMillis);
 
+            // Vet the epoch number and sequence number.
             long clientLastEpochNumber = handshakeResponse.getLastEpochNumber();
             long clientLastSeqno = handshakeResponse.getLastSeqno();
 
@@ -201,6 +211,7 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                 // If we don't have a connection to the log, make it now.
                 if (connection == null)
                 {
+                    // Establish the connection.
                     connection = thl.connect(true);
                     if (!connection.seek(seqno))
                     {
@@ -210,13 +221,27 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                         sendError(protocol, message);
                         return;
                     }
+
+                    // Set the connection timeout to match the requested
+                    // heartbeat interval.
+                    connection.setTimeoutMillis(heartbeatMillis);
                 }
 
                 long i = 0;
                 while (i < prefetchRange)
                 {
-                    // Get the next event from the log, waiting if necessary.
-                    THLEvent event = connection.next();
+                    // Get the next event from the log, waiting if necessary. If
+                    // the read times out send a heartbeat and try again.
+                    THLEvent event = null;
+                    try
+                    {
+                        event = connection.next(true);
+                    }
+                    catch (LogTimeoutException e)
+                    {
+                        sendHeartbeat(protocol);
+                        continue;
+                    }
 
                     // Peel off and process the underlying replication event.
                     ReplEvent revent = event.getReplEvent();
@@ -355,6 +380,11 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
             throws IOException
     {
         protocol.sendError(message);
+    }
+
+    private void sendHeartbeat(Protocol protocol) throws IOException
+    {
+        protocol.sendHeartbeat();
     }
 
     /**

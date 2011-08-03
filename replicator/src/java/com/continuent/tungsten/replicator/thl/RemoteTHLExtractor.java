@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -54,6 +54,7 @@ public class RemoteTHLExtractor implements Extractor
     private String         connectUri;
     private int            resetPeriod        = 1;
     private boolean        checkSerialization = true;
+    private int            heartbeatMillis    = 3000;
 
     // Connection control variables.
     private PluginContext  pluginContext;
@@ -110,6 +111,20 @@ public class RemoteTHLExtractor implements Extractor
     public void setCheckSerialization(boolean checkSerialization)
     {
         this.checkSerialization = checkSerialization;
+    }
+
+    public int getHeartbeatInterval()
+    {
+        return heartbeatMillis;
+    }
+
+    /** 
+     * Sets the interval for sending heartbeat events from server to avoid TCP/IP 
+     * timeout on server connection. 
+     */
+    public void setHeartbeatInterval(int heartbeatMillis)
+    {
+        this.heartbeatMillis = heartbeatMillis;
     }
 
     /**
@@ -285,6 +300,7 @@ public class RemoteTHLExtractor implements Extractor
                                             false));
                     conn.setURI(connectUri);
                     conn.setResetPeriod(resetPeriod);
+                    conn.setHeartbeatMillis(heartbeatMillis);
                     if (this.lastEvent == null
                             || this.checkSerialization == false)
                     {

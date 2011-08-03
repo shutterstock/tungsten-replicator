@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s):
+ * Contributor(s): Robert Hodges
  */
 
 package com.continuent.tungsten.replicator.thl;
@@ -31,10 +31,11 @@ package com.continuent.tungsten.replicator.thl;
  */
 public class ProtocolHandshakeResponse extends ProtocolMessage
 {
-    static final long    serialVersionUID = 123452345L;
+    static final long    serialVersionUID = 123452346L;
     private final String sourceId;
     private final long   lastEpochNumber;
     private final long   lastSeqno;
+    private final int    heartbeatMillis;
 
     /**
      * Create a new instance.
@@ -42,12 +43,13 @@ public class ProtocolHandshakeResponse extends ProtocolMessage
      * @param sourceId Source ID of client.
      */
     public ProtocolHandshakeResponse(String sourceId, long lastEpochNumber,
-            long lastSeqno)
+            long lastSeqno, int heartbeatMillis)
     {
         super(null);
         this.sourceId = sourceId;
         this.lastEpochNumber = lastEpochNumber;
         this.lastSeqno = lastSeqno;
+        this.heartbeatMillis = heartbeatMillis;
     }
 
     /** Returns the source ID. */
@@ -66,5 +68,11 @@ public class ProtocolHandshakeResponse extends ProtocolMessage
     public long getLastSeqno()
     {
         return this.lastSeqno;
+    }
+
+    /** Returns the number of milliseconds between heartbeats. */
+    public int getHeartbeatMillis()
+    {
+        return this.heartbeatMillis;
     }
 }

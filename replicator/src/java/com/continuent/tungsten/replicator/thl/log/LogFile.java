@@ -377,7 +377,8 @@ public class LogFile
      * Returns only if log file is in write mode. If we are in read mode, this
      * will switch over to write mode and position at the end of the file.
      */
-    protected void assertWriteMode() throws ReplicatorException, InterruptedException
+    protected void assertWriteMode() throws ReplicatorException,
+            InterruptedException
     {
         if (mode != AccessMode.write)
         {
@@ -388,7 +389,8 @@ public class LogFile
     }
 
     /** Returns only if log file is in read mode. */
-    protected void assertReadMode() throws ReplicatorException, InterruptedException
+    protected void assertReadMode() throws ReplicatorException,
+            InterruptedException
     {
         if (mode != AccessMode.read)
         {
@@ -457,7 +459,7 @@ public class LogFile
      * @throws IOException If positioning results in an error.
      */
     public synchronized void seekOffset(long offset) throws IOException,
-    ReplicatorException, InterruptedException
+            ReplicatorException, InterruptedException
     {
         assertReadMode();
         dataInput.seek(offset);
@@ -522,8 +524,7 @@ public class LogFile
             else if (available < RECORD_LENGTH_SIZE)
             {
                 // If there is not enough to read the length, and we don't want
-                // to
-                // wait, this is a truncated record.
+                // to wait, this is a truncated record.
                 if (logger.isDebugEnabled())
                     logger.debug("Length is truncated; returning immediately");
                 return new LogRecord(offset, true);
@@ -636,8 +637,8 @@ public class LogFile
         dataOutput.writeLong(seqno);
     }
 
-    protected void write(short myShort) throws IOException, ReplicatorException,
-            InterruptedException
+    protected void write(short myShort) throws IOException,
+            ReplicatorException, InterruptedException
     {
         assertWriteMode();
         dataOutput.writeShort(myShort);

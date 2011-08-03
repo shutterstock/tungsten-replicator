@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s):
+ * Contributor(s): Robert Hodges
  */
 
 package com.continuent.tungsten.replicator.thl;
@@ -34,7 +34,6 @@ import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
-import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSFilteredEvent;
 import com.continuent.tungsten.replicator.event.ReplEvent;
@@ -48,8 +47,7 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class Protocol
 {
-    private static Logger        logger                   = Logger
-                                                                  .getLogger(Protocol.class);
+    private static Logger        logger                   = Logger.getLogger(Protocol.class);
 
     protected PluginContext      pluginContext            = null;
     protected SocketChannel      channel                  = null;
@@ -145,9 +143,9 @@ public class Protocol
      * @throws IOException
      * @throws ReplicatorException
      */
-    protected ProtocolMessage readMessage() throws IOException, ReplicatorException
+    protected ProtocolMessage readMessage() throws IOException,
+            ReplicatorException
     {
-        long metricID = 0L;
         if (ois == null)
         {
             ois = new ObjectInputStream(new BufferedInputStream(this.channel
@@ -156,13 +154,7 @@ public class Protocol
         Object obj;
         try
         {
-            if (pluginContext.getMonitor().getDetailEnabled())
-                metricID = pluginContext.getMonitor().startCPUEvent(
-                        ReplicatorMonitor.CPU_MSG_DESERIAL);
             obj = ois.readObject();
-            if (pluginContext.getMonitor().getDetailEnabled())
-                pluginContext.getMonitor().stopCPUEvent(
-                        ReplicatorMonitor.CPU_MSG_DESERIAL, metricID);
         }
         catch (ClassNotFoundException e)
         {
@@ -204,8 +196,8 @@ public class Protocol
      * @throws InterruptedException
      */
     public void serverHandshake(ProtocolHandshakeResponseValidator validator,
-            long minSeqNo, long maxSeqNo) throws ReplicatorException, IOException,
-            InterruptedException
+            long minSeqNo, long maxSeqNo) throws ReplicatorException,
+            IOException, InterruptedException
     {
         writeMessage(new ProtocolHandshake());
         ProtocolMessage response = readMessage();
@@ -235,20 +227,35 @@ public class Protocol
     }
 
     /**
-     * TODO: clientHandshake definition.
+     * Define a client handshake event including default heartbeat interval.
      * 
-     * @return seqno range
-     * @throws ReplicatorException
-     * @throws IOException
+     * @param lastEpochNumber Epoch number client has from last sequence number
+     * @param lastSeqno Last sequence number client received
+     * @return A sequence number range
      */
     public SeqNoRange clientHandshake(long lastEpochNumber, long lastSeqno)
             throws ReplicatorException, IOException
+    {
+        return clientHandshake(lastEpochNumber, lastSeqno, 3000);
+    }
+
+    /**
+     * Define a client handshake event including attendant information. TODO:
+     * clientHandshake definition.
+     * 
+     * @param lastEpochNumber Epoch number client has from last sequence number
+     * @param lastSeqno Last sequence number client received
+     * @param heartbeatMillis Number of milliseconds between heartbeat events
+     * @return A sequence number range
+     */
+    public SeqNoRange clientHandshake(long lastEpochNumber, long lastSeqno,
+            int heartbeatMillis) throws ReplicatorException, IOException
     {
         ProtocolMessage handshake = readMessage();
         if (handshake instanceof ProtocolHandshake == false)
             throw new THLException("Invalid handshake");
         writeMessage(new ProtocolHandshakeResponse(pluginContext.getSourceId(),
-                lastEpochNumber, lastSeqno));
+                lastEpochNumber, lastSeqno, heartbeatMillis));
 
         ProtocolMessage okOrNok = readMessage();
         if (okOrNok instanceof ProtocolOK)
@@ -290,7 +297,23 @@ public class Protocol
             {
                 writeMessage(new ProtocolReplEventRequest(seqNo, prefetchRange));
             }
-            ProtocolMessage msg = readMessage();
+
+            // Read the next message, skipping over any heartbeat events, which
+            // serve to keep the connection open.
+            ProtocolMessage msg = null;
+            for (;;)
+            {
+                msg = readMessage();
+                if (msg instanceof ProtocolHeartbeat)
+                {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Received protocol heartbeat");
+                }
+                else
+                {
+                    break;
+                }
+            }
 
             // Handling buffering on the client side
             if (msg.getPayload() instanceof ArrayList<?>)
@@ -312,7 +335,9 @@ public class Protocol
             {
                 // Receiving an invalid message (neither a ProtocolReplEvent or
                 // a list of ReplEvent)
-                throw new THLException("Protocol error");
+                throw new THLException(
+                        "Protocol error; unexpected protocol type: "
+                                + msg.getClass().getName());
             }
             else
                 ret = ((ProtocolReplEvent) msg).getReplEvent();
@@ -360,8 +385,8 @@ public class Protocol
      * @throws ReplicatorException
      * @throws IOException
      */
-    public ProtocolReplEventRequest waitReplEventRequest() throws ReplicatorException,
-            IOException
+    public ProtocolReplEventRequest waitReplEventRequest()
+            throws ReplicatorException, IOException
     {
         ProtocolMessage msg = readMessage();
         if (msg instanceof ProtocolReplEventRequest == false)
@@ -405,5 +430,18 @@ public class Protocol
             buffer.clear();
         }
         writeMessage(new ProtocolNOK(message));
+    }
+
+    /**
+     * Send a heartbeat message to client.
+     */
+    public void sendHeartbeat() throws IOException
+    {
+        if (buffering && buffer.size() > 0)
+        {
+            writeMessage(new ProtocolMessage(buffer));
+            buffer.clear();
+        }
+        writeMessage(new ProtocolHeartbeat());
     }
 }

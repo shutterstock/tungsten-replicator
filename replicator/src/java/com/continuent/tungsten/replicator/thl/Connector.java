@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Teemu Ollakka
- * Contributor(s):
+ * Contributor(s): Robert Hodges
  */
 
 package com.continuent.tungsten.replicator.thl;
@@ -46,21 +46,22 @@ import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
  */
 public class Connector implements ReplicatorPlugin
 {
-    private static Logger   logger        = Logger.getLogger(Connector.class);
+    private static Logger   logger          = Logger.getLogger(Connector.class);
 
-    protected PluginContext pluginContext = null;
-    protected String        host          = null;
-    protected int           port          = 2112;
-    private SocketChannel   channel       = null;
-    private long            minSeqNo      = -1;
-    private long            maxSeqNo      = -1;
-    private Protocol        protocol      = null;
+    protected PluginContext pluginContext   = null;
+    protected String        host            = null;
+    protected int           port            = 2112;
+    private SocketChannel   channel         = null;
+    private long            minSeqNo        = -1;
+    private long            maxSeqNo        = -1;
+    private Protocol        protocol        = null;
 
     protected int           resetPeriod;
     protected long          lastSeqno;
     protected long          lastEpochNumber;
+    protected int           heartbeatMillis = 3000;
 
-    private String          remoteURI     = null;
+    private String          remoteURI       = null;
 
     /**
      * Creates a new <code>Connector</code> object
@@ -78,18 +79,20 @@ public class Connector implements ReplicatorPlugin
      * @throws ReplicatorException
      */
     public Connector(PluginContext context, String remoteURI, int resetPeriod,
-            long lastSeqno, long lastEpochNumber) throws ReplicatorException
+            long lastSeqno, long lastEpochNumber, int heartbeatMillis)
+            throws ReplicatorException
     {
         this.pluginContext = context;
         this.lastSeqno = lastSeqno;
         this.lastEpochNumber = lastEpochNumber;
+        this.heartbeatMillis = heartbeatMillis;
+        this.resetPeriod = resetPeriod;
         try
         {
             URI uri = new URI(remoteURI);
             this.host = uri.getHost();
             if ((this.port = uri.getPort()) == -1)
                 this.port = 2112;
-            this.resetPeriod = resetPeriod;
         }
         catch (URISyntaxException e)
         {
@@ -128,9 +131,12 @@ public class Connector implements ReplicatorPlugin
         channel.socket().setTcpNoDelay(true);
         // Enable TCP keepalive
         channel.socket().setKeepAlive(true);
+        // Timeout at 10 times the heartbeat interval.
+        channel.socket().setSoTimeout(heartbeatMillis * 10);
+
         protocol = new Protocol(pluginContext, channel, resetPeriod);
         SeqNoRange seqNoRange = protocol.clientHandshake(lastEpochNumber,
-                lastSeqno);
+                lastSeqno, heartbeatMillis);
         minSeqNo = seqNoRange.getMinSeqNo();
         maxSeqNo = seqNoRange.getMaxSeqNo();
     }
@@ -262,5 +268,11 @@ public class Connector implements ReplicatorPlugin
     public void setURI(String connectUri)
     {
         this.remoteURI = connectUri;
+    }
+
+    /** Returns the number of milliseconds between heartbeats. */
+    public void setHeartbeatMillis(int heartbeatMillis)
+    {
+        this.heartbeatMillis = heartbeatMillis;
     }
 }

@@ -112,6 +112,15 @@ public class LogConnection
     }
 
     /**
+     * Sets the timeout in milliseconds for blocking reads on this connection.
+     * The value overrides the read timeout for the log as a whole.
+     */
+    public void setTimeoutMillis(int timeoutMillis)
+    {
+        this.timeoutMillis = timeoutMillis;
+    }
+
+    /**
      * Releases the client connection. This must be called to avoid resource
      * leaks.
      */
@@ -276,7 +285,8 @@ public class LogConnection
 
     // Deserialize the event we just found. This takes into consideration
     // the read filter, if present.
-    private THLEvent deserialize(LogRecord logRecord) throws ReplicatorException
+    private THLEvent deserialize(LogRecord logRecord)
+            throws ReplicatorException
     {
         LogEventReplReader eventReader = new LogEventReplReader(logRecord,
                 eventSerializer, doChecksum);
@@ -376,8 +386,8 @@ public class LogConnection
      * @param block If true, read blocks until next event is available
      * @return A THLEvent or null if we are non-blocking
      */
-    public synchronized THLEvent next(boolean block) throws ReplicatorException,
-            InterruptedException
+    public synchronized THLEvent next(boolean block)
+            throws ReplicatorException, InterruptedException
     {
         assertNotDone();
 
@@ -573,7 +583,8 @@ public class LogConnection
     /**
      * Commit transactions stored in the log.
      */
-    public synchronized void commit() throws ReplicatorException, InterruptedException
+    public synchronized void commit() throws ReplicatorException,
+            InterruptedException
     {
         assertWritable();
 
@@ -610,8 +621,8 @@ public class LogConnection
     /**
      * Delete a range of events from the log.
      */
-    public synchronized void delete(Long low, Long high) throws ReplicatorException,
-            InterruptedException
+    public synchronized void delete(Long low, Long high)
+            throws ReplicatorException, InterruptedException
     {
         assertWritable();
         diskLog.delete(this, low, high);

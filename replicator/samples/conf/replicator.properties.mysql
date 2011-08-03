@@ -372,6 +372,8 @@ replicator.extractor.thl-remote=com.continuent.tungsten.replicator.thl.RemoteTHL
 replicator.extractor.thl-remote.connectUri=${replicator.master.connect.uri}
 # If true, check to ensure logs are consistent.  
 replicator.extractor.thl-remote.checkSerialization=true
+# Set requested interval in milliseconds for heartbeat events from remote THL.
+replicator.extractor.thl-remote.heartbeatInterval=3000
 
 # Queue extractor.
 replicator.extractor.queue=com.continuent.tungsten.replicator.storage.InMemoryQueueAdapter

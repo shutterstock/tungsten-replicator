@@ -367,6 +367,66 @@ public class DiskLogTest extends TestCase
     }
 
     /**
+     * Confirm that we can set a read timeout that is less than the timeout on
+     * the log and that blocking reads return null within or around that time.
+     */
+    public void testReadTimeout() throws Exception
+    {
+        int bigLogTimeout = 5000;
+
+        // Create the log.
+        File logDir = prepareLogDir("testReadWriteBasic");
+        DiskLog log = new DiskLog();
+        log.setReadOnly(false);
+        log.setLogDir(logDir.getAbsolutePath());
+        log.setTimeoutMillis(bigLogTimeout);
+        log.prepare();
+
+        // Add 1 record to log.
+        writeEventsToLog(log, 1);
+
+        // Confirm that normal reading from the log times out after 5 seconds.
+        LogConnection conn = log.connect(true);
+        assertTrue("Seek first record", conn.seek(0));
+        assertNotNull("Return first record", conn.next());
+        long startMillis = System.currentTimeMillis();
+        try
+        {
+            conn.next();
+            throw new Exception("Read #1 did not timeout!");
+        }
+        catch (LogTimeoutException e)
+        {
+        }
+        long intervalMillis = System.currentTimeMillis() - startMillis;
+        assertTrue("Took at least 5 seconds to complete",
+                5000 <= intervalMillis);
+
+        // Now repeat with log connection timeout reduced to 10ms. Show that
+        // read times
+        // out within a second.
+        // WARNING: THIS WILL NOT WORK IN A DEBUGGER IF YOU STOP DURING READ.
+        conn.setTimeoutMillis(10);
+        assertTrue("Seek first record", conn.seek(0));
+        assertNotNull("Return first record", conn.next());
+        startMillis = System.currentTimeMillis();
+        try
+        {
+            conn.next();
+            throw new Exception("Read #2 did not timeout!");
+        }
+        catch (LogTimeoutException e)
+        {
+        }
+        intervalMillis = System.currentTimeMillis() - startMillis;
+        assertTrue("Took less than 1 second to complete", 1000 > intervalMillis);
+
+        // Clean up.
+        conn.release();
+        log.release();
+    }
+
+    /**
      * Confirm that we can seek to the sequenced number *after* the last
      * sequence number currently stored and read the next event when it appears.
      */
