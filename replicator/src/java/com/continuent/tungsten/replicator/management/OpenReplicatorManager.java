@@ -545,8 +545,8 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             msg.append(e.getTransition().getName());
             msg.append(" event=");
             msg.append(e.getEvent().getClass().getSimpleName());
-            logger.error(msg.toString());
-            throw new ReplicatorStateException(e.getMessage());
+            endUserLog.error(msg.toString());
+            throw new ReplicatorStateException(msg.toString(), e);
         }
         catch (TransitionFailureException e)
         {
@@ -1116,13 +1116,12 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
                 properties = propertiesManager.getProperties();
                 doConfigure();
             }
-            catch (Exception e)
+            catch (ReplicatorException e)
             {
                 if (logger.isDebugEnabled())
                     logger.debug("Unable to set role", e);
-                throw new TransitionRollbackException("Unable to set role: "
-                        + e.getMessage(), event, entity, transition,
-                        actionType, e);
+                throw new TransitionRollbackException("Unable to set role",
+                        event, entity, transition, actionType, e);
             }
         }
     };
@@ -2666,12 +2665,11 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
                     + event.getClass().getName());
             Thread.currentThread().interrupt();
         }
-        catch (Exception e)
+        catch (ReplicatorException e)
         {
-            logger.error("Event processing failed: " + e.getMessage());
             if (logger.isDebugEnabled())
-                logger.debug("Event failure trace", e);
-            throw new Exception(e.getMessage());
+                logger.debug("Event processing failed", e);
+            throw new Exception("Event processing failed", e);
         }
     }
 

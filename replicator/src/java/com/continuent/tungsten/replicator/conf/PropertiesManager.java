@@ -175,8 +175,7 @@ public class PropertiesManager
         {
             String msg = "Unable to write dymamic properties file: "
                     + dynamicPropertiesFile.getAbsolutePath();
-            logger.error(msg, e);
-            throw new ReplicatorException(msg);
+            throw new ReplicatorException(msg, e);
         }
         finally
         {

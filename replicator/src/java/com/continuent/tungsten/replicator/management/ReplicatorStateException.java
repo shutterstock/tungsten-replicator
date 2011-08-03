@@ -42,4 +42,9 @@ public class ReplicatorStateException extends ReplicatorException
     {
         super(message);
     }
+
+    public ReplicatorStateException(String message, Throwable e)
+    {
+        super(message, e);
+    }
 }
