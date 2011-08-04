@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s): 
+ * Contributor(s):
  */
 
 package com.continuent.tungsten.replicator.thl.log;
@@ -33,7 +33,7 @@ import org.junit.Before;
 /**
  * Test capabilities of tungsten log files. This test is fully self-contained
  * but creates files on the file system.
- * 
+ *
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -43,7 +43,7 @@ public class LogFileTest extends TestCase
 
     /**
      * Setup.
-     * 
+     *
      * @throws java.lang.Exception
      */
     @Before
@@ -55,7 +55,7 @@ public class LogFileTest extends TestCase
 
     /**
      * Teardown.
-     * 
+     *
      * @throws java.lang.Exception
      */
     @After
@@ -134,7 +134,7 @@ public class LogFileTest extends TestCase
         tf.flush();
 
         // Reopen file read only, reread, and compare.
-        LogFile tf2 = LogHelper.openExistingFileForRead("TestReadWrite.dat");
+        LogFile tf2 = LogHelper.openExistingFileForRead("testReadWrite.dat");
         long firstPos2 = tf2.getOffset();
         LogRecord record2 = tf2.readRecord(0);
         long lastPos2 = tf2.getOffset();
