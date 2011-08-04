@@ -241,11 +241,11 @@ then
 else
   printHeader "Building replicator from source"
   # Run the builds.
-  doAnt commons $source_commons/build.xml clean releases
-  doAnt fsm $source_fsm/build.xml clean releases
-  doAnt replicator $source_replicator/build.xml clean releases
+  doAnt commons $source_commons/build.xml clean all
+  doAnt fsm $source_fsm/build.xml clean all
+  doAnt replicator $source_replicator/build.xml clean all
   #doAnt replicator-extra $source_replicator_extra/build.xml clean dist
-  doAnt bristlecone $source_bristlecone/build.xml clean releases
+  doAnt bristlecone $source_bristlecone/build.xml clean all
 fi
 
 ##########################################################################
@@ -357,16 +357,16 @@ echo -n "  bristlecone: " >> $manifest
 svn info $source_bristlecone | grep Revision: >> $manifest
 
 ##########################################################################
-# Create JSON manifest file. 
+# Create JSON manifest file.
 ##########################################################################
 
-# Extract SVN revision number from the SVN info. 
+# Extract SVN revision number from the SVN info.
 extractRevision() {
   svn info $1 | grep Revision: | sed "s/[^0-9]//g" | tr -d "\n"
 }
 
 manifestJSON=${reldir}/.manifest.json
-echo "### Creating JSON manifest file: $manifestJSON" 
+echo "### Creating JSON manifest file: $manifestJSON"
 
 # Local details.
 echo    "{" >> $manifestJSON
@@ -392,7 +392,7 @@ echo    "    \"URL\": \"${HUDSON_URL}\"," >> $manifestJSON
 echo    "    \"SVNRevision\": ${SVN_REVISION-null}" >> $manifestJSON
 echo    "  }," >> $manifestJSON
 
-# SVN details. 
+# SVN details.
 echo    "  \"SVN\":" >> $manifestJSON
 echo    "  {" >> $manifestJSON
 echo    "    \"commons\":" >> $manifestJSON
@@ -528,12 +528,12 @@ then
   rm -rf ${reldir_tools}
   mkdir -p ${reldir_tools}
   mkdir -p ${reldir_tools}/.runtime
-  
+
   cp $extra_tools/configure $reldir_tools
   cp $extra_tools/tungsten-installer $reldir_tools
   rsync -Ca $extra_tools/ruby $reldir_tools
   rsync -Ca $extra_tools/ruby-tools-only/* $reldir_tools/ruby/
-  
+
   cp -rf ${reldir} ${reldir_tools}/.runtime
   cp -rf ${reldir}/.man* ${reldir_tools}
 else
