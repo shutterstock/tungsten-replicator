@@ -35,7 +35,7 @@ import com.continuent.tungsten.commons.jmx.JmxManager;
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
-public class JmxManagerTestDisabledBecauseItFailsEveryNowAndThen extends TestCase
+public class JmxManagerTDisabledBecauseItFailsEveryNowAndThen extends TestCase
 {
     private String host        = "localhost";
     private int    port        = 1199;
