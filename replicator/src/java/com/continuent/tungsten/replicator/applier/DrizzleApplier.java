@@ -96,8 +96,8 @@ public class DrizzleApplier extends JdbcApplier
 
             url = sb.toString();
         }
-        else
-            logger.info("Property url already set; ignoring host and port properties");
+        else if (logger.isDebugEnabled())
+            logger.debug("Property url already set; ignoring host and port properties");
         super.configure(context);
     }
 
