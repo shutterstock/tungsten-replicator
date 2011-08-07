@@ -390,9 +390,11 @@ public class SingleThreadStageTask implements Runnable
                                     + event.getSeqno() + " fragno="
                                     + event.getFragno() + " message="
                                     + e.getMessage();
-                            logError(message, e);
                             if (context.getApplierFailurePolicy() == FailurePolicy.STOP)
                             {
+                                // Don't log the full stack trace here, but just
+                                // the error message
+                                logError(message, null);
                                 eventDispatcher
                                         .handleEvent(new ErrorNotification(
                                                 message, event.getSeqno(),
@@ -401,6 +403,7 @@ public class SingleThreadStageTask implements Runnable
                             }
                             else
                             {
+                                logError(message, e);
                                 continue;
                             }
                         }
@@ -505,9 +508,12 @@ public class SingleThreadStageTask implements Runnable
                     String message = "Event application failed: seqno="
                             + event.getSeqno() + " fragno=" + event.getFragno()
                             + " message=" + e.getMessage();
-                    logError(message, e);
                     if (context.getApplierFailurePolicy() == FailurePolicy.STOP)
                     {
+                        // Don't log the full stack trace here, but just the
+                        // error message
+                        logError(message, null);
+
                         eventDispatcher.handleEvent(new ErrorNotification(
                                 message, event.getSeqno(), event.getEventId(),
                                 e));
@@ -515,6 +521,7 @@ public class SingleThreadStageTask implements Runnable
                     }
                     else
                     {
+                        logError(message, e);
                         continue;
                     }
                 }
