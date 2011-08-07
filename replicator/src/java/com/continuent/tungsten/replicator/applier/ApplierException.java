@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Alex Yurchenko
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.applier;
@@ -40,11 +40,9 @@ public class ApplierException extends ReplicatorException
 
     /**
      * Creates a new <code>ApplierException</code> object
-     * 
      */
     public ApplierException()
     {
-        // TODO Auto-generated constructor stub
     }
 
     /**
@@ -55,7 +53,6 @@ public class ApplierException extends ReplicatorException
     public ApplierException(String message)
     {
         super(message);
-        // TODO Auto-generated constructor stub
     }
 
     /**
@@ -66,7 +63,6 @@ public class ApplierException extends ReplicatorException
     public ApplierException(Throwable cause)
     {
         super(cause);
-        // TODO Auto-generated constructor stub
     }
 
     /**
@@ -78,7 +74,6 @@ public class ApplierException extends ReplicatorException
     public ApplierException(String message, Throwable cause)
     {
         super(message, cause);
-        // TODO Auto-generated constructor stub
     }
 
 }
