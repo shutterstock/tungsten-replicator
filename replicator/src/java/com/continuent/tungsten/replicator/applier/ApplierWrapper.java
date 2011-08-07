@@ -153,7 +153,7 @@ public class ApplierWrapper implements ParallelApplier
     public void configure(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
-        logger.info("Configuring raw applier");
+        logger.debug("Configuring raw applier");
         applier.configure(context);
     }
 
@@ -165,7 +165,7 @@ public class ApplierWrapper implements ParallelApplier
     public void prepare(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
-        logger.info("Preparing raw applier");
+        logger.debug("Preparing raw applier");
         applier.prepare(context);
     }
 
@@ -177,7 +177,7 @@ public class ApplierWrapper implements ParallelApplier
     public void release(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
-        logger.info("Releasing raw applier");
+        logger.debug("Releasing raw applier");
         applier.release(context);
     }
 }
