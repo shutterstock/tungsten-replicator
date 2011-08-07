@@ -480,8 +480,6 @@ public class ReplicatorMonitor implements ReplicatorMonitorMBean
             threadInfo = tmxbean.getThreadInfo(threadID);
             threadName = threadInfo.getThreadName();
           
-            //logger.info("QQQ: name= " + threadName + "id = " + threadID);
-
             if (reportInterestingOnly &&
                 !threadName.equals(MonitorThreadInfo.THLSRV) &&
                 !threadName.equals(MonitorThreadInfo.THLCLI) &&
