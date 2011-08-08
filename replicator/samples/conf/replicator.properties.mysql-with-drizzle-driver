@@ -313,6 +313,7 @@ replicator.store.parallel-queue=com.continuent.tungsten.replicator.thl.THLParall
 replicator.store.parallel-queue.maxSize=${replicator.global.buffer.size}
 replicator.store.parallel-queue.partitions=${replicator.global.apply.channels}
 replicator.store.parallel-queue.partitionerClass=com.continuent.tungsten.replicator.storage.parallel.ShardListPartitioner
+replicator.store.parallel-queue.maxOfflineInterval=300
 
 ##############
 # EXTRACTORS #

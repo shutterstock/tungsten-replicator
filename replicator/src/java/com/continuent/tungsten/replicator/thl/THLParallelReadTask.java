@@ -34,6 +34,7 @@ import com.continuent.tungsten.replicator.event.DBMSEmptyEvent;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplControlEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeaderData;
 import com.continuent.tungsten.replicator.event.ReplEvent;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
@@ -43,6 +44,7 @@ import com.continuent.tungsten.replicator.thl.log.LogConnection;
 import com.continuent.tungsten.replicator.thl.log.LogEventReadFilter;
 import com.continuent.tungsten.replicator.thl.log.LogEventReplReader;
 import com.continuent.tungsten.replicator.util.AtomicCounter;
+import com.continuent.tungsten.replicator.util.AtomicIntervalGuard;
 
 /**
  * Performs coordinated reads on the THL on behalf of a particular client (a
@@ -53,7 +55,7 @@ import com.continuent.tungsten.replicator.util.AtomicCounter;
  */
 public class THLParallelReadTask implements Runnable
 {
-    private static Logger                  logger       = Logger.getLogger(THLParallelReadTask.class);
+    private static Logger                  logger               = Logger.getLogger(THLParallelReadTask.class);
 
     // Task number on whose behalf we are reading.
     private final int                      taskId;
@@ -63,10 +65,15 @@ public class THLParallelReadTask implements Runnable
 
     // Counters to coordinate queue operation.
     private AtomicCounter                  headSeqnoCounter;
-    private AtomicLong                     lowWaterMark = new AtomicLong(0);
-    private AtomicLong                     acceptCount  = new AtomicLong(0);
-    private AtomicLong                     discardCount = new AtomicLong(0);
-    private AtomicLong                     readCount    = new AtomicLong(0);
+    private AtomicIntervalGuard            intervalGuard;
+    private AtomicLong                     lowWaterMark         = new AtomicLong(
+                                                                        0);
+    private AtomicLong                     acceptCount          = new AtomicLong(
+                                                                        0);
+    private AtomicLong                     discardCount         = new AtomicLong(
+                                                                        0);
+    private AtomicLong                     readCount            = new AtomicLong(
+                                                                        0);
 
     // Ordered queue of events for clients.
     private final BlockingQueue<ReplEvent> eventQueue;
@@ -76,7 +83,8 @@ public class THLParallelReadTask implements Runnable
 
     // Queue parameters.
     private final int                      maxControlEvents;
-    private long                           startSeqno;
+    private long                           restartSeqno         = 0;
+    private long                           restartExtractMillis = Long.MAX_VALUE;
 
     // Pending control events to be integrated into the event queue and seqno
     // of next event if known.
@@ -87,37 +95,38 @@ public class THLParallelReadTask implements Runnable
     private LogConnection                  connection;
 
     // Throwable trapped from run loop.
-    private Throwable                      throwable;
+    private volatile Throwable             throwable;
 
     // Thread ID for this read task.
     private volatile Thread                taskThread;
 
     // Flag indicating task is cancelled.
-    private volatile boolean               cancelled    = false;
+    private volatile boolean               cancelled            = false;
 
     /**
      * Instantiate a read task.
      */
     public THLParallelReadTask(int taskId, THL thl, Partitioner partitioner,
-            AtomicCounter headSeqnoCounter, int maxSize, int maxControlEvents,
-            int syncInterval)
+            AtomicCounter headSeqnoCounter, AtomicIntervalGuard intervalGuard,
+            int maxSize, int maxControlEvents, int syncInterval)
     {
         this.taskId = taskId;
         this.thl = thl;
         this.partitioner = partitioner;
         this.headSeqnoCounter = headSeqnoCounter;
+        this.intervalGuard = intervalGuard;
         this.maxControlEvents = maxControlEvents;
         this.eventQueue = new LinkedBlockingQueue<ReplEvent>(maxSize);
         this.syncInterval = syncInterval;
     }
 
     /**
-     * Set the starting sequence number for reads. Must be called before
-     * prepare().
+     * Set the starting header. This must be called before prepare().
      */
-    public synchronized void setSeqno(long seqno)
+    public synchronized void setRestartHeader(ReplDBMSHeader header)
     {
-        this.startSeqno = seqno;
+        this.restartSeqno = header.getSeqno();
+        this.restartExtractMillis = header.getExtractedTstamp().getTime();
     }
 
     /**
@@ -129,7 +138,7 @@ public class THLParallelReadTask implements Runnable
     {
         // Set up the read queue.
         this.readQueue = new THLParallelReadQueue(eventQueue, maxControlEvents,
-                startSeqno);
+                restartSeqno);
 
         // Connect to the log.
         connection = thl.connect(true);
@@ -221,16 +230,20 @@ public class THLParallelReadTask implements Runnable
     public void run()
     {
         // Get the starting sequence number.
-        long readSeqno = startSeqno;
+        long readSeqno = restartSeqno;
 
         try
         {
+            // Report our starting position to the interval guard.
+            intervalGuard
+                    .report(taskThread, restartSeqno, restartExtractMillis);
+
             // Seek to initial position to start reading.
-            if (!connection.seek(startSeqno))
+            if (!connection.seek(restartSeqno))
             {
                 throw new THLException(
                         "Unable to locate starting seqno in log: seqno="
-                                + startSeqno + " store=" + thl.getName()
+                                + restartSeqno + " store=" + thl.getName()
                                 + " taskId=" + taskId);
             }
 
@@ -251,6 +264,15 @@ public class THLParallelReadTask implements Runnable
                             + thlEvent.getLastFrag() + " deserialized="
                             + (thlEvent.getReplEvent() != null));
                 }
+
+                // Ensure it is safe to process this value. This lock prevents
+                // our thread from jumping too far ahead of others and
+                // coordinates serialization.
+                headSeqnoCounter.waitSeqnoGreaterEqual(thlEvent.getSeqno());
+
+                // Report our position to the interval guard.
+                intervalGuard.report(taskThread, thlEvent.getSeqno(), thlEvent
+                        .getSourceTstamp().getTime());
 
                 // If we do not want it, just go to the next event. This
                 // would be null if the read filter discarded the event due
@@ -285,10 +307,6 @@ public class THLParallelReadTask implements Runnable
                     checkSync(thlEvent);
                     continue;
                 }
-
-                // Ensure it is safe to process this value.
-                headSeqnoCounter
-                        .waitSeqnoGreaterEqual(replDBMSEvent.getSeqno());
 
                 // Add to queue.
                 if (logger.isDebugEnabled())
@@ -367,13 +385,20 @@ public class THLParallelReadTask implements Runnable
      */
     public ReplEvent get() throws InterruptedException, ReplicatorException
     {
-        // Check for a failure.
+        // Check for read thread liveness.
         if (throwable != null)
         {
+            // If this happens the thread has died.
             throw new ReplicatorException("THL reader thread failed", throwable);
         }
+        else if (cancelled)
+        {
+            // If this is true the thread has been cancelled. This should never
+            // occur before the caller thread has exited.
+            throw new ReplicatorException("THL reader thread is cancelled");
+        }
 
-        // Get the event and return it.
+        // Get the next event and return it.
         ReplEvent event = eventQueue.take();
         if (logger.isDebugEnabled())
         {

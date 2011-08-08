@@ -43,6 +43,7 @@ import com.continuent.tungsten.replicator.storage.parallel.Partitioner;
 import com.continuent.tungsten.replicator.storage.parallel.PartitionerResponse;
 import com.continuent.tungsten.replicator.storage.parallel.SimplePartitioner;
 import com.continuent.tungsten.replicator.util.AtomicCounter;
+import com.continuent.tungsten.replicator.util.AtomicIntervalGuard;
 import com.continuent.tungsten.replicator.util.WatchPredicate;
 
 /**
@@ -61,7 +62,8 @@ public class THLParallelQueue implements ParallelStore
     private int                                                 maxSize             = 100;
     private int                                                 maxControlEvents    = 1000;
     private int                                                 partitions          = 1;
-    private int                                                 syncInterval        = 1000;
+    private int                                                 syncInterval        = 5000;
+    private int                                                 maxOfflineInterval  = 300;
     private String                                              thlStoreName        = "thl";
 
     // THL for which we are implementing a parallel queue.
@@ -97,6 +99,13 @@ public class THLParallelQueue implements ParallelStore
     private int                                                 criticalPartition   = -1;
     private AtomicCounter                                       activeSize          = new AtomicCounter(
                                                                                             0);
+
+    // Control data to enforce maximum offline interval. These variables limit
+    // the time interval between most and least advanced read threads.
+    private AtomicIntervalGuard                                 intervalGuard;
+    private long                                                lastTimestampMillis = -1;
+    private long                                                intervalCheckMillis;
+    private long                                                maxOfflineMillis;
 
     public String getName()
     {
@@ -166,6 +175,18 @@ public class THLParallelQueue implements ParallelStore
         this.syncInterval = syncInterval;
     }
 
+    /** Returns the maximum number of seconds to do a clean shutdown. */
+    public int getMaxOfflineInterval()
+    {
+        return maxOfflineInterval;
+    }
+
+    /** Sets the maximum number of seconds for a clean shutdown. */
+    public void setMaxOfflineInterval(int maxOfflineInterval)
+    {
+        this.maxOfflineInterval = maxOfflineInterval;
+    }
+
     /** Sets the last header processed. This is required for restart. */
     public void setLastHeader(int taskId, ReplDBMSHeader header)
             throws ReplicatorException
@@ -186,7 +207,7 @@ public class THLParallelQueue implements ParallelStore
             {
                 for (int i = 0; i < partitions; i++)
                 {
-                    readTasks.get(i).setSeqno(restartHeader.getSeqno());
+                    readTasks.get(i).setRestartHeader(restartHeader);
                 }
             }
         }
@@ -303,8 +324,41 @@ public class THLParallelQueue implements ParallelStore
             }
         }
 
-        // Advance the head seqno counter. This allows all eligible threads to
-        // move forward. Update the active size to show how many events are
+        // Check the thread read interval once per second of elapsed
+        // time. This check ropes in threads that have exceeded the
+        // maximum online interval between highest and lowest threads.
+        long currentTimeMillis = System.currentTimeMillis();
+        if (currentTimeMillis - intervalCheckMillis >= 1000)
+        {
+            // If we have a previously recorded event timestamp, it is
+            // now time to see how our threads are doing and ensure nobody
+            // is too far behind.
+            if (lastTimestampMillis >= 0)
+            {
+                long minimumTimeMillis = Math.max(lastTimestampMillis
+                        - maxOfflineMillis, 0);
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Ensuring threads meet min offline wait: minimumTimeMillis="
+                            + minimumTimeMillis
+                            + " low seqno="
+                            + intervalGuard.getLowSeqno()
+                            + " low time="
+                            + intervalGuard.getLowTime()
+                            + " high time="
+                            + intervalGuard.getHiTime());
+                }
+                intervalGuard.waitMinTime(minimumTimeMillis);
+            }
+
+            // Remember the time of this check.
+            intervalCheckMillis = currentTimeMillis;
+        }
+        // Update the event timestamp so we are ready for the next check.
+        lastTimestampMillis = event.getExtractedTstamp().getTime();
+
+        // Advance the head seqno counter. This allows all eligible threads
+        // to move forward. Update the active size to show how many events are
         // logically in the queue.
         activeSize.incrAndGetSeqno();
         headSeqnoCounter.setSeqno(event.getSeqno());
@@ -475,6 +529,11 @@ public class THLParallelQueue implements ParallelStore
         if (syncInterval <= 0)
             throw new ReplicatorException(
                     "Sync interval must be greater than 0");
+
+        // Allocate the thread interval checker now that we know the number of
+        // partitions.
+        intervalGuard = new AtomicIntervalGuard(partitions);
+        maxOfflineMillis = maxOfflineInterval * 1000;
     }
 
     /**
@@ -508,8 +567,8 @@ public class THLParallelQueue implements ParallelStore
         for (int i = 0; i < partitions; i++)
         {
             THLParallelReadTask readTask = new THLParallelReadTask(i, thl,
-                    partitioner, headSeqnoCounter, maxSize, maxControlEvents,
-                    syncInterval);
+                    partitioner, headSeqnoCounter, intervalGuard, maxSize,
+                    maxControlEvents, syncInterval);
             readTasks.add(readTask);
             readTask.prepare(context);
         }
@@ -600,6 +659,9 @@ public class THLParallelQueue implements ParallelStore
         props.setLong("discardCount", discardCount);
         props.setInt("queues", partitions);
         props.setInt("syncInterval", syncInterval);
+        props.setInt("maxOfflineInterval", maxOfflineInterval);
+        props.setDouble("estimatedOfflineInterval",
+                ((double) intervalGuard.getInterval()) / 1000.0);
         props.setBoolean("serialized", this.criticalPartition >= 0);
         props.setLong("serializationCount", serializationCount);
         props.setBoolean("stopRequested", stopRequested);
