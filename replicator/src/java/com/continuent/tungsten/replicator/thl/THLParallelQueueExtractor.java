@@ -42,12 +42,13 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 public class THLParallelQueueExtractor implements ParallelExtractor
 {
-    private static Logger    logger  = Logger.getLogger(THLParallelQueueExtractor.class);
+    private static Logger    logger    = Logger.getLogger(THLParallelQueueExtractor.class);
 
-    private int              taskId  = -1;
+    private int              taskId    = -1;
     private String           storeName;
     private THLParallelQueue thlParallelQueue;
-    private boolean          started = false;
+    private boolean          started   = false;
+    private long             lastSeqno = -1;
 
     /**
      * Instantiate the adapter.
@@ -81,16 +82,22 @@ public class THLParallelQueueExtractor implements ParallelExtractor
             started = true;
         }
 
-        // Get next event.
-        try
+        // Get next event. We use a loop to ensure any previously seen events
+        // are thrown away.
+        for (;;)
         {
-            return thlParallelQueue.get(taskId);
-        }
-        catch (ReplicatorException e)
-        {
-            throw new ExtractorException(
-                    "Unable to extract event from parallel queue: name="
-                            + storeName, e);
+            try
+            {
+                ReplEvent replEvent = thlParallelQueue.get(taskId);
+                if (replEvent != null && replEvent.getSeqno() > this.lastSeqno)
+                    return replEvent;
+            }
+            catch (ReplicatorException e)
+            {
+                throw new ExtractorException(
+                        "Unable to extract event from parallel queue: name="
+                                + storeName, e);
+            }
         }
     }
 
@@ -203,13 +210,16 @@ public class THLParallelQueueExtractor implements ParallelExtractor
 
     /**
      * Store the header so that it can be propagated back through the pipeline
-     * for restart. {@inheritDoc}
+     * for restart. Keep the sequence number locally so that we can throw away
+     * any extra events that are sent to us. {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEvent(com.continuent.tungsten.replicator.event.ReplDBMSHeader)
      */
     public void setLastEvent(ReplDBMSHeader header) throws ReplicatorException
     {
         thlParallelQueue.setLastHeader(taskId, header);
+        if (header != null)
+            this.lastSeqno = header.getSeqno();
     }
 
     /**

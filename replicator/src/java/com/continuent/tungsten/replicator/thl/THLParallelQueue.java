@@ -472,7 +472,7 @@ public class THLParallelQueue implements ParallelStore
                     + event.getSeqno() + " activeSize=" + activeSize.getSeqno());
         }
 
-        // Only decrement for a proper event belonging to a transction.
+        // Only decrement for a proper event belonging to a transaction.
         if (event instanceof ReplDBMSEvent)
             activeSize.decrAndGetSeqno();
         return event;
