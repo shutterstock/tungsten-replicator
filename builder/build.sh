@@ -241,11 +241,11 @@ then
 else
   printHeader "Building replicator from source"
   # Run the builds.
-  doAnt commons $source_commons/build.xml clean all
-  doAnt fsm $source_fsm/build.xml clean all
-  doAnt replicator $source_replicator/build.xml clean all
+  doAnt commons $source_commons/build.xml clean dist
+  doAnt fsm $source_fsm/build.xml clean dist
+  doAnt replicator $source_replicator/build.xml clean dist
   #doAnt replicator-extra $source_replicator_extra/build.xml clean dist
-  doAnt bristlecone $source_bristlecone/build.xml clean all
+  doAnt bristlecone $source_bristlecone/build.xml clean dist
 fi
 
 ##########################################################################
