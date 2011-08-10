@@ -446,6 +446,11 @@ public class DiskLog
                     logFile.close();
                     if (!readOnly)
                     {
+                        // Fix up last index entry so that it points to the
+                        // number we just discovered.
+                        index.setMaxIndexedSeqno(maxSeqno);
+
+                        // Create the next file.
                         logFileIndexPos = fileName.lastIndexOf(".");
                         fileIndex = Long.valueOf(fileName
                                 .substring(logFileIndexPos + 1));
@@ -771,20 +776,28 @@ public class DiskLog
     }
 
     /**
-     * Opens a log file for reading. Caller must release the log file.
+     * Opens a log file for reading if it exists. Caller must release the log
+     * file.
      * 
-     * @param newFileName Name of the file.
-     * @return Opens log file.
-     * @throws ReplicatorException If file cannot be found or opened
+     * @param newFileName Name of the file null if the file does not exist
+     * @throws ReplicatorException If file exists but cannot be opened
      * @throws InterruptedException Thrown if we are interrupted
      */
     LogFile getLogFileForReading(String newFileName)
             throws ReplicatorException, InterruptedException
     {
-        LogFile logFile = new LogFile(logDir, newFileName);
-        logFile.setBufferSize(bufferSize);
-        logFile.openRead();
-        return logFile;
+        File newFile = new File(logDir, newFileName);
+        if (newFile.exists())
+        {
+            LogFile logFile = new LogFile(newFile);
+            logFile.setBufferSize(bufferSize);
+            logFile.openRead();
+            return logFile;
+        }
+        else
+        {
+            return null;
+        }
     }
 
     /**

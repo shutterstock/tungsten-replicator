@@ -101,7 +101,7 @@ public class BufferedFileDataInput
     }
 
     /**
-     * Waits for a specifed number of bytes to be available for a non-blocking
+     * Waits for a specified number of bytes to be available for a non-blocking
      * read.
      * 
      * @param requested Number of bytes to read

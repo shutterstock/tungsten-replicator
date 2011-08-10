@@ -462,10 +462,44 @@ public class LogConnection
                     String newFileName = diskLog.getDataFileName(rotateReader
                             .getIndex());
 
-                    // Use this to allocate the next LogFile and roll over the
-                    // cursor to the next log file.
+                    // Release current cursor to free OS file descriptor.
                     cursor.release();
-                    data = diskLog.getLogFileForReading(newFileName);
+
+                    // Attempt to open the next log file. This is subject to a
+                    // timeout as the log may be truncated after the current log
+                    // file or we may be reading an active log and just happen
+                    // to look for the next file before the writer can finish
+                    // flushing the first write to disk.
+                    int rotateTimeoutMillis = timeoutMillis;
+                    while (rotateTimeoutMillis > 0)
+                    {
+                        // Try to open file, exiting loop if successful.
+                        data = diskLog.getLogFileForReading(newFileName);
+                        if (data != null)
+                            break;
+
+                        // Non-blocking reads just return a null.
+                        if (data == null && !block)
+                        {
+                            // TODO: Reconnect to the log file, as we have just
+                            // messed up our position so that this call is not
+                            // idempotent.
+                            return null;
+                        }
+
+                        // Blocking reads sleep for 50ms.
+                        long startSleepMillis = System.currentTimeMillis();
+                        Thread.sleep(50);
+                        long sleepMillis = System.currentTimeMillis()
+                                - startSleepMillis;
+                        rotateTimeoutMillis -= sleepMillis;
+                        if (rotateTimeoutMillis <= 0)
+                            throw new LogTimeoutException(
+                                    "Read timed out while waiting for next log file: "
+                                            + newFileName);
+                    }
+
+                    // Open cursor on next file.
                     cursor = new LogCursor(data, -1);
                     cursor.setRotateNext(true);
                 }

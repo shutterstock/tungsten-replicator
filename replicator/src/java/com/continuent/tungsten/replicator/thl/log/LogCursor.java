@@ -95,7 +95,10 @@ public class LogCursor
      */
     public void release()
     {
-        logFile.close();
-        logFile = null;
+        if (logFile != null)
+        {
+            logFile.close();
+            logFile = null;
+        }
     }
 }

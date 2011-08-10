@@ -845,6 +845,7 @@ public class DiskLogTest extends TestCase
 
         // Assert that we stored the proper number of events in multiple files.
         logger.info("Log file count: " + log.fileCount());
+        assertTrue("More than one log file", log.fileCount() > 1);
         log.validate();
         log.release();
 
@@ -855,6 +856,80 @@ public class DiskLogTest extends TestCase
 
         // Read back expected number of events.
         readBackStoredEvents(log2, 0, 200);
+
+        // Close the log.
+        log2.release();
+    }
+
+    /**
+     * Confirm that if the last log file ends with a rotate log event with no
+     * log file thereafter that non-blocking reads return null and a blocking
+     * read times out. This test covers two important cases: (a) a log that has
+     * been truncated by removing one or more files and (b) a reader tries to
+     * read past the end of the log file before a writer can add a new file.
+     */
+    public void testTruncateEndFile() throws Exception
+    {
+        // Create the log and write multiple events.
+        File logDir = prepareLogDir("testTruncateEndFile");
+        DiskLog log = openLog(logDir, false, 3000);
+        writeEventsToLog(log, 200);
+        log.validate();
+        log.release();
+
+        // Delete the last log file.
+        String[] logFiles = log.getLogFileNames();
+        String lastLogName = logFiles[logFiles.length - 1];
+        File lastLog = new File(logDir, lastLogName);
+        logger.info("Deleting last log: " + lastLog.getAbsolutePath());
+        assertTrue("Delete last log: " + lastLogName, lastLog.delete());
+
+        // Confirm that a non-blocking read returns null.
+        DiskLog log2 = openLog(logDir, false, 3000);
+        LogConnection conn1 = log2.connect(true);
+        conn1.seek(0);
+        long maxSeqnoNonBlocking = -1;
+        THLEvent e;
+        while ((e = conn1.next(false)) != null)
+        {
+            maxSeqnoNonBlocking = e.getSeqno();
+        }
+        logger.info("Non-blocking reads find " + maxSeqnoNonBlocking
+                + " events");
+        assertTrue("Found more than 0 events", maxSeqnoNonBlocking > 0);
+        conn1.release();
+
+        // Confirm that a blocking read times out.
+        LogConnection conn2 = log2.connect(true);
+        conn2.setTimeoutMillis(500);
+        conn2.seek(0);
+        long maxSeqnoBlocking = -1;
+        try
+        {
+            while (maxSeqnoBlocking <= maxSeqnoNonBlocking)
+            {
+                e = conn2.next(true);
+                maxSeqnoBlocking = e.getSeqno();
+            }
+            throw new Exception(
+                    "Read failed to time out on missing log file after rotation");
+        }
+        catch (LogTimeoutException ex)
+        {
+            logger.info("Read timed out as expected: " + ex.getMessage());
+        }
+        logger.info("Blocking reads find " + maxSeqnoBlocking + " events");
+        assertEquals("Blocking and non-blocking find same number of reads",
+                maxSeqnoNonBlocking, maxSeqnoBlocking);
+        conn2.release();
+
+        // Write events to the end of the file to round it out to 300 events.
+        long startSeqno = maxSeqnoNonBlocking + 1;
+        writeEventsToLog(log2, startSeqno, 300);
+        log2.validate();
+
+        // Read back to confirm log now has 300 events.
+        readBackStoredEvents(log2, 0, 300);
 
         // Close the log.
         log2.release();

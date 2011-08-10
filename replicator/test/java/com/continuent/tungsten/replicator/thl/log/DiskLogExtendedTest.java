@@ -82,22 +82,22 @@ public class DiskLogExtendedTest extends TestCase
         log.setDoChecksum(true);
         log.setReadOnly(false);
         log.setLogDir(logDir.getAbsolutePath());
-        log.setLogFileSize(10000000);
+        log.setLogFileSize(10000);
         log.setFlushIntervalMillis(100);
         log.prepare();
-
-        // Write a bunch of events to the log.
-        writeEventsToLog(log, 0, 10000);
 
         // Create and start readers.
         HashMap<Thread, SimpleLogReader> tasks = new HashMap<Thread, SimpleLogReader>();
         for (int i = 0; i < 10; i++)
         {
-            SimpleLogReader reader = new SimpleLogReader(log, 0, 10000);
+            SimpleLogReader reader = new SimpleLogReader(log, 0, 100000);
             Thread thread = new Thread(reader);
             tasks.put(thread, reader);
             thread.start();
         }
+
+        // Write a bunch of events to the log.
+        writeEventsToLog(log, 0, 100000);
 
         // Wait for readers to finish. 30 seconds should be sufficient.
         for (Thread thread : tasks.keySet())
@@ -112,7 +112,7 @@ public class DiskLogExtendedTest extends TestCase
                         "Reader thread failed with exception after "
                                 + reader.eventsRead + " events", reader.error);
             }
-            assertEquals("Checking events read", 10000, reader.eventsRead);
+            assertEquals("Checking events read", 100000, reader.eventsRead);
         }
 
         // Release the log.
@@ -143,14 +143,14 @@ public class DiskLogExtendedTest extends TestCase
                 log.setDoChecksum(false);
                 log.setReadOnly(false);
                 log.setLogDir(logDir.getAbsolutePath());
-                log.setLogFileSize(100000000);
+                log.setLogFileSize(1000000);
                 log.setFlushIntervalMillis(fsync);
                 log.setBufferSize(buffer);
 
                 // Write a bunch of events to the log.
                 long start = System.currentTimeMillis();
                 log.prepare();
-                writeEventsToLog(log, 0, 1000000);
+                writeEventsToLog(log, 0, 100000);
                 log.release();
                 long end = System.currentTimeMillis();
 

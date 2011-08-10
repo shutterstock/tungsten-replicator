@@ -42,11 +42,15 @@ public class LogFile
 {
     static Logger              logger             = Logger.getLogger(LogFile.class);
 
-    // Header fields.
+    // Header fields values.
     private static final int   MAGIC_NUMBER       = 0xC001CAFE;
     private static final short MAJOR_VERSION      = 0x0001;
     private static final short MINOR_VERSION      = 0x0001;
     private static final int   RECORD_LENGTH_SIZE = 4;
+    // Length of header in bytes.
+    private static final int   HEADER_LENGTH      = 16;
+    // Length of time to wait for a partially written header to appear.
+    private static final int   HEADER_WAIT_MILLIS = 5000;
 
     /**
      * Maximum value of a single record. Larger values indicate file corruption.
@@ -330,7 +334,7 @@ public class LogFile
      * file header.
      */
     private long checkFileHeader(BufferedFileDataInput bfdi)
-            throws ReplicatorException
+            throws ReplicatorException, InterruptedException
     {
         int magic = 0;
         short major = 0;
@@ -338,6 +342,7 @@ public class LogFile
 
         try
         {
+            bfdi.waitAvailable(HEADER_LENGTH, HEADER_WAIT_MILLIS);
             magic = bfdi.readInt();
             major = bfdi.readShort();
             minor = bfdi.readShort();
