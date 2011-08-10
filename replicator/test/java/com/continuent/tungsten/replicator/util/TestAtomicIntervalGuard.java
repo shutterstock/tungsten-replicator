@@ -49,9 +49,9 @@ public class TestAtomicIntervalGuard extends TestCase
     {
         // Allocate interval array and threads to live in it.
         AtomicIntervalGuard ati = new AtomicIntervalGuard(3);
-        Thread[] t = {new Thread("t0"), new Thread("t1"), new Thread("t2")};
+        Thread[] t = {new Thread("t0"), new Thread("t1"), new Thread("t2"), new Thread("t3")};
 
-        // Ensure that new threads insert correctly.
+        // Insert into an empty list. 
         ati.report(t[0], 2, 20);
         assertEquals("Head #1", 2, ati.getLowSeqno());
         assertEquals("Tail #1", 2, ati.getHiSeqno());
@@ -60,6 +60,7 @@ public class TestAtomicIntervalGuard extends TestCase
         ati.validate();
         assertEquals("Interval #1", 0, ati.getInterval());
 
+        // Insert at the front of the list. 
         ati.report(t[1], 1, 10);
         assertEquals("Head #2", 1, ati.getLowSeqno());
         assertEquals("Tail #2", 2, ati.getHiSeqno());
@@ -68,12 +69,22 @@ public class TestAtomicIntervalGuard extends TestCase
         assertEquals("Interval #2", 10, ati.getInterval());
         ati.validate();
 
-        ati.report(t[2], 3, 30);
+        // Insert at the back of the list. 
+        ati.report(t[2], 4, 40);
         assertEquals("Head #3", 1, ati.getLowSeqno());
-        assertEquals("Tail #3", 3, ati.getHiSeqno());
+        assertEquals("Tail #3", 4, ati.getHiSeqno());
         assertEquals("Head #3 -time", 10, ati.getLowTime());
-        assertEquals("Tail #3 -time", 30, ati.getHiTime());
-        assertEquals("Interval #3", 20, ati.getInterval());
+        assertEquals("Tail #3 -time", 40, ati.getHiTime());
+        assertEquals("Interval #3", 30, ati.getInterval());
+        ati.validate();
+        
+        // Insert in the middle of the list. 
+        ati.report(t[3], 3, 30);
+        assertEquals("Head #4", 1, ati.getLowSeqno());
+        assertEquals("Tail #4", 4, ati.getHiSeqno());
+        assertEquals("Head #4 -time", 10, ati.getLowTime());
+        assertEquals("Tail #4 -time", 40, ati.getHiTime());
+        assertEquals("Interval #4", 30, ati.getInterval());
         ati.validate();
     }
 

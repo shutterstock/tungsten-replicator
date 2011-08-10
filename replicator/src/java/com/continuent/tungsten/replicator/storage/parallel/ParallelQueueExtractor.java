@@ -42,11 +42,15 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 public class ParallelQueueExtractor implements ParallelExtractor
 {
-    private static Logger      logger = Logger.getLogger(ParallelQueueExtractor.class);
+    private static Logger      logger    = Logger.getLogger(ParallelQueueExtractor.class);
 
-    private int                taskId = -1;
+    private int                taskId    = -1;
     private String             storeName;
     private ParallelQueueStore parallelQueue;
+
+    // Last extracted seqno set by task. Skip any event before or equal to this
+    // sequence number.
+    private long               lastSeqno = -1;
 
     /**
      * Instantiate the adapter.
@@ -72,15 +76,34 @@ public class ParallelQueueExtractor implements ParallelExtractor
      */
     public ReplEvent extract() throws ReplicatorException, InterruptedException
     {
-        try
+        // Get next event. We use a loop to ensure any previously seen events
+        // are thrown away.
+        for (;;)
         {
-            return parallelQueue.get(taskId);
-        }
-        catch (ReplicatorException e)
-        {
-            throw new ExtractorException(
-                    "Unable to extract event from parallel queue: name="
-                            + storeName, e);
+            try
+            {
+                ReplEvent replEvent = parallelQueue.get(taskId);
+                if (replEvent != null)
+                {
+                    // Return all events that are past the restart point.
+                    if (replEvent.getSeqno() > this.lastSeqno)
+                    {
+                        return replEvent;
+                    }
+                    // Always return a stop event.
+                    else if (replEvent instanceof ReplControlEvent
+                            && ((ReplControlEvent) replEvent).getEventType() == ReplControlEvent.STOP)
+                    {
+                        return replEvent;
+                    }
+                }
+            }
+            catch (ReplicatorException e)
+            {
+                throw new ExtractorException(
+                        "Unable to extract event from parallel queue: name="
+                                + storeName, e);
+            }
         }
     }
 
@@ -206,6 +229,8 @@ public class ParallelQueueExtractor implements ParallelExtractor
     public void setLastEvent(ReplDBMSHeader header) throws ReplicatorException
     {
         parallelQueue.setLastHeader(taskId, header);
+        if (header != null)
+            this.lastSeqno = header.getSeqno();
     }
 
     /**

@@ -174,6 +174,11 @@ public class ParallelQueueStore implements ParallelStore
         this.syncEnabled = syncEnabled;
     }
 
+    /** No-op method to preserve interface compability with THLParallelQueue. */
+    public void setMaxOfflineInterval(int maxOfflineInterval)
+    {
+    }
+
     /**
      * Returns the current number of events across all queues of store.
      */

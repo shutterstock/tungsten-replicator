@@ -258,13 +258,13 @@ public class THLParallelQueueTest extends TestCase
      * capacity. This proves that the parallel THL queue can handle a very large
      * gap between the positions of different partitions.
      */
-    public void testMultiChannelLag() throws Exception
+    public void testLaggingChannels() throws Exception
     {
-        logger.info("##### testMultiChannelLag #####");
+        logger.info("##### testLaggingChannels #####");
 
         // Set up and prepare pipeline.
         TungstenProperties conf = this.generateTHLParallelPipeline(
-                "testMultiChannelLag", 3, 50, 100);
+                "testLaggingChannels", 3, 50, 100);
         ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
                 new MockOpenReplicatorContext(),
                 ReplicatorMonitor.getInstance());
@@ -329,13 +329,93 @@ public class THLParallelQueueTest extends TestCase
         runtime.release();
     }
 
-    // Returns the current serialization count from a parallel queue. 
+    /**
+     * Verify that the parallel queue correctly transfers data in pipeline where
+     * only a few of many channels are actually used.
+     */
+    public void testMultiChannelLag() throws Exception
+    {
+        logger.info("##### testMultiChannelLag #####");
+
+        // Set up and prepare pipeline.
+        TungstenProperties conf = this.generateTHLParallelPipeline(
+                "testMultiChannelLag", 30, 50, 100);
+        ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
+        runtime.configure();
+        runtime.prepare();
+        Pipeline pipeline = runtime.getPipeline();
+        pipeline.start(new EventDispatcher());
+
+        // Fetch references to stores.
+        THL thl = (THL) pipeline.getStore("thl");
+        InMemoryMultiQueue mq = (InMemoryMultiQueue) pipeline
+                .getStore("multi-queue");
+
+        // Write a large number of events into the THL using only 3 shards.
+        String[] shardNames = {"db01", "db07", "db09"};
+        LogConnection conn = thl.connect(false);
+        long seqno = 0;
+        for (int i = 0; i < 100000; i++)
+        {
+            for (int shard = 0; shard < 3; shard++)
+            {
+                ReplDBMSEvent rde = this
+                        .createEvent(seqno++, shardNames[shard]);
+                THLEvent thlEvent = new THLEvent(rde.getSourceId(), rde);
+                conn.store(thlEvent, false);
+            }
+        }
+        conn.commit();
+        thl.disconnect(conn);
+
+        // Read across each queue until we reach 100K events for the main
+        // shards (i.e., 300K total). Time out after 60 seconds to avoid hangs.
+        long startMillis = System.currentTimeMillis();
+        int shardTotal = 0;
+        while (shardTotal < 300000)
+        {
+            // Iterate across all queues.
+            for (int q = 0; q < 30; q++)
+            {
+                // If the current queue has something in it...
+                while (mq.peek(q) != null)
+                {
+                    // Read next event from this queue.
+                    ReplDBMSEvent event = mq.get(q);
+                    String shard = event.getShardId();
+
+                    // If it's from a shard we are tracking, count it.
+                    for (String shardName : shardNames)
+                    {
+                        if (shardName.equals(shard))
+                            shardTotal++;
+
+                        if (shardTotal % 30000 == 0)
+                            logger.info("Tracked shard entries read:"
+                                    + shardTotal);
+                    }
+                }
+
+                // Check time.
+                if (System.currentTimeMillis() - startMillis > 60000)
+                    throw new Exception("Took way too long to read shards!");
+            }
+        }
+
+        // Close down pipeline.
+        pipeline.shutdown(false);
+        runtime.release();
+    }
+
+    // Returns the current serialization count from a parallel queue.
     private int getSerializationCount(THLParallelQueue tpq)
     {
         TungstenProperties props = tpq.status();
         return props.getInt("serializationCount");
     }
-    
+
     // Generate configuration properties for a three stage-pipeline
     // that loads events into a THL then loads a parallel queue. Input
     // is from a dummy extractor.
@@ -388,9 +468,8 @@ public class THLParallelQueueTest extends TestCase
 
     // Generate configuration properties for a two-stage pipeline that
     // connects a THL to a THLParallelQueue to an in-memory multi queue, which
-    // can mimic parallel apply on DBMS instances.
-    // Clients use direct calls to the stores to write to and read from the
-    // pipeline.
+    // can mimic parallel apply on DBMS instances. Clients use direct calls
+    // to the stores to write to and read from the pipeline.
     public TungstenProperties generateTHLParallelPipeline(String schemaName,
             int partitions, int blockCommit, int mqSize) throws Exception
     {

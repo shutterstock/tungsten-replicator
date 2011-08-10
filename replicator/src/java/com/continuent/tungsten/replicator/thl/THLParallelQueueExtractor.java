@@ -48,6 +48,9 @@ public class THLParallelQueueExtractor implements ParallelExtractor
     private String           storeName;
     private THLParallelQueue thlParallelQueue;
     private boolean          started   = false;
+
+    // Last extracted seqno set by task. Skip any event before or equal to this
+    // sequence number.
     private long             lastSeqno = -1;
 
     /**
@@ -89,8 +92,20 @@ public class THLParallelQueueExtractor implements ParallelExtractor
             try
             {
                 ReplEvent replEvent = thlParallelQueue.get(taskId);
-                if (replEvent != null && replEvent.getSeqno() > this.lastSeqno)
-                    return replEvent;
+                if (replEvent != null)
+                {
+                    // Return all events that are past the restart point.
+                    if (replEvent.getSeqno() > this.lastSeqno)
+                    {
+                        return replEvent;
+                    }
+                    // Always return a stop event.
+                    else if (replEvent instanceof ReplControlEvent
+                            && ((ReplControlEvent) replEvent).getEventType() == ReplControlEvent.STOP)
+                    {
+                        return replEvent;
+                    }
+                }
             }
             catch (ReplicatorException e)
             {

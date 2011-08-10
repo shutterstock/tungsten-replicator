@@ -105,22 +105,24 @@ public class AtomicIntervalGuard
             else
             {
                 // We are inserting in an existing list.
-                ThreadPosition nextPi = head;
-                while (nextPi != null)
+                ThreadPosition nextTp = head;
+                while (nextTp != null)
                 {
                     // If the next item in the list has a higher sequence
                     // number, we insert before it.
-                    if (nextPi.seqno > tp.seqno)
+                    if (nextTp.seqno > tp.seqno)
                     {
-                        tp.before = nextPi.before;
-                        tp.after = nextPi;
-                        nextPi.before = tp;
+                        if (nextTp.before != null)
+                            nextTp.before.after = tp;
+                        tp.before = nextTp.before;
+                        tp.after = nextTp;
+                        nextTp.before = tp;
                         break;
                     }
-                    nextPi = nextPi.after;
+                    nextTp = nextTp.after;
                 }
                 // If we did not find anything, we are at the tail.
-                if (nextPi == null)
+                if (nextTp == null)
                 {
                     tail.after = tp;
                     tp.before = tail;
