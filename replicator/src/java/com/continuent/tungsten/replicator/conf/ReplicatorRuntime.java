@@ -1028,7 +1028,7 @@ public class ReplicatorRuntime implements PluginContext
                     + pluginClassName, t);
         }
 
-        logger.info("Plug-in released successfully: class name="
+        logger.debug("Plug-in released successfully: class name="
                 + pluginClassName);
     }
 
