@@ -93,7 +93,10 @@
 
     <target name="compile-test" depends="compile">
         <mkdir dir="${test.classes.dir}"/>
-        <javac srcdir="${test.src.dir}" destdir="${test.classes.dir}" classpathref="test.classpath"/>
+        <javac srcdir="${test.src.dir}"
+               destdir="${test.classes.dir}"
+               classpathref="test.classpath"
+               includeantruntime="false"/>
     </target>
 
     <target name="jar" depends="compile">
