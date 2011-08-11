@@ -266,7 +266,7 @@ public class ColumnNameFilter implements Filter
         for (Iterator<ColumnSpec> iterator = orc.getColumnSpec().iterator(); iterator
                 .hasNext();)
         {
-            ColumnSpec type = (ColumnSpec) iterator.next();
+            ColumnSpec type = iterator.next();
             type.setName(columns.get(index).getName());
             index++;
         }
@@ -275,7 +275,7 @@ public class ColumnNameFilter implements Filter
         for (Iterator<ColumnSpec> iterator = orc.getKeySpec().iterator(); iterator
                 .hasNext();)
         {
-            ColumnSpec type = (ColumnSpec) iterator.next();
+            ColumnSpec type = iterator.next();
             type.setName(columns.get(index).getName());
             index++;
         }

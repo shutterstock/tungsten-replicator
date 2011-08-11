@@ -92,8 +92,7 @@ public class ShardManager implements ShardManagerMBean
             for (Iterator<Map<String, String>> iterator = params.iterator(); iterator
                     .hasNext();)
             {
-                Map<String, String> shard = (Map<String, String>) iterator
-                        .next();
+                Map<String, String> shard = iterator.next();
                 try
                 {
                     shardsCount += shardTable.insert(connection, new Shard(
@@ -131,8 +130,7 @@ public class ShardManager implements ShardManagerMBean
             for (Iterator<Map<String, String>> iterator = params.iterator(); iterator
                     .hasNext();)
             {
-                Map<String, String> shard = (Map<String, String>) iterator
-                        .next();
+                Map<String, String> shard = iterator.next();
                 try
                 {
                     shardsCount += shardTable.update(connection, new Shard(
@@ -171,8 +169,7 @@ public class ShardManager implements ShardManagerMBean
             for (Iterator<Map<String, String>> iterator = params.iterator(); iterator
                     .hasNext();)
             {
-                Map<String, String> shard = (Map<String, String>) iterator
-                        .next();
+                Map<String, String> shard = iterator.next();
                 String id = shard.get(ShardTable.SHARD_ID_COL);
                 try
                 {

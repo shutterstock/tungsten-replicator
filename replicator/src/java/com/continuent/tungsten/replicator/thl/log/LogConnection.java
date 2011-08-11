@@ -304,7 +304,7 @@ public class LogConnection
             event = new THLEvent(eventReader.getSeqno(),
                     eventReader.getFragno(), eventReader.isLastFrag(),
                     eventReader.getSourceId(),
-                    (short) THLEvent.REPL_DBMS_EVENT,
+                    THLEvent.REPL_DBMS_EVENT,
                     eventReader.getEpochNumber(), new Timestamp(
                             System.currentTimeMillis()), new Timestamp(
                             eventReader.getSourceTStamp()),

@@ -1473,7 +1473,7 @@ public class OpenReplicatorManagerCtrl
                 for (Iterator<String[]> iterator = values.iterator(); iterator
                         .hasNext();)
                 {
-                    String[] val = (String[]) iterator.next();
+                    String[] val = iterator.next();
 
                     if (val.length < 4)
                         println("Missing parameter for shard creation : " + val
@@ -1506,7 +1506,7 @@ public class OpenReplicatorManagerCtrl
                 for (Iterator<String[]> iterator = values.iterator(); iterator
                         .hasNext();)
                 {
-                    String[] val = (String[]) iterator.next();
+                    String[] val = iterator.next();
 
                     if (val.length < 4)
                         println("Missing parameter for shard creation : " + val
@@ -1534,7 +1534,7 @@ public class OpenReplicatorManagerCtrl
                 for (Iterator<String[]> iterator = values.iterator(); iterator
                         .hasNext();)
                 {
-                    String[] val = (String[]) iterator.next();
+                    String[] val = iterator.next();
                     paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
                     shardParams.add(paramProps.map());
                 }
@@ -1571,8 +1571,7 @@ public class OpenReplicatorManagerCtrl
                 for (Iterator<Map<String, String>> iterator = list.iterator(); iterator
                         .hasNext();)
                 {
-                    Map<String, String> map = (Map<String, String>) iterator
-                            .next();
+                    Map<String, String> map = iterator.next();
                     buf.append(map.get(ShardTable.SHARD_ID_COL));
                     buf.append("\t");
                     buf.append(map.get(ShardTable.SHARD_MASTER_COL));
