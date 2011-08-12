@@ -222,9 +222,7 @@ class JavaVersionCheck < ConfigureValidationCheck
     # Look for Java.
     java_out = cmd_result("java -version")
     if $? == 0
-      if java_out =~ /OpenJDK/
-        error "Tungsten does not support using OpenJDK.  Please make sure that the Oracle Java 1.6 or greater is in the current path."
-      elsif java_out =~ /Java|JDK/
+      if java_out =~ /Java|JDK/
         debug "Supported Java found"
         
         java_version = java_out.scan(/java version \"1.(6|7|8)./)
