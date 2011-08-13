@@ -166,7 +166,7 @@
               toFile="${test.work}/replicator.properties"/>
 
         <junit printsummary="yes" haltonfailure="no" fork="yes"
-          dir="${test.work}" failureproperty="tests.failed">
+          dir="${test.work}" failureproperty="tests.failed" timeout="300000">
             <jvmarg value="-Dreplicator.log.dir=." />
             <classpath>
                 <pathelement location="${classes.dir}"/>
