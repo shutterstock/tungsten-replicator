@@ -37,7 +37,7 @@ class Transformer
     output = []
     File.open(@infile) do |file|
       while line = file.gets
-        line_keys = line.scan(/[#]?([a-zA-Z0-9\.]+)=.*/)
+        line_keys = line.scan(/[#]?([a-zA-Z0-9\._-]+)=.*/)
         if line_keys.length() > 0 && @@global_replacements.has_key?(line_keys[0][0])
           transformed_line = "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}"
         else
