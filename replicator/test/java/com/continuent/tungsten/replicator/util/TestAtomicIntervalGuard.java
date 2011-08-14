@@ -48,10 +48,11 @@ public class TestAtomicIntervalGuard extends TestCase
     public void testInitialInsert() throws Exception
     {
         // Allocate interval array and threads to live in it.
-        AtomicIntervalGuard ati = new AtomicIntervalGuard(3);
-        Thread[] t = {new Thread("t0"), new Thread("t1"), new Thread("t2"), new Thread("t3")};
+        AtomicIntervalGuard<Integer> ati = new AtomicIntervalGuard<Integer>(4);
+        Integer[] t = {new Integer(0), new Integer(1), new Integer(2),
+                new Integer(3)};
 
-        // Insert into an empty list. 
+        // Insert into an empty list.
         ati.report(t[0], 2, 20);
         assertEquals("Head #1", 2, ati.getLowSeqno());
         assertEquals("Tail #1", 2, ati.getHiSeqno());
@@ -60,7 +61,7 @@ public class TestAtomicIntervalGuard extends TestCase
         ati.validate();
         assertEquals("Interval #1", 0, ati.getInterval());
 
-        // Insert at the front of the list. 
+        // Insert at the front of the list.
         ati.report(t[1], 1, 10);
         assertEquals("Head #2", 1, ati.getLowSeqno());
         assertEquals("Tail #2", 2, ati.getHiSeqno());
@@ -69,7 +70,7 @@ public class TestAtomicIntervalGuard extends TestCase
         assertEquals("Interval #2", 10, ati.getInterval());
         ati.validate();
 
-        // Insert at the back of the list. 
+        // Insert at the back of the list.
         ati.report(t[2], 4, 40);
         assertEquals("Head #3", 1, ati.getLowSeqno());
         assertEquals("Tail #3", 4, ati.getHiSeqno());
@@ -77,8 +78,8 @@ public class TestAtomicIntervalGuard extends TestCase
         assertEquals("Tail #3 -time", 40, ati.getHiTime());
         assertEquals("Interval #3", 30, ati.getInterval());
         ati.validate();
-        
-        // Insert in the middle of the list. 
+
+        // Insert in the middle of the list.
         ati.report(t[3], 3, 30);
         assertEquals("Head #4", 1, ati.getLowSeqno());
         assertEquals("Tail #4", 4, ati.getHiSeqno());
@@ -94,8 +95,8 @@ public class TestAtomicIntervalGuard extends TestCase
     public void testReordering() throws Exception
     {
         // Allocate interval array and threads to live in it.
-        AtomicIntervalGuard ati = new AtomicIntervalGuard(3);
-        Thread[] t = {new Thread("t0"), new Thread("t1"), new Thread("t2")};
+        AtomicIntervalGuard<Integer> ati = new AtomicIntervalGuard<Integer>(4);
+        Integer[] t = {new Integer(0), new Integer(1), new Integer(2)};
 
         // Add initial data. (Thread order = 0,1,2)
         ati.report(t[0], 1, 10);
@@ -155,8 +156,8 @@ public class TestAtomicIntervalGuard extends TestCase
     public void testSingleThreadedInterval() throws Exception
     {
         // Allocate interval array and threads to live in it.
-        AtomicIntervalGuard ati = new AtomicIntervalGuard(3);
-        Thread[] t = {new Thread("t0"), new Thread("t1"), new Thread("t2")};
+        AtomicIntervalGuard<Integer> ati = new AtomicIntervalGuard<Integer>(3);
+        Integer[] t = {new Integer(0), new Integer(1), new Integer(2)};
 
         // Perform 100K iterations of updating all threads and waiting for
         // spread. At the end of each iteration the threads should be within
@@ -187,13 +188,13 @@ public class TestAtomicIntervalGuard extends TestCase
     public void testMultiThreadedInterval() throws Exception
     {
         // Allocate interval array and threads to live in it.
-        AtomicIntervalGuard ati = new AtomicIntervalGuard(30);
+        AtomicIntervalGuard<Integer> ati = new AtomicIntervalGuard<Integer>(30);
         AtomicCounter counter = new AtomicCounter(0);
         SampleThreadIntervalWriter[] writer = new SampleThreadIntervalWriter[30];
         for (int i = 0; i < writer.length; i++)
         {
-            writer[i] = new SampleThreadIntervalWriter(counter, ati, 1000000);
-            ati.report(writer[i], 0, 0);
+            writer[i] = new SampleThreadIntervalWriter(i, counter, ati, 1000000);
+            ati.report(i, 0, 0);
             writer[i].start();
         }
 
@@ -244,21 +245,23 @@ public class TestAtomicIntervalGuard extends TestCase
 // Sample class to post thread position.
 class SampleThreadIntervalWriter extends Thread
 {
-    private AtomicCounter       counter;
-    private AtomicIntervalGuard threadInterval;
-    private long                maxSeqno;
+    private int                          id;
+    private AtomicCounter                counter;
+    private AtomicIntervalGuard<Integer> threadInterval;
+    private long                         maxSeqno;
 
-    volatile Throwable          throwable;
-    volatile long               seqno;
-    volatile boolean            done;
+    volatile Throwable                   throwable;
+    volatile long                        seqno;
+    volatile boolean                     done;
 
     /**
      * Create new write with counter and maximum sequence number to execute to.
      * (Start at 0.)
      */
-    SampleThreadIntervalWriter(AtomicCounter counter,
-            AtomicIntervalGuard threadInterval, long maxSeqno)
+    SampleThreadIntervalWriter(int id, AtomicCounter counter,
+            AtomicIntervalGuard<Integer> threadInterval, long maxSeqno)
     {
+        this.id = id;
         this.counter = counter;
         this.maxSeqno = maxSeqno;
         this.threadInterval = threadInterval;
@@ -270,7 +273,6 @@ class SampleThreadIntervalWriter extends Thread
     public void run()
     {
         seqno = 0;
-        Thread currentThread = Thread.currentThread();
 
         try
         {
@@ -286,7 +288,7 @@ class SampleThreadIntervalWriter extends Thread
                 counter.waitSeqnoGreaterEqual(seqno);
 
                 // Report the sequence number.
-                threadInterval.report(currentThread, seqno, seqno);
+                threadInterval.report(id, seqno, seqno);
             }
         }
         catch (InterruptedException e)

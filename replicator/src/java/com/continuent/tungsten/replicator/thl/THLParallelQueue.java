@@ -102,7 +102,7 @@ public class THLParallelQueue implements ParallelStore
 
     // Control data to enforce maximum offline interval. These variables limit
     // the time interval between most and least advanced read threads.
-    private AtomicIntervalGuard                                 intervalGuard;
+    private AtomicIntervalGuard<Integer>                        intervalGuard;
     private long                                                lastTimestampMillis = -1;
     private long                                                intervalCheckMillis;
     private long                                                maxOfflineMillis;
@@ -532,7 +532,7 @@ public class THLParallelQueue implements ParallelStore
 
         // Allocate the thread interval checker now that we know the number of
         // partitions.
-        intervalGuard = new AtomicIntervalGuard(partitions);
+        intervalGuard = new AtomicIntervalGuard<Integer>(partitions);
         maxOfflineMillis = maxOfflineInterval * 1000;
     }
 

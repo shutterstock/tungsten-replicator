@@ -28,22 +28,22 @@ import java.util.Map;
 import com.continuent.tungsten.replicator.ReplicatorException;
 
 /**
- * Tracks the sequence number and time interval between a group of task threads
- * processing transactions to ensure that the first and last threads do not get
+ * Tracks the sequence number and time interval between a group of tasks
+ * processing transactions to ensure that the first and last tasks do not get
  * too far apart in the log. Class methods are fully synchronized, which results
  * in a large number of lock requests. Changes to these classes should be
  * carefully checked for performance via unit tests.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  */
-public class AtomicIntervalGuard
+public class AtomicIntervalGuard<T>
 {
-    // Simple class to hold thread information. The thread ID is the key.
+    // Simple class to hold task information. The id value is the key.
     // The before and after fields are used to implement a linked list of
     // threads to show ordering by sequence number.
     private class ThreadPosition
     {
-        Thread         thread;
+        T              id;
         long           seqno;
         long           time;
         ThreadPosition before;
@@ -51,16 +51,16 @@ public class AtomicIntervalGuard
 
         public String toString()
         {
-            return this.getClass().getSimpleName() + " thread=" + thread
+            return this.getClass().getSimpleName() + " id=" + id
                     + " seqno=" + seqno + " time=" + time;
         }
     }
 
     // Map to hold information on each thread.
-    private Map<Thread, ThreadPosition> array = new HashMap<Thread, ThreadPosition>();
-    private ThreadPosition              head;
-    private ThreadPosition              tail;
-    private int                         size;
+    private Map<T, ThreadPosition> array = new HashMap<T, ThreadPosition>();
+    private ThreadPosition         head;
+    private ThreadPosition         tail;
+    private int                    size;
 
     /**
      * Allocates a thread interval array.
@@ -73,26 +73,26 @@ public class AtomicIntervalGuard
     }
 
     /**
-     * Report position for an individual thread. This call makes an important
+     * Report position for an individual task. This call makes an important
      * assumption that sequence numbers never move backward, which simplifies
      * maintenance of the array.
      * 
      * @throws ReplicatorException Thrown if there is an illegal update.
      */
-    public synchronized void report(Thread t, long seqno, long time)
+    public synchronized void report(T id, long seqno, long time)
             throws ReplicatorException
     {
-        ThreadPosition tp = array.get(t);
+        ThreadPosition tp = array.get(id);
 
         // See if this thread is already known.
         if (tp == null)
         {
             // It is not. Allocate and add to the hash map.
             tp = new ThreadPosition();
-            tp.thread = t;
+            tp.id = id;
             tp.seqno = seqno;
             tp.time = time;
-            array.put(t, tp);
+            array.put(id, tp);
 
             // Order within the linked list.
             if (head == null)
@@ -140,8 +140,8 @@ public class AtomicIntervalGuard
             // The thread is already in the map. Ensure thread seqno does not
             // move backwards and update its information.
             if (tp.seqno > seqno)
-                bug("Thread reporting position moved backwards: thread="
-                        + t.getName() + " previous seqno=" + tp.seqno
+                bug("Thread reporting position moved backwards: task="
+                        + id.toString() + " previous seqno=" + tp.seqno
                         + " new seqno=" + seqno);
             tp.seqno = seqno;
             tp.time = time;

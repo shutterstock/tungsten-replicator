@@ -65,7 +65,7 @@ public class THLParallelReadTask implements Runnable
 
     // Counters to coordinate queue operation.
     private AtomicCounter                  headSeqnoCounter;
-    private AtomicIntervalGuard            intervalGuard;
+    private AtomicIntervalGuard<Integer>   intervalGuard;
     private AtomicLong                     lowWaterMark         = new AtomicLong(
                                                                         0);
     private AtomicLong                     acceptCount          = new AtomicLong(
@@ -107,8 +107,9 @@ public class THLParallelReadTask implements Runnable
      * Instantiate a read task.
      */
     public THLParallelReadTask(int taskId, THL thl, Partitioner partitioner,
-            AtomicCounter headSeqnoCounter, AtomicIntervalGuard intervalGuard,
-            int maxSize, int maxControlEvents, int syncInterval)
+            AtomicCounter headSeqnoCounter,
+            AtomicIntervalGuard<Integer> intervalGuard, int maxSize,
+            int maxControlEvents, int syncInterval)
     {
         this.taskId = taskId;
         this.thl = thl;
@@ -174,6 +175,9 @@ public class THLParallelReadTask implements Runnable
             }
         };
         connection.setReadFilter(filter);
+
+        // Report our starting position to the interval guard.
+        intervalGuard.report(taskId, restartSeqno, restartExtractMillis);
     }
 
     /**
@@ -234,10 +238,6 @@ public class THLParallelReadTask implements Runnable
 
         try
         {
-            // Report our starting position to the interval guard.
-            intervalGuard
-                    .report(taskThread, restartSeqno, restartExtractMillis);
-
             // Seek to initial position to start reading.
             if (!connection.seek(restartSeqno))
             {
@@ -271,7 +271,7 @@ public class THLParallelReadTask implements Runnable
                 headSeqnoCounter.waitSeqnoGreaterEqual(thlEvent.getSeqno());
 
                 // Report our position to the interval guard.
-                intervalGuard.report(taskThread, thlEvent.getSeqno(), thlEvent
+                intervalGuard.report(taskId, thlEvent.getSeqno(), thlEvent
                         .getSourceTstamp().getTime());
 
                 // If we do not want it, just go to the next event. This
