@@ -372,7 +372,6 @@ public class THLParallelQueueTest extends TestCase
 
         // Read across each queue until we reach 100K events for the main
         // shards (i.e., 300K total). Time out after 60 seconds to avoid hangs.
-        long startMillis = System.currentTimeMillis();
         int shardTotal = 0;
         while (shardTotal < 300000)
         {
@@ -397,12 +396,6 @@ public class THLParallelQueueTest extends TestCase
                                     + shardTotal);
                     }
                 }
-
-                // Check time.
-                long testTimeMillis = System.currentTimeMillis() - startMillis;
-                if (testTimeMillis > 150000)
-                    throw new Exception("Took way too long to read shards!: "
-                            + (testTimeMillis / 1000.0) + "s");
             }
         }
 
