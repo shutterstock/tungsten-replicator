@@ -399,8 +399,10 @@ public class THLParallelQueueTest extends TestCase
                 }
 
                 // Check time.
-                if (System.currentTimeMillis() - startMillis > 60000)
-                    throw new Exception("Took way too long to read shards!");
+                long testTimeMillis = System.currentTimeMillis() - startMillis;
+                if (testTimeMillis > 150000)
+                    throw new Exception("Took way too long to read shards!: "
+                            + (testTimeMillis / 1000.0) + "s");
             }
         }
 
