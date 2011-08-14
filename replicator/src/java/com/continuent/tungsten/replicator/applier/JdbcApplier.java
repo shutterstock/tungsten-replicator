@@ -147,7 +147,8 @@ public class JdbcApplier implements RawApplier
     public void setTaskId(int id)
     {
         this.taskId = id;
-        logger.info("Set task id: id=" + taskId);
+        if (logger.isDebugEnabled())
+            logger.debug("Set task id: id=" + taskId);
     }
 
     public void setDriver(String driver)
@@ -923,8 +924,9 @@ public class JdbcApplier implements RawApplier
         {
             int colCount = fillColumnNames(oneRowChange);
             if (colCount <= 0)
-                logger.warn("No column information found for table: "
-                        + oneRowChange.getSchemaName() + "."
+                logger.warn("No column information found for table (perhaps table is missing?): "
+                        + oneRowChange.getSchemaName()
+                        + "."
                         + oneRowChange.getTableName());
         }
         catch (SQLException e1)
@@ -1440,7 +1442,8 @@ public class JdbcApplier implements RawApplier
             fileQuery.setLocalFile(temporaryFile);
             applyStatementData(fileQuery);
         }
-        logger.info("File deleted : " + temporaryFile.delete());
+        if (logger.isDebugEnabled())
+            logger.debug("File deleted : " + temporaryFile.delete());
     }
 
     /**
@@ -1627,12 +1630,14 @@ public class JdbcApplier implements RawApplier
             {
                 if (runtime.logReplicatorUpdates() || runtime.isRemoteService())
                 {
-                    logger.info("Slave updates will be logged");
+                    if (logger.isDebugEnabled())
+                        logger.debug("Slave updates will be logged");
                     conn.controlSessionLevelLogging(false);
                 }
                 else
                 {
-                    logger.info("Slave updates will not be logged");
+                    if (logger.isDebugEnabled())
+                        logger.debug("Slave updates will not be logged");
                     conn.controlSessionLevelLogging(true);
                 }
             }
@@ -1640,7 +1645,8 @@ public class JdbcApplier implements RawApplier
             // Set session variable to show we are a slave.
             if (conn.supportsSessionVariables())
             {
-                logger.info("Setting TREPSLAVE session variable");
+                if (logger.isDebugEnabled())
+                    logger.debug("Setting TREPSLAVE session variable");
                 conn.setSessionVariable("TREPSLAVE", "YES");
             }
 

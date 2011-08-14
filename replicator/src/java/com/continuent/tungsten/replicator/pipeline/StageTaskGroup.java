@@ -105,6 +105,7 @@ public class StageTaskGroup implements ReplicatorPlugin
             InterruptedException
     {
         // Instantiate and configure each task.
+        logger.info("Instantiating and configuring tasks for stage: " + stage.getName());
         tasks = new SingleThreadStageTask[taskCount];
         for (int i = 0; i < taskCount; i++)
         {
@@ -170,11 +171,12 @@ public class StageTaskGroup implements ReplicatorPlugin
     public void prepare(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
-        // Configure components within each task.
+        // Prepare components within each task.
+        logger.info("Preparing tasks for stage: " + stage.getName());
         for (int i = 0; i < taskCount; i++)
         {
             // Prepare components.
-            logger.info("Preparing task: " + i);
+            logger.debug("Preparing task: " + i);
             SingleThreadStageTask task = tasks[i];
 
             ReplicatorRuntime.preparePlugin(task.getExtractor(), context);
@@ -187,7 +189,7 @@ public class StageTaskGroup implements ReplicatorPlugin
             ReplicatorRuntime.preparePlugin(task.getApplier(), context);
 
             // Get the starting event data and position extractor.
-            logger.info("Looking up last applied event to position extractor");
+            logger.debug("Looking up last applied event to position extractor");
             ReplDBMSHeader lastHeader = task.getApplier().getLastEvent();
             if (lastHeader == null || lastHeader.getSeqno() < 0)
             {
@@ -214,10 +216,11 @@ public class StageTaskGroup implements ReplicatorPlugin
      */
     public void release(PluginContext context)
     {
-        // Configure components within each task.
+        // Release components within each task.
+        logger.info("Releasing tasks for stage: " + stage.getName());
         for (int i = 0; i < taskCount; i++)
         {
-            logger.info("Releasing task: " + i);
+            logger.debug("Releasing task: " + i);
             ReplicatorRuntime.releasePlugin(tasks[i].getExtractor(), context);
 
             for (Filter f : tasks[i].getFilters())

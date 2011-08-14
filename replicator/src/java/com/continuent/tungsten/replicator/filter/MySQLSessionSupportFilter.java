@@ -41,8 +41,7 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class MySQLSessionSupportFilter implements Filter
 {
-    private static Logger       logger                = Logger
-                                                              .getLogger(LoggingFilter.class);
+    private static Logger       logger                = Logger.getLogger(LoggingFilter.class);
 
     private String              lastSessionId         = "";
     private static final String SET_PTHREAD_STATEMENT = "set @@session.pseudo_thread_id=";
@@ -95,8 +94,9 @@ public class MySQLSessionSupportFilter implements Filter
      */
     public void prepare(PluginContext context) throws ReplicatorException
     {
-        logger.info(String.format("Filter %s loaded successfully", getClass()
-                .getSimpleName()));
+        if (logger.isDebugEnabled())
+            logger.debug(String.format("Filter %s loaded successfully",
+                    getClass().getSimpleName()));
     }
 
     /**

@@ -551,8 +551,9 @@ public class ReplicatorRuntime implements PluginContext
     {
         if (properties.getString(key) == null)
         {
-            logger.info("Assigning default global property value: key=" + key
-                    + " default value=" + value);
+            if (logger.isDebugEnabled())
+                logger.debug("Assigning default global property value: key="
+                        + key + " default value=" + value);
             properties.setString(key, value);
         }
         return properties.getString(key);
@@ -583,8 +584,9 @@ public class ReplicatorRuntime implements PluginContext
                     "Plugin class name property is missing or null:  key="
                             + pluginPrefix);
         String pluginClassName = rawClassName.trim();
-        logger.info("Loading plugin: key=" + pluginPrefix + " class name="
-                + pluginClassName);
+        if (logger.isDebugEnabled())
+            logger.debug("Loading plugin: key=" + pluginPrefix + " class name="
+                    + pluginClassName);
 
         // Subset plug-in properties.
         TungstenProperties pluginProperties = properties.subset(pluginPrefix
@@ -632,8 +634,9 @@ public class ReplicatorRuntime implements PluginContext
                     "Plugin class name property is missing or null:  key="
                             + pluginPrefix);
         String pluginClassName = rawClassName.trim();
-        logger.info("Loading plugin: key=" + pluginPrefix + " class name="
-                + pluginClassName);
+        if (logger.isDebugEnabled())
+            logger.debug("Loading plugin: key=" + pluginPrefix + " class name="
+                    + pluginClassName);
 
         // Subset plug-in properties.
         TungstenProperties pluginProperties = properties.subset(pluginPrefix
@@ -980,8 +983,9 @@ public class ReplicatorRuntime implements PluginContext
         }
 
         // It worked. We have a configured plugin.
-        logger.info("Plug-in configured successfully: class name="
-                + pluginClassName);
+        if (logger.isDebugEnabled())
+            logger.debug("Plug-in configured successfully: class name="
+                    + pluginClassName);
     }
 
     /** Call prepare method on a plugin class. */
@@ -1009,8 +1013,9 @@ public class ReplicatorRuntime implements PluginContext
         }
 
         // It worked. We have a prepared plugin.
-        logger.info("Plug-in prepared successfully: class name="
-                + pluginClassName);
+        if (logger.isDebugEnabled())
+            logger.debug("Plug-in prepared successfully: class name="
+                    + pluginClassName);
     }
 
     /** Call release method on a plugin class, warning on errors. */
@@ -1028,8 +1033,9 @@ public class ReplicatorRuntime implements PluginContext
                     + pluginClassName, t);
         }
 
-        logger.debug("Plug-in released successfully: class name="
-                + pluginClassName);
+        if (logger.isDebugEnabled())
+            logger.debug("Plug-in released successfully: class name="
+                    + pluginClassName);
     }
 
     /**
