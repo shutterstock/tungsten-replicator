@@ -1,63 +1,158 @@
-DBMSTypePrompt.add_dbms_type(DBMS_POSTGRESQL)
+raise IgnoreError
+DBMS_POSTGRESQL = "postgresql"
+
+# PostgreSQL-specific parameters.
+REPL_PG_REPLICATOR = "repl_pg_replicator"
+REPL_PG_STREAMING = "repl_pg_streaming"
+REPL_PG_LOND_DATABASE = "repl_pg_lond_database"
+REPL_PG_HOME = "repl_pg_home"
+REPL_PG_ROOT = "repl_pg_root"
+REPL_PG_POSTGRESQL_CONF = "repl_pg_postgresql_conf"
+REPL_PG_ARCHIVE = "repl_pg_archive"
+REPL_PG_ARCHIVE_TIMEOUT = "repl_pg_archive_timeout"
+
+class PGDatabasePlatform < ConfigureDatabasePlatform
+  def get_uri_scheme
+    DBMS_POSTGRESQL
+  end
+  
+  def get_default_backup_method
+    "pg_dump"
+  end
+  
+  def get_valid_backup_methods
+    "none|pg_dump|script"
+  end
+  
+  def run(command)
+    ssh_result("echo '#{command}' | psql -q -A -t", true, @host, @user)
+  end
+  
+  def get_thl_uri
+	  "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/"
+	end
+  
+  def get_default_port
+    "5432"
+  end
+  
+  def get_default_start_script
+    "/etc/init.d/postgres"
+  end
+  
+  def get_default_master_log_directory
+    nil
+  end
+  
+  def get_default_master_log_pattern
+    nil
+  end
+  
+  def getJdbcUrl()
+    "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/"
+  end
+  
+  def getJdbcDriver()
+    "org.postgresql.Driver"
+  end
+  
+  def getVendor()
+    "postgresql"
+  end
+	
+	def get_applier_filters
+	  ["pgddl"]
+	end
+end
 
 #
 # Prompts
 #
 
-class PostgresConfigurePrompt < ConfigurePrompt
+module PGPrompt
   def enabled?
-    @config.getProperty(get_member_key(DBMS_TYPE)) == "postgresql"
+    super() && (get_datasource().is_a?(PGDatabasePlatform) || get_extractor_datasource().is_a?(PGDatabasePlatform))
+  end
+  
+  def enabled_for_config?
+    super() && (get_datasource().is_a?(PGDatabasePlatform) || get_extractor_datasource().is_a?(PGDatabasePlatform))
+  end
+end
+
+module PGApplierPrompt
+  def enabled?
+    super() && (get_datasource().is_a?(PGDatabasePlatform))
+  end
+  
+  def enabled_for_config?
+    super() && (get_datasource().is_a?(PGDatabasePlatform))
   end
   
   def get_default_value
     begin
-      get_pgsql_default_value()
+      if (get_datasource().is_a?(PGDatabasePlatform))
+        get_pgsql_default_value()
+      else
+        raise
+      end
     rescue => e
-      @default
+      super()
     end
   end
+end
+
+module PGExtractorPrompt
+  def enabled?
+    super() && (get_extractor_datasource().is_a?(PGDatabasePlatform))
+  end
   
+  def enabled_for_config?
+    super() && (get_extractor_datasource().is_a?(PGDatabasePlatform))
+  end
+  
+  def get_default_value
+    begin
+      if (get_extractor_datasource().is_a?(PGDatabasePlatform))
+        get_pgsql_default_value()
+      else
+        raise
+      end
+    rescue => e
+      super()
+    end
+  end
+end
+
+class PostgresConfigurePrompt < ConfigurePrompt
   def get_pgsql_default_value
     raise "Undefined function"
-  end
-  
-  # Execute mysql command and return result to client. 
-  def pgsql(command, hostname = nil)
-    user = @config.getProperty(REPL_DBLOGIN)
-    password = @config.getProperty(REPL_DBPASSWORD)
-    port = @config.getProperty(REPL_DBPORT)
-    if hostname == nil
-      hosts = @config.getProperty(HOSTS).split(",")
-      hostname = hosts[0]
-    end
-
-    ssh_result("echo '#{command}' | psql -q -A -t", true, hostname)
   end
 end
 
 class PostgresStreamingReplication < PostgresConfigurePrompt
-  include DataserverPrompt
+  include ReplicationServicePrompt
+  include PGPrompt
   
   def initialize
     super(REPL_PG_STREAMING, "Use streaming replication (available from PostgreSQL 9)",
-      PV_BOOLEAN, "false")
+      PV_BOOLEAN, "true")
   end
 end
 
 class PostgresRootDirectory < PostgresConfigurePrompt
-  include DataserverPrompt
+  include ReplicationServicePrompt
+  include PGPrompt
   
   def initialize
     super(REPL_PG_ROOT, "Root directory for postgresql installation", PV_FILENAME)
   end
   
   def get_default_value
-    @default = @config.getProperty(HOME_DIRECTORY)
-    super()
+    @config.getProperty(HOME_DIRECTORY)
   end
   
   def get_pgsql_default_value
-    def_data_dir = pgsql("SHOW data_directory;")
+    def_data_dir = get_datasource.run("SHOW data_directory;")
     if def_data_dir.to_s() == "" || !def_data_dir.include?("/") || def_data_dir.include?("psql")
       raise "Cannot determine"
     else
@@ -67,60 +162,42 @@ class PostgresRootDirectory < PostgresConfigurePrompt
 end
 
 class PostgresDataDirectory < PostgresConfigurePrompt
-  include DataserverPrompt
+  include ReplicationServicePrompt
+  include PGPrompt
   
   def initialize
     super(REPL_PG_HOME, "PostgreSQL data directory", PV_FILENAME)
   end
   
   def get_default_value
-    @default = @config.getProperty(REPL_PG_ROOT) + "/data"
-  end
-  
-  def get_default_value
-    @default = @config.getProperty(HOME_DIRECTORY)
-    super()
-  end
-  
-  def get_pgsql_default_value
-    def_data_dir = pgsql("SHOW data_directory;")
-    if def_data_dir.to_s() == ""
-      raise "Cannot determine"
-    else
-      def_data_dir
-    end
+    @config.getProperty(get_member_key(REPL_PG_ROOT)) + "/data"
   end
 end
 
 class PostgresArchiveDirectory < PostgresConfigurePrompt
-  include DataserverPrompt
+  include ReplicationServicePrompt
+  include PGPrompt
   
   def initialize
     super(REPL_PG_ARCHIVE, "PostgreSQL archive location", PV_FILENAME)
   end
   
   def get_default_value
-    begin
-      @config.getProperty(get_member_key(REPL_PG_ROOT)) + "/archive"
-    rescue
-      ""
-    end
+    @config.getProperty(get_member_key(REPL_PG_ROOT)) + "/archive"
   end
 end
 
 class PostgresConfFile < PostgresConfigurePrompt
-  include DataserverPrompt
+  include ReplicationServicePrompt
+  include PGPrompt
   
   def initialize
     super(REPL_PG_POSTGRESQL_CONF, "Location of postgresql.conf", PV_FILENAME)
   end
   
   def get_default_value
-    begin
-      @default = @config.getProperty(get_member_key(REPL_PG_ROOT)) + "/data/postgresql.conf"
-    rescue
-      ""
-    end
+    @default = @config.getProperty(get_member_key(REPL_PG_HOME)) + "/postgresql.conf"
+    super()
   end
   
   def get_pgsql_default_value
@@ -134,7 +211,8 @@ class PostgresConfFile < PostgresConfigurePrompt
 end
 
 class PostgresArchiveTimeout < PostgresConfigurePrompt
-  include DataserverPrompt
+  include ReplicationServicePrompt
+  include PGPrompt
   
   def initialize
     super(REPL_PG_ARCHIVE_TIMEOUT, "Timeout for sending unfilled WAL buffers (data loss window)", 
@@ -152,7 +230,7 @@ class PostgreSQLValidationCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    super() && @config.getProperty(DBMS_TYPE) == "postgresql"
+    super() && @config.getProperty(REPL_DBTYPE) == "postgresql"
   end
 end
 
@@ -324,6 +402,23 @@ class ConnectorUserPostgreSQLCheck < PostgreSQLValidationCheck
   end
 end
 
+class PgdumpAvailableCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  
+  def set_vars
+    @title = "Pg_dump method availability check"
+  end
+  
+  def validate
+    path = cmd_result("which pg_dump")
+    info("pg_dump found at #{path}")
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_BACKUP_METHOD)) == "pg_dump"
+  end
+end
+
 #
 # Deployment
 #
@@ -335,38 +430,46 @@ module ConfigureDeploymentStepPostgresql
     write_wal_shipping_properties()
   end
   
-  def deploy_replication_dataservice(service_name, service_config)
-    if is_applier(service_config, DBMS_POSTGRESQL) && 
-        is_extractor(service_config, DBMS_POSTGRESQL)
-      write_wal_shipping_properties(service_name, service_config)
+  def is_extractor?(type)
+	  get_extractor_datasource().is_a?(type)
+	end
+	
+	def is_applier?(type)
+	  get_applier_datasource().is_a?(type)
+	end
+  
+  def deploy_replication_dataservice()
+    if is_applier?(service_config, PGDatabasePlatform) && 
+        is_extractor?(service_config, PGDatabasePlatform)
+      write_wal_shipping_properties()
     end
     
-    super(service_name, service_config)
+    super()
   end
   
-  def transform_replication_dataservice_line(line, service_name, service_config)
+  def transform_replication_dataservice_line(line, service_name, service_config, transformer)
     if line =~ /replicator.master.uri/ && 
-        is_applier(service_config, DBMS_POSTGRESQL) then
+        is_applier?(service_config, PGDatabasePlatform) then
       if service_config.getProperty(REPL_MASTERHOST)
         "replicator.master.uri=wal://" + service_config.getProperty(REPL_MASTERHOST) + "/"
       else
         "replicator.master.uri=wal://localhost/"
       end
     elsif line =~ /replicator.master.connect.uri/ && 
-        is_applier(service_config, DBMS_POSTGRESQL) then
+        is_applier?(service_config, PGDatabasePlatform) then
       if service_config.getProperty(REPL_ROLE) == "master" then
         line
       else
         "replicator.master.connect.uri=thl://" + service_config.getProperty(REPL_MASTERHOST) + "/"
       end
     elsif line =~ /replicator.script.root/ && 
-        is_applier(service_config, DBMS_POSTGRESQL)
+        is_applier?(service_config, PGDatabasePlatform)
       "replicator.script.root_dir=" + File.expand_path("#{get_deployment_basedir()}/tungsten-replicator")
     elsif line =~ /replicator.script.conf_file/ && 
-        is_applier(service_config, DBMS_POSTGRESQL)
+        is_applier?(service_config, PGDatabasePlatform)
       "replicator.script.conf_file=conf/postgresql-wal.properties"
     elsif line =~ /replicator.script.processor/ && 
-        is_applier(service_config, DBMS_POSTGRESQL)
+        is_applier?(service_config, PGDatabasePlatform)
       "replicator.script.processor=bin/pg/pg-wal-plugin"
     elsif line =~ /replicator.backup.agent.pg_dump.port/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
       "replicator.backup.agent.pg_dump.port=" + service_config.getProperty(REPL_DBPORT)
@@ -377,7 +480,7 @@ module ConfigureDeploymentStepPostgresql
     elsif line =~ /replicator.backup.agent.pg_dump.dumpDir/ && service_config.getProperty(REPL_BACKUP_METHOD) == "pg_dump"
       "replicator.backup.agent.pg_dump.dumpDir=" + service_config.getProperty(REPL_BACKUP_DUMP_DIR)
 		else
-		  super(line, service_name, service_config)
+		  super(line, service_name, service_config, transformer)
 		end
 	end
   
@@ -457,13 +560,4 @@ module ConfigureDeploymentStepPostgresql
     cmd_result(cmd2, false)
     Configurator.instance.write_divider()
   end
-  
-  def get_replication_dataservice_template(service_config)
-    if is_applier(service_config, DBMS_POSTGRESQL) && 
-        is_extractor(service_config, DBMS_POSTGRESQL)
-  	  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.static.properties.postgresql"
-  	else
-  	  super(service_config)
-  	end
-	end
 end

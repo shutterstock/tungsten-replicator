@@ -35,417 +35,434 @@ class ReplicatorInstallPackage < ConfigurePackage
                                   Configurator.instance.display_help?(true) }
     
     remainder = Configurator.instance.run_option_parser(opts, arguments)
-    
-    if Configurator.instance.display_help?()
-      output_usage()
-      exit 0
-    end
-    
-    unless @config.getProperty(DEPLOYMENT_TYPE)
-      error("You must specify either --direct or --master-slave")
-    end
-    
-    unless is_valid?
-      raise "There are issues with the command options"
-    end
 
     case method
     when "direct"
       @display_direct_help = true
-      options = parse_direct_arguments(remainder)
-      unless is_valid?
-        return false
-      end
-      
-      process_direct_options(options)
-      unless is_valid?
-        return false
-      end
+      parse_direct_arguments(remainder)
     when "master-slave"
       @display_ms_help = true
-      options = parse_master_slave_arguments(remainder)
-      unless is_valid?
-        return false
-      end
-      
-      process_master_slave_options(options)
-      unless is_valid?
-        return false
-      end
+      parse_master_slave_arguments(remainder)
     else
-      raise "Invalid deployment type specified"
+      unless Configurator.instance.display_help?()
+        error("You must specify either --direct or --master-slave")
+      end
     end
     
-    Configurator.instance.save_prompts()
+    if Configurator.instance.display_help?()
+      reset_errors()
+    end
     
-    true
+    is_valid?()
   end
   
   def parse_direct_arguments(arguments)
-    options = Properties.new()
-    options.props = {
-      "host" => Configurator.instance.hostname(),
-      "master-port" => "3306",
-      "master-user" => Configurator.instance.whoami(),
-      "slave-port" => "3306",
-      "slave-user" => Configurator.instance.whoami(),
-      "thl-mode" => "disk",
-      "thl-port" => "2112",
-      "svc-start" => "false",
-      "report-services" => "false",
-      "home-directory" => Configurator.instance.get_base_path(),
-      "use-relay-logs" => "true"
-    }
-    
     opts = OptionParser.new
-    opts.on("--start")      {options.setProperty("svc-start", "true")}
-    opts.on("--start-and-report")      {
-      options.setProperty("svc-start", "true")
-      options.setProperty("svc-report", "true")
+    host_options = Properties.new()
+    host_options.setProperty(HOST, Configurator.instance.hostname())
+    
+    service_options = Properties.new()
+    service_options.setProperty(DEPLOYMENT_HOST, DIRECT_DEPLOYMENT_HOST_ALIAS)
+    service_options.setProperty(REPL_ROLE, REPL_ROLE_DI)
+    
+    datasource_options = Properties.new()
+    datasource_options.setProperty([DATASOURCES, "master"], {})
+    datasource_options.setProperty([DATASOURCES, "slave"], {})
+    
+    each_host_prompt{
+      |prompt|
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument()}") {
+          host_options.setProperty(prompt.name, av)
+          ConfigurePrompt.add_global_default(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument()} String") {
+          |val|
+          host_options.setProperty(prompt.name, val)
+          ConfigurePrompt.add_global_default(prompt.name, val)
+        }
+      end
     }
+    
+    each_service_prompt{
+      |prompt|
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument()}") {
+          service_options.setProperty(prompt.name, av)
+          ConfigurePrompt.add_global_default(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument()} String") {
+          |val|
+          service_options.setProperty(prompt.name, val)
+          ConfigurePrompt.add_global_default(prompt.name, val)
+        }
+      end
+    }
+    
     opts.on("--disable-relay-logs") {
-      options.setProperty("use-relay-logs", "false")
+      datasource_options.setProperty([DATASOURCES, "master", REPL_DISABLE_RELAY_LOGS], "true")
+      datasource_options.setProperty([DATASOURCES, "slave", REPL_DISABLE_RELAY_LOGS], "true")
     }
-    opts.on("--native-slave-takeover") {
-      ConfigurePrompt.add_global_default(REPL_SVC_NATIVE_SLAVE_TAKEOVER, "true")
+    each_master_datasource_prompt{
+      |prompt|
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument().gsub('datasource', 'master')}") {
+          datasource_options.setProperty([DATASOURCES, "master", prompt.name], av)
+          ConfigurePrompt.add_global_default(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument().gsub('datasource', 'master')} String") {
+          |val|
+          datasource_options.setProperty([DATASOURCES, "master", prompt.name], val)
+          ConfigurePrompt.add_global_default(prompt.name, val)
+        }
+      end
     }
     
-    {
-      'rmi-port' => REPL_RMI_PORT,
-      'user' => USERID,
-      'buffer-size' => REPL_BUFFER_SIZE,
-      'channels' => REPL_SVC_CHANNELS,
-      'svc-parallelization-type' => REPL_SVC_PARALLELIZATION_TYPE
-    }.each{
-      |arg, prop_key|
-      opts.on("--#{arg} String") {|val| ConfigurePrompt.add_global_default(prop_key, val)}
-    }
-    
-    [
-      "dbms-type",
-      "home-directory",
-      "host",
-      "master-alias",
-      "master-host",
-      "master-port",
-      "master-user",
-      "master-password",
-      "master-log-directory",
-      "master-log-pattern",
-      "master-log-file",
-      "master-log-pos",
-      "slave-alias",
-      "slave-host",
-      "slave-port",
-      "slave-user",
-      "slave-password",
-      "thl-directory",
-      "thl-port",
-      "relay-directory",
-      "service-name",
-      "backup-directory"
-    ].each{
-      |arg|
-      opts.on("--#{arg} String")  {|val| options.setProperty(arg, val)}
+    each_slave_datasource_prompt{
+      |prompt|
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument().gsub('datasource', 'slave')}") {
+          datasource_options.setProperty([DATASOURCES, "slave", prompt.name], av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument().gsub('datasource', 'slave')} String") {
+          |val|
+          datasource_options.setProperty([DATASOURCES, "slave", prompt.name], val)
+        }
+      end
     }
     
     remainder = Configurator.instance.run_option_parser(opts, arguments, false, "invalid option for --direct")
     
-    options
-  end
-  
-  def process_direct_options(options)
-    unless options.getProperty("master-host")
-      error("You must specify a value for --master-host")
-    end
-    
-    unless options.getProperty("slave-host")
-      error("You must specify a value for --slave-host")
-    end
-    
-    unless options.getProperty("service-name")
-      error("You must specify a value for --service-name")
-    end
-    
-    unless is_valid?
-      raise "There are issues with the command options"
-    end
-    
-    master_alias = options.getPropertyOr("master-alias", options.getProperty("master-host").tr(".", "_")) + "_" + options.getPropertyOr("master-port", "3306")
-    slave_alias = options.getPropertyOr("slave-alias", options.getProperty("slave-host").tr(".", "_")) + "_" + options.getPropertyOr("slave-port", "3306")
-    
-    if options.getProperty("home-directory") == Configurator.instance.get_base_path()
-      options.setProperty("home-directory", Configurator.instance.get_base_path())
-      options.setProperty("current-release-directory", Configurator.instance.get_base_path())
-    end
-    
-    @config.setProperty(DEPLOYMENT_HOST, DIRECT_DEPLOYMENT_HOST_ALIAS)
-    
     @config.setProperty(HOSTS, nil)
-    @config.setProperty([HOSTS, DIRECT_DEPLOYMENT_HOST_ALIAS], {
-      SVC_START => options.getProperty('svc-start'),
-      SVC_REPORT => options.getProperty('svc-report'),
-      HOST => options.getProperty("host"),
-      HOME_DIRECTORY => options.getProperty("home-directory"),
-      CURRENT_RELEASE_DIRECTORY => options.getProperty("current-release-directory"),
-      REPL_LOG_DIR => options.getPropertyOr("thl-directory", options.getProperty("home-directory") + "/thl"),
-      REPL_RELAY_LOG_DIR => options.getPropertyOr("relay-directory", options.getProperty("home-directory") + "/relay")
-    })
+    @config.setProperty([HOSTS, DIRECT_DEPLOYMENT_HOST_ALIAS], 
+      host_options.props.dup
+    )
     
-    @config.setProperty(DATASERVERS, nil)
-    @config.setProperty([DATASERVERS, master_alias], {
-      REPL_DBHOST => options.getProperty("master-host"),
-      REPL_DBPORT => options.getProperty("master-port"),
-      REPL_DBLOGIN => options.getProperty("master-user"),
-      REPL_DBPASSWORD => options.getProperty("master-password"),
-      REPL_MYSQL_BINLOGDIR => options.getProperty("master-log-directory"),
-      REPL_MYSQL_BINLOGPATTERN => options.getProperty("master-log-pattern"),
-      DBMS_TYPE => options.getProperty("dbms-type"),
-      REPL_EXTRACTOR_USE_RELAY_LOGS => options.getProperty("use-relay-logs")
-    })
-    @config.setProperty([DATASERVERS, slave_alias], {
-      REPL_DBHOST => options.getProperty("slave-host"),
-      REPL_DBPORT => options.getProperty("slave-port"),
-      REPL_DBLOGIN => options.getProperty("slave-user"),
-      REPL_DBPASSWORD => options.getProperty("slave-password"),
-      DBMS_TYPE => options.getProperty("dbms-type"),
-      REPL_EXTRACTOR_USE_RELAY_LOGS => "true",
-      REPL_BACKUP_STORAGE_DIR => options.getPropertyOr("backup-directory", options.getProperty("home-directory") + "/backups")
-    })
+    @config.setProperty(DATASOURCES, {})
+    master_alias = datasource_options.getProperty([DATASOURCES, "master", REPL_DBHOST]).gsub(".", "_") + "_" + datasource_options.getProperty([DATASOURCES, "master", REPL_DBPORT])
+    slave_alias = datasource_options.getProperty([DATASOURCES, "slave", REPL_DBHOST]).gsub(".", "_") + "_" + datasource_options.getProperty([DATASOURCES, "slave", REPL_DBPORT])
+    @config.setProperty([DATASOURCES, master_alias], datasource_options.getProperty([DATASOURCES, "master"]).dup())
+    @config.setProperty([DATASOURCES, slave_alias], datasource_options.getProperty([DATASOURCES, "slave"]).dup())
+    service_options.setProperty(REPL_DATASOURCE, slave_alias)
+    service_options.setProperty(REPL_MASTER_DATASOURCE, master_alias)
     
     @config.setProperty(REPL_SERVICES, {})
-    @config.setProperty([REPL_SERVICES, options.getProperty("service-name")], {
-      DEPLOYMENT_HOST => DIRECT_DEPLOYMENT_HOST_ALIAS,
-      DSNAME => options.getProperty("service-name"),
-      DEPLOYMENT_SERVICE => options.getProperty("service-name"),
-      REPL_ROLE => "direct",
-      REPL_EXTRACTOR_DATASERVER => master_alias,
-      REPL_DATASERVER => slave_alias,
-      REPL_SVC_THL_PORT => options.getProperty("thl-port")
-    })
+    @config.setProperty([REPL_SERVICES, service_options.getProperty(DEPLOYMENT_SERVICE)], 
+      service_options.props.dup
+    )
+    
+    unless Configurator.instance.display_help?()
+      unless datasource_options.getNestedProperty([DATASOURCES, "master", REPL_DBHOST])
+        error("You must specify a value for --master-host")
+      end
+    
+      unless datasource_options.getNestedProperty([DATASOURCES, "slave", REPL_DBHOST])
+        error("You must specify a value for --slave-host")
+      end
+    
+      unless service_options.getProperty(DEPLOYMENT_SERVICE)
+        error("You must specify a value for --service-name")
+      end
+    end
   end
   
   def parse_master_slave_arguments(arguments)
-    options = Properties.new()
-    options.props = {
-      "datasource-port" => "3306",
-      "datasource-user" => Configurator.instance.whoami(),
-      "thl-port" => "2112",
-      "svc-start" => "false",
-      "svc-report" => "false",
-      "home-directory" => Configurator.instance.get_base_path(),
-      "use-relay-logs" => "true"
-    }
-    
     opts = OptionParser.new
-    opts.on("--start")      {options.setProperty("svc-start", "true")}
-    opts.on("--start-and-report")      {
-      options.setProperty("svc-start", "true")
-      options.setProperty("svc-report", "true")
+    
+    host_options = Properties.new()
+    host_options.setProperty(HOST, Configurator.instance.hostname())
+    
+    service_options = Properties.new()
+    service_options.setProperty(DEPLOYMENT_HOST, DIRECT_DEPLOYMENT_HOST_ALIAS)
+    
+    datasource_options = Properties.new()
+    datasource_options.setProperty([DATASOURCES, "ds"], {})
+    
+    cluster_hosts = [Configurator.instance.hostname()]
+    opts.on("--cluster-hosts String") {
+      |val|
+      cluster_hosts = val.split(',')
     }
     
-    opts.on("--disable-relay-logs") {
-      options.setProperty("use-relay-logs", "false")
+    master_host = nil
+    opts.on("--master-host String") {
+      |val|
+      master_host = val
+    }
+    
+    each_host_prompt{
+      |prompt|
+      
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument()}") {
+          host_options.setProperty(prompt.name, av)
+          ConfigurePrompt.add_global_default(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument()} String") {
+          |val|
+          host_options.setProperty(prompt.name, val)
+          ConfigurePrompt.add_global_default(prompt.name, val)
+        }
+      end
     }
     
     {
-      'rmi-port' => REPL_RMI_PORT,
-      'user' => USERID,
-      'buffer-size' => REPL_BUFFER_SIZE,
-      'channels' => REPL_SVC_CHANNELS,
-      'svc-parallelization-type' => REPL_SVC_PARALLELIZATION_TYPE
+      "master-thl-port" => REPL_MASTERPORT
     }.each{
-      |arg, prop_key|
-      opts.on("--#{arg} String") {|val| ConfigurePrompt.add_global_default(prop_key, val)}
+      |arg, key|
+      opts.on("--#{arg} String")  {
+        |val| service_options.setProperty(key, val)
+      }
+    }
+    
+    each_service_prompt{
+      |prompt|
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument()}") {
+          service_options.setProperty(prompt.name, av)
+          ConfigurePrompt.add_global_default(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument()} String") {
+          |val|
+          service_options.setProperty(prompt.name, val)
+          ConfigurePrompt.add_global_default(prompt.name, val)
+        }
+      end
     }
 
-    [
-      "dbms-type",
-      "cluster-hosts",
-      "master-host",
-      "master-thl-port",
-      "home-directory",
-      "datasource-port",
-      "datasource-user",
-      "datasource-password",
-      "datasource-log-directory",
-      "datasource-log-pattern",
-      "master-log-file",
-      "master-log-pos",
-      "datasource-transfer-logs",
-      "thl-directory",
-      "thl-port",
-      "relay-directory",
-      "service-name",
-      "backup-directory"
-    ].each{
-      |prop_key|
-      opts.on("--#{prop_key} String")  {|val| options.setProperty(prop_key, val)}
+    opts.on("--disable-relay-logs") {
+      datasource_options.setProperty([DATASOURCES, "ds", REPL_DISABLE_RELAY_LOGS], "true")
+    }
+    each_datasource_prompt{
+      |prompt|
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument()}") {
+          datasource_options.setProperty(prompt.name, av)
+          ConfigurePrompt.add_global_default(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument()} String") {
+          |val|
+          datasource_options.setProperty([DATASOURCES, "ds", prompt.name], val)
+          ConfigurePrompt.add_global_default(prompt.name, val)
+        }
+      end
     }
     
     remainder = Configurator.instance.run_option_parser(opts, arguments, false, "invalid option for --master-slave")
     
-    options
-  end
-  
-  def process_master_slave_options(options)
-    if options.getProperty("cluster-hosts") == nil
-      error("You must specify cluster-hosts")
-      cluster_hosts = []
-    else
-      cluster_hosts = options.getProperty("cluster-hosts").split(',')
-    end
-    
-    if options.getProperty("master-host") == nil
-      error("You must specify a master-host")
-    end
-    
-    unless cluster_hosts.include?(options.getProperty("master-host"))
-      confirm("The master-host (#{options.getProperty('master-host')}) does not appear in the cluster-hosts (#{options.getProperty('cluster-hosts')}).")
-    end
-    
-    if options.getProperty("service-name") == nil
-      error("You must specify a service-name")
-    end
-    
-    unless is_valid?
-      raise "There are issues with the command options"
-    end
-    
-    if options.getProperty("home-directory") == Configurator.instance.get_base_path()
-      options.setProperty("home-directory", Configurator.instance.get_base_path())
-      options.setProperty("current-release-directory", Configurator.instance.get_base_path())
-    end
-    
-    @config.setProperty(DBMS_TYPE, options.getProperty("dbms-type"))
-    
-    @config.setProperty(HOSTS, nil)
-    @config.setProperty(DATASERVERS, nil)
-    @config.setProperty(REPL_SERVICES, nil)
-    
     cluster_hosts.each{
       |host|
       host_alias = host.tr('.', '_')
-      @config.setProperty([HOSTS, host_alias], {
-        SVC_REPORT => options.getProperty('svc-report'),
-        HOST => host,
-        HOME_DIRECTORY => options.getProperty("home-directory"),
-        CURRENT_RELEASE_DIRECTORY => options.getProperty("current-release-directory"),
-        REPL_LOG_DIR => options.getProperty("thl-directory"),
-        REPL_RELAY_LOG_DIR => options.getProperty("relay-directory")
-      })
+      @config.setProperty([HOSTS, host_alias], host_options.props.dup)
+      @config.setProperty([HOSTS, host_alias, HOST], host)
       
-      @config.setProperty([DATASERVERS, host_alias], {
-        REPL_DBHOST => host,
-        REPL_DBPORT => options.getProperty("datasource-port"),
-        REPL_DBLOGIN => options.getProperty("datasource-user"),
-        REPL_DBPASSWORD => options.getProperty("datasource-password"),
-        DBMS_TYPE => options.getProperty("dbms-type"),
-        REPL_MYSQL_BINLOGDIR => options.getProperty("datasource-log-directory"),
-        REPL_MYSQL_BINLOGPATTERN => options.getProperty("datasource-log-pattern"),
-        REPL_EXTRACTOR_USE_RELAY_LOGS => options.getProperty("use-relay-logs"),
-        REPL_BACKUP_STORAGE_DIR => options.getPropertyOr("backup-directory", options.getProperty("home-directory") + "/backups")
-      })
+      datasource_alias = host_alias
+      @config.setProperty([DATASOURCES, datasource_alias],
+        datasource_options.getProperty([DATASOURCES, "ds"]).dup)
+      @config.setProperty([DATASOURCES, datasource_alias, REPL_DBHOST], host)
       
-      service_alias = options.getProperty("service-name") + "_" + host_alias
-      @config.setProperty([REPL_SERVICES, service_alias], {
-        REPL_SVC_START => options.getProperty('svc-start'),
-        DEPLOYMENT_HOST => host_alias,
-        DSNAME => options.getProperty("service-name"),
-        DEPLOYMENT_SERVICE => options.getProperty("service-name"),
-        REPL_DATASERVER => host_alias,
-        REPL_SVC_THL_PORT => options.getProperty("thl-port"),
-      })
+      service_alias = service_options.getProperty(DEPLOYMENT_SERVICE) + "_" + host_alias
+      @config.setProperty([REPL_SERVICES, service_alias], service_options.props.dup)
+      @config.setProperty([REPL_SERVICES, service_alias, DEPLOYMENT_HOST],
+        host_alias)
+      @config.setProperty([REPL_SERVICES, service_alias, REPL_DATASOURCE],
+        datasource_alias)
       
-      if host == options.getProperty("master-host")
-        if options.getPropertyOr("master-thl-port", options.getProperty("thl-port")) == options.getProperty("thl-port")
-          @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "master")
-        else
-          @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "slave")
-        end
+      if host == master_host &&
+          (@config.getProperty([REPL_SERVICES, service_alias, REPL_MASTERPORT]) == 
+          @config.getProperty([REPL_SERVICES, service_alias, REPL_SVC_THL_PORT]))
+        @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "master")
       else
         @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "slave")
-      end
-      
-      if @config.getProperty([REPL_SERVICES, service_alias, REPL_ROLE]) == "slave"
-        @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], options.getProperty("master-host"))
-        @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERPORT], options.getPropertyOr("master-thl-port", options.getProperty("thl-port")))
+        @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], master_host)
       end
     }
-  end
-  
-  def post_prompt_handler_run
-    Configurator.instance.save_prompts()
+    
+    unless Configurator.instance.display_help?()
+      if master_host == nil
+        error("You must specify a value for --master-host")
+      end
+    
+      unless cluster_hosts.include?(master_host)
+        confirm("The master-host (#{master_host}) does not appear in the cluster-hosts (#{cluster_hosts.join(', ')}).")
+      end
+    
+      if service_options.getProperty(DEPLOYMENT_SERVICE) == nil
+        error("You must specify a value for --service-name")
+      end
+    end
   end
   
   def output_usage()
+    ph = ConfigurePromptHandler.new(@config)
     puts "Usage: tungsten-installer [general-options] {--direct|--master-slave} [--help-direct|--help-master-slave|--help-all] [install-options]"
     output_general_usage()
-
+    
     if @display_direct_help
       Configurator.instance.write_divider(Logger::ERROR)
       puts "Install options: --direct"
-      output_usage_line("--dbms-type (mysql|postgresql)", "", "mysql")
-      output_usage_line("--home-directory", "Specify this if you would like Tungsten to be installed to a different directory")
-      output_usage_line("--master-alias")
-      output_usage_line("--master-host")
-      output_usage_line("--master-port", "", "3306")
-      output_usage_line("--master-user", "", Configurator.instance.whoami())
-      output_usage_line("--master-password")
-      output_usage_line("--disable-relay-logs", "Force the replicator to tail the binary log files.  This will reduce performance.")
-      output_usage_line("--master-log-directory", "", "/var/lib/mysql")
-      output_usage_line("--master-log-pattern", "", "mysql-bin")
-      output_usage_line("--native-slave-takeover", "Start replication from the current slave position")
-      output_usage_line("--slave-alias")
-      output_usage_line("--slave-host", "", Configurator.instance.hostname())
-      output_usage_line("--slave-port", "", "3306")
-      output_usage_line("--slave-user", "", Configurator.instance.whoami())
-      output_usage_line("--slave-password")
-      output_usage_line("--thl-directory", "", Configurator.instance.get_base_path() + "/thl")
-      output_usage_line("--thl-port", "", "2112")
-      output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
-      output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
-      output_usage_line("--channels", "Number of channels for parallel apply", "1")
-      output_usage_line("--svc-parallelization-type (disk|memory)", "Method for storing parallel queues", "memory")
-      output_usage_line("--rmi-port", "", "10000")
-      output_usage_line("--backup-directory", "Storage directory for database backup files", Configurator.instance.get_base_path() + "/backups")
-      output_usage_line("--service-name")
-      output_usage_line("--start", "Start the replicator after configuration")
-      output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
+      each_host_prompt{
+        |prompt|
+        prompt.output_usage()
+      }
+      
+      output_usage_line("--disable-relay-logs", "Disable the use of relay-logs?")
+      each_master_datasource_prompt{
+        |prompt|
+        output_usage_line("--#{prompt.get_command_line_argument()}".gsub("datasource", "master"), prompt.get_prompt(), prompt.get_value(true, true), nil, prompt.get_prompt_description())
+      }
+      
+      each_slave_datasource_prompt{
+        |prompt|
+        output_usage_line("--#{prompt.get_command_line_argument()}".gsub("datasource", "slave"), prompt.get_prompt(), prompt.get_value(true, true), nil, prompt.get_prompt_description())
+      }
+      
+      each_service_prompt{
+        |prompt|
+        prompt.output_usage()
+      }
     end
     
     if @display_ms_help
       Configurator.instance.write_divider(Logger::ERROR)
       puts "Install options: --master-slave"
-      output_usage_line("--dbms-type (mysql|postgresql)", "", "mysql")
       output_usage_line("--cluster-hosts")
-      output_usage_line("--master-host")
-      output_usage_line("--user")
-      output_usage_line("--home-directory", "Specify this if you would like Tungsten to be installed to a different directory")
-      output_usage_line("--datasource-port", "", "3306")
-      output_usage_line("--datasource-user", "", Configurator.instance.whoami())
-      output_usage_line("--datasource-password")
-      output_usage_line("--disable-relay-logs", "Force the replicator to tail the binary log files.  This will reduce performance.")
-      output_usage_line("--datasource-log-directory", "", "/var/lib/mysql")
-      output_usage_line("--datasource-log-pattern", "", "mysql-bin")
+      
+      prompt = ph.find_prompt(ReplicationServiceTHLMaster)
+      output_usage_line("--master-host", prompt.get_prompt(), prompt.get_value(true, true), nil, prompt.get_prompt_description())
+      
+      each_host_prompt{
+        |prompt|
+        prompt.output_usage()
+      }
+      
+      output_usage_line("--disable-relay-logs", "Disable the use of relay-logs?")
+      each_datasource_prompt{
+        |prompt|
+        prompt.output_usage()
+      }
+      
       output_usage_line("--master-log-file", "PENDING")
       output_usage_line("--master-log-pos", "PENDING")
-      output_usage_line("--datasource-transfer-logs")
-      output_usage_line("--thl-directory", "", Configurator.instance.get_base_path() + "/thl")
-      output_usage_line("--thl-port", "", "2112")
-      output_usage_line("--relay-directory", "", Configurator.instance.get_base_path() + "/relay")
-      output_usage_line("--buffer-size", "Size of buffers for block commit and queues", "10")
-      output_usage_line("--channels", "Number of channels for parallel apply", "1")
-      output_usage_line("--svc-parallelization-type (disk|memory)", "Method for implementing parallel queues", "memory")
-      output_usage_line("--rmi-port", "", "10000")
-      output_usage_line("--backup-directory", "Storage directory for database backup files", Configurator.instance.get_base_path() + "/backups")
-      output_usage_line("--service-name")
-      output_usage_line("--start", "Start the replicator after configuration")
-      output_usage_line("--start-and-report", "Start the replicator and report out the services list after configuration")
+      prompt = ph.find_prompt(ReplicationServiceTHLMasterPort)
+      prompt.output_usage()
+      
+      each_service_prompt{
+        |prompt|
+        prompt.output_usage()
+      }
     end
   end
   
-  def store_config_file?
-    false
+  def each_host_prompt(&block)
+    ch = ClusterHosts.new()
+    ch.set_config(@config)
+    
+    ch.each_prompt{
+      |prompt|
+      
+      if prompt.enabled_for_command_line?()
+        begin
+          block.call(prompt)
+        rescue => e
+          error(e.message)
+        end
+      end
+    }
+  end
+  
+  def each_service_prompt(&block)
+    ch = ReplicationServices.new()
+    ch.set_config(@config)
+    
+    ch.each_prompt{
+      |prompt|
+      
+      if prompt.enabled_for_command_line?()
+        begin
+          block.call(prompt)
+        rescue => e
+          error(e.message)
+        end
+      end
+    }
+  end
+  
+  def each_datasource_prompt(&block)
+    ch = Datasources.new()
+    ch.set_config(@config)
+    
+    ch.each_prompt{
+      |prompt|
+      
+      case prompt.class.name
+      when "DatasourceDBHost"
+        next
+      else
+        if prompt.enabled_for_command_line?()
+          begin
+            block.call(prompt)
+          rescue => e
+            error(e.message)
+          end
+        end
+      end
+    }
+  end
+  
+  def each_master_datasource_prompt(&block)
+    ch = Datasources.new()
+    ch.set_config(@config)
+    
+    ch.each_prompt{
+      |prompt|
+      
+      if prompt.enabled_for_command_line?()
+        begin
+          block.call(prompt)
+        rescue => e
+          error(e.message)
+        end
+      end
+    }
+  end
+  
+  def each_slave_datasource_prompt(&block)
+    ch = Datasources.new()
+    ch.set_config(@config)
+    
+    ch.each_prompt{
+      |prompt|
+      
+      case prompt.class.name
+      when "DatasourceMasterLogDirectory", "DatasourceMasterLogPattern"
+        next
+      else
+        if prompt.enabled_for_command_line?()
+          begin
+            block.call(prompt)
+          rescue => e
+            error(e.message)
+          end
+        end
+      end
+    }
+  end
+end
+
+module NotTungstenInstallerPrompt
+  def enabled_for_command_line?
+    unless Configurator.instance.package.is_a?(ReplicatorInstallPackage)
+      super() && true
+    else
+      false
+    end
   end
 end

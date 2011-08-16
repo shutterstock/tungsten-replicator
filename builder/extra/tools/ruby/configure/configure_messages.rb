@@ -50,7 +50,7 @@ module ConfigureMessages
   
   def error(message, e = nil)
     Configurator.instance.error(message, get_message_hostname())
-    
+
     store_error_object(message, e || build_error_object(message))
   end
 

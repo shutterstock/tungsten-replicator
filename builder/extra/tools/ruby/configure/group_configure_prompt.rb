@@ -9,7 +9,7 @@ class GroupConfigurePrompt
   include ConfigurePromptInterface
   attr_accessor :name, :singular, :plural
   
-  def initialize(name, prompt, singular, plural)
+  def initialize(name, prompt, singular, plural, template_prefix)
     @group_prompts = []
     @name = name.to_s()
     @prompt = prompt.to_s()
@@ -17,6 +17,7 @@ class GroupConfigurePrompt
     @weight = 0
     @singular = singular.to_s().downcase()
     @plural = plural.to_s().downcase()
+    @template_prefix = template_prefix
     
     @prompt_pairs = nil
     @previous_prompts = []
@@ -198,6 +199,7 @@ class GroupConfigurePrompt
   def is_valid?
     each_member_prompt{
       |member, prompt|
+      
       prompt.is_valid?()
     }
     
@@ -228,20 +230,20 @@ class GroupConfigurePrompt
   end
 
   # Add a single prompt to this group
-  def add_prompt(new_prompt)
-    unless new_prompt.is_a?(ConfigurePrompt)
-      raise "Unable to add #{new_prompt.class().name()}:#{new_prompt.get_name()} because it does not extend ConfigurePrompt"
+  def add_prompt(prompt)
+    unless prompt.is_a?(ConfigurePrompt)
+      raise "Unable to add #{prompt.class().name()}:#{prompt.get_name()} because it does not extend ConfigurePrompt"
     end
     
-    unless new_prompt.is_a?(GroupConfigurePromptMember)
-      new_prompt.extend(GroupConfigurePromptMember)
-    end
-    
-    new_prompt = prepare_prompt(new_prompt)
-    @group_prompts << new_prompt
+    prompt = prepare_prompt(prompt)
+    @group_prompts << prompt
   end
   
   def prepare_prompt(prompt)
+    unless prompt.is_a?(GroupConfigurePromptMember)
+      prompt.extend(GroupConfigurePromptMember)
+    end
+    
     prompt.set_group(self)
     
     if @config != nil
@@ -287,6 +289,7 @@ class GroupConfigurePrompt
       
       block.call(prompt)
     }
+    
     self
   end
   
@@ -299,7 +302,6 @@ class GroupConfigurePrompt
       |member|
       each_prompt{
         |prompt|
-        
         begin
           prompt.set_member(member)
           block.call(member, prompt)
@@ -311,7 +313,10 @@ class GroupConfigurePrompt
           rescue
             val = ""
           end
-          errors << ConfigurePromptError.new(prompt.dup(), e.message, val)
+          
+          dup_prompt = prompt.dup()
+          prepare_prompt(dup_prompt)
+          errors << ConfigurePromptError.new(dup_prompt, e.message, val)
         end
       }
     }
@@ -331,12 +336,93 @@ class GroupConfigurePrompt
       p.output_config_file_usage()
     }
   end
+  
+  def output_template_file_usage
+    puts ""
+    output_usage_line(@template_prefix)
+    each_prompt{
+      |p|
+      if p.enabled_for_template_file?()
+        p.output_template_file_usage()
+      end
+    }
+  end
+  
+  def get_property(attrs)
+    if attrs[0] != @name
+      raise IgnoreError
+    end
+    
+    if attrs.size == 1
+      return @config.getNestedProperty(attrs)
+    end
+    
+    if attrs.size == 2
+      return @config.getNestedProperty(attrs)
+    end
+    
+    each_prompt{
+      |prompt|
+      
+      begin
+        prompt.set_member(attrs[1])
+        value = prompt.get_property(attrs.slice(2, attrs.length))
+        
+        return value
+      rescue IgnoreError
+        #Do Nothing
+      end
+    }
+    
+    raise IgnoreError
+  end
+  
+  def get_config_file_property(attrs, transform_values_method)
+    if attrs[0] != @name
+      raise IgnoreError
+    end
+    
+    if attrs.size == 1
+      return @config.getNestedProperty(attrs)
+    end
+    
+    if attrs.size == 2
+      return @config.getNestedProperty(attrs)
+    end
+    
+    each_prompt{
+      |prompt|
+      
+      begin
+        prompt.set_member(attrs[1])
+        value = prompt.get_config_file_property(attrs.slice(2, attrs.length), transform_values_method)
+        
+        return value
+      rescue IgnoreError
+        #Do Nothing
+      end
+    }
+    
+    raise IgnoreError
+  end
+  
+  def update_deprecated_keys()
+    each_member_prompt{
+      |member, prompt|
+      
+      prompt.update_deprecated_keys()
+    }
+  end
 end
 
 module GroupConfigurePromptMember
   # Assign the parent group to this prompt
   def set_group(val)
     @parent_group = val
+  end
+  
+  def get_group
+    @parent_group
   end
   
   # Assign the current member for this prompt
@@ -379,9 +465,9 @@ module GroupConfigurePromptMember
   
   # Get the value for this member-property pair from the current config 
   # or the default value if none is found
-  def get_value(allow_default = true)
+  def get_value(allow_default = true, allow_disabled = false)
     value = @config.getProperty(get_name())
-    if value == nil && allow_default
+    if value == nil && allow_default && (enabled_for_config?() || allow_disabled)
       global_default = ConfigurePrompt.get_global_default(@name)
       
       if global_default == nil
@@ -400,7 +486,7 @@ module GroupConfigurePromptMember
   
   # Does this prompt support a group-wide default value to be specified
   def allow_group_default
-    false
+    true
   end
   
   # Build the help filename based on the basic config key
@@ -413,8 +499,12 @@ module GroupConfigurePromptMember
     "#{get_interface_text_directory()}/prompt_#{@name}"
   end
   
-  def output_config_file_usage
-    output_usage_line("  ." + @name, get_prompt(), get_default_value())
+  def get_config_file_usage_symbol
+    "  ." + @name
+  end
+  
+  def get_template_file_usage_symbol
+    "  ." + Configurator.instance.get_constant_symbol(@name)
   end
 end
 
@@ -442,7 +532,7 @@ class DeleteGroupMemberPrompt < TemporaryPrompt
     super() && @config.getProperty([@parent_group.name, get_member()]) != nil
   end
   
-  def get_value
+  def get_value(allow_default = true, allow_disabled = false)
     "no"
   end
 end

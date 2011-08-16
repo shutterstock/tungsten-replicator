@@ -26,7 +26,7 @@ module ConfigureDeploymentStepServices
       write_stopall()
     end
     
-    if @config.getProperty(SVC_START) == "true"
+    if @config.getProperty(SVC_REPORT) == "true" || @config.getProperty(SVC_START) == "true"
       @services.each {
         |svc| 
         unless svc_is_running?("#{get_deployment_basedir()}/#{svc}")

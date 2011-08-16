@@ -128,23 +128,12 @@ module ConfigureDeploymentStepDeployment
     end
     debug("Write #{config_file}")
 
-    host_config = @stored_config.dup()
-    host_config.setProperty(DEPLOYMENT_TYPE, DISTRIBUTED_DEPLOYMENT_NAME)
+    host_config = @config.dup()
+    host_config.setProperty(DEPLOYMENT_TYPE, nil)
     host_config.setProperty(GLOBAL_DEPLOY_PACKAGE_URI, nil)
     host_config.setProperty(DEPLOY_PACKAGE_URI, nil)
-    host_config.setProperty(DEPLOY_CURRENT_PACKAGE, "true")
+    host_config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
     
-    host_config.getPropertyOr(REPL_SERVICES, {}).delete_if{
-      |s_alias, s_props|
-      
-      (host_config.getProperty([REPL_SERVICES, s_alias, DEPLOYMENT_HOST]) != host_config.getProperty(DEPLOYMENT_HOST))
-    }
-    
-    host_config.getPropertyOr(HOSTS, {}).delete_if{
-      |h_alias, h_props|
-      
-      (h_alias != host_config.getProperty(DEPLOYMENT_HOST))
-    }
     host_config.store(config_file)
   end
 end

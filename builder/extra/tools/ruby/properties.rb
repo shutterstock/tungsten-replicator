@@ -16,11 +16,16 @@ class Properties
   # Initialize with some base values. 
   def initialize
     @props = {}
+    @in_prompt_handler = {}
+    @in_config_file_prompt_handler = {}
+    @prompt_handler = nil
   end
   
   def initialize_copy(source)
     super(source)
     @props = Marshal::load(Marshal::dump(@props))
+    @in_prompt_handler = {}
+    @prompt_handler = nil
   end
   
   # Read properties from a file. 
@@ -67,6 +72,14 @@ class Properties
         end
         
         @props = new_props
+      end
+      
+      original_props = @props.dup
+      
+      getPromptHandler.update_deprecated_keys()
+      
+      if original_props != @props
+        Configurator.instance.warning("Deprecated keys in the config file were updated")
       end
     end
   end
@@ -131,7 +144,7 @@ class Properties
   end
   
   # Fetch a nested hash value
-  def getNestedProperty(*attrs)
+  def getNestedProperty(attrs)
     attr_count = attrs.size
     current_val = @props
     for i in 0..(attr_count-1)
@@ -144,7 +157,7 @@ class Properties
     return nil
   end
   
-  def setNestedProperty(new_val, *attrs)
+  def setNestedProperty(new_val, attrs)
     attr_count = attrs.size
     current_val = @props
     for i in 0..(attr_count-1)
@@ -173,17 +186,93 @@ class Properties
   end
   
   # Get a property value. 
-  def getProperty(key) 
+  def getProperty(key)
     if key.is_a?(String)
       key = key.split('.')
     end
     
-    getNestedProperty(*key)
+    findProperty = lambda do |keys|
+      key_string = keys.join('.')
+      if @in_prompt_handler[key_string] == true
+        return nil
+      end
+
+      begin
+        @in_prompt_handler[key_string] = true
+
+        value = getPromptHandler().get_property(keys)
+
+        @in_prompt_handler[key_string] = false
+      rescue IgnoreError
+        @in_prompt_handler[key_string] = false
+      rescue => e
+        @in_prompt_handler[key_string] = false
+        raise e
+      end
+
+      return value
+    end
+    
+    value = getNestedProperty(key)
+    if value == nil
+      value = findProperty.call(key)
+    end
+    
+    if value == nil && key.size == 1 && (host = getNestedProperty([DEPLOYMENT_HOST]))
+      value = findProperty.call([HOSTS, host, key[0]])
+    end
+    
+    if value == nil && key.size == 1 && (svc = getNestedProperty([DEPLOYMENT_SERVICE]))
+      value = findProperty.call([REPL_SERVICES, svc, key[0]])
+    end
+    
+    value
+  end
+  
+  # Get the config file value for a property. 
+  def getConfigFileProperty(key, transform_values_method)
+    if key.is_a?(String)
+      key = key.split('.')
+    end
+    
+    findProperty = lambda do |keys|
+      key_string = keys.join('.')
+      if @in_config_file_prompt_handler[key_string] == true
+        return nil
+      end
+
+      begin
+        @in_config_file_prompt_handler[key_string] = true
+
+        value = getPromptHandler().get_config_file_property(keys, transform_values_method)
+
+        @in_config_file_prompt_handler[key_string] = false
+      rescue IgnoreError
+        @in_config_file_prompt_handler[key_string] = false
+      rescue => e
+        @in_config_file_prompt_handler[key_string] = false
+        raise e
+      end
+
+      return value
+    end
+    
+    value = findProperty.call(key)
+    
+    if value == nil && key.size == 1 && (host = getNestedProperty([DEPLOYMENT_HOST]))
+      value = findProperty.call([HOSTS, host, key[0]])
+    end
+    
+    if value == nil && key.size == 1 && (svc = getNestedProperty([DEPLOYMENT_SERVICE]))
+      value = findProperty.call([REPL_SERVICES, svc, key[0]])
+    end
+    
+    value
   end
   
   # Get the property value or return the default if nil
   def getPropertyOr(key, default = "")
-    value = getNestedProperty(*key)
+    value = getProperty(key)
     if value == nil
       default
     else
@@ -197,7 +286,7 @@ class Properties
       key = key.split('.')
     end
     
-    setNestedProperty(value, *key)
+    setNestedProperty(value, key)
   end 
   
   # Set the property to a value only if it is currently unset. 
@@ -206,8 +295,8 @@ class Properties
       key = key.split('.')
     end
     
-    if getNestedProperty(*key) == nil
-      setNestedProperty(value, *key)
+    if getNestedProperty(key) == nil
+      setNestedProperty(value, key)
     end
   end
   
@@ -226,5 +315,13 @@ class Properties
   # Get the underlying hash table. 
   def hash()
     @props
+  end
+  
+  def getPromptHandler
+    unless @prompt_handler
+      @prompt_handler = ConfigurePromptHandler.new(self)
+    end
+    
+    @prompt_handler
   end
 end

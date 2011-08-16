@@ -101,7 +101,6 @@ class ConfigurePromptHandler
             # Clear the config value because the prompt is disabled
             @prompts[i].save_disabled_value()
           else
-            # Save the default value into the config
             @prompts[i].save_current_value()
           end
           
@@ -147,11 +146,6 @@ class ConfigurePromptHandler
     prompts.each{
       |prompt|
       begin
-        if prompt.enabled_for_config?()
-          prompt.save_current_value()
-        else
-          prompt.save_disabled_value()
-        end
         prompt_keys = prompt_keys + prompt.get_keys()
         prompt.is_valid?()
       rescue ConfigurePromptError => cpe
@@ -205,9 +199,13 @@ class ConfigurePromptHandler
     @errors.each{
       |error|
       Configurator.instance.write_divider(Logger::ERROR)
-      Configurator.instance.error error.prompt.get_prompt()
+      Configurator.instance.error error.prompt.get_display_prompt()
       Configurator.instance.error "> Message: #{error.message}"
-      Configurator.instance.error "> Config Key: #{error.prompt.get_name()}"
+      
+      arg = error.prompt.get_command_line_argument
+      if arg.to_s != ""
+        Configurator.instance.error "> Argument: --#{arg}"
+      end
       
       if error.current_value.to_s() != ""
         Configurator.instance.error "> Current Value: #{error.current_value}"
@@ -233,6 +231,88 @@ class ConfigurePromptHandler
     @prompts.each{
       |prompt|
       prompt.output_config_file_usage()
+    }
+  end
+  
+  def output_template_file_usage
+    @prompts.each{
+      |prompt|
+      if prompt.enabled_for_template_file?()
+        prompt.output_template_file_usage()
+      end
+    }
+  end
+  
+  def find_prompt(klass)
+    each_prompt{
+      |prompt|
+      if prompt.is_a?(klass)
+        return prompt
+      end
+    }
+    
+    nil
+  end
+  
+  def get_property(attrs)
+    @prompts.each{
+      |prompt|
+      
+      begin
+        return prompt.get_property(attrs)
+      rescue IgnoreError
+        #Do Nothing
+      end
+    }
+    
+    @non_interactive_prompts.each{
+      |prompt|
+      
+      begin
+        return prompt.get_property(attrs)
+      rescue IgnoreError
+        #Do Nothing
+      end
+    }
+    
+    nil
+  end
+  
+  def get_config_file_property(attrs, transform_values_method)
+    @prompts.each{
+      |prompt|
+      
+      begin
+        return prompt.get_config_file_property(attrs, transform_values_method)
+      rescue IgnoreError
+        #Do Nothing
+      end
+    }
+    
+    @non_interactive_prompts.each{
+      |prompt|
+      
+      begin
+        return prompt.get_config_file_property(attrs, transform_values_method)
+      rescue IgnoreError
+        #Do Nothing
+      end
+    }
+    
+    nil
+  end
+  
+  def update_deprecated_keys()
+    @prompts.each{
+      |prompt|
+      
+      prompt.update_deprecated_keys()
+    }
+    
+    @non_interactive_prompts.each{
+      |prompt|
+      
+      prompt.update_deprecated_keys()
     }
   end
 end

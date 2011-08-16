@@ -22,65 +22,16 @@ class ConfigureDeployment
   def expand_deployment_configuration(deployment_config)
     config = deployment_config.dup()
     
-    config.props = config.props.merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+    config.getPropertyOr(REPL_SERVICES, {}).delete_if{
+      |s_alias, s_props|
+      
+      (config.getProperty([REPL_SERVICES, s_alias, DEPLOYMENT_HOST]) != config.getProperty(DEPLOYMENT_HOST))
+    }
     
-    config.getPropertyOr(REPL_SERVICES, {}).each{
-      |service_alias,service_properties|
-      datasource = service_properties[REPL_DATASERVER]
+    config.getPropertyOr(HOSTS, {}).delete_if{
+      |h_alias, h_props|
       
-      unless config.getProperty([REPL_SERVICES, service_alias, DEPLOYMENT_HOST]) == config.getProperty(DEPLOYMENT_HOST)
-        config.setProperty([REPL_SERVICES, service_alias], nil)
-        next
-      end
-      
-      config.setDefault([REPL_SERVICES, service_alias, REPL_SVC_CONFIG_FILE], 
-        "#{config.getProperty(CURRENT_RELEASE_DIRECTORY)}/tungsten-replicator/conf/static-#{service_properties[DEPLOYMENT_SERVICE]}.properties")
-      
-      case config.getProperty([REPL_SERVICES, service_alias, REPL_ROLE])
-      when REPL_ROLE_M
-        config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], config.getProperty(HOST))
-      when REPL_ROLE_DI
-        direct_datasource = config.getProperty([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DATASERVER])
-        
-        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_USE_RELAY_LOGS], config.getProperty([DATASERVERS, direct_datasource, REPL_EXTRACTOR_USE_RELAY_LOGS]))
-        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBHOST], config.getProperty([DATASERVERS, direct_datasource, REPL_DBHOST]))
-        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBPORT], config.getProperty([DATASERVERS, direct_datasource, REPL_DBPORT]))
-        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBLOGIN], config.getProperty([DATASERVERS, direct_datasource, REPL_DBLOGIN]))
-        config.setDefault([REPL_SERVICES, service_alias, REPL_EXTRACTOR_DBPASSWORD], config.getProperty([DATASERVERS, direct_datasource, REPL_DBPASSWORD]))
-        config.setDefault([REPL_SERVICES, service_alias, REPL_MYSQL_BINLOGPATTERN], config.getProperty([DATASERVERS, direct_datasource, REPL_MYSQL_BINLOGPATTERN]))
-        config.setDefault([REPL_SERVICES, service_alias, REPL_MYSQL_BINLOGDIR], config.getProperty([DATASERVERS, direct_datasource, REPL_MYSQL_BINLOGDIR]))
-        
-        if config.getProperty([DATASERVERS, direct_datasource, REPL_DBHOST]) != config.getProperty([DATASERVERS, datasource, REPL_DBHOST])
-          config.setProperty([REPL_SERVICES, service_alias, REPL_EXTRACTOR_USE_RELAY_LOGS], "true")
-        end
-      end
-      
-      config.getPropertyOr([DATASERVERS, datasource], {}).each{
-        |key,value|
-        
-        if value.is_a?(Hash)
-          next
-        end
-        
-        config.setDefault([REPL_SERVICES, service_alias, key], value)
-      }
-      
-      config.getPropertyOr([HOSTS, service_properties[DEPLOYMENT_HOST]], {}).each{
-        |key,value|
-        
-        if value.is_a?(Hash)
-          next
-        end
-        
-        case key
-        when REPL_LOG_DIR
-          config.setDefault([REPL_SERVICES, service_alias, key], "#{value}/#{service_properties[DEPLOYMENT_SERVICE]}")
-        when REPL_RELAY_LOG_DIR
-          config.setDefault([REPL_SERVICES, service_alias, key], "#{value}/#{service_properties[DEPLOYMENT_SERVICE]}")
-        else
-          config.setDefault([REPL_SERVICES, service_alias, key], value)
-        end
-      }
+      (h_alias != config.getProperty(DEPLOYMENT_HOST))
     }
     
     config
@@ -122,7 +73,7 @@ class ConfigureDeployment
     # Get an object that represents the deployment steps required by the config
     obj = Class.new{
       include ConfigureDeploymentCore
-    }.new(expanded_config, deployment_config)
+    }.new(expanded_config)
 
     deployment_methods = []
     get_deployment_object_modules(expanded_config).each{
@@ -178,10 +129,6 @@ class ConfigureDeployment
   
   def include_deployment_for_package?(package)
     false
-  end
-  
-  def get_default_config_filename
-    Configurator.instance().get_base_path() + "/" + Configurator::CLUSTER_CONFIG
   end
   
   def require_package_uri

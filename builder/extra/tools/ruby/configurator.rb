@@ -20,6 +20,7 @@ system_require 'uri'
 system_require 'resolv'
 system_require 'ifconfig'
 system_require 'pp'
+system_require 'cgi'
 
 # This isn't required, but it makes the output update more often with SSH results
 begin
@@ -46,11 +47,9 @@ system_require 'configure/configure_validation_check'
 system_require 'configure/group_validation_check'
 system_require 'configure/configure_deployment_handler'
 system_require 'configure/configure_deployment'
+system_require 'configure/database_platform'
 
 DEFAULTS = "__defaults__"
-
-DBMS_MYSQL = "mysql"
-DBMS_POSTGRESQL = "postgresql"
 
 # Define operating system names.
 OS_LINUX = "linux"
@@ -66,8 +65,15 @@ OS_ARCH_32 = "32-bit"
 OS_ARCH_64 = "64-bit"
 OS_ARCH_UNKNOWN = "unknown"
 
+REPL_ROLE_M = "master"
+REPL_ROLE_S = "slave"
+REPL_ROLE_DI = "direct"
+
 DISTRIBUTED_DEPLOYMENT_NAME = "regular"
 DIRECT_DEPLOYMENT_HOST_ALIAS = "local"
+
+class IgnoreError < StandardError
+end
 
 Dir[File.dirname(__FILE__) + '/configure/packages/*.rb'].sort().each do |file| 
   require File.dirname(file) + '/' + File.basename(file, File.extname(file))
@@ -79,7 +85,10 @@ Dir[File.dirname(__FILE__) + '/configure/deployments/*.rb'].sort().each do |file
   require File.dirname(file) + '/' + File.basename(file, File.extname(file))
 end
 Dir[File.dirname(__FILE__) + '/configure/dbms_types/*.rb'].sort().each do |file| 
-  require File.dirname(file) + '/' + File.basename(file, File.extname(file))
+  begin
+    require File.dirname(file) + '/' + File.basename(file, File.extname(file))
+  rescue IgnoreError
+  end
 end
 
 # Manages top-level configuration.
@@ -112,10 +121,13 @@ class Configurator
     @options = OpenStruct.new
     @options.output_threshold = Logger::INFO
     @options.force = false
-    @options.interactive = true
+    @options.batch = false
+    @options.interactive = false
     @options.advanced = false
     @options.stream_output = false
     @options.display_help = false
+    @options.display_config_file_help = false
+    @options.display_template_file_help = false
     @options.validate_only = false
 
     if is_full_tungsten_package?()
@@ -123,12 +135,9 @@ class Configurator
     else
       configs_path = false
     end
+    
     # Check for the tungsten.cfg in the unified configs directory
-    if configs_path && File.exist?("#{configs_path}/#{CLUSTER_CONFIG}")
-      @options.config = "#{configs_path}/#{CLUSTER_CONFIG}"
-    else
-      @options.config = "#{get_base_path()}/#{CLUSTER_CONFIG}"
-    end
+    @options.config = "#{get_base_path()}/#{CLUSTER_CONFIG}"
     
     if is_full_tungsten_package?() && !File.exist?(@options.config)
       if configs_path && File.exist?("#{configs_path}/#{HOST_CONFIG}")
@@ -390,11 +399,14 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     }
     
     opts.on("-a", "--advanced")       {|val| @options.advanced = true}
-    opts.on("-b", "--batch")          {|val| @options.interactive = false}
+    opts.on("-b", "--batch")          {|val| @options.batch = true }
     opts.on("-c", "--config String")  {|val| @options.config = val }
     opts.on("--config-file-help")          {
-      @options.display_help = true
-      @options.display_config_file_help = true }
+      @options.display_config_file_help = true
+    }
+    opts.on("--template-file-help")          {
+      @options.display_template_file_help = true
+    }
     opts.on("-f", "--force")          {@options.force = true}
     opts.on("-h", "--help")           {|val| @options.display_help = true }
     opts.on("-i", "--interactive")    {|val| @options.interactive = true}
@@ -424,6 +436,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("--stream")               {@options.stream_output = true }
 
     remainder = run_option_parser(opts, arguments)
+    
+    if is_batch?()
+      @package = ConfigurePackageCluster.new(@config)
+    end
 
     unless arguments_valid?()
       unless display_help?()
@@ -432,22 +448,34 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     if include_package
-      begin
-        unless @package.parsed_options?(remainder)
+      if is_batch?()
+        warning('Running in batch mode will disable the install options')
+      else
+        begin
+          unless @package.parsed_options?(remainder)
+            error("There was a problem parsing the arguments")
+            exit 1
+          end
+        rescue => e
+          error(e.to_s())
           exit 1
         end
-      rescue => e
-        error(e.to_s())
-        exit 1
       end
     end
     
     if display_help?()
-      output_help
+      unless display_config_file_help?() || display_template_file_help?()
+        output_help
+      end
       
       if display_config_file_help?()
         write_header('Config File Options')
         display_config_file_help()
+      end
+      
+      if display_template_file_help?()
+        write_header('Template File Options')
+        display_template_file_help()
       end
       
       exit 0
@@ -458,7 +486,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
 
   # True if required arguments were provided
   def arguments_valid?
-    if @options.interactive
+    if is_interactive?()
       # For interactive mode, must be able to write the config file.
       if File.exist?(@options.config)
         if ! File.writable?(@options.config)
@@ -471,7 +499,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
           return false
         end
       end
-    else
+    elsif @package.read_config_file?
       # For batch mode, options file must be readable.
       if ! File.readable?(@options.config) && File.exist?(@options.config)
         write "Config file is not readable: #{@options.config}", Logger::ERROR
@@ -480,8 +508,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     # Load the current configuration values
-    if File.exist?(@options.config)
-      @config.load(@options.config)
+    if @package.read_config_file?
+      if File.exist?(@options.config)
+        @config.load(@options.config)
+      end
     end
     
     true
@@ -528,8 +558,8 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     remaining_arguments
   end
   
-  def save_prompts(force = false)
-    if @package.store_config_file? || force
+  def save_prompts()
+    if @options.config && @package.store_config_file?
       temp = @package.prepare_saved_config(@config)
       temp.store(@options.config)
     end
@@ -558,12 +588,17 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     prompt_handler.output_config_file_usage()
   end
   
+  def display_template_file_help
+    prompt_handler = ConfigurePromptHandler.new(@config)
+    prompt_handler.output_template_file_usage()
+  end
+  
   def display_help?(enabled = nil)
     if enabled != nil
       @options.display_help = enabled
     end
     
-    return @options.display_help
+    return @options.display_help || @options.display_config_file_help || @options.display_template_file_help
   end
   
   def display_config_file_help?(enabled = nil)
@@ -572,6 +607,14 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     return @options.display_config_file_help
+  end
+  
+  def display_template_file_help?(enabled = nil)
+    if enabled != nil
+      @options.display_template_file_help = enabled
+    end
+    
+    return @options.display_template_file_help
   end
   
   # Write a header
@@ -828,8 +871,12 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     @options.advanced == true
   end
   
+  def is_batch?
+    (@options.batch == true) && @package.allow_batch?()
+  end
+  
   def is_interactive?
-    (@options.interactive == true)
+    (@options.interactive == true) && @package.allow_interactive?()
   end
   
   def forced?
@@ -931,6 +978,44 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
         end
     end
   end
+  
+  # Determines if a shell command exists by searching for it in ENV['PATH'].
+  def command_exists?(command)
+    ENV['PATH'].split(File::PATH_SEPARATOR).any? {|d| File.exists? File.join(d, command) }
+  end
+
+  # Returns [width, height] of terminal when detected, nil if not detected.
+  # Think of this as a simpler version of Highline's Highline::SystemExtensions.terminal_size()
+  def detect_terminal_size
+    unless @terminal_size
+      if (ENV['COLUMNS'] =~ /^\d+$/) && (ENV['LINES'] =~ /^\d+$/)
+        @terminal_size = [ENV['COLUMNS'].to_i, ENV['LINES'].to_i]
+      elsif (RUBY_PLATFORM =~ /java/ || (!STDIN.tty? && ENV['TERM'])) && command_exists?('tput')
+        @terminal_size = [`tput cols`.to_i, `tput lines`.to_i]
+      elsif STDIN.tty? && command_exists?('stty')
+        @terminal_size = `stty size`.scan(/\d+/).map { |s| s.to_i }.reverse
+      else
+        @terminal_size = [80, 30]
+      end
+    end
+    
+    return @terminal_size
+  rescue => e
+    [80, 30]
+  end
+  
+  def get_constant_symbol(value)
+    unless @constant_map
+      @constant_map = {}
+      
+      Object.constants.each{
+        |symbol|
+        @constant_map[Object.const_get(symbol)] = symbol
+      }
+    end
+    
+    @constant_map[value]
+  end
 end
 
 def cmd_result(command, ignore_fail = false)
@@ -947,10 +1032,18 @@ def cmd_result(command, ignore_fail = false)
   return result
 end
 
-def output_usage_line(argument, msg = "", default = nil, max_line = 70)
+def output_usage_line(argument, msg = "", default = nil, max_line = nil, additional_help = "")
+  if max_line == nil
+    max_line = Configurator.instance.detect_terminal_size[0]-5
+  end
+  
   if msg.is_a?(String)
     msg = msg.split("\n").join(" ")
+  else
+    msg = msg.to_s()
   end
+  
+  msg = msg.gsub(/^\s+/, "").gsub(/\s+$/, $/)
   
   if default.to_s() != ""
     if msg != ""
@@ -980,6 +1073,13 @@ def output_usage_line(argument, msg = "", default = nil, max_line = 70)
     puts line
   else
     puts format("%-29s", argument) + " " + msg
+  end
+  
+  if additional_help.to_s != ""
+    additional_help.split("<br>").each{
+      |line|
+      output_usage_line("", line, nil, max_line)
+    }
   end
 end
 

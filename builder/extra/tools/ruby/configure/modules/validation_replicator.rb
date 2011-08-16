@@ -2,7 +2,7 @@ require 'socket'
 
 class DataserversChecks < GroupValidationCheck
   def initialize
-    super(DATASERVERS, "dataserver", "dataservers")
+    super(DATASOURCES, "datasource", "datasources")
     
     DataserverValidationCheck.submodules().each{
       |klass|
@@ -44,6 +44,57 @@ class ReplicationServiceChecks < GroupValidationCheck
 end
 
 module ReplicationServiceValidationCheck
+  def enabled?
+    if (v = @config.getNestedProperty([DEPLOYMENT_SERVICE])) != nil
+      if v != get_member()
+        # This replication service is not being deployed, so we don't need to check it
+        return false
+      end
+    end
+    
+    super()
+  end
+  
+  def get_applier_datasource
+    ds = @config.getProperty(get_member_key(REPL_DATASOURCE))
+    if ds.to_s() == ""
+      raise "No applier datasource specified"
+    end
+    
+    ConfigureDatabasePlatform.build(
+      @config.getProperty([DATASOURCES, ds, REPL_DBTYPE]),
+      @config.getProperty([DATASOURCES, ds, REPL_DBHOST]),
+      @config.getProperty([DATASOURCES, ds, REPL_DBPORT]),
+      @config.getProperty([DATASOURCES, ds, REPL_DBLOGIN]),
+      @config.getProperty([DATASOURCES, ds, REPL_DBPASSWORD]), @config)
+  end
+  
+  def get_extractor_datasource
+    if @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_DI
+      ds = @config.getProperty(get_member_key(REPL_MASTER_DATASOURCE))
+      if ds.to_s() == ""
+        raise "No extractor datasource specified"
+      end
+
+      ConfigureDatabasePlatform.build(
+        @config.getProperty([DATASOURCES, ds, REPL_DBTYPE]),
+        @config.getProperty([DATASOURCES, ds, REPL_DBHOST]),
+        @config.getProperty([DATASOURCES, ds, REPL_DBPORT]),
+        @config.getProperty([DATASOURCES, ds, REPL_DBLOGIN]),
+        @config.getProperty([DATASOURCES, ds, REPL_DBPASSWORD]), @config)
+    else
+      get_applier_datasource()
+    end
+  end
+  
+  def get_applier_key(key)
+    [DATASOURCES, @config.getProperty(get_member_key(REPL_DATASOURCE)), key]
+  end
+  
+  def get_extractor_key(key)
+    [DATASOURCES, @config.getProperty(get_member_key(REPL_MASTER_DATASOURCE)), key]
+  end
+  
   def self.included(subclass)
     @submodules ||= []
     @submodules << subclass
@@ -54,49 +105,27 @@ module ReplicationServiceValidationCheck
   end
 end
 
-class BackupMethodAvailableCheck < ConfigureValidationCheck
+class BackupScriptAvailableCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   
   def set_vars
-    @title = "Backup method availability check"
+    @title = "Backup script availability check"
   end
   
-  def validate
-    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
-    case @config.getProperty([DATASERVERS, applier, REPL_BACKUP_METHOD])
-    when "mysqldump"
-      path = cmd_result("which mysqldump")
-      info("mysqldump found at #{path}")
-    when "xtrabackup"
-      begin
-        path = cmd_result("which innobackupex-1.5.1")
-        info("xtrabackup found at #{path}")
-      rescue
-        error("Unable to find the innobackupex-1.5.1 script for backup")
-      end
-    when "pg_dump"
-      path = cmd_result("which pg_dump")
-      info("pg_dump found at #{path}")
-    when "script"
-      if File.executable(@config.getProperty(REPL_BACKUP_SCRIPT))
-        info("The backup script is executable")
+  def validate    
+    if File.executable(@config.getProperty(REPL_BACKUP_SCRIPT))
+      info("The backup script is executable")
+    else
+      if File.exists(@config.getProperty(REPL_BACKUP_SCRIPT))
+        error("The backup script (#{config.getProperty(REPL_BACKUP_SCRIPT)}) is not executable")
       else
-        if File.exists(@config.getProperty(REPL_BACKUP_SCRIPT))
-          error("The backup script (#{config.getProperty(REPL_BACKUP_SCRIPT)}) is not executable")
-        else
-          error("The backup script (#{config.getProperty(REPL_BACKUP_SCRIPT)}) does not exist")
-        end
+        error("The backup script (#{config.getProperty(REPL_BACKUP_SCRIPT)}) does not exist")
       end
     end
   end
   
   def enabled?
-    applier = @config.getProperty(get_member_key(REPL_DATASERVER))
-    if @config.getProperty([DATASERVERS, applier, DBMS_TYPE]) == "mysql"
-      true
-    else
-      false
-    end
+    super() && @config.getProperty(get_member_key(REPL_BACKUP_METHOD)) == "script"
   end
 end
 
@@ -124,16 +153,11 @@ class THLStorageCheck < ConfigureValidationCheck
       end
     end
     
-    datasource_alias = @config.getProperty(get_member_key(REPL_DATASERVER))
-    thl_schema = "tungsten_#{@config.getProperty(get_member_key(DEPLOYMENT_SERVICE))}"
-    case @config.getProperty([DATASERVERS, datasource_alias, DBMS_TYPE])
-    when "mysql"
-      schemas = mysql_on("SHOW SCHEMAS LIKE '#{thl_schema}'", datasource_alias)
-      if schemas != ""
-        error("THL schema #{thl_schema} already exists at #{get_connection_summary_for(datasource_alias)}")
-      end
-    else
-      warn("Currently unable to check for the THL schema in #{@config.getProperty([DATASERVERS, datasource_alias, DBMS_TYPE])}")
+    begin
+      thl_schema = "tungsten_#{@config.getProperty(get_member_key(DEPLOYMENT_SERVICE))}"
+      get_applier_datasource.check_thl_schema(thl_schema)
+    rescue => e
+      warn(e.message)
     end
   end
 end
@@ -241,8 +265,8 @@ class DifferentMasterSlaveCheck < ConfigureValidationCheck
   end
   
   def validate
-    if (extractor = @config.getProperty(get_member_key(REPL_EXTRACTOR_DATASERVER)))
-      if extractor == @config.getProperty(get_member_key(REPL_DATASERVER))
+    if (extractor = get_extractor_datasource())
+      if extractor == get_applier_datasource()
         error("Service '#{@config.getProperty(get_member_key(DEPLOYMENT_SERVICE))}' uses the same datasource for extracting and applying events")
       end
     end

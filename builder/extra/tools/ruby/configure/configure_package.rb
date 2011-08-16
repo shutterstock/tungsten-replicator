@@ -6,6 +6,26 @@ class ConfigurePackage
   end
   
   def store_config_file?
+    false
+  end
+  
+  def read_config_file?
+    if Configurator.instance.is_interactive?()
+      return true
+    end
+    
+    if Configurator.instance.is_batch?()
+      return true
+    end
+    
+    false
+  end
+  
+  def allow_interactive?
+    true
+  end
+  
+  def allow_batch?
     true
   end
   
@@ -48,6 +68,7 @@ class ConfigurePackage
     output_usage_line("-f, --force", "Do not display confirmation prompts or stop the configure process for errors")
     output_usage_line("-h, --help", "Displays help message")
     output_usage_line("-q, --quiet", "Only display error messages")
+    output_usage_line("--template-file-help", "Display the keys that may be used in configuration template files")
     output_usage_line("-v, --verbose", "Display all messages")
     output_usage_line("--no-validation", "Skip all validation checks")
     output_usage_line("--validate-only", "Skip all deployment steps")

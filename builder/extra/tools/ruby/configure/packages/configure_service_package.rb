@@ -17,37 +17,26 @@ class ConfigureServicePackage < ConfigurePackage
     opts.on("-C", "--create")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_CREATE) }
     opts.on("-D", "--delete")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_DELETE) }
     opts.on("-U", "--update")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_UPDATE) }
-    opts.on("--start")          { service_config.setProperty(REPL_SVC_START, "true") }
     
-    {
-      "--local-service-name" => DSNAME,
-      "--role" => REPL_ROLE,
-      "--master-host" => REPL_MASTERHOST,
-      "--master-port" => REPL_MASTERPORT,
-      "--direct-datasource" => REPL_EXTRACTOR_DATASERVER,
-      "--datasource" => REPL_DATASERVER,
-      "--auto-enable" => REPL_AUTOENABLE,
-      "--buffer-size" => REPL_BUFFER_SIZE,
-      "--channels" => REPL_SVC_CHANNELS,
-      "--thl-port" => REPL_SVC_THL_PORT,
-      "--shard-default-db" => REPL_SVC_SHARD_DEFAULT_DB,
-      "--allow-bidi-unsafe" => REPL_SVC_ALLOW_BIDI_UNSAFE,
-      "--allow-any-remote-service" => REPL_SVC_ALLOW_ANY_SERVICE,
-      "--service-type" => REPL_SVC_SERVICE_TYPE
-    }.each{
-      |arg, prop_key|
-      opts.on("#{arg} String")  {|val|  service_config.setProperty(prop_key, val) }
+    each_service_prompt{
+      |prompt|
+      opts.on("--#{prompt.get_command_line_argument()} String") {
+        |val|
+        service_config.setProperty(prompt.name, val)
+        ConfigurePrompt.add_global_default(prompt.name, val)
+      }
+    }
+    opts.on("--master-host String") {
+      |val|
+      service_config.setProperty(REPL_MASTERHOST, val)
+      ConfigurePrompt.add_global_default(REPL_MASTERHOST, val)
+      warning("--master-host is deprecated, use --master-thl-host instead.")
     }
     
     begin
       remainder = Configurator.instance.run_option_parser(opts, arguments)
       
-      if Configurator.instance.display_help?()
-        output_usage()
-        exit 0
-      end
-      
-      unless @config.getProperty(DEPLOYMENT_TYPE)
+      unless @config.getNestedProperty([DEPLOYMENT_TYPE])
         error("You must specify -C, -D or -U")
       end
       
@@ -91,10 +80,18 @@ class ConfigureServicePackage < ConfigurePackage
       end
     rescue => e
       error("Argument parsing failed: #{e.to_s()}")
-      return false
     end
     
     @config.setProperty(DEPLOYMENT_SERVICE, deploy_service_key)
+    
+    if Configurator.instance.display_help?()
+      service_config.props.each{
+        |sc_key, sc_val|
+        @config.setProperty([REPL_SERVICES, 'temp', sc_key], sc_val)
+      }
+      
+      reset_errors()
+    end
     
     is_valid?()
   end
@@ -107,23 +104,22 @@ class ConfigureServicePackage < ConfigurePackage
     output_usage_line("-C", "Create a replication service")
     output_usage_line("-D", "Delete a replication service")
     output_usage_line("-U", "Update a replication service")
-    output_usage_line("--allow-bidi-unsafe [true|false]", "Allow unsafe SQL from remote services", "false")
-    output_usage_line("--allow-any-remote-service [true|false]", "Replicate from any service", "false")
-    output_usage_line("--auto-enable [true|false]", "If true, service goes online at startup", "true")
-    output_usage_line("--buffer-size #", "Size of buffers for block commit and queues", "10")
-    output_usage_line("--channels #", "Number of channels for parallel apply", "1")
-    output_usage_line("--local-service-name name", "Replicator service that owns master")
-    output_usage_line("--master-host host_name", "Replicator remote master host name")
-    output_usage_line("--master-port #", "Replicator remote master THL port")
-    output_usage_line("--direct-datasource alias", "Configuration alias for the datasource to extract events from")
-    output_usage_line("--role [master|slave|direct]", "Replicator role", "slave")
-    output_usage_line("--datasource alias", "Configuration alias of the datasource to use when applying events")
-    output_usage_line("--service-type [local|remote]", "Replicator service type", "local")
-    output_usage_line("--shard-default-db [stringent|relaxed]", "Use default db for shard ID", "stringent")
+    
+    svc = @config.getProperty(DEPLOYMENT_SERVICE)
+    if svc == ""
+      svc = DEFAULTS
+    end
+    
+    each_service_prompt{
+      |prompt|
+      prompt.set_member(svc)
+      prompt.output_usage()
+    }
   end
   
   def get_prompts
     [
+      Datasources.new(),
       ReplicationServices.new(),
       DeploymentServicePrompt.new()
     ]
@@ -131,22 +127,52 @@ class ConfigureServicePackage < ConfigurePackage
   
   def get_non_interactive_prompts
     cluster_prompts = ConfigurePackageCluster.new(@config).get_prompts()
-    cluster_prompts.delete_if{ |prompt| prompt.is_a?(ReplicationServices)}
+    cluster_prompts.delete_if{ |prompt| 
+      (prompt.is_a?(ReplicationServices) || prompt.is_a?(Datasources))
+    }
     
     cluster_prompts
   end
   
   def get_validation_checks
-    []
+    [
+      TransferredLogStorageCheck.new(),
+      ReplicationServiceChecks.new()
+    ]
   end
   
-  def store_config_file?
+  def each_service_prompt(&block)
+    ch = ReplicationServices.new()
+    ch.set_config(@config)
+    
+    ch.each_prompt{
+      |prompt|
+      
+      if prompt.enabled_for_command_line?()
+        begin
+          block.call(prompt)
+        rescue => e
+          error(e.message)
+        end
+      end
+    }
+  end
+  
+  def read_config_file?
+    true
+  end
+  
+  def allow_interactive?
+    false
+  end
+  
+  def allow_batch?
     false
   end
 end
 
 module NotDeleteServicePrompt
-  def enabled?
+  def required?
     super() && @config.getProperty(DEPLOYMENT_TYPE) != ConfigureServicePackage::SERVICE_DELETE
   end
 end

@@ -536,6 +536,11 @@ then
 
   cp -rf ${reldir} ${reldir_tools}/.runtime
   cp -rf ${reldir}/.man* ${reldir_tools}
+  
+  rel_tools_tgz=${relname}-tools.tar.gz
+
+  echo "### generating tools tar file: ${rel_tools_tgz}"
+  (cd ${reldir}/..; tar -czf ${rel_tools_tgz} ${relname}-tools/)
 else
   echo "### Skipping tools release generation"
 fi

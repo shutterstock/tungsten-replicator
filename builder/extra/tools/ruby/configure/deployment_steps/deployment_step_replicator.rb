@@ -26,11 +26,22 @@ module ConfigureDeploymentStepReplicator
     mkdir_if_absent(@config.getProperty(REPL_LOG_DIR))
 
     write_replication_service_properties()
-    write_replicator_thl()
     write_wrapper_conf()
     deploy_mysql_connectorj_package()
     add_service("tungsten-replicator/bin/replicator")
     set_run_as_user("#{get_deployment_basedir()}/tungsten-replicator/bin/replicator")
+  end
+  
+  def deploy_replication_dataservices
+    @config.getPropertyOr(REPL_SERVICES, {}).each{
+      |service_alias,service_properties|
+      
+      @config.setProperty(DEPLOYMENT_SERVICE, service_alias)
+      
+      deploy_replication_dataservice()
+        
+      @config.setProperty(DEPLOYMENT_SERVICE, nil)
+    }
   end
   
   def write_replication_service_properties
@@ -38,18 +49,10 @@ module ConfigureDeploymentStepReplicator
 		  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
 			"#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties", "#")
 
-		transformer.transform { |line|
-		  if line =~ /replicator.rmi_port=/ then
-        "replicator.rmi_port=" + @config.getProperty(REPL_RMI_PORT)
-  		else
-  		  line
-  		end
-		}
+	  transformer.transform_values(method(:transform_values))
+
+    transformer.output
   end
-  
-  def write_replicator_thl
-		# Fix up the THL utility class name. (No longer necessary.) 
-	end
 	
 	def write_wrapper_conf
     transformer = Transformer.new(

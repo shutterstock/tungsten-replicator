@@ -19,7 +19,7 @@ class ConfigureDeploymentHandler
   end
   
   def prepare_config(config)
-    @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+    @config.props = config.props
     
     unless Configurator.instance.is_localhost?(@config.getProperty(HOST))
       validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}/"
@@ -55,7 +55,7 @@ class ConfigureDeploymentHandler
   end
   
   def deploy_config(config)
-    @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+    @config.props = config.props
     
     if Configurator.instance.is_localhost?(@config.getProperty(HOST))
       Configurator.instance.write ""
@@ -75,7 +75,7 @@ class ConfigureDeploymentHandler
       Configurator.instance.write_header "Remote deploy #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
       
       deployment_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}"
-      command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options.join(' ')}"
+      command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -b -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options.join(' ')}"
       debug(command)
       
       if Configurator.instance.use_streaming_ssh()
@@ -112,7 +112,7 @@ class ConfigureDeploymentHandler
     configs.each{
       |config|
       
-      @config.props = config.props.dup().merge(config.getPropertyOr([HOSTS, config.getProperty(DEPLOYMENT_HOST)], {}))
+      @config.props = config.props
       begin
         unless Configurator.instance.is_localhost?(@config.getProperty(HOST))
           ssh_result("rm -rf #{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}", true)

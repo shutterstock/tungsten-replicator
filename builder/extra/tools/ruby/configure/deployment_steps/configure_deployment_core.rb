@@ -1,17 +1,11 @@
 module ConfigureDeploymentCore
   include ConfigureMessages
   
-  def initialize(config, stored_config = nil)
+  def initialize(config)
     super()
     @config = config
     @services = []
     @deployment_methods = []
-    
-    if stored_config
-      @stored_config = stored_config
-    else
-      @stored_config = config
-    end
   end
   
   def set_deployment_methods(deployment_methods)
@@ -143,6 +137,10 @@ module ConfigureDeploymentCore
     @services.insert(-1, start_script)
   end
   
+  def get_host_key(key)
+    [HOSTS, @config.getProperty(DEPLOYMENT_HOST), key]
+  end
+  
   # Find out the full executable path or return nil
   # if this is not executable. 
   def which(cmd)
@@ -174,6 +172,20 @@ module ConfigureDeploymentCore
   def is_master?
     false
   end
+  
+  def transform_values(matches)
+	  case matches.at(0)
+    when "HOST"
+      v = @config.getConfigFileProperty(get_host_key(Kernel.const_get(matches[1])), method(:transform_values))
+    else
+      v = @config.getConfigFileProperty(matches.map{
+        |match|
+        Kernel.const_get(match)
+      }, method(:transform_values))
+    end
+    
+    return v
+	end
 end
 
 class ConfigureDeploymentMethod

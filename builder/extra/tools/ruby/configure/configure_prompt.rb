@@ -21,11 +21,11 @@ class ConfigurePrompt
     end
   end
 
-  def initialize(name, prompt, validator = nil, default = "")
+  def initialize(name, prompt, validator = nil, default = nil)
     @name = name
     @prompt = prompt
     @validator = validator
-    @default = default.to_s
+    @default = default
     @config = nil
     @weight = 0
   end
@@ -61,7 +61,11 @@ class ConfigurePrompt
     value = get_input_value()
     
     # Save the validated response to the config object
-     @config.setProperty(get_name(), value)
+    if value != get_default_value()
+      @config.setProperty(get_name(), value)
+    else
+      @config.setProperty(get_name(), nil)
+    end
   end
   
   def get_input_value
@@ -104,9 +108,9 @@ class ConfigurePrompt
   
   # Get the current value for the prompt, use the default if the config does
   # not have a response for the given config key
-  def get_value(allow_default = true)
+  def get_value(allow_default = true, allow_disabled = false)
     value = @config.getProperty(get_name())
-    if value == nil && allow_default
+    if value == nil && allow_default && (enabled_for_config?() || allow_disabled)
       global_default = ConfigurePrompt.get_global_default(@name)
       
       if global_default == nil
@@ -123,15 +127,27 @@ class ConfigurePrompt
     value
   end
   
+  def get_config_file_value(transform_values_method)
+    get_value()
+  end
+  
   # Save the current value back to the config object or the default 
   # value if none is set
   def save_current_value
-    @config.setProperty(get_name(), get_value())
+    if (v = get_value()) != get_default_value()
+      @config.setProperty(get_name(), v)
+    else
+      @config.setProperty(get_name(), nil)
+    end
   end
 
   # Save the disabled value back to the config object
   def save_disabled_value
-    @config.setProperty(get_name(), get_disabled_value())
+    if (v = get_disabled_value()) != get_default_value()
+      @config.setProperty(get_name(), v)
+    else
+      @config.setProperty(get_name(), nil)
+    end
   end
   
   # Get the value that should be set if this prompt is disabled
@@ -140,13 +156,12 @@ class ConfigurePrompt
   end
   
   def is_valid?
-    value = get_value(false)
-    
     if enabled_for_config?
+      value = get_value()
       if value == nil && required?()
         # The prompt is enabled, the value should not be missing
         raise ConfigurePromptError.new(
-          ConfigurePrompt.new(get_name(), get_display_prompt()),
+          self.clone(),
           "Value is missing", "")
       elsif value != nil
         begin
@@ -154,24 +169,25 @@ class ConfigurePrompt
         rescue Exception => e
           # There was an issue in the validation
           raise ConfigurePromptError.new(
-            ConfigurePrompt.new(get_name(), get_display_prompt()),
+            self.clone(),
             e.to_s(), value)
         end
       end
     else
+      value = get_value(false)
       if value.to_s() == ""
         if get_disabled_value() == nil
           # The prompt is disabled, no value should be given
         elsif required?()
           raise ConfigurePromptError.new(
-            ConfigurePrompt.new(get_name(), get_display_prompt()),
+            self.clone(),
             "Value is missing", "")
         end
       else
         if get_disabled_value() == nil
           # The prompt is disabled, the value should be empty
           raise ConfigurePromptError.new(
-            ConfigurePrompt.new(get_name(), get_display_prompt()),
+            self.clone(),
             "Value should not be given, remove it from the configuration", value)
         end
       end
@@ -193,12 +209,54 @@ class ConfigurePrompt
   
   # Get the default value for the prompt
   def get_default_value
-    @default
+    if @default
+      @default.to_s
+    else
+      nil
+    end
+  end
+  
+  def get_property(attrs)
+    if attrs[0] != @name
+      raise IgnoreError
+    end
+    
+    if attrs.size > 1
+      raise "Unable to get_property:#{attrs.join('.')} for #{self.class.name}"
+    end
+    
+    get_value()
+  end
+  
+  def get_config_file_property(attrs, transform_values_method)
+    if attrs[0] != @name
+      raise IgnoreError
+    end
+    
+    if attrs.size > 1
+      raise "Unable to get_config_file_property:#{attrs.join('.')} for #{self.class.name}"
+    end
+    
+    get_config_file_value(transform_values_method)
+  end
+  
+  def update_deprecated_keys()
+  end
+  
+  def replace_deprecated_key(deprecated_key)
+    if (v = @config.getProperty(deprecated_key)) != nil
+      @config.setProperty(get_name(), v)
+      @config.setProperty(deprecated_key, nil)
+    end
   end
 end
 
 module AdvancedPromptModule
   def enabled?
+    super() && Configurator.instance.advanced_mode?()
+  end
+  
+  def enabled_for_command_line?
     super() && Configurator.instance.advanced_mode?()
   end
   
@@ -225,11 +283,14 @@ module ConstantValueModule
   end
   
   def get_disabled_value
-    if enabled_for_config?
-      get_value()
-    else
-      nil
-    end
+    get_value()
+  end
+  
+  def enabled_for_command_line?()
+    false
+  end
+  
+  def output_config_file_usage
   end
 end
 
@@ -271,10 +332,6 @@ end
 class AdvancedInterfaceMessage < InterfaceMessage
   def enabled?
     Configurator.instance.advanced_mode?()
-  end
-  
-  def enabled_for_config?
-    super()
   end
 end
 
@@ -323,11 +380,5 @@ class TemporaryPrompt < ConfigurePrompt
 
   # Save the disabled value back to the config object
   def save_disabled_value
-  end
-end
-
-module IsReplicatorPrompt
-  def enabled?
-    super()
   end
 end

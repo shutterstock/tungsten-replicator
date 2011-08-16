@@ -227,7 +227,7 @@ class JavaVersionCheck < ConfigureValidationCheck
         
         java_version = java_out.scan(/java version \"1.(6|7|8)./)
         unless java_version.length == 1
-          error "Oracle Java 1.6 or greater is required to run Tungsten"
+          error "Java 1.6 or greater is required to run Tungsten"
         end
       else
         error "Unknown Java version"

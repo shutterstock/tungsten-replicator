@@ -1,5 +1,6 @@
 module ConfigurePromptInterface
   include ConfigureMessages
+  attr_accessor :name
   
   COMMAND_HELP = "help"
   COMMAND_SAVE = "save"
@@ -13,6 +14,14 @@ module ConfigurePromptInterface
   # Get the config key
   def get_name
     @name
+  end
+  
+  def get_command_line_argument()
+    @name.gsub("_", "-")
+  end
+  
+  def get_command_line_argument_value
+    nil
   end
   
   def is_initialized?
@@ -40,7 +49,7 @@ module ConfigurePromptInterface
   end
   
   def required?
-    true
+    enabled?()
   end
   
   # Does the user need to answer this prompt
@@ -50,6 +59,14 @@ module ConfigurePromptInterface
   
   def enabled_for_config?
     enabled?()
+  end
+  
+  def enabled_for_command_line?()
+    true
+  end
+  
+  def enabled_for_template_file?()
+    true
   end
   
   def allow_previous?
@@ -154,8 +171,24 @@ module ConfigurePromptInterface
     return description
   end
   
+  def output_usage
+    output_usage_line("--#{get_command_line_argument()}", get_prompt(), get_value(true, true), nil, get_prompt_description())
+  end
+  
   def output_config_file_usage
-    output_usage_line(get_name(), get_prompt(), get_default_value())
+    output_usage_line(get_config_file_usage_symbol(), get_prompt(), get_default_value())
+  end
+  
+  def get_config_file_usage_symbol
+    get_name()
+  end
+  
+  def output_template_file_usage
+    output_usage_line(get_template_file_usage_symbol(), get_prompt())
+  end
+  
+  def get_template_file_usage_symbol
+    Configurator.instance.get_constant_symbol(@name)
   end
   
   def ssh_result(command, ignore_fail = false, host = nil, user = nil)
@@ -186,5 +219,14 @@ module ConfigurePromptInterface
   def each_prompt(&block)
     block.call(self)
     self
+  end
+  
+  def update_deprecated_keys()
+  end
+end
+
+module NoTemplateValuePrompt
+  def enabled_for_template_file?()
+    false
   end
 end
