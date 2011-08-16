@@ -1,0 +1,2 @@
+replicator.filter.nocreatedbifnotexists=com.continuent.tungsten.replicator.filter.JavaScriptFilter
+replicator.filter.nocreatedbifnotexists.script=${replicator.home.dir}/samples/extensions/javascript/nocreatedbifnotexists.js
