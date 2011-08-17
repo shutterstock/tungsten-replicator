@@ -62,11 +62,18 @@ class ConfigureServicePackage < ConfigurePackage
     
     each_service_prompt{
       |prompt|
-      opts.on("--#{prompt.get_command_line_argument()} String") {
-        |val|
-        service_config.setProperty(prompt.name, val)
-        ConfigurePrompt.add_global_default(prompt.name, val)
-      }
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument()}") {
+          service_config.setProperty(prompt.name, av)
+          ConfigurePrompt.add_global_default(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument()} String") {
+          |val|
+          service_config.setProperty(prompt.name, val)
+          ConfigurePrompt.add_global_default(prompt.name, val)
+        }
+      end
     }
     opts.on("--master-host String") {
       |val|

@@ -90,6 +90,17 @@ module ConfigureDeploymentCore
     end
   end
   
+  def svc_is_running?(cmd)
+    begin
+      cmd_result("#{cmd} status")
+      return true
+    rescue CommandError => ce
+      return false
+    end
+    
+    return false
+  end
+  
   # Update the RUN_AS_USER in a service script.
   def set_run_as_user(script)
     transformer = Transformer.new(script, script, nil)

@@ -178,15 +178,4 @@ module ConfigureDeploymentStepServices
       info "GENERATED FILE: " + script
     end
   end
-  
-  def svc_is_running?(cmd)
-    begin
-      cmd_result("#{cmd} status")
-      return true
-    rescue CommandError => ce
-      return false
-    end
-    
-    return false
-  end
 end

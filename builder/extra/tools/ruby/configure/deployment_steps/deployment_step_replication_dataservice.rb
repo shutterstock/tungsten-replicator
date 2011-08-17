@@ -21,7 +21,7 @@ module ConfigureDeploymentStepReplicationDataservice
     
     transformer.output
 		
-		if @config.getProperty(REPL_SVC_START) == "true"
+		if @config.getProperty(REPL_SVC_REPORT) == "true" || @config.getProperty(REPL_SVC_START) == "true"
 		  if svc_is_running?(get_svc_command("#{get_deployment_basedir()}/tungsten-replicator/bin/replicator"))
 		    begin
 		      info("Check if the replication service is running")
@@ -36,6 +36,12 @@ module ConfigureDeploymentStepReplicationDataservice
         info("Start the replicator")
         cmd_result(get_svc_command("#{get_deployment_basedir()}/tungsten-replicator/bin/replicator start"))
       end
+    end
+    
+    if @config.getProperty(REPL_SVC_REPORT) == "true"
+      output("Getting services list")
+      services = cmd_result("#{get_deployment_basedir()}/tungsten-replicator/bin/trepctl -port #{@config.getProperty(REPL_RMI_PORT)} services")
+      output(services)
     end
   end
 	
@@ -113,5 +119,9 @@ module ConfigureDeploymentStepReplicationDataservice
     else
       get_applier_key(key)
     end
+  end
+  
+  def get_trepctl_cmd
+    "#{get_deployment_basedir()}/tungsten-replicator/bin/trepctl -port #{@config.getProperty(REPL_RMI_PORT)}"
   end
 end

@@ -92,10 +92,6 @@ module ConfigureDeploymentStepReplicator
 		end
 	end
   
-  def get_trepctl_cmd
-    "#{get_deployment_basedir()}/tungsten-replicator/bin/trepctl -port #{@config.getProperty(REPL_RMI_PORT)}"
-  end
-  
   def get_dynamic_properties_file()
     "#{get_deployment_basedir()}/tungsten-replicator/conf/dynamic.properties"
   end

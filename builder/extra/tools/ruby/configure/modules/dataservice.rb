@@ -170,7 +170,29 @@ class ReplicationServiceStart < ConfigurePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
-    super(REPL_SVC_START, "Do you want to automatically start the service?", PV_BOOLEAN, "false")
+    super(REPL_SVC_START, "Do you want to automatically start the service?", PV_BOOLEAN)
+  end
+  
+  def get_default_value
+    @config.getProperty(get_member_key(REPL_SVC_REPORT))
+  end
+  
+  def get_command_line_argument_value
+    "true"
+  end
+end
+
+class ReplicationServiceReport < ConfigurePrompt
+  include ReplicationServicePrompt
+  include NotDeleteServicePrompt
+  include NotTungstenInstallerPrompt
+  
+  def initialize
+    super(REPL_SVC_REPORT, "Do you want to automatically start the service?", PV_BOOLEAN, "false")
+  end
+  
+  def get_command_line_argument_value
+    "true"
   end
 end
 
@@ -323,7 +345,7 @@ class ReplicationServiceTHLMasterPort < ConfigurePrompt
   
   def initialize
     super(REPL_MASTERPORT, 
-      "Master THL port", PV_INTEGER, "2112")
+      "Master THL port", PV_INTEGER)
   end
   
   def enabled?
@@ -333,6 +355,10 @@ class ReplicationServiceTHLMasterPort < ConfigurePrompt
   def update_deprecated_keys()
     replace_deprecated_key(get_member_key('repl_master_port'))
     super()
+  end
+  
+  def get_default_value
+    @config.getProperty(get_member_key(REPL_SVC_THL_PORT))
   end
 end
 
