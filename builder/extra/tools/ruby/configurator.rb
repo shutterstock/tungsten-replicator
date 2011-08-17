@@ -630,7 +630,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   # Write a header
   def write_header(content, level=Logger::INFO)
-    unless enable_log_level(level)
+    unless enable_log_level?(level)
       return
     end
     
@@ -647,7 +647,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
 
   # Write a sub-divider, which is used between sections under a singl header.
   def write_divider(level=Logger::INFO)
-    unless enable_log_level(level)
+    unless enable_log_level?(level)
       return
     end
     
@@ -659,7 +659,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   end
   
   def write(content="", level=Logger::INFO, hostname = nil, force = false)
-    if !enable_log_level(level) && force == false
+    if !enable_log_level?(level) && force == false
       return
     end
     
@@ -676,7 +676,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   end
   
   def write_from_file(filename, level=Logger::INFO)
-    unless enable_log_level(level)
+    unless enable_log_level?(level)
       return
     end
     
@@ -731,7 +731,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
   end
   
-  def enable_log_level(level=Logger::INFO)
+  def enable_log_level?(level=Logger::INFO)
     if level<@options.output_threshold
       false
     else

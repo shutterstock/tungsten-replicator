@@ -102,10 +102,10 @@ class ConfigureValidationHandler
         else
           # Invoke ValidationChecks on the remote server
           extra_options = ["--package #{Configurator.instance.package.class.name}"]
-          if Configurator.instance.enable_log_level(Logger::DEBUG)
+          if Configurator.instance.enable_log_level?(Logger::DEBUG)
             extra_options << "-v"
           end
-          unless Configurator.instance.enable_log_level(Logger::INFO)
+          unless Configurator.instance.enable_log_level?(Logger::INFO)
             extra_options << "-q"
           end
 

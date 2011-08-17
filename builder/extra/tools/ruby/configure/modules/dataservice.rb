@@ -56,12 +56,7 @@ module ReplicationServicePrompt
       ds = DEFAULTS
     end
     
-    ConfigureDatabasePlatform.build(
-      @config.getProperty([DATASOURCES, ds, REPL_DBTYPE]),
-      @config.getProperty([DATASOURCES, ds, REPL_DBHOST]),
-      @config.getProperty([DATASOURCES, ds, REPL_DBPORT]),
-      @config.getProperty([DATASOURCES, ds, REPL_DBLOGIN]),
-      @config.getProperty([DATASOURCES, ds, REPL_DBPASSWORD]), @config)
+    get_datasource_for(ds)
   end
   
   def get_extractor_datasource
@@ -71,15 +66,19 @@ module ReplicationServicePrompt
         ds = DEFAULTS
       end
       
-      ConfigureDatabasePlatform.build(
-        @config.getProperty([DATASOURCES, ds, REPL_DBTYPE]),
-        @config.getProperty([DATASOURCES, ds, REPL_DBHOST]),
-        @config.getProperty([DATASOURCES, ds, REPL_DBPORT]),
-        @config.getProperty([DATASOURCES, ds, REPL_DBLOGIN]),
-        @config.getProperty([DATASOURCES, ds, REPL_DBPASSWORD]), @config)
+      get_datasource_for(ds)
     else
       get_applier_datasource()
     end
+  end
+  
+  def get_datasource_for(ds_key)
+    ConfigureDatabasePlatform.build(
+      @config.getProperty([DATASOURCES, ds_key, REPL_DBTYPE]),
+      @config.getProperty([DATASOURCES, ds_key, REPL_DBHOST]),
+      @config.getProperty([DATASOURCES, ds_key, REPL_DBPORT]),
+      @config.getProperty([DATASOURCES, ds_key, REPL_DBLOGIN]),
+      @config.getProperty([DATASOURCES, ds_key, REPL_DBPASSWORD]), @config)
   end
   
   def get_command_line_argument()
@@ -297,6 +296,19 @@ class ReplicationServiceDatasource < ConfigurePrompt
       return ds_keys[0]
     end
   end
+  
+  def get_prompt_description
+    output = []
+    
+    @config.getPropertyOr(DATASOURCES, {}).keys.each {
+      |ds_key|
+      
+      ds = get_datasource_for(ds_key)
+      output << "#{ds_key}\t- #{ds.get_connection_summary}"
+    }
+    
+    return output.join("\n")
+  end
 end
 
 class ReplicationServiceMasterDatasource < ConfigurePrompt
@@ -315,6 +327,19 @@ class ReplicationServiceMasterDatasource < ConfigurePrompt
   
   def enabled_for_config?
     super() && (@config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_DI)
+  end
+  
+  def get_prompt_description
+    output = []
+    
+    @config.getPropertyOr(DATASOURCES, {}).keys.each {
+      |ds_key|
+      
+      ds = get_datasource_for(ds_key)
+      output << "#{ds_key}\t- #{ds.get_connection_summary}"
+    }
+    
+    return output.join("\n")
   end
 end
 

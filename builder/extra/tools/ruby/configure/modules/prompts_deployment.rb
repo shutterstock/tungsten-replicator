@@ -269,7 +269,7 @@ class RelayLogStorageDirectory < ConfigurePrompt
   include ClusterHostPrompt
   
   def initialize
-    super(REPL_RELAY_LOG_DIR, "Enter the local-disk directory into which the relay-logs will be stored",
+    super(REPL_RELAY_LOG_DIR, "Directory for logs transferred from the master",
 		  PV_FILENAME)
   end
   
@@ -287,7 +287,7 @@ class BackupStorageDirectory < BackupConfigurePrompt
   include ClusterHostPrompt
   
   def initialize
-    super(REPL_BACKUP_STORAGE_DIR, "Backup permanent shared storage", PV_FILENAME)
+    super(REPL_BACKUP_STORAGE_DIR, "Permanent backup storage directory", PV_FILENAME)
   end
   
   def get_default_value
