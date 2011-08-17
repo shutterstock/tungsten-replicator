@@ -17,7 +17,7 @@ class ConfigureServicePackage < ConfigurePackage
       @target_host = @config.getProperty([HOSTS, deployment_host, HOST])
     end
     @target_user = @config.getProperty([HOSTS, deployment_host, USERID])
-    @target_home_directory = @config.getProperty([HOSTS, deployment_host, HOME_DIRECTORY])
+    @target_home_directory = @config.getProperty([HOSTS, deployment_host, CURRENT_RELEASE_DIRECTORY])
     @load_remote_config = false
     
     opts=OptionParser.new
@@ -26,7 +26,7 @@ class ConfigureServicePackage < ConfigurePackage
       @target_host = val }
     opts.on("--user String")    { |val| 
       @target_user = val }
-    opts.on("--home-directory String")  { |val| 
+    opts.on("--release-directory String")  { |val| 
       @load_remote_config = true
       @target_home_directory = val }
     
@@ -151,7 +151,7 @@ class ConfigureServicePackage < ConfigurePackage
     puts "Target options:"
     output_usage_line("--host", "Host to connect to configure the service", @target_host)
     output_usage_line("--user", "User to connect to the host as", @target_user)
-    output_usage_line("--home-directory", "The parent directory name that holds all Tungsten files", @target_home_directory)
+    output_usage_line("--release-directory", "The release directory that holds the Tungsten runtime files", @target_home_directory)
     
     Configurator.instance.write_divider()
     puts "Service options:"
