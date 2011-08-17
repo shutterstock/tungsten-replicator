@@ -465,6 +465,86 @@ public class DiskLogTest extends TestCase
     }
 
     /**
+     * Confirm that we can seek a non-zero entry in an empty log and read it
+     * when it appears.
+     */
+    public void testSeekGoodNonZeroFirst() throws Exception
+    {
+        // Create a log with a short timeout.
+        File logDir = prepareLogDir("testSeekGoodNonZeroFirst");
+        DiskLog log = openLog(logDir, false);
+        log.setTimeoutMillis(1000);
+
+        // Confirm that seek to future non-zero position returns true even
+        // though no such position exists.
+        LogConnection conn = log.connect(true);
+        assertTrue("Seeking future event that will exist", conn.seek(10));
+
+        // Confirm that a seek to that position waits (using a timeout).
+        try
+        {
+            THLEvent e = conn.next();
+            throw new Exception(
+                    "Able to seek and read non-existent position in empty log: "
+                            + e);
+        }
+        catch (LogTimeoutException e)
+        {
+            logger.info("Returned expected timeout exception");
+        }
+
+        // Write data and confirm we can read them.
+        writeEventsToLog(log, 10, 1);
+        THLEvent e = conn.next();
+        assertNotNull("Found an event", e);
+        assertEquals("Has expected seqno", 10, e.getSeqno());
+        assertEquals("Log min should be same as written event", 10,
+                log.getMinSeqno());
+        assertEquals("Log max should be same as written event", 10,
+                log.getMaxSeqno());
+
+        // Close up.
+        conn.release();
+        log.release();
+    }
+
+    /**
+     * Confirm that if we seek a future non-zero event it will succeed but if
+     * the first event returned does not match the seqno the next() call fails.
+     */
+    public void testSeekBadNonZeroFirst() throws Exception
+    {
+        // Create a log and write 10 events to it. Set the timeout interval to
+        // 1 second.
+        File logDir = prepareLogDir("testSeekGoodNonZeroFirst");
+        DiskLog log = openLog(logDir, false);
+        log.setTimeoutMillis(1000);
+
+        // Confirm that seek to future non-zero position returns true even
+        // though no such position exists.
+        LogConnection conn = log.connect(true);
+        assertTrue("Seeking future event that will not exist", conn.seek(9));
+
+        // Write event at seqno 10 and confirm our next call fails.
+        writeEventsToLog(log, 10, 1);
+        try
+        {
+            THLEvent e = conn.next();
+            throw new Exception(
+                    "Able to seek and read non-existent position in empty log: "
+                            + e);
+        }
+        catch (LogPositionException e)
+        {
+            logger.info("Received expected exception");
+        }
+
+        // Close up.
+        conn.release();
+        log.release();
+    }
+
+    /**
      * Confirm that after seeking on a log file next() returns each event in log
      * file followed by a null after the rotate log event. This behavior should
      * be identical for both blocking and non-blocking connections.
@@ -805,7 +885,9 @@ public class DiskLogTest extends TestCase
         long[] seqno1 = {1, 2, 100};
         for (long seqno : seqno1)
         {
-            assertFalse("Cannot find non-existent value", conn.seek(seqno));
+            assertTrue("Seeking non-existent value in empty log",
+                    conn.seek(seqno));
+            assertNull("No value in empty log", conn.next(false));
         }
         conn.release();
         logR.release();

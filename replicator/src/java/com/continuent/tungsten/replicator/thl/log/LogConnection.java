@@ -42,25 +42,31 @@ import com.continuent.tungsten.replicator.thl.serializer.Serializer;
  */
 public class LogConnection
 {
-    private static Logger      logger     = Logger.getLogger(LogConnection.class);
+    private static Logger      logger        = Logger.getLogger(LogConnection.class);
 
     /**
-     * Symbol representing the first transaction in a new log.
+     * Simple representing base seqno of uninitialized log.
      */
-    public static long         FIRST      = 0;
+    public static long         UNINITIALIZED = -1;
+
+    /**
+     * Symbol representing the first seqno in a new log.
+     */
+    public static long         FIRST         = 0;
 
     // Client connection parameters.
     private final boolean      readonly;
 
     // Control parameters.
-    private volatile boolean   done       = false;
+    private volatile boolean   done          = false;
 
     // Disk log parameters.
     private DiskLog            diskLog;
     private LogCursor          cursor;
     private THLEvent           pendingEvent;
-    private long               writeCount = 0;
-    private long               readCount  = 0;
+    private long               pendingSeqno;
+    private long               writeCount    = 0;
+    private long               readCount     = 0;
 
     // Information required for successful output.
     private boolean            doChecksum;
@@ -176,18 +182,18 @@ public class LogConnection
             cursor.release();
             cursor = null;
         }
-        if (pendingEvent != null)
-            pendingEvent = null;
+        pendingEvent = null;
+        pendingSeqno = UNINITIALIZED;
 
         // Find the log file that contains our sequence number.
         LogFile logFile = diskLog.getLogFile(seqno);
         if (logFile == null)
         {
             // If we cannot get the log file, that means the log does
-            // not have this sequence number.
+            // not exist.
             if (logger.isDebugEnabled())
             {
-                logger.debug("Requested seqno does not exist in log: seqno="
+                logger.debug("Log is uninitialized and does not contain seqno: seqno="
                         + seqno);
             }
             return false;
@@ -206,7 +212,15 @@ public class LogConnection
         // If we are looking for the first sequence number, we can stop now that
         // the first log file is open.
         if (seqno == FIRST)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Seeking seqno in newly initialized log: seqno="
+                        + seqno);
+            }
+            pendingSeqno = seqno;
             return true;
+        }
 
         // Look for the sequence number we are trying to find.
         long lastSeqno = logFile.getBaseSeqno();
@@ -222,8 +236,26 @@ public class LogConnection
                     // If we are positioned on the end of the log, this means we
                     // must be waiting for the record to arrive. We are
                     // correctly positioned.
-                    if (seqno == (lastSeqno + 1))
+                    if (lastSeqno == UNINITIALIZED && lastSeqno < 0)
+                    {
+                        if (logger.isDebugEnabled())
+                        {
+                            logger.debug("Seeking seqno in newly initialized log: seqno="
+                                    + seqno);
+                        }
+                        pendingSeqno = seqno;
                         return true;
+                    }
+                    else if (seqno == (lastSeqno + 1))
+                    {
+                        if (logger.isDebugEnabled())
+                        {
+                            logger.debug("Seeking seqno past end of log: seqno="
+                                    + seqno + " end seqno=" + lastSeqno);
+                        }
+                        pendingSeqno = seqno;
+                        return true;
+                    }
                     else
                         break;
                 }
@@ -303,8 +335,7 @@ public class LogConnection
         {
             event = new THLEvent(eventReader.getSeqno(),
                     eventReader.getFragno(), eventReader.isLastFrag(),
-                    eventReader.getSourceId(),
-                    THLEvent.REPL_DBMS_EVENT,
+                    eventReader.getSourceId(), THLEvent.REPL_DBMS_EVENT,
                     eventReader.getEpochNumber(), new Timestamp(
                             System.currentTimeMillis()), new Timestamp(
                             eventReader.getSourceTStamp()),
@@ -519,6 +550,18 @@ public class LogConnection
             }
         }
 
+        // We now have an event. If this is the first read after a seek, make
+        // sure we found what we expected.
+        if (pendingSeqno != UNINITIALIZED)
+        {
+            if (event.getSeqno() != pendingSeqno)
+                throw new LogPositionException(
+                        "Log seek failure: expected seqno=" + pendingSeqno
+                                + " found seqno=" + event.getSeqno());
+            pendingSeqno = UNINITIALIZED;
+        }
+
+        // Increment read count and return.
         readCount++;
         return event;
     }
