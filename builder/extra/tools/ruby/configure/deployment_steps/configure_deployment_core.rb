@@ -50,6 +50,15 @@ module ConfigureDeploymentCore
     @config.getProperty(CURRENT_RELEASE_DIRECTORY)
   end
   
+  def get_deployment_config_file
+    if @config.getProperty(HOME_DIRECTORY) == get_deployment_basedir()
+      return "#{@config.getProperty(HOME_DIRECTORY)}/#{Configurator::HOST_CONFIG}"
+    else
+      mkdir_if_absent("#{@config.getProperty(HOME_DIRECTORY)}/configs")
+      return "#{@config.getProperty(HOME_DIRECTORY)}/configs/#{Configurator::HOST_CONFIG}"
+    end
+  end
+  
   def alter_deployment_method_name(method_name)
     method_name
   end

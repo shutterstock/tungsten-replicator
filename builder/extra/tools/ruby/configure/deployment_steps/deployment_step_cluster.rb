@@ -120,12 +120,7 @@ module ConfigureDeploymentStepDeployment
   end
   
   def deploy_config_files
-    if @config.getProperty(HOME_DIRECTORY) == get_deployment_basedir()
-      config_file = "#{@config.getProperty(HOME_DIRECTORY)}/#{Configurator::HOST_CONFIG}"
-    else
-      mkdir_if_absent("#{@config.getProperty(HOME_DIRECTORY)}/configs")
-      config_file = "#{@config.getProperty(HOME_DIRECTORY)}/configs/#{Configurator::HOST_CONFIG}"
-    end
+    config_file = get_deployment_config_file()
     debug("Write #{config_file}")
 
     host_config = @config.dup()

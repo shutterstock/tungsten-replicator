@@ -6,6 +6,48 @@ class ConfigureServicePackage < ConfigurePackage
   SERVICE_UPDATE = "update_service"
   
   def parsed_options?(arguments)
+    deployment_host = @config.getNestedProperty([DEPLOYMENT_HOST])
+    if deployment_host.to_s == ""
+      deployment_host = DEFAULTS
+    end
+    
+    if deployment_host == DEFAULTS
+      @target_host = Configurator.instance.hostname
+    else
+      @target_host = @config.getProperty([HOSTS, deployment_host, HOST])
+    end
+    @target_user = @config.getProperty([HOSTS, deployment_host, USERID])
+    @target_home_directory = @config.getProperty([HOSTS, deployment_host, HOME_DIRECTORY])
+    @load_remote_config = false
+    
+    opts=OptionParser.new
+    opts.on("--host String")    { |val| 
+      @load_remote_config = true
+      @target_host = val }
+    opts.on("--user String")    { |val| 
+      @target_user = val }
+    opts.on("--home-directory String")  { |val| 
+      @load_remote_config = true
+      @target_home_directory = val }
+    
+    arguments = Configurator.instance.run_option_parser(opts, arguments)
+
+    if @load_remote_config == true
+      info "Load the current config from #{@target_user}@#{@target_host}:#{@target_home_directory}"
+      
+      begin
+        command = "cd #{@target_home_directory}; tools/configure --output-config"    
+        config_output = ssh_result(command, false, @target_host, @target_user)
+        parsed_contents = JSON.parse(config_output)
+        unless parsed_contents.instance_of?(Hash)
+          raise "invalid object"
+        end
+        @config.props = parsed_contents.dup
+      rescue
+        raise "Unable to load the current config from #{@target_user}@#{@target_host}:#{@target_home_directory}"
+      end
+    end
+    
     @config.setProperty(DEPLOYMENT_TYPE, nil)
     @config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
     @config.setProperty(DEPLOY_PACKAGE_URI, nil)
@@ -85,10 +127,15 @@ class ConfigureServicePackage < ConfigurePackage
     @config.setProperty(DEPLOYMENT_SERVICE, deploy_service_key)
     
     if Configurator.instance.display_help?()
+      svc = @config.getProperty(DEPLOYMENT_SERVICE)
+      if svc == ""
+        svc = DEFAULTS
+      end
       service_config.props.each{
         |sc_key, sc_val|
-        @config.setProperty([REPL_SERVICES, 'temp', sc_key], sc_val)
+        @config.setProperty([REPL_SERVICES, svc, sc_key], sc_val)
       }
+      @config.setDefault([REPL_SERVICES, svc, DEPLOYMENT_HOST], DEFAULTS)
       
       reset_errors()
     end
@@ -97,8 +144,15 @@ class ConfigureServicePackage < ConfigurePackage
   end
   
   def output_usage
-    puts "Usage: configure-service [general-options] {-C|-D|-U} [service-options] service-name"
+    puts "Usage: configure-service [general-options] {-C|-D|-U} [target-options] [service-options] service-name"
     output_general_usage()
+    
+    Configurator.instance.write_divider()
+    puts "Target options:"
+    output_usage_line("--host", "Host to connect to configure the service", @target_host)
+    output_usage_line("--user", "User to connect to the host as", @target_user)
+    output_usage_line("--home-directory", "The parent directory name that holds all Tungsten files", @target_home_directory)
+    
     Configurator.instance.write_divider()
     puts "Service options:"
     output_usage_line("-C", "Create a replication service")

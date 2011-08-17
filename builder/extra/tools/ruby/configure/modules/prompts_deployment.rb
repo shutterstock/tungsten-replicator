@@ -121,10 +121,6 @@ class HostPrompt < ConfigurePrompt
   def get_default_value
     get_member()
   end
-  
-  def allow_group_default
-    false
-  end
 
   def enabled_for_command_line?()
     false

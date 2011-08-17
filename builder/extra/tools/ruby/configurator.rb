@@ -129,6 +129,7 @@ class Configurator
     @options.display_config_file_help = false
     @options.display_template_file_help = false
     @options.validate_only = false
+    @options.output_config = false
 
     if is_full_tungsten_package?()
       configs_path = File.expand_path(ENV['PWD'] + "/../../configs/")
@@ -414,6 +415,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("-q", "--quiet")          {@options.output_threshold = Logger::WARN}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
     opts.on("--no-validation")        {|val| @options.force = true }
+    opts.on("--output-config")        { @options.output_config = true }
     opts.on("--configure String")      {|val|
                                         val_parts = val.split("=")
                                         if val_parts.length() !=2
@@ -445,6 +447,11 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       unless display_help?()
         exit 1
       end
+    end
+    
+    if @options.output_config
+      @config.output
+      exit 0
     end
     
     if include_package
@@ -499,7 +506,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
           return false
         end
       end
-    elsif @package.read_config_file?
+    elsif read_config_file?
       # For batch mode, options file must be readable.
       if ! File.readable?(@options.config) && File.exist?(@options.config)
         write "Config file is not readable: #{@options.config}", Logger::ERROR
@@ -508,13 +515,17 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     # Load the current configuration values
-    if @package.read_config_file?
+    if read_config_file?
       if File.exist?(@options.config)
         @config.load(@options.config)
       end
     end
     
     true
+  end
+  
+  def read_config_file?
+    (@package.read_config_file? || @options.output_config)
   end
   
   def run_option_parser(opts, arguments, allow_invalid_options = true, invalid_option_prefix = nil)
@@ -1016,6 +1027,24 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     
     @constant_map[value]
   end
+end
+
+def ssh_result(command, ignore_fail, host, user)
+  if Configurator.instance.is_localhost?(host) && user == Configurator.instance.whoami()
+    return cmd_result(command, ignore_fail)
+  end
+  
+  debug("Execute `#{command}` on #{host}")
+  result = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; export LANG=en_US; #{command}\" 2>&1`.chomp
+  rc = $?
+  
+  if rc != 0 && ! ignore_fail
+    raise RemoteCommandError.new(user, host, command, rc, result)
+  else
+    Configurator.instance.debug("RC: #{rc}, Result: #{result}")
+  end
+  
+  return result
 end
 
 def cmd_result(command, ignore_fail = false)
