@@ -17,7 +17,7 @@ class Properties
   def initialize
     @props = {}
     @in_prompt_handler = {}
-    @in_config_file_prompt_handler = {}
+    @in_template_value_prompt_handler = {}
     @prompt_handler = nil
   end
   
@@ -25,6 +25,7 @@ class Properties
     super(source)
     @props = Marshal::load(Marshal::dump(@props))
     @in_prompt_handler = {}
+    @in_template_value_prompt_handler = {}
     @prompt_handler = nil
   end
   
@@ -230,27 +231,27 @@ class Properties
   end
   
   # Get the config file value for a property. 
-  def getConfigFileProperty(key, transform_values_method)
+  def getTemplateValue(key, transform_values_method)
     if key.is_a?(String)
       key = key.split('.')
     end
     
     findProperty = lambda do |keys|
       key_string = keys.join('.')
-      if @in_config_file_prompt_handler[key_string] == true
+      if @in_template_value_prompt_handler[key_string] == true
         return nil
       end
 
       begin
-        @in_config_file_prompt_handler[key_string] = true
+        @in_template_value_prompt_handler[key_string] = true
 
-        value = getPromptHandler().get_config_file_property(keys, transform_values_method)
+        value = getPromptHandler().find_template_value(keys, transform_values_method)
 
-        @in_config_file_prompt_handler[key_string] = false
+        @in_template_value_prompt_handler[key_string] = false
       rescue IgnoreError
-        @in_config_file_prompt_handler[key_string] = false
+        @in_template_value_prompt_handler[key_string] = false
       rescue => e
-        @in_config_file_prompt_handler[key_string] = false
+        @in_template_value_prompt_handler[key_string] = false
         raise e
       end
 

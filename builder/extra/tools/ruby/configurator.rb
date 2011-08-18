@@ -29,7 +29,6 @@ system_require 'properties'
 system_require 'configure/is_tools_package'
 system_require 'configure/parameter_names'
 system_require 'configure/configure_messages'
-system_require 'configure/configure_module'
 system_require 'configure/configure_package'
 system_require 'configure/configure_prompt_handler'
 system_require 'configure/configure_prompt_interface'
@@ -213,8 +212,6 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
         end
       end
     end
-    
-    @package.post_prompt_handler_run()
     
     deployment_method = get_deployment()
     
@@ -570,8 +567,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   def save_prompts()
     if @options.config && @package.store_config_file?
-      temp = @package.prepare_saved_config(@config)
-      temp.store(@options.config)
+      @config.store(@options.config)
     end
   end
 

@@ -127,7 +127,7 @@ class ConfigurePrompt
     value
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_value()
   end
   
@@ -228,19 +228,16 @@ class ConfigurePrompt
     get_value(true, allow_disabled)
   end
   
-  def get_config_file_property(attrs, transform_values_method)
+  def find_template_value(attrs, transform_values_method)
     if attrs[0] != @name
       raise IgnoreError
     end
     
     if attrs.size > 1
-      raise "Unable to get_config_file_property:#{attrs.join('.')} for #{self.class.name}"
+      raise "Unable to find_template_value:#{attrs.join('.')} for #{self.class.name}"
     end
     
-    get_config_file_value(transform_values_method)
-  end
-  
-  def update_deprecated_keys()
+    get_template_value(transform_values_method)
   end
   
   def replace_deprecated_key(deprecated_key)
@@ -268,7 +265,7 @@ module AdvancedPromptModule
     if enabled_for_config?
       get_value()
     else
-      nil
+      super()
     end
   end
 end

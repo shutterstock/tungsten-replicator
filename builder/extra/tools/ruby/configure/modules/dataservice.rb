@@ -675,7 +675,7 @@ class BackupScriptCommandPrefixConfigurePrompt < ScriptBackupConfigurePrompt
     super(REPL_BACKUP_COMMAND_PREFIX, "Use sudo when running the backup script?", PV_BOOLEAN, "false")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     if get_value() == "true"
       "sudo"
     else
@@ -791,7 +791,7 @@ class ReplicationServiceApplierConfig < ConfigurePrompt
     super(REPL_SVC_APPLIER_CONFIG, "Replication service applier config properties")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     transformer = Transformer.new(@config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
       get_applier_datasource().get_applier_template())
     transformer.transform_values(transform_values_method)
@@ -807,7 +807,7 @@ class ReplicationServiceExtractorConfig < ConfigurePrompt
     super(REPL_SVC_EXTRACTOR_CONFIG, "Replication service extractor config properties")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     transformer = Transformer.new(@config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
       get_extractor_datasource().get_extractor_template())
     transformer.transform_values(transform_values_method)
@@ -823,7 +823,7 @@ class ReplicationServiceFilterConfig < ConfigurePrompt
     super(REPL_SVC_FILTER_CONFIG, "Replication service filter config properties")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     output_lines = []
     
     Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + '/tungsten-replicator/samples/conf/filters/default/*.tpl'].sort().each do |file| 
@@ -861,7 +861,7 @@ class ReplicationServiceBackupConfig < ConfigurePrompt
     super(REPL_SVC_BACKUP_CONFIG, "Replication service backup config properties")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     output_lines = []
     
     Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + '/tungsten-replicator/samples/conf/backup_methods/default/*.tpl'].sort().each do |file| 
@@ -890,7 +890,7 @@ class ReplicationServiceExtractorFilters < ConfigurePrompt
     super(REPL_SVC_EXTRACTOR_FILTERS, "Replication service extractor filters")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_extractor_datasource().get_extractor_filters().join(",")
   end
 end
@@ -903,7 +903,7 @@ class ReplicationServiceTHLFilters < ConfigurePrompt
     super(REPL_SVC_THL_FILTERS, "Replication service THL filters")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_extractor_datasource().get_thl_filters().join(",")
   end
 end
@@ -916,7 +916,7 @@ class ReplicationServiceApplierFilters < ConfigurePrompt
     super(REPL_SVC_APPLIER_FILTERS, "Replication service applier filters")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_extractor_datasource().get_applier_filters().join(",")
   end
 end

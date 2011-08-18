@@ -57,7 +57,8 @@ class ConfigureDeploymentHandler
   def deploy_config(config)
     @config.props = config.props
     
-    if Configurator.instance.is_localhost?(@config.getProperty(HOST))
+    if Configurator.instance.is_localhost?(@config.getProperty(HOST))&& 
+        (Configurator.instance.whoami == @config.getProperty(USERID))
       Configurator.instance.write ""
       Configurator.instance.write_header "Local deploy #{@config.getProperty(HOME_DIRECTORY)}"
       

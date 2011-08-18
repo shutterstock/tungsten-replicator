@@ -212,7 +212,7 @@ class RootCommandPrefixPrompt < ConfigurePrompt
     super() && @config.getProperty(USERID) != "root"
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     if get_value() == "true"
       "sudo"
     else

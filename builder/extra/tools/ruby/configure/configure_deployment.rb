@@ -19,24 +19,6 @@ class ConfigureDeployment
     raise "This function must be overwritten"
   end
   
-  def expand_deployment_configuration(deployment_config)
-    config = deployment_config.dup()
-    
-    config.getPropertyOr(REPL_SERVICES, {}).delete_if{
-      |s_alias, s_props|
-      
-      (config.getProperty([REPL_SERVICES, s_alias, DEPLOYMENT_HOST]) != config.getProperty(DEPLOYMENT_HOST))
-    }
-    
-    config.getPropertyOr(HOSTS, {}).delete_if{
-      |h_alias, h_props|
-      
-      (h_alias != config.getProperty(DEPLOYMENT_HOST))
-    }
-    
-    config
-  end
-  
   def get_deployment_basedir(config)
     config.getProperty(CURRENT_RELEASE_DIRECTORY)
   end
@@ -50,8 +32,7 @@ class ConfigureDeployment
   end
   
   def validate_config(deployment_config)
-    expanded_config = expand_deployment_configuration(deployment_config)
-    get_validation_handler().validate_config(expanded_config)
+    get_validation_handler().validate_config(deployment_config)
   end
   
   def prepare
@@ -68,15 +49,13 @@ class ConfigureDeployment
       system_require File.dirname(file) + '/' + File.basename(file, File.extname(file))
     end
     
-    expanded_config = expand_deployment_configuration(deployment_config)
-    
     # Get an object that represents the deployment steps required by the config
     obj = Class.new{
       include ConfigureDeploymentCore
-    }.new(expanded_config)
+    }.new(deployment_config)
 
     deployment_methods = []
-    get_deployment_object_modules(expanded_config).each{
+    get_deployment_object_modules(deployment_config).each{
       |module_name|
       obj.extend(module_name)
       begin

@@ -47,15 +47,15 @@ module ConfigureDeploymentStepReplicationDataservice
 	def transform_replication_dataservice_values(matches)
 	  case matches.at(0)
     when "APPLIER"
-      v = @config.getConfigFileProperty(get_applier_key(Kernel.const_get(matches[1])), method(:transform_replication_dataservice_values))
+      v = @config.getTemplateValue(get_applier_key(Kernel.const_get(matches[1])), method(:transform_replication_dataservice_values))
     when "EXTRACTOR"
-      v = @config.getConfigFileProperty(get_extractor_key(Kernel.const_get(matches[1])), method(:transform_replication_dataservice_values))
+      v = @config.getTemplateValue(get_extractor_key(Kernel.const_get(matches[1])), method(:transform_replication_dataservice_values))
     when "SERVICE"
-      v = @config.getConfigFileProperty(get_service_key(Kernel.const_get(matches[1])), method(:transform_replication_dataservice_values))
+      v = @config.getTemplateValue(get_service_key(Kernel.const_get(matches[1])), method(:transform_replication_dataservice_values))
     when "HOST"
-      v = @config.getConfigFileProperty(get_host_key(Kernel.const_get(matches[1])), method(:transform_replication_dataservice_values))
+      v = @config.getTemplateValue(get_host_key(Kernel.const_get(matches[1])), method(:transform_replication_dataservice_values))
     else
-      v = @config.getConfigFileProperty(matches.map{
+      v = @config.getTemplateValue(matches.map{
         |match|
         Kernel.const_get(match)
       }, method(:transform_replication_dataservice_values))

@@ -10,7 +10,6 @@ class ConfigureValidationHandler
     initialize_validation_checks()
   end
   
-  # Tell each ConfigureModule to register their prompts
   def initialize_validation_checks
     @local_checks = []
     @deployment_checks = []
@@ -88,18 +87,20 @@ class ConfigureValidationHandler
     
     configs.each{
       |config|
-      
       @config.props = config.props
       
-      Configurator.instance.write ""
-      Configurator.instance.write_header "Validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
-
       begin
-        if Configurator.instance.is_localhost?(@config.getProperty(HOST))
-          debug("Start:  Local validation checks for #{@config.getProperty(HOME_DIRECTORY)}")
+        if Configurator.instance.is_localhost?(@config.getProperty(HOST)) && 
+            (Configurator.instance.whoami == @config.getProperty(USERID))
+          Configurator.instance.write ""
+          Configurator.instance.write_header "Local checks for #{@config.getProperty(HOME_DIRECTORY)}"
+        
           validate_config(@config)
-          debug("Finish: Local validation checks for #{@config.getProperty(HOME_DIRECTORY)}")
+          debug("Finish: Local checks for #{@config.getProperty(HOME_DIRECTORY)}")
         else
+          Configurator.instance.write ""
+          Configurator.instance.write_header "Remote checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
+          
           # Invoke ValidationChecks on the remote server
           extra_options = ["--package #{Configurator.instance.package.class.name}"]
           if Configurator.instance.enable_log_level?(Logger::DEBUG)
@@ -111,7 +112,6 @@ class ConfigureValidationHandler
 
           validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}/"
 
-          debug("Remote validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}")
           command = "cd #{validation_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/validate.rb -b -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options.join(' ')}"
           result_dump = ssh_result(command, @config.getProperty(HOST), @config.getProperty(USERID), true)
           
@@ -121,13 +121,13 @@ class ConfigureValidationHandler
             @errors = @errors + result.errors
             result.output()
 
-            Configurator.instance.write "Finish: Remote validation checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}", Logger::DEBUG
+            debug("Finish: Remote checks for #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}")
           rescue ArgumentError => ae
             raise "Unable to load validation result: #{result_dump}"
           end
         end
       rescue => e
-        error(e.to_s())
+        exception(e)
       end
     }
     
@@ -150,12 +150,8 @@ class ConfigureValidationHandler
           end
         end
       }
-    rescue ValidationError => ve  
-      Configurator.instance.exception(ve)
-      @errors.push(ve)
-    rescue Exception => e  
-      Configurator.instance.exception(e)
-      @errors.push(RemoteError.new(e.to_s(), @config.getProperty(HOST)))
+    rescue => e  
+      exception(e)
     end
     
     # Prepare the return object

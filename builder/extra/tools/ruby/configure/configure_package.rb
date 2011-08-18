@@ -45,14 +45,6 @@ class ConfigurePackage
     true
   end
   
-  def post_prompt_handler_run
-    true
-  end
-  
-  def prepare_saved_config(config)
-    config
-  end
-  
   def output_usage
     puts "Usage: configure [general-options]"
     output_general_usage()

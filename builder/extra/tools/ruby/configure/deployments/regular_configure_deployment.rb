@@ -29,6 +29,18 @@ class RegularConfigureDeployment < ConfigureDeployment
         config_obj.setProperty(GLOBAL_REPL_MYSQL_CONNECTOR_PATH, config_obj.getProperty(REPL_MYSQL_CONNECTOR_PATH))
         config_obj.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{@config.getProperty([HOSTS, host_alias, TEMP_DIRECTORY])}/#{Configurator.instance.get_unique_basename()}/#{File.basename(config_obj.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
       end
+      
+      config_obj.getPropertyOr(REPL_SERVICES, {}).delete_if{
+        |s_alias, s_props|
+
+        (config_obj.getProperty([REPL_SERVICES, s_alias, DEPLOYMENT_HOST]) != config_obj.getProperty(DEPLOYMENT_HOST))
+      }
+
+      config_obj.getPropertyOr(HOSTS, {}).delete_if{
+        |h_alias, h_props|
+
+        (h_alias != config_obj.getProperty(DEPLOYMENT_HOST))
+      }
     
       config_objs.push(config_obj)
     }

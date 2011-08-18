@@ -196,9 +196,9 @@ module ConfigureDeploymentCore
   def transform_values(matches)
 	  case matches.at(0)
     when "HOST"
-      v = @config.getConfigFileProperty(get_host_key(Kernel.const_get(matches[1])), method(:transform_values))
+      v = @config.getTemplateValue(get_host_key(Kernel.const_get(matches[1])), method(:transform_values))
     else
-      v = @config.getConfigFileProperty(matches.map{
+      v = @config.getTemplateValue(matches.map{
         |match|
         Kernel.const_get(match)
       }, method(:transform_values))

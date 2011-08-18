@@ -179,7 +179,7 @@ class DatasourceMasterLogDirectory < ConfigurePrompt
     super()
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     if @config.getProperty(get_member_key(REPL_DISABLE_RELAY_LOGS)) == "true"
       super(transform_values_method)
     else
@@ -229,7 +229,7 @@ class DatasourceDisableRelayLogs < ConfigurePrompt
     end
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     v = super(transform_values_method)
     
     if v == "false"
@@ -248,7 +248,7 @@ class DatasourceTHLURL < ConfigurePrompt
     super(REPL_DBTHLURL, "Datasource THL URL")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_datasource().get_thl_uri()
   end
 end
@@ -261,7 +261,7 @@ class DatasourceJDBCURL < ConfigurePrompt
     super(REPL_DBJDBCURL, "Datasource JDBC URL")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_datasource().getJdbcUrl()
   end
 end
@@ -274,7 +274,7 @@ class DatasourceJDBCDriver < ConfigurePrompt
     super(REPL_DBJDBCDRIVER, "Datasource JDBC Driver")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_datasource().getJdbcDriver()
   end
 end
@@ -287,7 +287,7 @@ class DatasourceVendor < ConfigurePrompt
     super(REPL_DBJDBCVENDOR, "Datasource Vendor")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_datasource().getVendor()
   end
 end
@@ -300,7 +300,7 @@ class DatasourceBackupAgents < ConfigurePrompt
     super(REPL_DBBACKUPAGENTS, "Datasource Backup Agents")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_datasource().get_backup_agents().join(",")
   end
 end
@@ -313,7 +313,7 @@ class DatasourceDefaultBackupAgent < ConfigurePrompt
     super(REPL_DBDEFAULTBACKUPAGENT, "Datasource Default Backup Agent")
   end
   
-  def get_config_file_value(transform_values_method)
+  def get_template_value(transform_values_method)
     get_datasource().get_default_backup_agent()
   end
 end

@@ -37,7 +37,7 @@ module ConfigureMessages
   def confirm(message, c = nil)
     warning(message)
     
-    store_error_object(message, c || build_confirmation_object(message))
+    store_error_object(c || build_confirmation_object(message))
   end
   
   def build_confirmation_object(message)
@@ -51,10 +51,20 @@ module ConfigureMessages
   def error(message, e = nil)
     Configurator.instance.error(message, get_message_hostname())
 
-    store_error_object(message, e || build_error_object(message))
+    store_error_object(e || build_error_object(message))
+  end
+  
+  def exception(e)
+    Configurator.instance.error(e.to_s() + ":\n" + e.backtrace.join("\n"), get_message_hostname())
+    
+    if e.is_a?(get_error_object_class())
+      store_error_object(e)
+    else
+      store_error_object(build_error_object(e.to_s))
+    end
   end
 
-  def store_error_object(message, e = nil)
+  def store_error_object(e = nil)
     @errors ||= []
     @errors.push(e)
   end

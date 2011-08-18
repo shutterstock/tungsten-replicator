@@ -8,7 +8,6 @@ class ConfigurePromptHandler
     initialize_prompts()
   end
   
-  # Tell each ConfigureModule to register their prompts
   def initialize_prompts
     @prompts = []
     Configurator.instance.package.get_prompts().each{
@@ -162,6 +161,12 @@ class ConfigurePromptHandler
       end
     }
     
+    # Register prompts that already have an error to avoid duplicates
+    @errors.each{
+      |e|
+      prompt_keys <<  e.prompt.get_name
+    }
+    
     # Ensure that there are not any extra values in the config object
     find_extra_keys = lambda do |hash, current_path|
       hash.each{
@@ -278,12 +283,12 @@ class ConfigurePromptHandler
     nil
   end
   
-  def get_config_file_property(attrs, transform_values_method)
+  def find_template_value(attrs, transform_values_method)
     @prompts.each{
       |prompt|
       
       begin
-        return prompt.get_config_file_property(attrs, transform_values_method)
+        return prompt.find_template_value(attrs, transform_values_method)
       rescue IgnoreError
         #Do Nothing
       end
@@ -293,7 +298,7 @@ class ConfigurePromptHandler
       |prompt|
       
       begin
-        return prompt.get_config_file_property(attrs, transform_values_method)
+        return prompt.find_template_value(attrs, transform_values_method)
       rescue IgnoreError
         #Do Nothing
       end
