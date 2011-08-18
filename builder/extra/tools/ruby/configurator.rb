@@ -1023,7 +1023,7 @@ def ssh_result(command, host, user, return_object = false)
   if return_object == false && 
       Configurator.instance.is_localhost?(host) && 
       user == Configurator.instance.whoami()
-    return cmd_result(command, ignore_fail)
+    return cmd_result(command)
   end
 
   Configurator.instance.debug("Execute `#{command}` on #{host}")
