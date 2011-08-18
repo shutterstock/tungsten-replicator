@@ -72,6 +72,18 @@ module ReplicationServicePrompt
     end
   end
   
+  def get_applier_key(key)
+    [DATASOURCES, @config.getProperty(get_member_key(REPL_DATASOURCE)), key]
+  end
+  
+  def get_extractor_key(key)
+    [DATASOURCES, @config.getProperty(get_member_key(REPL_MASTER_DATASOURCE)), key]
+  end
+  
+  def get_host_key(key)
+    [HOSTS, @config.getProperty(get_member_key(DEPLOYMENT_HOST)), key]
+  end
+  
   def get_datasource_for(ds_key)
     ConfigureDatabasePlatform.build(
       @config.getProperty([DATASOURCES, ds_key, REPL_DBTYPE]),

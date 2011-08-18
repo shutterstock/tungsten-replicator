@@ -21,13 +21,7 @@ system_require 'resolv'
 system_require 'ifconfig'
 system_require 'pp'
 system_require 'cgi'
-
-# This isn't required, but it makes the output update more often with SSH results
-begin
-  require 'net/ssh'
-rescue LoadError
-end
-
+system_require 'net/ssh'
 system_require 'json'
 system_require 'transformer'
 system_require 'validator'
@@ -95,7 +89,7 @@ end
 class Configurator
   include Singleton
   
-  attr_reader :package
+  attr_reader :package, :options
   
   TUNGSTEN_COMMUNITY = "Community"
   TUNGSTEN_ENTERPRISE = "Enterprise"
@@ -130,6 +124,7 @@ class Configurator
     @options.display_template_file_help = false
     @options.validate_only = false
     @options.output_config = false
+    @options.ssh_options = {}
 
     if is_full_tungsten_package?()
       configs_path = File.expand_path(ENV['PWD'] + "/../../configs/")
@@ -153,10 +148,6 @@ class Configurator
   # then deploy on each host
   def run
     parsed_options?(ARGV)
-    
-    unless use_streaming_ssh()
-      warning("It is recommended that you install the net-ssh rubygem")
-    end
     
     write_header "Tungsten #{tungsten_version()} Configuration Procedure"
     display_help()
@@ -432,6 +423,14 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
                                         
                                         Transformer.add_global_replacement(val_parts[0], val_parts[1])
                                       }
+    opts.on("--net-ssh-option String")  {|val|
+                                        val_parts = val.split("=")
+                                        if val_parts.length() !=2
+                                          raise "Invalid value #{val} given for '--net-ssh-option'.  There should be a key/value pair joined by a single =."
+                                        end
+
+                                        @options.ssh_options[val_parts[0].to_sym] = val_parts[1]
+                                      }
     opts.on("--validate-only")        {@options.validate_only = true}
     
     # Argument used by the validation and deployment handlers
@@ -464,7 +463,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
             exit 1
           end
         rescue => e
-          error(e.to_s())
+          error(e.to_s() + e.backtrace().join("\n"))
           exit 1
         end
       end
@@ -928,15 +927,6 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
   end
   
-  # Is the Net::SSH module available
-  def use_streaming_ssh()
-    if defined?(Net::SSH)
-      true
-    else
-      false
-    end
-  end
-  
   def os?
     os = `uname -s`.chomp
     case
@@ -1029,21 +1019,41 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   end
 end
 
-def ssh_result(command, ignore_fail, host, user)
-  if Configurator.instance.is_localhost?(host) && user == Configurator.instance.whoami()
+def ssh_result(command, host, user, return_object = false)
+  if return_object == false && 
+      Configurator.instance.is_localhost?(host) && 
+      user == Configurator.instance.whoami()
     return cmd_result(command, ignore_fail)
   end
-  
-  debug("Execute `#{command}` on #{host}")
-  result = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; export LANG=en_US; #{command}\" 2>&1`.chomp
-  rc = $?
-  
-  if rc != 0 && ! ignore_fail
+
+  Configurator.instance.debug("Execute `#{command}` on #{host}")
+  result = ""
+
+  ssh = Net::SSH.start(host, user, Configurator.instance.options.ssh_options)
+
+  if return_object
+    ssh.exec!(". /etc/profile; export LANG=en_US; #{command} --stream") do
+      |ch, stream, data|
+
+      unless data =~ /RemoteResult/ || result != ""
+        puts data
+      else
+        result += data
+      end
+    end
+  else
+    result = ssh.exec!(". /etc/profile; export LANG=en_US; #{command}").to_s.chomp
+  end
+
+  rc = ssh.exec!("echo $?").chomp.to_i
+  ssh.close()
+
+  if rc != 0
     raise RemoteCommandError.new(user, host, command, rc, result)
   else
     Configurator.instance.debug("RC: #{rc}, Result: #{result}")
   end
-  
+
   return result
 end
 

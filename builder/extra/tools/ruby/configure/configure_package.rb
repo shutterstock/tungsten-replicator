@@ -68,6 +68,7 @@ class ConfigurePackage
     output_usage_line("-h, --help", "Displays help message")
     output_usage_line("-q, --quiet", "Only display error messages")
     output_usage_line("-v, --verbose", "Display all messages")
+    output_usage_line("--net-ssh-option=key=value", "Set the Net::SSH option for remote system calls", nil, nil, "Valid options can be found at http://net-ssh.github.com/ssh/v2/api/classes/Net/SSH.html#M000002")
     
     if Configurator.instance.advanced_mode?()
       output_usage_line("--config-file-help", "Display help information for content of the config file")

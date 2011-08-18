@@ -18,7 +18,6 @@ module ConfigureDeploymentStepReplicationDataservice
 			@config.getProperty(REPL_SVC_CONFIG_FILE), "#")
 		
 		transformer.transform_values(method(:transform_replication_dataservice_values))
-    
     transformer.output
 		
 		if @config.getProperty(REPL_SVC_REPORT) == "true" || @config.getProperty(REPL_SVC_START) == "true"

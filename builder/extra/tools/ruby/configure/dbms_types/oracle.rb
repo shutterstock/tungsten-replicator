@@ -90,7 +90,6 @@ class OracleConfigurePrompt < ConfigurePrompt
     end
 
     raise "Update this to build the proper command"
-    ssh_result("echo '#{command}' | psql -q -A -t", true, hostname)
   end
   
   def enabled?

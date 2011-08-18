@@ -216,7 +216,7 @@ class ConfigurePrompt
     end
   end
   
-  def get_property(attrs)
+  def get_property(attrs, allow_disabled = false)
     if attrs[0] != @name
       raise IgnoreError
     end
@@ -225,7 +225,7 @@ class ConfigurePrompt
       raise "Unable to get_property:#{attrs.join('.')} for #{self.class.name}"
     end
     
-    get_value()
+    get_value(true, allow_disabled)
   end
   
   def get_config_file_property(attrs, transform_values_method)

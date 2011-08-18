@@ -151,7 +151,7 @@ class HomeDirectoryPrompt < ConfigurePrompt
   def get_default_value
     begin
       unless Configurator.instance.is_localhost?(@config.getProperty(get_member_key(HOST)))
-        return ssh_result('pwd', false, @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
+        return ssh_result('pwd', @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
       end
     rescue => e
     end

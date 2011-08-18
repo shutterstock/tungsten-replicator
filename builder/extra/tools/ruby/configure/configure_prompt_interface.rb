@@ -191,31 +191,6 @@ module ConfigurePromptInterface
     Configurator.instance.get_constant_symbol(@name)
   end
   
-  def ssh_result(command, ignore_fail = false, host = nil, user = nil)
-    if (user == nil)
-      user = @config.getProperty(USERID)
-    end
-    if (host == nil)
-      host = @config.getProperty(HOST)
-    end
-    
-    if Configurator.instance.is_localhost?(host) && user == Configurator.instance.whoami()
-      return cmd_result(command, ignore_fail)
-    end
-    
-    debug("Execute `#{command}` on #{host}")
-    result = `ssh #{user}@#{host} -oConnectTimeout=2 -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; export LANG=en_US; #{command}\" 2>&1`.chomp
-    rc = $?
-    
-    if rc != 0 && ! ignore_fail
-      raise RemoteCommandError.new(user, host, command, rc, result)
-    else
-      debug("RC: #{rc}, Result: #{result}")
-    end
-    
-    return result
-  end
-  
   def each_prompt(&block)
     block.call(self)
     self

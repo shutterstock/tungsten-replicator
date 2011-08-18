@@ -76,23 +76,7 @@ class ConfigureDeploymentHandler
       
       deployment_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}"
       command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -b -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options.join(' ')}"
-      debug(command)
-      
-      if Configurator.instance.use_streaming_ssh()
-        result_dump = ""
-        ssh = Net::SSH.start(@config.getProperty(HOST), @config.getProperty(USERID))
-        ssh.exec!(". /etc/profile; #{command} --stream") do
-          |ch, stream, data|
-          unless data =~ /RemoteResult/ || result_dump != ""
-            puts data
-          else
-            result_dump = data
-          end
-        end
-        ssh.close()
-      else
-        result_dump = ssh_result(command)
-      end
+      result_dump = ssh_result(command, @config.getProperty(HOST), @config.getProperty(USERID), true)
       
       begin
         result = Marshal.load(result_dump)
@@ -115,9 +99,9 @@ class ConfigureDeploymentHandler
       @config.props = config.props
       begin
         unless Configurator.instance.is_localhost?(@config.getProperty(HOST))
-          ssh_result("rm -rf #{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}", true)
+          ssh_result("rm -rf #{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}", @config.getProperty(HOST), @config.getProperty(USERID))
         end
-      rescue
+      rescue RemoteError
       end
     }
     
@@ -126,30 +110,5 @@ class ConfigureDeploymentHandler
   
   def get_message_hostname
     @config.getProperty(HOST)
-  end
-  
-  def ssh_result(command, ignore_fail = false, host = nil, user = nil)
-    if (user == nil)
-      user = @config.getProperty(USERID)
-    end
-    if (host == nil)
-      host = @config.getProperty(HOST)
-    end
-    
-    if Configurator.instance.is_localhost?(host) && user == Configurator.instance.whoami()
-      return cmd_result(command, ignore_fail)
-    end
-    
-    debug("Execute `#{command}` on #{host}")
-    result = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; export LANG=en_US; #{command}\" 2>&1`.chomp
-    rc = $?
-    
-    if rc != 0 && ! ignore_fail
-      raise RemoteCommandError.new(user, host, command, rc, result)
-    else
-      debug("RC: #{rc}, Result: #{result}")
-    end
-    
-    return result
   end
 end

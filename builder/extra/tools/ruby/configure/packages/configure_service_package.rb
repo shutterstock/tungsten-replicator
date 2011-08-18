@@ -37,7 +37,7 @@ class ConfigureServicePackage < ConfigurePackage
       
       begin
         command = "cd #{@target_home_directory}; tools/configure --output-config"    
-        config_output = ssh_result(command, false, @target_host, @target_user)
+        config_output = ssh_result(command, @target_host, @target_user)
         parsed_contents = JSON.parse(config_output)
         unless parsed_contents.instance_of?(Hash)
           raise "invalid object"

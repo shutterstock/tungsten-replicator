@@ -30,7 +30,7 @@ module ValidationCheckInterface
       info("Start: #{@title}")
       validate()
     rescue Exception => e
-      error(e.to_s())
+      error(e.to_s() + "\n" + e.backtrace.join("\n"))
     ensure
       info("Finish: #{@title}")
     end
@@ -79,31 +79,6 @@ module ValidationCheckInterface
   
   def get_hostname
     @config.getProperty(HOST)
-  end
-  
-  def ssh_result(command, ignore_fail = false, host = nil, user = nil)
-    if (user == nil)
-      user = get_userid()
-    end
-    if (host == nil)
-      host = get_hostname()
-    end
-    
-    if Configurator.instance.is_localhost?(host) && user == Configurator.instance.whoami()
-      return cmd_result(command, ignore_fail)
-    end
-    
-    debug("Execute `#{command}` on #{host}")
-    result = `ssh #{user}@#{host} -o \"PreferredAuthentications publickey\" -o \"IdentitiesOnly yes\" -o \"StrictHostKeyChecking no\" \". /etc/profile; export LANG=en_US; #{command}\" 2>&1`.chomp
-    rc = $?
-    
-    if rc != 0 && ! ignore_fail
-      raise RemoteCommandError.new(user, host, command, rc, result)
-    else
-      debug("RC: #{rc}, Result: #{result}")
-    end
-    
-    return result
   end
   
   def get_message_hostname

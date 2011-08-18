@@ -348,7 +348,7 @@ class GroupConfigurePrompt
     }
   end
   
-  def get_property(attrs)
+  def get_property(attrs, allow_disabled = false)
     if attrs[0] != @name
       raise IgnoreError
     end
@@ -366,7 +366,7 @@ class GroupConfigurePrompt
       
       begin
         prompt.set_member(attrs[1])
-        value = prompt.get_property(attrs.slice(2, attrs.length))
+        value = prompt.get_property(attrs.slice(2, attrs.length), allow_disabled)
         
         return value
       rescue IgnoreError

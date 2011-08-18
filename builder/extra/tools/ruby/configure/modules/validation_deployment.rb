@@ -10,7 +10,11 @@ class SSHLoginCheck < ConfigureValidationCheck
   
   def validate
     # whoami will output the current user and we can confirm that the login succeeded
-    login_result = ssh_result("whoami", true)
+    begin
+      login_result = ssh_result("whoami", @config.getProperty(HOST), @config.getProperty(USERID))
+    rescue RemoteError
+      login_result = ""
+    end
     
     if login_result != @config.getProperty(USERID)
       error "Unable to SSH to #{@config.getProperty(HOST)} as #{@config.getProperty(USERID)}."
@@ -37,7 +41,7 @@ class WriteableTempDirectoryCheck < ConfigureValidationCheck
     debug "Checking #{validation_temp_directory}"
     
     begin
-      ssh_result("mkdir -p #{validation_temp_directory}")
+      ssh_result("mkdir -p #{validation_temp_directory}", @config.getProperty(HOST), @config.getProperty(USERID))
     rescue RemoteCommandError => rce
       error("Unable to create the temporary directory '#{validation_temp_directory}':#{rce.result}")
       
@@ -46,7 +50,7 @@ class WriteableTempDirectoryCheck < ConfigureValidationCheck
     end
     
     # The -D flag will tell us if it is a directory
-    is_directory = ssh_result("if [ -d #{validation_temp_directory} ]; then echo 0; else echo 1; fi")
+    is_directory = ssh_result("if [ -d #{validation_temp_directory} ]; then echo 0; else echo 1; fi", @config.getProperty(HOST), @config.getProperty(USERID))
     unless is_directory == "0"
       error "#{validation_temp_directory} is not a directory"
     else
@@ -54,7 +58,7 @@ class WriteableTempDirectoryCheck < ConfigureValidationCheck
     end
     
     # The -w flag will tell us if it is writeable
-    writeable = ssh_result("if [ -w #{validation_temp_directory} ]; then echo 0; else echo 1; fi")
+    writeable = ssh_result("if [ -w #{validation_temp_directory} ]; then echo 0; else echo 1; fi", @config.getProperty(HOST), @config.getProperty(USERID))
     
     unless writeable == "0"
       error "#{validation_temp_directory} is not writeable"
@@ -89,13 +93,10 @@ class WriteableHomeDirectoryCheck < ConfigureValidationCheck
       dir = @config.getProperty(HOME_DIRECTORY)
     end
     
-    create_dir = ssh_result("mkdir -p #{dir}")
-    unless create_dir
-      error("There was an issue creating #{dir}")
-    end
+    ssh_result("mkdir -p #{dir}", @config.getProperty(HOST), @config.getProperty(USERID))
     
     # The -d flag will tell us if it is a directory
-    is_directory = ssh_result("if [ -d #{dir} ]; then echo 0; else echo 1; fi")
+    is_directory = ssh_result("if [ -d #{dir} ]; then echo 0; else echo 1; fi", @config.getProperty(HOST), @config.getProperty(USERID))
     
     unless is_directory == "0"
       error "#{dir} is not a directory"
@@ -104,7 +105,7 @@ class WriteableHomeDirectoryCheck < ConfigureValidationCheck
     end
     
     # The -w flag will tell us if it is writeable
-    writeable = ssh_result("if [ -w #{dir} ]; then echo 0; else echo 1; fi")
+    writeable = ssh_result("if [ -w #{dir} ]; then echo 0; else echo 1; fi", @config.getProperty(HOST), @config.getProperty(USERID))
     
     unless writeable == "0"
       error "#{dir} is not writeable"
@@ -144,7 +145,7 @@ class RubyVersionCheck < ConfigureValidationCheck
   end
   
   def validate
-    ruby_version = ssh_result("ruby -v | cut -f 2 -d ' '")
+    ruby_version = ssh_result("ruby -v | cut -f 2 -d ' '", @config.getProperty(HOST), @config.getProperty(USERID))
     
     if ruby_version =~ /^1\.8\.[5-9]/
       debug "Ruby version (#{ruby_version}) OK"
@@ -340,7 +341,7 @@ class ClusterSSHLoginCheck < ConfigureValidationCheck
   def validate
     @config.getProperty(REPL_HOSTS).split(",").each{
       |repl_host|
-      remote_user = ssh_result("echo $USER", false, repl_host, @config.getProperty(USERID))
+      remote_user = ssh_result("echo $USER", repl_host, @config.getProperty(USERID))
       if remote_user != @config.getProperty(USERID)
         error("SSH login failed from #{@config.getProperty(HOST)} to #{repl_host}")
       else

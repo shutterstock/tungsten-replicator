@@ -186,7 +186,7 @@ class Properties
   end
   
   # Get a property value. 
-  def getProperty(key)
+  def getProperty(key, allow_disabled = false)
     if key.is_a?(String)
       key = key.split('.')
     end
@@ -200,7 +200,7 @@ class Properties
       begin
         @in_prompt_handler[key_string] = true
 
-        value = getPromptHandler().get_property(keys)
+        value = getPromptHandler().get_property(keys, allow_disabled)
 
         @in_prompt_handler[key_string] = false
       rescue IgnoreError

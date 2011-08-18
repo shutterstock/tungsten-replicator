@@ -254,12 +254,12 @@ class ConfigurePromptHandler
     nil
   end
   
-  def get_property(attrs)
+  def get_property(attrs, allow_disabled = false)
     @prompts.each{
       |prompt|
       
       begin
-        return prompt.get_property(attrs)
+        return prompt.get_property(attrs, allow_disabled)
       rescue IgnoreError
         #Do Nothing
       end
@@ -269,7 +269,7 @@ class ConfigurePromptHandler
       |prompt|
       
       begin
-        return prompt.get_property(attrs)
+        return prompt.get_property(attrs, allow_disabled)
       rescue IgnoreError
         #Do Nothing
       end
