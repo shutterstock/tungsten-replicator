@@ -23,6 +23,8 @@ class Datasources < GroupConfigurePrompt
   end
 end
 
+# Prompts that include this module will be collected for each datasource 
+# across interactive mode, the tungsten-installer script
 module DatasourcePrompt
   def self.included(subclass)
     @subclasses ||= []

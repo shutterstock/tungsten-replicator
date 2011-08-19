@@ -49,6 +49,9 @@ class ReplicationServices < GroupConfigurePrompt
   end
 end
 
+# Prompts that include this module will be collected for each dataservice 
+# across interactive mode, the configure-service script and the
+# tungsten-installer script
 module ReplicationServicePrompt
   def get_applier_datasource
     ds = @config.getProperty(get_member_key(REPL_DATASOURCE))

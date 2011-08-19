@@ -1,61 +1,45 @@
 Module Structure
 ====
 Configurator
-- Modules (Loaded from the modules directory)
-- Deployments (Loaded from the deployments directory)
+- Packages
+- Deployments
 - Prompt Handler
-  - Prompts (Loaded from each module)
+  - Prompts (Loaded from the modules dir, selected by the package)
 - Validation Handler
-  - Validation Checks (Loaded from each module)
+  - Validation Checks (Loaded from the modules dir, selected by the package)
 - Deployment Handler
 
 Adding Prompts
 ====
 
-The following example adds a prompt to collect the MySQL configuration file location.
+To add a prompt you must add a constant to parameter_names.rb and define a new class that extends ConfigurePrompt and includes one of three modules
 
-Add these lines to register_prompts in configure_module_replicator.rb before the Connector/J path prompt.
+* ClusterHostPrompt
+* ReplicationServicePrompt
+* DatasourcePrompt
 
-MySQLConfigurePrompt.new(REPL_MYSQL_MYCNF, "MySQL configuration file", 
-  PV_FILENAME, "/etc/my.cnf"),
-  
-Rebuild the tools package and run the script again  
+These are the basic modules that will affect how a prompt is displayed in interactive mode, help output and the config file.  There are additional modules that can be included to modify behavior.
+
+* AdvancedPromptModule - Only enabled when advanced mode is specified
+* ConstantValueModule - Only available for template files.  Use this for values that are purely based on other prompts.
+* You will see other modules included in prompts to modify the behavior
+
+For any prompt you must at least define the the initialize method.
+
+def initialize
+  super(PARAMETER_NAME, "Description", PropertyValidator object, "Default Value")
+end
+
+The two most common actions after that will be to modify when the the prompt is enabled and dynamically identify the default value.  If you need to limit when the prompt is enabled you should extend the 'enabled?' and 'enabled_for_config?' methods.
+
+The 'get_default_value' method will allow you to return the default value for the prompt.  This is useful when the default value is dependent on other config values, like directory names.
 
 Adding Validation Checks
 ====
 
-The following example adds a check to verify that there are no bind address lines in the configuration file.
-
-Add this class to validation_replicator_mysql.rb
-
-class MySQLBindAddress < MySQLValidationCheck
-  def set_vars
-    @title = "MySQL bind address check"
-  end
-  
-  def validate
-    info("Checking for bind_address in #{@config.getProperty(REPL_MYSQL_MYCNF)}")
-    bind_lines_count = cmd_result("cat #{@config.getProperty(REPL_MYSQL_MYCNF)} | grep bind | grep address | wc -l")
-    
-    if bind_lines_count.to_i() > 0
-      error("There is a configuration value for bind_address")
-      help("Remove any bind_address lines from #{@config.getProperty(REPL_MYSQL_MYCNF)}")
-    end
-  end
-end
-
-Add this line to register_validation_checks in configure_module_replicator.rb
-
-MySQLBindAddress.new()
-
-Rebuild the tools package and run the script again
-
-Modifying an Existing Deployment Step
+Including a Config Setting in a Template
 ====
 
-Each deployment step executes a set of methods defined inside of that module.  If there is a method that is modifying the file in question, extend that for your needs.  If you need to modify a new file or do something that is not already covered, you can create the new method and add it to the array returned by get_deployment_methods in that module.
+Once you have defined a prompt, you can start to use the PARAMETER_NAME in your template files by specifying '@{PARAMETER_NAME}'.  You can see what template keys are available by running with the '--template-file-help'.
 
-Adding a Deployment Step
-====
-
-Create a new module file in the deployment_steps directory.  The new module must have a get_deployment_methods method and include the 'module_function :get_deployment_methods' line that make the method accessible.  After the module is defined you must include it in the return array from the get_deployment_object_modules method of the deployment you would like to change.
+If you need a new template key that is based on existing prompts.  Add a new prompt that includes one of the core modules but also includes ConstantValueModule.  Define the 'get_default_value' method on that prompt to build the value which will be placed in the template.

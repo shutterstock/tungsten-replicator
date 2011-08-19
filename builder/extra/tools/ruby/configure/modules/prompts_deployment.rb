@@ -20,6 +20,9 @@ class ClusterHosts < GroupConfigurePrompt
   end
 end
 
+# Prompts that include this module will be collected for each host 
+# across interactive mode, the configure script and the
+# tungsten-installer script
 module ClusterHostPrompt
   def self.included(subclass)
     @subclasses ||= []

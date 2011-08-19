@@ -7,27 +7,34 @@ module ConfigurePromptInterface
   COMMAND_PREVIOUS = "prev"
   COMMAND_ACCEPT_DEFAULTS = "defaults"
   
+  # Set the config object that this prompt should modify when saving values
   def set_config(config)
     @config = config
   end
   
-  # Get the config key
+  # The config hash key for this prompt
   def get_name
     @name
   end
   
+  # The argument name that will be used to set this prompt from 
+  # the command line
   def get_command_line_argument()
     @name.gsub("_", "-")
   end
   
+  # The value to set when the command line argument is present
+  # If this is not nil, no value will be accepted from the command line
   def get_command_line_argument_value
     nil
   end
   
+  # Are all class variables specified
   def is_initialized?
     raise "Undefined function: is_initialized?"
   end
   
+  # Interact with the user to get the value for this prompt
   def run
     raise "Undefined function: run"
   end
@@ -40,10 +47,12 @@ module ConfigurePromptInterface
     raise "Undefined function: save_disabled_value"
   end
   
+  # Check that the value currently in the config object is valid
   def is_valid?
     raise "Undefined function: is_valid?"
   end
   
+  # Get the list of config hash keys that are allowed for this prompt
   def get_keys
     raise "Undefined function: get_keys"
   end
@@ -57,18 +66,25 @@ module ConfigurePromptInterface
     true
   end
   
+  # Is this value allowed in the config file
+  # If a prompt is not needed based on other responses, we do not let 
+  # them set the value in the config to avoid confusion
   def enabled_for_config?
     enabled?()
   end
   
+  # Is this value accepted from the command line
   def enabled_for_command_line?()
     true
   end
   
+  # Is the value allowed to be used in template files
   def enabled_for_template_file?()
     true
   end
   
+  # Return to this prompt if the user specifies 'previous' during
+  # interactive configuration.
   def allow_previous?
     enabled?()
   end
@@ -78,7 +94,7 @@ module ConfigurePromptInterface
     @weight || 0
   end
   
-  # Read the prompt response from the command line.
+  # Read the prompt response from the terminal
   def input_value(prompt, default)
     default = default.to_s
     if (default.length + prompt.length < 75)
@@ -141,6 +157,7 @@ module ConfigurePromptInterface
     return help
   end
   
+  # A wrapper function for get_prompt_description
   def get_description
     get_prompt_description()
   end
@@ -171,22 +188,27 @@ module ConfigurePromptInterface
     return description
   end
   
+  # Output how to set this value from the command line
   def output_usage
     output_usage_line("--#{get_command_line_argument()}", get_prompt(), get_value(true, true), nil, get_prompt_description())
   end
   
+  # Output how to specify this value in a config file
   def output_config_file_usage
     output_usage_line(get_config_file_usage_symbol(), get_prompt(), get_default_value())
   end
   
+  # The config hash key to output in output_config_file_usage
   def get_config_file_usage_symbol
     get_name()
   end
   
+  # Output how to specify this value in a template file
   def output_template_file_usage
     output_usage_line(get_template_file_usage_symbol(), get_prompt())
   end
   
+  # The template parameter to output in output_template_file_usage
   def get_template_file_usage_symbol
     Configurator.instance.get_constant_symbol(@name)
   end
@@ -196,6 +218,7 @@ module ConfigurePromptInterface
     self
   end
   
+  # Update the config object so that old values are set to their new keys
   def update_deprecated_keys()
   end
 end
