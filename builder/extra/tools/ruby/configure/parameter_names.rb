@@ -24,12 +24,14 @@ DEPLOY_CURRENT_PACKAGE = "deploy_current_package"
 GLOBAL_DEPLOY_PACKAGE_URI = "global_deploy_package_uri"
 DEPLOY_PACKAGE_URI = "deploy_package_uri"
 OPTION_MONITOR_INTERNAL = "internal_monitor"
+HOST_ENABLE_REPLICATOR = "host_enable_replicator"
 
 # Operating system service parameters.
 SVC_INSTALL = "install"
 SVC_START = "start"
 SVC_REPORT = "start_and_report"
 ROOT_PREFIX = "root_command_prefix"
+SVC_PATH_REPLICATOR = "svc_path_replicator"
 
 # Network control parameters.
 HOSTS = "hosts"

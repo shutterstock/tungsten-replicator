@@ -122,6 +122,7 @@ class Configurator
     @options.display_config_file_help = false
     @options.display_template_file_help = false
     @options.validate_only = false
+    @options.no_validation = false
     @options.output_config = false
     @options.ssh_options = {}
 
@@ -230,16 +231,16 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
         end
       end
     
-      unless @options.force
+      unless @options.no_validation
         unless deployment_method.validate()
           write_header("Validation failed", Logger::ERROR)
           deployment_method.get_validation_handler().output_errors()
-        
+      
           unless forced?()
             raise
           end
         end
-      
+    
         info("")
         info("Validation finished")
       end
@@ -402,7 +403,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("-n", "--info")           {@options.output_threshold = Logger::INFO}
     opts.on("-q", "--quiet")          {@options.output_threshold = Logger::WARN}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
-    opts.on("--no-validation")        {|val| @options.force = true }
+    opts.on("--no-validation")        {|val| @options.no_validation = true }
     opts.on("--output-config")        { @options.output_config = true }
     opts.on("--configure String")      {|val|
                                         val_parts = val.split("=")

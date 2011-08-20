@@ -28,6 +28,8 @@ module DataserverValidationCheck
 end
 
 class ReplicationServiceChecks < GroupValidationCheck
+  include ClusterHostCheck
+  
   def initialize
     super(REPL_SERVICES, "replication service", "replication services")
     
@@ -105,6 +107,26 @@ module ReplicationServiceValidationCheck
   end
 end
 
+module CreateServiceCheck
+  def enabled?
+    if [ConfigureServicePackage::SERVICE_UPDATE, ConfigureServicePackage::SERVICE_DELETE].include?(@config.getProperty(DEPLOYMENT_TYPE))
+      false
+    else
+      super()
+    end
+  end
+end
+
+module ModifyServiceCheck
+  def enabled?
+    if [ConfigureServicePackage::SERVICE_UPDATE, ConfigureServicePackage::SERVICE_DELETE].include?(@config.getProperty(DEPLOYMENT_TYPE))
+      super()
+    else
+      false
+    end
+  end
+end
+
 class BackupScriptAvailableCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   
@@ -162,61 +184,27 @@ class THLStorageCheck < ConfigureValidationCheck
   end
 end
 
-class TransferredLogStorageCheck < ConfigureValidationCheck
+class ServiceTransferredLogStorageCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  include CreateServiceCheck
+  
   def set_vars
-    @title = "Transferred log storage check"
+    @title = "Service transferred log storage check"
   end
   
   def validate
-    # TODO
-    
-    if @config.getProperty(REPL_RELAY_LOG_DIR)
-      if File.exists?(@config.getProperty(REPL_RELAY_LOG_DIR)) && !File.directory?(@config.getProperty(REPL_RELAY_LOG_DIR))
-        error("Transferred log directory #{@config.getProperty(REPL_RELAY_LOG_DIR)} already exists as a file")
+    unless File.exists?(@config.getProperty(get_member_key(REPL_SVC_CONFIG_FILE)))
+      if File.exists?(@config.getProperty(get_member_key(REPL_RELAY_LOG_DIR)))
+        dir_file_count = cmd_result("ls #{@config.getProperty(get_member_key(REPL_RELAY_LOG_DIR))} | wc -l")
+        if dir_file_count.to_i() > 0
+          error("Transferred log directory #{@config.getProperty(get_member_key(REPL_RELAY_LOG_DIR))} already contains log files")
+        end
       end
     end
-    
-    @config.getPropertyOr(REPL_SERVICES).each{
-      |service_alias,service_properties|
-      
-      if service_properties[REPL_RELAY_LOG_DIR]
-        unless File.exists?(service_properties[REPL_SVC_CONFIG_FILE])
-          if File.exists?(service_properties[REPL_RELAY_LOG_DIR])
-            dir_file_count = cmd_result("ls #{service_properties[REPL_RELAY_LOG_DIR]} | wc -l")
-            if dir_file_count.to_i() > 0
-              error("Transferred log directory #{service_properties[REPL_RELAY_LOG_DIR]} already contains log files")
-            end
-          end
-        end  
-      end
-    }
-  end
-end
-
-class NoHiddenServicesCheck < ConfigureValidationCheck
-  def set_vars
-    @title = "No hidden services check"
   end
   
-  def validate
-    # TODO - Update this check
-    config_services = []
-    
-    current_services = []
-    Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + '/tungsten-replicator/conf/static-*.properties'].each do |file| 
-      service_name = cmd_result("grep ^service.name= #{file} | awk -F = '{print $2}'")
-      if service_name != ""
-        current_services << service_name
-      end
-    end
-    
-    debug("Current services: #{current_services.join(',')}")
-    debug("Configured services: #{config_services.join(',')}")
-    missing_services = current_services - config_services
-    missing_services.each{
-      |service_name|
-      error("Missing configuration information for replication service '#{service_name}'")
-    }
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_RELAY_LOG_DIR)).to_s != ""
   end
 end
 

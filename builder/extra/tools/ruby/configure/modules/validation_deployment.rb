@@ -1,5 +1,18 @@
+module ClusterHostCheck
+  def self.included(subclass)
+    @subclasses ||= []
+    @subclasses << subclass
+  end
+
+  def self.subclasses
+    @subclasses || []
+  end
+end
+
 class SSHLoginCheck < ConfigureValidationCheck
+  include ClusterHostCheck
   include LocalValidationCheck
+  
   def set_vars
     @title = "SSH login"
     @description = "Ensure that the configuration host can login to each member of the cluster via SSH"
@@ -30,7 +43,9 @@ class SSHLoginCheck < ConfigureValidationCheck
 end
 
 class WriteableTempDirectoryCheck < ConfigureValidationCheck
+  include ClusterHostCheck
   include LocalValidationCheck
+  
   def set_vars
     @title = "Writeable temp directory"
     @properties << TEMP_DIRECTORY
@@ -73,7 +88,9 @@ class WriteableTempDirectoryCheck < ConfigureValidationCheck
 end
 
 class WriteableHomeDirectoryCheck < ConfigureValidationCheck
+  include ClusterHostCheck
   include LocalValidationCheck
+  
   def set_vars
     @title = "Writeable home directory"
     @properties << HOME_DIRECTORY
@@ -120,7 +137,9 @@ class WriteableHomeDirectoryCheck < ConfigureValidationCheck
 end
 
 class DeploymentPackageCheck < ConfigureValidationCheck
+  include ClusterHostCheck
   include LocalValidationCheck
+  
   def set_vars
     @title = "Deployment package"
   end
@@ -139,7 +158,9 @@ class DeploymentPackageCheck < ConfigureValidationCheck
 end
 
 class RubyVersionCheck < ConfigureValidationCheck
+  include ClusterHostCheck
   include LocalValidationCheck
+  
   def set_vars
     @title = "Ruby version"
   end
@@ -160,6 +181,8 @@ class RubyVersionCheck < ConfigureValidationCheck
 end
 
 class OSCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
   def set_vars
     @title = "Operating system"
   end
@@ -215,6 +238,8 @@ class OSCheck < ConfigureValidationCheck
 end
 
 class JavaVersionCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
   def set_vars
     @title = "Java version"
   end
@@ -240,6 +265,8 @@ class JavaVersionCheck < ConfigureValidationCheck
 end
 
 class SudoCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
   def set_vars
     @title = "Sudo"
   end
@@ -278,6 +305,8 @@ class SudoCheck < ConfigureValidationCheck
 end
 
 class HostnameCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
   def set_vars
     @title = "Hostname"
     @description = "Ensure hostname is legal host name, not localhost"
@@ -294,6 +323,8 @@ class HostnameCheck < ConfigureValidationCheck
 end
 
 class PackageDownloadCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
   def set_vars
     @title = "Package download check"
   end
@@ -314,6 +345,8 @@ class PackageDownloadCheck < ConfigureValidationCheck
 end
 
 class InstallServicesCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
   def set_vars
     @title = "Install services check"
   end
@@ -334,6 +367,8 @@ class InstallServicesCheck < ConfigureValidationCheck
 end
 
 class ClusterSSHLoginCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
   def set_vars
     @title = "SSH login check"
   end
@@ -353,5 +388,85 @@ class ClusterSSHLoginCheck < ConfigureValidationCheck
   def enabled?
     # Disabled until the manager is present and needs SSH access between hosts
     false
+  end
+end
+
+class HostReplicatorServiceRunningCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
+  def set_vars
+    @title = "Replicator is running check"
+  end
+  
+  def validate
+    begin
+      cmd_result("#{@config.getProperty(SVC_PATH_REPLICATOR)} status")
+      error("The replicator in #{@config.getProperty(HOME_DIRECTORY)} is still running.  You must stop it before installation can continue.")
+    rescue CommandError
+      info("The replicator in #{@config.getProperty(HOME_DIRECTORY)} is stopped.")
+    end
+  end
+  
+  def enabled?
+    super() && @config.getProperty(HOST_ENABLE_REPLICATOR) == "true"
+  end
+end
+
+class TransferredLogStorageCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
+  def set_vars
+    @title = "Transferred log storage check"
+  end
+  
+  def validate
+    if File.exists?(@config.getProperty(REPL_RELAY_LOG_DIR)) && !File.directory?(@config.getProperty(REPL_RELAY_LOG_DIR))
+      error("Transferred log directory #{@config.getProperty(REPL_RELAY_LOG_DIR)} already exists as a file")
+    end
+  end
+  
+  def enabled?
+    super() && @config.getProperty(REPL_RELAY_LOG_DIR).to_s != ""
+  end
+end
+
+class NoHiddenReplicationServicesCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
+  def set_vars
+    @title = "No hidden services check"
+  end
+  
+  def validate
+    current_config = get_target_current_config
+    if current_config == nil
+      return true
+    end
+    
+    missing_services = []
+    current_config.getPropertyOr([REPL_SERVICES], {}).keys().each{
+      |current_svc_key|
+      current_svc_name = current_config.getNestedProperty([REPL_SERVICES, current_svc_key, DEPLOYMENT_SERVICE])
+      
+      @config.getPropertyOr([REPL_SERVICES], {}).keys().each{
+        |check_svc_key|
+        
+        unless current_svc_name == @config.getNestedProperty([REPL_SERVICES, check_svc_key, DEPLOYMENT_SERVICE])
+          missing_services << current_svc_name
+        end
+      }
+    }
+    
+    missing_services.each{
+      |service_name|
+      error("Missing configuration information for replication service '#{service_name}'")
+    }
+    if missing_services.size > 0
+      help("Try using configure-service to add new replication services")
+    end
+  end
+  
+  def enabled?
+    super() && @config.getProperty(DEPLOYMENT_TYPE) == DISTRIBUTED_DEPLOYMENT_NAME
   end
 end

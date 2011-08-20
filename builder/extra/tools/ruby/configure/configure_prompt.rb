@@ -291,6 +291,14 @@ module ConstantValueModule
   end
 end
 
+module HiddenValueModule
+  include ConstantValueModule
+  
+  def enabled_for_template_file?
+    false
+  end
+end
+
 class InterfaceMessage < ConfigurePrompt
   def initialize(message_id, title = nil)
     @name = message_id

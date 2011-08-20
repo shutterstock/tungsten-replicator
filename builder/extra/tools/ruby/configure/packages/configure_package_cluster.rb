@@ -19,22 +19,14 @@ class ConfigurePackageCluster < ConfigurePackage
   end
   
   def get_validation_checks
-    [
-      ClusterSSHLoginCheck.new(),
-      InstallServicesCheck.new(),
-      SSHLoginCheck.new(),
-      WriteableTempDirectoryCheck.new(),
-      WriteableHomeDirectoryCheck.new(),
-      DeploymentPackageCheck.new(),
-      RubyVersionCheck.new(),
-      JavaVersionCheck.new(),
-      OSCheck.new(),
-      SudoCheck.new(),
-      HostnameCheck.new(),
-      PackageDownloadCheck.new(),
-      TransferredLogStorageCheck.new(),
-      ReplicationServiceChecks.new()
-    ]
+    checks = []
+    
+    ClusterHostCheck.subclasses.each{
+      |klass|
+      checks << klass.new()
+    }
+    
+    return checks
   end
   
   def parsed_options?(arguments)

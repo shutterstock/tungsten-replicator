@@ -197,7 +197,6 @@ class ConfigureServicePackage < ConfigurePackage
   
   def get_validation_checks
     [
-      TransferredLogStorageCheck.new(),
       ReplicationServiceChecks.new()
     ]
   end

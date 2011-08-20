@@ -469,3 +469,25 @@ class ReplicationAPIPassword < ConfigurePrompt
     super() && @config.getProperty(get_member_key(REPL_API)) == "true"
   end
 end
+
+class HostEnableReplicator < ConfigurePrompt
+  include ClusterHostPrompt
+  include HiddenValueModule
+  
+  def initialize
+    super(HOST_ENABLE_REPLICATOR, "Is the replicator enabled on this host", PV_BOOLEAN, "true")
+  end
+end
+
+class HostServicePathReplicator < ConfigurePrompt
+  include ClusterHostPrompt
+  include ConstantValueModule
+  
+  def initialize
+    super(SVC_PATH_REPLICATOR, "Path to the replicator service command", PV_FILENAME)
+  end
+  
+  def get_default_value
+    @config.getProperty(get_member_key(CURRENT_RELEASE_DIRECTORY)) + "/tungsten-replicator/bin/replicator"
+  end
+end
