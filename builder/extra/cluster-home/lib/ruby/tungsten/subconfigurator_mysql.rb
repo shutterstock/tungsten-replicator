@@ -585,6 +585,10 @@ MEMSIZE
     transformer.transform { |line|
       if line =~ /replicator.services/
         "replicator.services=" + @configurator.config.props[GLOBAL_DSNAME]
+      elsif line =~ /replicator.rmi_port=/ then
+        "replicator.rmi_port=10000"
+      elsif line =~ /replicator.host=/ then
+        "replicator.host=" + @configurator.config.props[GLOBAL_HOST]
       elsif line =~ /replicator.global.db.user=/ then
         "replicator.global.db.user=" + @configurator.config.props[REPL_DBLOGIN]
       elsif line =~ /replicator.global.db.password=/ then
