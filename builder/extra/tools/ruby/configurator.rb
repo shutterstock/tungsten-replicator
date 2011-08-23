@@ -754,6 +754,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   end
   
   def is_localhost?(hostname)
+    if hostname == DEFAULTS
+      return false
+    end
+    
     debug("Is '#{hostname}' the current host?")
     if hostname == hostname()
       return true
@@ -1024,6 +1028,11 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
 end
 
 def ssh_result(command, host, user, return_object = false)
+  if host == DEFAULTS
+    debug("Unable to run '#{command}' because '#{host}' is not valid")
+    raise RemoteCommandError.new(user, host, command, nil, '')
+  end
+  
   if return_object == false && 
       Configurator.instance.is_localhost?(host) && 
       user == Configurator.instance.whoami()
