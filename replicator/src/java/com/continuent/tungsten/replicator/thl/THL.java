@@ -28,6 +28,7 @@ import java.sql.SQLException;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.cluster.resource.physical.Replicator;
+import com.continuent.tungsten.commons.config.Interval;
 import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
@@ -67,7 +68,6 @@ public class THL implements Store
     private String             logDir               = "/opt/continuent/logs/";
     private String             eventSerializer      = ProtobufSerializer.class
                                                             .getName();
-    private String             logFileRetention     = "0";
 
     // Settable properties to control this storage implementation.
     protected String           password;
@@ -151,7 +151,7 @@ public class THL implements Store
     {
         this.url = url;
     }
-    
+
     public void setVendor(String vendor)
     {
         this.vendor = vendor;
@@ -230,7 +230,7 @@ public class THL implements Store
      */
     public void setLogFileRetention(String logFileRetention)
     {
-        this.logFileRetention = logFileRetention;
+        this.logFileRetainMillis = new Interval(logFileRetention).longValue();
     }
 
     /**
@@ -524,7 +524,7 @@ public class THL implements Store
         props.setLong(Replicator.MAX_STORED_SEQNO, getMaxStoredSeqno());
         props.setInt("logFileSize", logFileSize);
         props.setBoolean("doChecksum", doChecksum);
-        props.setString("logFileRetention", logFileRetention);
+        props.setLong("logFileRetainMillis", logFileRetainMillis);
         props.setString("logDir", logDir);
         return props;
     }
