@@ -27,7 +27,6 @@ module ConfigureDeploymentStepReplicator
 
     write_replication_service_properties()
     write_wrapper_conf()
-    deploy_mysql_connectorj_package()
     add_service("tungsten-replicator/bin/replicator")
     set_run_as_user("#{get_deployment_basedir()}/tungsten-replicator/bin/replicator")
   end
@@ -82,15 +81,6 @@ module ConfigureDeploymentStepReplicator
       end
     }
   end
-  
-  def deploy_mysql_connectorj_package
-		connector = @config.getProperty(REPL_MYSQL_CONNECTOR_PATH)
-		if connector != nil and connector != "" and File.exist?(connector)
-		  # Deploy user's specified MySQL Connector/J (TENT-222).
-  		info "Deploying MySQL Connector/J..."
-			FileUtils.cp(connector, "#{get_deployment_basedir()}/tungsten-replicator/lib/")
-		end
-	end
   
   def get_dynamic_properties_file()
     "#{get_deployment_basedir()}/tungsten-replicator/conf/dynamic.properties"

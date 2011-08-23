@@ -20,6 +20,7 @@ system_require 'uri'
 system_require 'resolv'
 system_require 'ifconfig'
 system_require 'pp'
+system_require 'timeout'
 system_require 'cgi'
 system_require 'net/ssh'
 system_require 'json'
@@ -757,9 +758,13 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     begin
-      ip_addresses = Resolv.getaddresses(hostname)
+      ip_addresses = Timeout.timeout(2) {
+        Resolv.getaddresses(hostname)
+      }
+    rescue Timeout::Error
+      raise "Unable to complete configuration because of a DNS timeout"
     rescue
-      raise "Unable to determine the IP addresses for '#{hostname}"
+      raise "Unable to determine the IP addresses for '#{hostname}'"
     end
     
     debug("Search ifconfig for #{ip_addresses.join(', ')}")

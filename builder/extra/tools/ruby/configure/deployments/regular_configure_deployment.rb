@@ -25,11 +25,6 @@ class RegularConfigureDeployment < ConfigureDeployment
         config_obj.setProperty(DEPLOY_PACKAGE_URI, "file://localhost#{config_obj.getProperty([HOSTS, host_alias, TEMP_DIRECTORY])}/#{package_basename}")
       end
       
-      if !(Configurator.instance.is_localhost?(@config.getProperty([HOSTS, host_alias, HOST]))) && @config.getProperty(REPL_MYSQL_CONNECTOR_PATH)
-        config_obj.setProperty(GLOBAL_REPL_MYSQL_CONNECTOR_PATH, config_obj.getProperty(REPL_MYSQL_CONNECTOR_PATH))
-        config_obj.setProperty(REPL_MYSQL_CONNECTOR_PATH, "#{@config.getProperty([HOSTS, host_alias, TEMP_DIRECTORY])}/#{Configurator.instance.get_unique_basename()}/#{File.basename(config_obj.getProperty(REPL_MYSQL_CONNECTOR_PATH))}")
-      end
-      
       config_obj.getPropertyOr(REPL_SERVICES, {}).delete_if{
         |s_alias, s_props|
 

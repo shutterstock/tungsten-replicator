@@ -28,12 +28,6 @@ class ConfigureDeploymentHandler
       debug("Transfer configuration code to #{@config.getProperty(HOST)}")
       cmd_result("rsync -Caze ssh --delete #{Configurator.instance.get_base_path()}/ #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
 
-      # Transfer the MySQL/J file if it is being used
-      if @config.getProperty(GLOBAL_REPL_MYSQL_CONNECTOR_PATH) != nil
-        debug("Transfer Connector/J to #{@config.getProperty(HOST)}")
-        cmd_result("scp #{@config.getProperty(GLOBAL_REPL_MYSQL_CONNECTOR_PATH)} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
-      end
-
       debug("Transfer host configuration file to #{@config.getProperty(HOST)}")
       config_tempfile = Tempfile.new("tcfg")
       config_tempfile.close()

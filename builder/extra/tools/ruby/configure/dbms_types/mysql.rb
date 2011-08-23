@@ -1,8 +1,6 @@
 DBMS_MYSQL = "mysql"
 
 # MySQL-specific parameters
-GLOBAL_REPL_MYSQL_CONNECTOR_PATH = "global_mysql_connector_path"
-REPL_MYSQL_CONNECTOR_PATH = "mysql_connector_path"
 REPL_MYSQL_DATADIR = "repl_datasource_mysql_data_directory"
 REPL_MYSQL_MYCNF = "repl_datasource_mysql_mycnf"
 REPL_MYSQL_RO_SLAVE = "repl_mysql_ro_slave"
