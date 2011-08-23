@@ -330,7 +330,7 @@ echo "USER ACCOUNT: ${USER}" >> $manifest
 # Hudson environment values.  These will be empty in local builds.
 echo "BUILD_NUMBER: ${BUILD_NUMBER}" >> $manifest
 echo "BUILD_ID: ${BUILD_NUMBER}" >> $manifest
-echo "JOB_HAME: ${JOB_NAME}" >> $manifest
+echo "JOB_NAME: ${JOB_NAME}" >> $manifest
 echo "BUILD_TAG: ${BUILD_TAG}" >> $manifest
 echo "HUDSON_URL: ${HUDSON_URL}" >> $manifest
 echo "SVN_REVISION: ${SVN_REVISION}" >> $manifest
