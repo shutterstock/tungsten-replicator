@@ -27,25 +27,6 @@ module ConfigureDeploymentCore
     return result
   end
   
-  def fill_ports_near_hosts(host_hash, port_to_add)
-    host_list = host_list = []
-    host_hash.each{
-      |h_key,h_props|
-      host_list << h_props[HOST]
-    }
-    
-    initial_hosts = nil
-    host_list.each { |host|
-      host_addr = host.strip + "[" + port_to_add + "]"
-      if initial_hosts
-        initial_hosts = initial_hosts + "," + host_addr
-      else
-        initial_hosts = host_addr
-      end
-    }
-    return initial_hosts
-  end
-  
   def get_deployment_basedir
     @config.getProperty(CURRENT_RELEASE_DIRECTORY)
   end

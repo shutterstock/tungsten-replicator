@@ -67,10 +67,6 @@ class DeploymentServicePrompt < ConfigurePrompt
     super(DEPLOYMENT_SERVICE, "Deployment Service", 
       PV_ANY)
   end
-  
-  def enabled?
-    super() && [SERVICE_CREATE, SERVICE_DELETE, SERVICE_UPDATE].include?(@config.getPropertyOr(DEPLOYMENT_TYPE, ""))
-  end
 end
 
 class DeployCurrentPackagePrompt < ConfigurePrompt

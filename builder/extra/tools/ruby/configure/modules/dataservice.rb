@@ -147,7 +147,8 @@ class ReplicationServiceName < ConfigurePrompt
   include ReplicationServicePrompt
   
   def initialize
-    super(DEPLOYMENT_SERVICE, "What is the replication service name?", PV_IDENTIFIER)
+    super(DEPLOYMENT_SERVICE, "What is the replication service name?", 
+      PV_IDENTIFIER, DEFAULT_SERVICE_NAME)
   end
   
   def update_deprecated_keys()
@@ -166,7 +167,6 @@ end
 
 class LocalReplicationServiceName < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -180,7 +180,6 @@ end
 
 class ReplicationServiceStart < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -198,7 +197,6 @@ end
 
 class ReplicationServiceReport < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -212,7 +210,6 @@ end
 
 class ReplicationServiceType < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -229,7 +226,6 @@ end
 
 class ReplicationServiceRole < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -241,7 +237,6 @@ end
 
 class ReplicationServiceLogDirectory < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -269,7 +264,6 @@ end
 
 class ReplicationServiceRelayLogDirectory < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -360,7 +354,6 @@ end
 
 class ReplicationServiceTHLMaster < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -380,7 +373,6 @@ end
 
 class ReplicationServiceTHLMasterPort < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -404,7 +396,6 @@ end
 
 class ReplicationServiceTHLPort < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_SVC_THL_PORT, 
@@ -420,7 +411,6 @@ end
 class ReplicationShardIDMode < ConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_SVC_SHARD_DEFAULT_DB, 
@@ -432,7 +422,6 @@ end
 
 class ReplicationAllowUnsafeSQL < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_SVC_ALLOW_BIDI_UNSAFE, 
@@ -448,7 +437,6 @@ end
 class ReplicationAllowAllSQL < ConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_SVC_ALLOW_ANY_SERVICE, 
@@ -460,7 +448,6 @@ end
 class ReplicationServiceAutoEnable < ConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_AUTOENABLE, "Auto-enable services after start-up", 
@@ -470,7 +457,6 @@ end
 
 class ReplicationServiceChannels < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_SVC_CHANNELS, "Number of replication channels to use for services",
@@ -485,7 +471,6 @@ end
 
 class ReplicationServiceParallelizationType < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_SVC_PARALLELIZATION_TYPE, "Method for implementing parallel queues (disk|memory)",
@@ -547,7 +532,6 @@ end
 
 class ReplicationServiceBufferSize < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_BUFFER_SIZE, "Replicator block commit size (min 1, max 100)",
@@ -557,7 +541,6 @@ end
 
 class ReplicationServiceSlaveTakeover < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_SVC_NATIVE_SLAVE_TAKEOVER, "Takeover native replication",
@@ -573,7 +556,6 @@ end
 class BackupMethod < ConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
 
   def initialize
     super(REPL_BACKUP_METHOD, "Database backup method", nil)
@@ -609,7 +591,6 @@ end
 class ReplicationServiceBackupStorageDirectory < BackupConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
   include NotTungstenInstallerPrompt
   
   def initialize
@@ -637,7 +618,6 @@ end
 class BackupStorageTempDirectory < BackupConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_BACKUP_DUMP_DIR, "Backup temporary dump directory", PV_FILENAME, "/tmp")
@@ -652,7 +632,6 @@ end
 class BackupStorageRetention < BackupConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_BACKUP_RETENTION, "Number of backups to retain", PV_INTEGER, "3")
@@ -662,7 +641,6 @@ end
 class BackupScriptPathConfigurePrompt < ScriptBackupConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_BACKUP_SCRIPT, "What is the path to the backup script", PV_FILENAME)
@@ -672,7 +650,6 @@ end
 class BackupScriptCommandPrefixConfigurePrompt < ScriptBackupConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_BACKUP_COMMAND_PREFIX, "Use sudo when running the backup script?", PV_BOOLEAN, "false")
@@ -690,7 +667,6 @@ end
 class BackupScriptOnlineConfigurePrompt < ScriptBackupConfigurePrompt
   include ReplicationServicePrompt
   include AdvancedPromptModule
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_BACKUP_ONLINE, "Does the backup script support backing up a datasource while it is ONLINE", PV_BOOLEAN, "false")
@@ -699,7 +675,6 @@ end
 
 class THLStorageChecksum < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include AdvancedPromptModule
   
   def initialize
@@ -714,7 +689,6 @@ end
 
 class THLStorageConnectionTimeout < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include AdvancedPromptModule
   
   def initialize
@@ -729,7 +703,6 @@ end
 
 class THLStorageFileSize < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include AdvancedPromptModule
   
   def initialize
@@ -744,7 +717,6 @@ end
 
 class THLStorageRetention < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include AdvancedPromptModule
   
   def initialize
@@ -759,7 +731,6 @@ end
 
 class THLStorageConsistency < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   include AdvancedPromptModule
   
   def initialize
@@ -774,7 +745,7 @@ end
 
 class ReplicationServiceConfigFile < ConfigurePrompt
   include ReplicationServicePrompt
-  include ConstantValueModule
+  include HiddenValueModule
   
   def initialize
     super(REPL_SVC_CONFIG_FILE, "Path to replication service static properties file", 

@@ -97,6 +97,10 @@ class MySQLDatabasePlatform < ConfigureDatabasePlatform
   def getVendor()
     "mysql"
   end
+  
+  def getVersion()
+    get_value("SHOW VARIABLES LIKE 'version'", "Value")
+  end
 	
 	def get_thl_filters()
 	  if @config.getProperty(REPL_MYSQL_ENABLE_ENUMTOSTRING) == "true"
@@ -173,7 +177,6 @@ end
 
 class MySQLEnableEnumToString < ConfigurePrompt
   include ReplicationServicePrompt
-  include NotDeleteServicePrompt
   
   def initialize
     super(REPL_MYSQL_ENABLE_ENUMTOSTRING, "Expand ENUM values into their text values?", 

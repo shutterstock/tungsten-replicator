@@ -173,8 +173,6 @@ PV_DBMSROLE = PropertyValidator.new("master|slave",
   "Value must be master or slave")
 PV_GC_MEMBERSHIP_PROTOCOL = PropertyValidator.new("multicast|gossip|ping", 
   "Value must be multicast, gossip or ping")
-PV_POLICY_MGR_MODE = PropertyValidator.new("manual|automatic", 
-  "Value must be manual or automatic")
 PV_URI = PropertyValidator.new('^(http|https|ftp|file)\://([a-zA-Z0-9\.\-]+(\:[a-zA-Z0-9\.&amp;%\$\-]+)*@)*((25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9])|localhost|([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9\-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(\:[0-9]+)*(/($|[a-zA-Z0-9\.\,\?\'\\\+&amp;%\$#\=~_\-]+))*$',
   "Value must be a URI")
 PV_ANY = PropertyValidator.new('.*', "Value may be any string")

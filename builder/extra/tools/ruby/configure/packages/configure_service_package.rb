@@ -230,9 +230,3 @@ class ConfigureServicePackage < ConfigurePackage
     false
   end
 end
-
-module NotDeleteServicePrompt
-  def required?
-    super() && @config.getProperty(DEPLOYMENT_TYPE) != ConfigureServicePackage::SERVICE_DELETE
-  end
-end

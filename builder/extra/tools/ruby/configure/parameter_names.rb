@@ -19,11 +19,9 @@ USERID = "user"
 HOME_DIRECTORY = "home_directory"
 CURRENT_RELEASE_DIRECTORY = 'current_release_directory'
 TEMP_DIRECTORY = "temp_directory"
-SANDBOX_COUNT = "sandbox_instance_count"
 DEPLOY_CURRENT_PACKAGE = "deploy_current_package"
 GLOBAL_DEPLOY_PACKAGE_URI = "global_deploy_package_uri"
 DEPLOY_PACKAGE_URI = "deploy_package_uri"
-OPTION_MONITOR_INTERNAL = "internal_monitor"
 HOST_ENABLE_REPLICATOR = "host_enable_replicator"
 
 # Operating system service parameters.

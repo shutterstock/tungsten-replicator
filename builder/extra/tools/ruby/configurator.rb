@@ -66,6 +66,8 @@ REPL_ROLE_DI = "direct"
 DISTRIBUTED_DEPLOYMENT_NAME = "regular"
 DIRECT_DEPLOYMENT_HOST_ALIAS = "local"
 
+DEFAULT_SERVICE_NAME = "default"
+
 class IgnoreError < StandardError
 end
 
@@ -1122,6 +1124,19 @@ def output_usage_line(argument, msg = "", default = nil, max_line = nil, additio
       output_usage_line("", line, nil, max_line)
     }
   end
+end
+
+def fill_ports_near_hosts(host_list, port_to_add)
+  initial_hosts = nil
+  host_list.split(",").each { |host|
+    host_addr = host.strip + "[" + port_to_add + "]"
+    if initial_hosts
+      initial_hosts = initial_hosts + "," + host_addr
+    else
+      initial_hosts = host_addr
+    end
+  }
+  return initial_hosts
 end
 
 # The user has requested to save all current configuration values and exit
