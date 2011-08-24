@@ -213,7 +213,6 @@ end
 
 class DatasourceDisableRelayLogs < ConfigurePrompt
   include DatasourcePrompt
-  include NotTungstenInstallerPrompt
   
   def initialize
     super(REPL_DISABLE_RELAY_LOGS, "Disable the use of relay-logs?",
@@ -229,6 +228,10 @@ class DatasourceDisableRelayLogs < ConfigurePrompt
       end
       @config.setProperty(get_member_key('repl_extractor_use_relay_logs'), nil)
     end
+  end
+  
+  def enabled_for_command_line?
+    false
   end
   
   def get_template_value(transform_values_method)

@@ -84,23 +84,6 @@ class ConfigurePackageCluster < ConfigurePackage
     }
   end
   
-  def each_host_prompt(&block)
-    ch = ClusterHosts.new()
-    ch.set_config(@config)
-    
-    ch.each_prompt{
-      |prompt|
-      
-      if prompt.enabled_for_command_line?()
-        begin
-          block.call(prompt)
-        rescue => e
-          error(e.message)
-        end
-      end
-    }
-  end
-  
   def store_config_file?
     Configurator.instance.is_interactive?()
   end

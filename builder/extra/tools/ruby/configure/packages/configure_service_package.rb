@@ -54,6 +54,10 @@ class ConfigureServicePackage < ConfigurePackage
     
     service_config = Properties.new
     
+    datasource_options = Properties.new()
+    datasource_options.setProperty([DATASOURCES, "master"], {})
+    datasource_options.setProperty([DATASOURCES, "ds"], {})
+    
     opts=OptionParser.new
     
     opts.on("-C", "--create")   { @config.setProperty(DEPLOYMENT_TYPE, SERVICE_CREATE) }
@@ -74,6 +78,46 @@ class ConfigureServicePackage < ConfigurePackage
           ConfigurePrompt.add_global_default(prompt.name, val)
         }
       end
+      
+      if Configurator.instance.advanced_mode?()
+        case prompt.class().name()
+        when "ReplicationServiceDatasource"
+          each_datasource_prompt{
+            |dsp|
+            if (av = dsp.get_command_line_argument_value()) != nil
+              opts.on("--#{dsp.get_command_line_argument()}") {
+                datasource_options.setProperty([DATASOURCES, "ds", dsp.name], av)
+                ConfigurePrompt.add_global_default(dsp.name, av)
+              }
+            else
+              opts.on("--#{dsp.get_command_line_argument()} String") {
+                |val|
+                datasource_options.setProperty([DATASOURCES, "ds", dsp.name], val)
+                ConfigurePrompt.add_global_default(dsp.name, val)
+              }
+            end
+          }
+        when "ReplicationServiceMasterDatasource"
+          each_datasource_prompt{
+            |dsp|
+            if (av = dsp.get_command_line_argument_value()) != nil
+              opts.on("--#{dsp.get_command_line_argument().gsub('datasource', 'master')}") {
+                datasource_options.setProperty([DATASOURCES, "master", dsp.name], av)
+              }
+            else
+              opts.on("--#{dsp.get_command_line_argument().gsub('datasource', 'master')} String") {
+                |val|
+                datasource_options.setProperty([DATASOURCES, "master", dsp.name], val)
+              }
+            end
+          }
+          opts.on("--disable-relay-logs") {
+            datasource_options.setProperty([DATASOURCES, "master", REPL_DISABLE_RELAY_LOGS], "true")
+            datasource_options.setProperty([DATASOURCES, "ds", REPL_DISABLE_RELAY_LOGS], "true")
+            ConfigurePrompt.add_global_default(REPL_DISABLE_RELAY_LOGS, "true")
+          }
+        end
+      end
     }
     opts.on("--master-host String") {
       |val|
@@ -87,6 +131,57 @@ class ConfigureServicePackage < ConfigurePackage
       
       unless @config.getNestedProperty([DEPLOYMENT_TYPE])
         error("You must specify -C, -D or -U")
+      end
+      
+      begin
+        ds_alias = service_config.getProperty(REPL_DATASOURCE)
+        if ds_alias && @config.getPropertyOr(DATASOURCES, {}).keys().include?(ds_alias)
+          if datasource_options.getPropertyOr([DATASOURCES, "ds"], {}).size > 0
+            raise "The '#{ds_alias}' datasource already exists, but you provided configuration settings for it."
+          else
+            # The datasource is properly configured
+          end
+        else
+          if datasource_options.getPropertyOr([DATASOURCES, "ds"], {}).size > 0
+            unless ds_alias
+              ds_alias = datasource_options.getProperty([DATASOURCES, "ds", REPL_DBHOST]).gsub(".", "_") + "_" + datasource_options.getProperty([DATASOURCES, "ds", REPL_DBPORT])
+            end
+            if @config.getPropertyOr(DATASOURCES, {}).keys().include?(ds_alias)
+              raise "The '#{ds_alias}' datasource already exists, but you provided configuration settings for it."
+            end
+            service_config.setProperty(REPL_DATASOURCE, ds_alias)
+            @config.setProperty([DATASOURCES, ds_alias], datasource_options.getProperty([DATASOURCES, "ds"]))
+          else
+            raise "You must specify a datasource alias or datasource configuration information"
+          end
+        end
+      rescue => e
+        error(e.message)
+      end
+      
+      
+      begin
+        master_alias = service_config.getProperty(REPL_MASTER_DATASOURCE)
+        if master_alias && @config.getProperty(DATASOURCES).keys().include?(master_alias)
+          if datasource_options.getPropertyOr([DATASOURCES, "master"], {}).size > 0
+            raise "The '#{master_alias}' master datasource already exists, but you provided configuration settings for it."
+          else
+            # The master datasource is properly configured
+          end
+        else
+          if datasource_options.getPropertyOr([DATASOURCES, "master"], {}).size > 0
+            unless master_alias
+              master_alias = datasource_options.getProperty([DATASOURCES, "master", REPL_DBHOST]).gsub(".", "_") + "_" + datasource_options.getProperty([DATASOURCES, "master", REPL_DBPORT])
+            end
+            if @config.getProperty(DATASOURCES).keys().include?(master_alias)
+              raise "The '#{master_alias}' master datasource already exists, but you provided configuration settings for it."
+            end
+            service_config.setProperty(REPL_MASTER_DATASOURCE, master_alias)
+            @config.setProperty([DATASOURCES, master_alias], datasource_options.getProperty([DATASOURCES, "master"]))
+          end
+        end
+      rescue => e
+        error(e.message)
       end
       
       case remainder.size()
@@ -175,6 +270,21 @@ class ConfigureServicePackage < ConfigurePackage
       |prompt|
       prompt.set_member(svc)
       prompt.output_usage()
+      
+      if Configurator.instance.advanced_mode?()
+        case prompt.class().name()
+        when "ReplicationServiceDatasource"
+          each_datasource_prompt{
+            |prompt|
+            prompt.output_usage()
+          }
+        when "ReplicationServiceMasterDatasource"
+          each_datasource_prompt{
+            |prompt|
+            output_usage_line("--#{prompt.get_command_line_argument()}".gsub("datasource", "master"), prompt.get_prompt(), prompt.get_value(true, true), nil, prompt.get_prompt_description())
+          }
+        end
+      end
     }
   end
   
@@ -199,23 +309,6 @@ class ConfigureServicePackage < ConfigurePackage
     [
       ReplicationServiceChecks.new()
     ]
-  end
-  
-  def each_service_prompt(&block)
-    ch = ReplicationServices.new()
-    ch.set_config(@config)
-    
-    ch.each_prompt{
-      |prompt|
-      
-      if prompt.enabled_for_command_line?()
-        begin
-          block.call(prompt)
-        rescue => e
-          error(e.message)
-        end
-      end
-    }
   end
   
   def read_config_file?

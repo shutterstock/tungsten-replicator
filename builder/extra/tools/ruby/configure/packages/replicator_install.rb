@@ -104,8 +104,9 @@ class ReplicatorInstallPackage < ConfigurePackage
     opts.on("--disable-relay-logs") {
       datasource_options.setProperty([DATASOURCES, "master", REPL_DISABLE_RELAY_LOGS], "true")
       datasource_options.setProperty([DATASOURCES, "slave", REPL_DISABLE_RELAY_LOGS], "true")
+      ConfigurePrompt.add_global_default(REPL_DISABLE_RELAY_LOGS, "true")
     }
-    each_master_datasource_prompt{
+    each_datasource_prompt{
       |prompt|
       if (av = prompt.get_command_line_argument_value()) != nil
         opts.on("--#{prompt.get_command_line_argument().gsub('datasource', 'master')}") {
@@ -121,7 +122,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       end
     }
     
-    each_slave_datasource_prompt{
+    each_datasource_prompt{
       |prompt|
       if (av = prompt.get_command_line_argument_value()) != nil
         opts.on("--#{prompt.get_command_line_argument().gsub('datasource', 'slave')}") {
@@ -238,9 +239,14 @@ class ReplicatorInstallPackage < ConfigurePackage
 
     opts.on("--disable-relay-logs") {
       datasource_options.setProperty([DATASOURCES, "ds", REPL_DISABLE_RELAY_LOGS], "true")
+      ConfigurePrompt.add_global_default(REPL_DISABLE_RELAY_LOGS, "true")
     }
     each_datasource_prompt{
       |prompt|
+      if prompt.is_a?(DatasourceDBHost)
+        next
+      end
+      
       if (av = prompt.get_command_line_argument_value()) != nil
         opts.on("--#{prompt.get_command_line_argument()}") {
           datasource_options.setProperty(prompt.name, av)
@@ -314,12 +320,12 @@ class ReplicatorInstallPackage < ConfigurePackage
       }
       
       output_usage_line("--disable-relay-logs", "Disable the use of relay-logs?")
-      each_master_datasource_prompt{
+      each_datasource_prompt{
         |prompt|
         output_usage_line("--#{prompt.get_command_line_argument()}".gsub("datasource", "master"), prompt.get_prompt(), prompt.get_value(true, true), nil, prompt.get_prompt_description())
       }
       
-      each_slave_datasource_prompt{
+      each_datasource_prompt{
         |prompt|
         output_usage_line("--#{prompt.get_command_line_argument()}".gsub("datasource", "slave"), prompt.get_prompt(), prompt.get_value(true, true), nil, prompt.get_prompt_description())
       }
@@ -346,6 +352,10 @@ class ReplicatorInstallPackage < ConfigurePackage
       output_usage_line("--disable-relay-logs", "Disable the use of relay-logs?")
       each_datasource_prompt{
         |prompt|
+        if prompt.is_a?(DatasourceDBHost)
+          next
+        end
+        
         prompt.output_usage()
       }
       
@@ -359,101 +369,6 @@ class ReplicatorInstallPackage < ConfigurePackage
         prompt.output_usage()
       }
     end
-  end
-  
-  def each_host_prompt(&block)
-    ch = ClusterHosts.new()
-    ch.set_config(@config)
-    
-    ch.each_prompt{
-      |prompt|
-      
-      if prompt.enabled_for_command_line?()
-        begin
-          block.call(prompt)
-        rescue => e
-          error(e.message)
-        end
-      end
-    }
-  end
-  
-  def each_service_prompt(&block)
-    ch = ReplicationServices.new()
-    ch.set_config(@config)
-    
-    ch.each_prompt{
-      |prompt|
-      
-      if prompt.enabled_for_command_line?()
-        begin
-          block.call(prompt)
-        rescue => e
-          error(e.message)
-        end
-      end
-    }
-  end
-  
-  def each_datasource_prompt(&block)
-    ch = Datasources.new()
-    ch.set_config(@config)
-    
-    ch.each_prompt{
-      |prompt|
-      
-      case prompt.class.name
-      when "DatasourceDBHost"
-        next
-      else
-        if prompt.enabled_for_command_line?()
-          begin
-            block.call(prompt)
-          rescue => e
-            error(e.message)
-          end
-        end
-      end
-    }
-  end
-  
-  def each_master_datasource_prompt(&block)
-    ch = Datasources.new()
-    ch.set_config(@config)
-    
-    ch.each_prompt{
-      |prompt|
-      
-      if prompt.enabled_for_command_line?()
-        begin
-          block.call(prompt)
-        rescue => e
-          error(e.message)
-        end
-      end
-    }
-  end
-  
-  def each_slave_datasource_prompt(&block)
-    ch = Datasources.new()
-    ch.set_config(@config)
-    
-    ch.each_prompt{
-      |prompt|
-      
-      case prompt.class.name
-      when "DatasourceMasterLogDirectory", "DatasourceMasterLogPattern"
-        next
-      else
-        if prompt.enabled_for_command_line?()
-          begin
-            block.call(prompt)
-          rescue => e
-            error(e.message)
-          end
-        end
-      end
-    }
   end
 end
 

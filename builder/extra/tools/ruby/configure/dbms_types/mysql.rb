@@ -158,7 +158,6 @@ end
 
 class MySQLServerID < MySQLConfigurePrompt
   include DatasourcePrompt
-  include NotTungstenInstallerPrompt
   
   def initialize
     super(REPL_MYSQL_SERVER_ID, "MySQL server ID", 

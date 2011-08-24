@@ -71,4 +71,55 @@ class ConfigurePackage
       output_usage_line("--property=key=value", "Set the property key to the value in any file that is modified by the configure script")
     end
   end
+  
+  def each_host_prompt(&block)
+    ch = ClusterHosts.new()
+    ch.set_config(@config)
+    
+    ch.each_prompt{
+      |prompt|
+      
+      if prompt.enabled_for_command_line?()
+        begin
+          block.call(prompt)
+        rescue => e
+          error(e.message)
+        end
+      end
+    }
+  end
+  
+  def each_service_prompt(&block)
+    ch = ReplicationServices.new()
+    ch.set_config(@config)
+    
+    ch.each_prompt{
+      |prompt|
+      
+      if prompt.enabled_for_command_line?()
+        begin
+          block.call(prompt)
+        rescue => e
+          error(e.message)
+        end
+      end
+    }
+  end
+  
+  def each_datasource_prompt(&block)
+    ch = Datasources.new()
+    ch.set_config(@config)
+    
+    ch.each_prompt{
+      |prompt|
+      
+      if prompt.enabled_for_command_line?()
+        begin
+          block.call(prompt)
+        rescue => e
+          error(e.message)
+        end
+      end
+    }
+  end
 end

@@ -316,7 +316,7 @@ class ReplicationServiceDatasource < ConfigurePrompt
       output << "#{ds_key}\t- #{ds.get_connection_summary}"
     }
     
-    return output.join("\n")
+    return output.join("<br>")
   end
 end
 
@@ -348,7 +348,7 @@ class ReplicationServiceMasterDatasource < ConfigurePrompt
       output << "#{ds_key}\t- #{ds.get_connection_summary}"
     }
     
-    return output.join("\n")
+    return output.join("<br>")
   end
 end
 

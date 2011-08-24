@@ -18,6 +18,24 @@ module DeploymentStepUpdateService
       [REPL_SERVICES, service_key],
       @config.getProperty([REPL_SERVICES, service_key])
     )
+    
+    applier = @config.getProperty([REPL_SERVICES, service_key, REPL_DATASOURCE])
+    extractor = @config.getProperty([REPL_SERVICES, service_key, REPL_MASTER_DATASOURCE])
+    
+    if applier != ""
+      stored_config.setProperty(
+        [DATASOURCES, applier],
+        @config.getProperty([DATASOURCES, applier])
+      )
+    end
+    
+    if extractor != ""
+      stored_config.setProperty(
+        [DATASOURCES, extractor],
+        @config.getProperty([DATASOURCES, extractor])
+      )
+    end
+    
     stored_config.store(get_deployment_config_file())
   end
 end
