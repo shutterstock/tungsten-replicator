@@ -97,11 +97,11 @@ class ConfigureServicePackage < ConfigurePackage
           each_datasource_prompt{
             |dsp|
             if (av = dsp.get_command_line_argument_value()) != nil
-              opts.on("--#{dsp.get_command_line_argument().gsub('datasource', 'master')}") {
+              opts.on("--master-#{dsp.get_command_line_argument()}") {
                 datasource_options.setProperty([DATASOURCES, "master", dsp.name], av)
               }
             else
-              opts.on("--#{dsp.get_command_line_argument().gsub('datasource', 'master')} String") {
+              opts.on("--master-#{dsp.get_command_line_argument()} String") {
                 |val|
                 datasource_options.setProperty([DATASOURCES, "master", dsp.name], val)
               }
@@ -276,7 +276,7 @@ class ConfigureServicePackage < ConfigurePackage
         when "ReplicationServiceMasterDatasource"
           each_datasource_prompt{
             |prompt|
-            output_usage_line("--#{prompt.get_command_line_argument()}".gsub("datasource", "master"), prompt.get_prompt(), prompt.get_value(true, true), nil, prompt.get_prompt_description())
+            output_usage_line("--master-#{prompt.get_command_line_argument()}", prompt.get_prompt(), prompt.get_value(true, true), nil, prompt.get_prompt_description())
           }
         end
       end
