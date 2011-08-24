@@ -68,6 +68,16 @@ module ConfigureDeploymentStepReplicationDataservice
     if @config.getProperty(REPL_ROLE) == REPL_ROLE_DI
       "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.direct"
 	  else
+	    begin
+	      extractor_template = get_extractor_datasource().get_extractor_template()
+	    rescue
+	      if @config.getProperty(REPL_ROLE) == REPL_ROLE_S
+	        return "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.slave"
+	      else
+	        raise "Unable to extract from #{get_extractor_datasource.get_connection_summary}"
+	      end
+	    end
+	  
 	    "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.masterslave"
 	  end
 	end

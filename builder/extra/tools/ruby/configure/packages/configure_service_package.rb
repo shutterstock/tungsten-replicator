@@ -69,13 +69,11 @@ class ConfigureServicePackage < ConfigurePackage
       if (av = prompt.get_command_line_argument_value()) != nil
         opts.on("--#{prompt.get_command_line_argument()}") {
           service_config.setProperty(prompt.name, av)
-          ConfigurePrompt.add_global_default(prompt.name, av)
         }
       else
         opts.on("--#{prompt.get_command_line_argument()} String") {
           |val|
           service_config.setProperty(prompt.name, val)
-          ConfigurePrompt.add_global_default(prompt.name, val)
         }
       end
       
@@ -87,13 +85,11 @@ class ConfigureServicePackage < ConfigurePackage
             if (av = dsp.get_command_line_argument_value()) != nil
               opts.on("--#{dsp.get_command_line_argument()}") {
                 datasource_options.setProperty([DATASOURCES, "ds", dsp.name], av)
-                ConfigurePrompt.add_global_default(dsp.name, av)
               }
             else
               opts.on("--#{dsp.get_command_line_argument()} String") {
                 |val|
                 datasource_options.setProperty([DATASOURCES, "ds", dsp.name], val)
-                ConfigurePrompt.add_global_default(dsp.name, val)
               }
             end
           }
@@ -114,7 +110,6 @@ class ConfigureServicePackage < ConfigurePackage
           opts.on("--disable-relay-logs") {
             datasource_options.setProperty([DATASOURCES, "master", REPL_DISABLE_RELAY_LOGS], "true")
             datasource_options.setProperty([DATASOURCES, "ds", REPL_DISABLE_RELAY_LOGS], "true")
-            ConfigurePrompt.add_global_default(REPL_DISABLE_RELAY_LOGS, "true")
           }
         end
       end
