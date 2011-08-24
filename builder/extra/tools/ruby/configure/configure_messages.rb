@@ -113,7 +113,7 @@ module ConfigureMessages
         $i+=1
         $next_host_error = host_errors[host][$i]
         
-        Configurator.instance.error($host_error.message, host)
+        Configurator.instance.error($host_error.get_message(), host)
         
         if $next_host_error == nil || $host_error.check != $next_host_error.check
           if $host_error.is_a?(ValidationError)
@@ -141,7 +141,7 @@ module ConfigureMessages
       Configurator.instance.write_header('Errors for the cluster', Logger::ERROR)
       generic_errors.each{
         |generic_error|
-        Configurator.instance.error(generic_error.message)
+        Configurator.instance.error(generic_error.get_message())
       }
     end
   end
@@ -157,6 +157,10 @@ class RemoteError < StandardError
     
     @message=message
     @host=host
+  end
+  
+  def get_message
+    @message
   end
   
   def is_fatal?

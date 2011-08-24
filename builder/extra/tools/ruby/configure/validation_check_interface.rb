@@ -22,6 +22,12 @@ module ValidationCheckInterface
   
   def run
     reset_errors()
+    
+    if ConfigureValidationHandler.skip_validation_class?(self.class.name)
+      debug("Skipping validation check '#{self.class.name}'")
+      return
+    end
+    
     unless enabled?()
       return
     end

@@ -424,6 +424,9 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
                                         
                                         Transformer.add_global_replacement(val_parts[0], val_parts[1])
                                       }
+    opts.on("--skip-validation-check String")      {|val|
+                                        ConfigureValidationHandler.mark_skipped_validation_class(val)
+                                      }
     opts.on("--net-ssh-option String")  {|val|
                                         val_parts = val.split("=")
                                         if val_parts.length() !=2

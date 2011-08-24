@@ -180,6 +180,16 @@ class ConfigureValidationHandler
       return value
     end
   end
+  
+  def self.skip_validation_class?(klass)
+    @skipped_classes ||= []
+    return @skipped_classes.include?(klass)
+  end
+  
+  def self.mark_skipped_validation_class(klass)
+    @skipped_classes ||= []
+    @skipped_classes << klass
+  end
 end
 
 class ValidationError < RemoteError
@@ -188,6 +198,10 @@ class ValidationError < RemoteError
   def initialize(message, host, check)
     super(message, host)
     @check = check
+  end
+  
+  def get_message
+    "#{@message} (#{@check.class.name})"
   end
   
   def get_help

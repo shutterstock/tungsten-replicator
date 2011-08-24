@@ -67,6 +67,7 @@ class ConfigurePackage
       output_usage_line("--template-file-help", "Display the keys that may be used in configuration template files")
       output_usage_line("--no-validation", "Skip all validation checks")
       output_usage_line("--validate-only", "Skip all deployment steps")
+      output_usage_line("--skip-validation-check String", "Do not run the specified validation check.  Validation checks are identified by the string included in their error they output.")
       output_usage_line("--configure=key=value", "Set the default configure script value for the given key to the value")
       output_usage_line("--property=key=value", "Set the property key to the value in any file that is modified by the configure script")
     end
