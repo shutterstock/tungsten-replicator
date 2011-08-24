@@ -24,6 +24,7 @@ package com.continuent.tungsten.replicator.thl;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
@@ -139,7 +140,7 @@ public class THLManagerCtrl
      * 
      * @throws ReplicatorException
      */
-    public void connect(boolean readOnly) throws ReplicatorException,
+    public void prepare(boolean readOnly) throws ReplicatorException,
             InterruptedException
     {
         diskLog = new DiskLog();
@@ -151,7 +152,7 @@ public class THLManagerCtrl
     /**
      * Disconnect from the THL database.
      */
-    public void disconnect()
+    public void release()
     {
         if (diskLog != null)
         {
@@ -287,6 +288,9 @@ public class THLManagerCtrl
             fail();
         }
 
+        // Initialize log.
+        prepare(true);
+
         // Adjust for missing ranges.
         long lowIndex;
         if (low == null)
@@ -370,6 +374,7 @@ public class THLManagerCtrl
 
         // Disconnect.
         conn.release();
+        release();
     }
 
     /**
@@ -782,8 +787,12 @@ public class THLManagerCtrl
             {
                 if (service == null)
                 {
-                    fatal("You must specify either a config file or a service name (-conf or -service)",
-                            null);
+                    configFile = lookForConfigFile();
+                    if (configFile == null)
+                    {
+                        fatal("You must specify either a config file or a service name (-conf or -service)",
+                                null);
+                    }
                 }
                 else
                 {
@@ -797,21 +806,18 @@ public class THLManagerCtrl
             if (THLCommands.INFO.equals(command))
             {
                 THLManagerCtrl thlManager = new THLManagerCtrl(configFile);
-                thlManager.connect(true);
+                thlManager.prepare(true);
 
                 InfoHolder info = thlManager.getInfo();
                 println("min seq# = " + info.getMinSeqNo());
                 println("max seq# = " + info.getMaxSeqNo());
                 println("events = " + info.getEventCount());
-                println("highest known replicated seq# = "
-                        + info.getHighestReplicatedEvent());
 
-                thlManager.disconnect();
+                thlManager.release();
             }
             else if (THLCommands.LIST.equals(command))
             {
                 THLManagerCtrl thlManager = new THLManagerCtrl(configFile);
-                thlManager.connect(true);
 
                 if (fileName != null)
                 {
@@ -824,16 +830,23 @@ public class THLManagerCtrl
                 else
                     thlManager.listEvents(seqno, seqno, by,
                             getBoolOrFalse(pureSQL), charsetName);
-
-                thlManager.disconnect();
             }
             else if (THLCommands.PURGE.equals(command))
             {
                 THLManagerCtrl thlManager = new THLManagerCtrl(configFile);
-                thlManager.connect(false);
+                thlManager.prepare(false);
 
+                // Ensure we have a writable log.
+                if (!thlManager.diskLog.isWritable())
+                {
+                    println("Fatal error:  The disk log is not writable and cannot be purged.");
+                    println("If a replication service is currently running, please set the service");
+                    println("offline first using 'trepctl -service svc offline'");
+                    fail();
+                }
+
+                // Ensure user is OK with this change.
                 println("WARNING: The purge command will break replication if you delete all events or delete events that have not reached all slaves.");
-
                 boolean confirmed = true;
                 if (!getBoolOrFalse(yesToQuestions))
                 {
@@ -847,7 +860,6 @@ public class THLManagerCtrl
                 if (confirmed)
                 {
                     String log = "Deleting events where";
-                    int deleted = 0;
                     if (seqno == null)
                     {
                         if (low != null)
@@ -865,25 +877,24 @@ public class THLManagerCtrl
                         println(log);
                         thlManager.purgeEvents(seqno, seqno);
                     }
-                    println("Deleted events: " + deleted);
                 }
 
-                thlManager.disconnect();
+                thlManager.release();
             }
             else if (THLCommands.SKIP.equals(command))
             {
                 println("SKIP operation is no longer supported");
-                println("Please check the ");
+                println("Please use 'trepctl online -skip-seqno N' to skip over a transaction");
                 return;
             }
             else if (command.equals("index"))
             {
                 THLManagerCtrl thlManager = new THLManagerCtrl(configFile);
-                thlManager.connect(true);
+                thlManager.prepare(true);
 
                 thlManager.printIndex();
 
-                thlManager.disconnect();
+                thlManager.release();
             }
             else
             {
@@ -898,9 +909,49 @@ public class THLManagerCtrl
         }
     }
 
+    // Return the service configuration file if there is one
+    // and only one file that matches the static-svcname.properties pattern.
+    private static String lookForConfigFile()
+    {
+        File configDir = ReplicatorRuntimeConf.locateReplicatorConfDir();
+        FilenameFilter propFileFilter = new FilenameFilter()
+        {
+            public boolean accept(File fdir, String fname)
+            {
+                if (fname.startsWith("static-")
+                        && fname.endsWith(".properties"))
+                    return true;
+                else
+                    return false;
+            }
+        };
+        File[] propertyFiles = configDir.listFiles(propFileFilter);
+        if (propertyFiles.length == 1)
+            return propertyFiles[0].getAbsolutePath();
+        else
+            return null;
+    }
+
+    /**
+     * List all events in a particular log file.
+     * 
+     * @param fileName Simple name of the file
+     * @param pureSQL Whether to print SQL
+     * @param charset Charset for translation, e.g., utf8
+     */
     private void listEvents(String fileName, boolean pureSQL, String charset)
             throws ReplicatorException, IOException, InterruptedException
     {
+        // Ensure we have a simple file name. Log APIs will not accept an
+        // absolute path.
+        if (!fileName.startsWith("thl.data."))
+        {
+            fatal("File name must be a THL log file name like thl.data.0000000001",
+                    null);
+        }
+
+        // Connect to the log.
+        prepare(true);
         LogConnection conn = diskLog.connect(true);
         if (!conn.seek(fileName))
         {
@@ -930,6 +981,9 @@ public class THLManagerCtrl
                         + ": not supported.");
             }
         }
+
+        // Disconnect from log.
+        release();
     }
 
     private void printIndex()
@@ -942,25 +996,23 @@ public class THLManagerCtrl
         println("Replicator THL Manager");
         println("Syntax: thl [global-options] command [command-options]");
         println("Global options:");
-        println("  -conf path                       - Path to replicator.properties. Default:    ");
-        println("                                     " + defaultConfigPath);
-        println("age_format: Seconds=s, Minutes=m, hours=h, days=d e.g \"2d 4h\" is 2 days + 4 hours");
+        println("  -conf path    - Path to a static-<svc>.properties file");
+        println("  -service name - Name of a replication service");
         println("Commands and corresponding options:");
-        println("  list [-low #] [-high #] [-by #]  - Dump THL events from low to high #.        ");
-        println("       [-sql]                        Specify -sql to use pure SQL output only.  ");
-        println("       [-charset <charset_name>]     Character set used for decoding, when needed.");
-        println("                                     (only with row replication with using_bytes_for_string is set to true).");
-        println("  list [-seqno #] [-sql]           - Dump the exact event by a given #.         ");
-        println("       [-charset <charset_name>]     Character set used for decoding, when needed.");
-        println("  list [-file <file_name>] [-sql]  - Dump the content of the given file (for Disk-based storage).");
-        println("       [-charset <charset_name>]     Character set used for decoding, when needed.");
-        println("  index                            - Display index of Disk-based storage        ");
-        println("  purge [-low #] [-high #] [-y]    - Delete events within the given range");
-        println("  purge [-seqno #] [-y]            - Delete the exact event.                    ");
-        println("                                     Use -y to answer yes to all questions.     ");
-        println("  info                             - Display minimum, maximum sequence number   ");
-        println("                                     and other summary.                         ");
-        println("  help                             - Print this help information.               ");
+        println("  list [-low #] [-high #] [-by #] - Dump THL events from low to high #");
+        println("       [-sql]                       Specify -sql to use pure SQL output only");
+        println("       [-charset <charset_name>]    Character set used for decoding row data");
+        println("  list [-seqno #] [-sql]          - Dump the exact event by a given #");
+        println("       [-charset <charset_name>]    Character set used for decoding row data");
+        println("  list [-file <file_name>] [-sql] - Dump the content of the given log file");
+        println("       [-charset <charset_name>]  - Character set used for decoding row data");
+        println("  index                           - Display index of log files");
+        println("  purge [-low #] [-high #] [-y]   - Delete events within the given range");
+        println("  purge [-seqno #] [-y]           - Delete the exact event");
+        println("                                    Use -y to suppress prompt");
+        println("  info                            - Display minimum, maximum sequence number");
+        println("                                     and other summary information about log");
+        println("  help                            - Print this help display");
     }
 
     /**
