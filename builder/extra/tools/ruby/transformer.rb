@@ -90,6 +90,12 @@ class Transformer
       |line|
       line_keys = line.scan(/[#]?([a-zA-Z0-9\._-]+)=.*/)
       if line_keys.length() > 0 && @@global_replacements.has_key?(line_keys[0][0])
+        if line =~ /@\{[A-Za-z\._]+\}/
+          if defined?(Configurator)
+            Configurator.instance.warning("Property value for '#{line_keys[0][0]}' is overriding a template value")
+          end
+        end
+        
         "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}\n"
       else
         line.gsub(/@\{[A-Za-z\._]+\}/){
