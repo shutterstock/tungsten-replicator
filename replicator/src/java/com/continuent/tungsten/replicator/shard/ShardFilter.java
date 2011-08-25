@@ -36,7 +36,6 @@ import com.continuent.tungsten.replicator.database.Database;
 import com.continuent.tungsten.replicator.database.DatabaseFactory;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplOptionParams;
-import com.continuent.tungsten.replicator.extractor.mysql.MySQLExtractor;
 import com.continuent.tungsten.replicator.filter.Filter;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 
@@ -46,25 +45,39 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class ShardFilter implements Filter
 {
-    private static Logger logger         = Logger.getLogger(MySQLExtractor.class);
+    private static Logger logger = Logger.getLogger(ShardFilter.class);
 
-    PluginContext         context;
-    Map<String, Shard>    shards;
+    private enum Policy
+    {
+        /** Accept shard with unknown master */
+        accept,
+        /** Drop shard with unknown master */
+        drop,
+        /** Issue warning for unknown master and drop shard */
+        warn,
+        /** Throw exception for unknown master */
+        error
+    }
 
-    Database              conn           = null;
+    // Plugin properties.
+    private boolean    autoCreate                = false;
+    private boolean    enforceHome               = false;
+    private Policy     unknownMasterPolicy       = Policy.error;
+    private String     unknownMasterPolicyString = null;
+    private boolean    criticalByDef             = false;
 
-    private String        user;
-    private String        url;
-    private String        password;
-    private boolean       remote;
-    private String        service;
-    private String        schemaName;
-    private String        tableType;
+    PluginContext      context;
+    Map<String, Shard> shards;
 
-    private boolean       autoCreate     = true;
-    private boolean       enforceHome    = false;
-    private int           defaultChannel = -1;
-    private boolean       criticalByDef  = false;
+    Database           conn                      = null;
+
+    private String     user;
+    private String     url;
+    private String     password;
+    private boolean    remote;
+    private String     service;
+    private String     schemaName;
+    private String     tableType;
 
     /**
      * {@inheritDoc}
@@ -75,8 +88,26 @@ public class ShardFilter implements Filter
     public void configure(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
+        // Record schema name and table type.
         schemaName = context.getReplicatorSchemaName();
         tableType = ((ReplicatorRuntime) context).getTungstenTableType();
+
+        // If policy string is set, convert to an enum.
+        if (this.unknownMasterPolicyString != null)
+        {
+            try
+            {
+                this.unknownMasterPolicy = Policy
+                        .valueOf(unknownMasterPolicyString.toLowerCase());
+            }
+            catch (IllegalArgumentException e)
+            {
+                throw new ReplicatorException(
+                        "Invalid value for unknownMasterPolicy: "
+                                + unknownMasterPolicyString);
+            }
+        }
+
     }
 
     /**
@@ -153,26 +184,15 @@ public class ShardFilter implements Filter
     public ReplDBMSEvent filter(ReplDBMSEvent event)
             throws ReplicatorException, InterruptedException
     {
-        String eventShard = event.getDBMSEvent().getMetadataOptionValue(
-                ReplOptionParams.SHARD_ID);
-
-        Shard shard = shards.get(eventShard);
-
+        // If we are not enforcing homes, we need to stop now.
         if (!enforceHome)
         {
             if (logger.isDebugEnabled())
                 logger.debug("Enforcing home check is disabled");
-
-            if (autoCreate && shard == null)
-            {
-                if (logger.isDebugEnabled())
-                    logger.debug("Auto creating shard definition for "
-                            + eventShard + " with home " + service);
-                updateShardCatalog(eventShard);
-            }
             return event;
         }
 
+        // Filtering only applies if we are running a remote service.
         if (!remote)
         {
             if (logger.isDebugEnabled())
@@ -180,56 +200,130 @@ public class ShardFilter implements Filter
             return event;
         }
 
+        // Get the shard definition.
+        String eventShard = event.getDBMSEvent().getMetadataOptionValue(
+                ReplOptionParams.SHARD_ID);
+        Shard shard = shards.get(eventShard);
+
+        // If no shard definition, then we have a couple of options. We can auto
+        // create a shard definition. Or we can fail.
         if (shard == null)
         {
-            if (logger.isDebugEnabled())
-                logger.debug("Shard not found in shards table " + eventShard);
-
-            // Shard does not exist : should we create it?
-            if (autoCreate)
+            if (event.getDBMSEvent().getMetadataOptionValue(
+                    ReplOptionParams.TUNGSTEN_METADATA) != null)
             {
-                updateShardCatalog(eventShard);
-                return event;
-            }
-            else
-            {
-                // Dropping event as it is part of an unknown shard and
-                // autoCreate is false
+                String shardService = event.getDBMSEvent()
+                        .getMetadataOptionValue(ReplOptionParams.SERVICE);
                 if (logger.isDebugEnabled())
-                    logger.debug("Dropping event from unknown shard ("
-                            + eventShard + ") as autoCreate is false");
-                return null;
+                    logger.debug("Auto-creating shard definition for Tungsten metadata transaction: seqno="
+                            + event.getSeqno()
+                            + " shardId="
+                            + eventShard
+                            + " master=" + shardService);
+                updateShardCatalog(eventShard, shardService);
+            }
+            else if (autoCreate)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug("Auto-creating shard definition for new shard: seqno="
+                            + event.getSeqno()
+                            + " shardId="
+                            + eventShard
+                            + " master=" + service);
+                updateShardCatalog(eventShard, service);
             }
         }
+
+        // If the shard is null, we refer to the policy for unknown shards.
+        if (shard == null)
+        {
+            switch (this.unknownMasterPolicy)
+            {
+                case accept :
+                {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Accepting event from unknown shard: seqno="
+                                + event.getSeqno() + " shard ID=" + eventShard);
+                    return event;
+                }
+                case drop :
+                {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Dropping event from unknown shard: seqno="
+                                + event.getSeqno() + " shard ID=" + eventShard);
+                    return null;
+                }
+                case warn :
+                {
+                    logger.warn("Dropping event from unknown shard: seqno="
+                            + event.getSeqno() + " shard ID=" + eventShard);
+                    return null;
+                }
+                case error :
+                {
+                    throw new ReplicatorException(
+                            "Rejected event from unknown shard: seqno="
+                                    + event.getSeqno() + " shard ID="
+                                    + eventShard);
+                }
+                default :
+                {
+                    throw new ReplicatorException(
+                            "No policy for unknown shard: seqno="
+                                    + event.getSeqno() + " shard ID="
+                                    + eventShard);
+                }
+            }
+        }
+        // Otherwise if it matches the service, apply it.
         else if (shard.getMaster().equals(service))
         {
             // Shard home matches the service name, apply this event
             if (logger.isDebugEnabled())
-                logger.debug("Event shard matches shard home definition. Processing event.");
+            {
+                logger.debug("Event master matches local home; processing event: seqno="
+                        + event.getSeqno()
+                        + " shard ID="
+                        + event.getShardId()
+                        + " shard master="
+                        + shard.getMaster()
+                        + " local service=" + service);
+
+            }
+            logger.debug("Event shard matches shard home definition. Processing event.");
             return event;
         }
         else
         {
             // Shard home does not match, discard this event
-            logger.info("Event shard (" + shard.getMaster()
-                    + ") does not match local home (" + service
-                    + "). Dropping event");
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Event master does not match local home; dropping event: seqno="
+                        + event.getSeqno()
+                        + " shard ID="
+                        + event.getShardId()
+                        + " shard master="
+                        + shard.getMaster()
+                        + " local service=" + service);
+            }
             return null;
         }
     }
 
     /**
-     * updateShardCatalog both update the shards hold in memory as well as in shard table in database.
+     * updateShardCatalog both update the shards hold in memory as well as in
+     * shard table in database.
      * 
      * @param eventShard Id of the shard to be created
+     * @param shardService Service to which shard is assigned
      * @throws ReplicatorException
      */
-    private void updateShardCatalog(String eventShard)
+    private void updateShardCatalog(String eventShard, String shardService)
             throws ReplicatorException
     {
         if (logger.isDebugEnabled())
             logger.debug("Creating unknown shard " + eventShard + " for home "
-                    + service);
+                    + shardService);
 
         ShardManager manager = new ShardManager(service, url, user, password,
                 schemaName, tableType);
@@ -237,8 +331,7 @@ public class ShardFilter implements Filter
         Map<String, String> newShard = new HashMap<String, String>();
         newShard.put(ShardTable.SHARD_ID_COL, eventShard);
         newShard.put(ShardTable.SHARD_CRIT_COL, Boolean.toString(criticalByDef));
-        newShard.put(ShardTable.SHARD_MASTER_COL, service);
-        newShard.put(ShardTable.SHARD_CHANNEL_COL, Integer.toString(defaultChannel));
+        newShard.put(ShardTable.SHARD_MASTER_COL, shardService);
         params.add(newShard);
         try
         {
@@ -261,9 +354,9 @@ public class ShardFilter implements Filter
         this.autoCreate = autoCreate;
     }
 
-    public void setDefaultChannel(int defaultChannel)
+    public void setUnknownMasterPolicy(String policy)
     {
-        this.defaultChannel = defaultChannel;
+        this.unknownMasterPolicyString = policy;
     }
 
     public void setCriticalByDef(boolean criticalByDef)

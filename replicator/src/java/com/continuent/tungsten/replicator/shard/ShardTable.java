@@ -54,7 +54,6 @@ public class ShardTable
     public static final String  SHARD_ID_COL      = "name";
     public static final String  SHARD_CRIT_COL    = "critical";
     public static final String  SHARD_DISPO_COL   = "disposition";
-    public static final String  SHARD_CHANNEL_COL = "channel";
     public static final String  SHARD_MASTER_COL  = "master";
 
     private static final String SELECT            = "SELECT " + SHARD_ID_COL
@@ -62,8 +61,6 @@ public class ShardTable
                                                           + SHARD_MASTER_COL
                                                           + ", "
                                                           + SHARD_CRIT_COL
-                                                          + ", "
-                                                          + SHARD_CHANNEL_COL
                                                           + " FROM "
                                                           + TABLE_NAME
                                                           + " ORDER BY "
@@ -73,7 +70,6 @@ public class ShardTable
     private Table               shardTable;
     private Column              shardName;
     private Column              shardCritical;
-    private Column              shardChannel;
     private Column              shardMaster;
 
     private String              tableType;
@@ -90,7 +86,6 @@ public class ShardTable
         shardMaster = new Column(SHARD_MASTER_COL, Types.VARCHAR, 128);
         shardName = new Column(SHARD_ID_COL, Types.VARCHAR, 128);
         shardCritical = new Column(SHARD_CRIT_COL, Types.TINYINT, 1);
-        shardChannel = new Column(SHARD_CHANNEL_COL, Types.INTEGER);
 
         Key shardKey = new Key(Key.Primary);
         shardKey.AddColumn(shardName);
@@ -98,7 +93,6 @@ public class ShardTable
         shardTable.AddColumn(shardName);
         shardTable.AddColumn(shardMaster);
         shardTable.AddColumn(shardCritical);
-        shardTable.AddColumn(shardChannel);
         shardTable.AddKey(shardKey);
     }
 
@@ -119,8 +113,6 @@ public class ShardTable
         shardName.setValue(shard.getShardId());
         shardMaster.setValue(shard.getMaster());
         shardCritical.setValue(shard.isCritical());
-
-        shardChannel.setValue(shard.getChannel());
         return database.insert(shardTable);
     }
 
@@ -134,10 +126,8 @@ public class ShardTable
 
         shardCritical.setValue(shard.isCritical());
         shardMaster.setValue(shard.getMaster());
-        shardChannel.setValue(shard.getChannel());
         values.add(shardMaster);
         values.add(shardCritical);
-        values.add(shardChannel);
 
         return database.update(shardTable, whereClause, values);
     }
@@ -174,8 +164,6 @@ public class ShardTable
 
                 shard.put(ShardTable.SHARD_MASTER_COL,
                         rs.getString(ShardTable.SHARD_MASTER_COL));
-                shard.put(ShardTable.SHARD_CHANNEL_COL, Integer.toString(rs
-                        .getInt(ShardTable.SHARD_CHANNEL_COL)));
                 shards.add(shard);
 
             }

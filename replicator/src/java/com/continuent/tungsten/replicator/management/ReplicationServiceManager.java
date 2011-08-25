@@ -544,8 +544,6 @@ public class ReplicationServiceManager
 
             orm.start();
 
-            orm.startShardManager(serviceName);
-
             int listenPort = orm.getMasterListenPort();
             if (listenPort > masterListenPortMax)
                 masterListenPortMax = listenPort;

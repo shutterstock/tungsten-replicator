@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.rmi.ConnectException;
 import java.rmi.RemoteException;
 import java.text.DateFormat;
@@ -48,6 +49,8 @@ import com.continuent.tungsten.commons.cluster.resource.OpenReplicatorParams;
 import com.continuent.tungsten.commons.cluster.resource.physical.Replicator;
 import com.continuent.tungsten.commons.cluster.resource.physical.ReplicatorCapabilities;
 import com.continuent.tungsten.commons.config.TungstenProperties;
+import com.continuent.tungsten.commons.csv.CsvReader;
+import com.continuent.tungsten.commons.csv.CsvWriter;
 import com.continuent.tungsten.commons.exec.ArgvIterator;
 import com.continuent.tungsten.commons.jmx.JmxManager;
 import com.continuent.tungsten.commons.jmx.ServerRuntimeException;
@@ -1444,16 +1447,16 @@ public class OpenReplicatorManagerCtrl
         }
         else if (readStdInput)
         {
-            BufferedReader in = new BufferedReader(new InputStreamReader(
-                    System.in));
-            String s;
-            while ((s = in.readLine()) != null && s.length() != 0)
+            CsvReader csvReader = new CsvReader(
+                    new InputStreamReader(System.in));
+            csvReader.setCollapseSeparators(true);
+            while (csvReader.next())
             {
-                s = s.trim();
-                if (!s.startsWith("#"))
-                {
-                    values.add(s.split("\t"));
-                }
+                String[] row = new String[3];
+                row[0] = csvReader.getString(ShardTable.SHARD_ID_COL);
+                row[1] = csvReader.getString(ShardTable.SHARD_MASTER_COL);
+                row[2] = csvReader.getString(ShardTable.SHARD_CRIT_COL);
+                values.add(row);
             }
         }
 
@@ -1475,7 +1478,7 @@ public class OpenReplicatorManagerCtrl
                 {
                     String[] val = iterator.next();
 
-                    if (val.length < 4)
+                    if (val.length < 3)
                         println("Missing parameter for shard creation : " + val
                                 + "\nSkipping");
                     else
@@ -1483,7 +1486,6 @@ public class OpenReplicatorManagerCtrl
                         paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
                         paramProps.put(ShardTable.SHARD_MASTER_COL, val[1]);
                         paramProps.put(ShardTable.SHARD_CRIT_COL, val[2]);
-                        paramProps.put(ShardTable.SHARD_CHANNEL_COL, val[3]);
 
                         shardParams.add(paramProps.map());
                     }
@@ -1516,7 +1518,6 @@ public class OpenReplicatorManagerCtrl
                         paramProps.put(ShardTable.SHARD_ID_COL, val[0]);
                         paramProps.put(ShardTable.SHARD_MASTER_COL, val[1]);
                         paramProps.put(ShardTable.SHARD_CRIT_COL, val[2]);
-                        paramProps.put(ShardTable.SHARD_CHANNEL_COL, val[3]);
 
                         shardParams.add(paramProps.map());
                     }
@@ -1554,35 +1555,31 @@ public class OpenReplicatorManagerCtrl
                 if (list == null)
                 {
                     println("Empty shard list");
-                    break;
                 }
-
-                StringBuffer buf = new StringBuffer();
-                buf.append("#");
-                buf.append(ShardTable.SHARD_ID_COL);
-                buf.append("\t");
-                buf.append(ShardTable.SHARD_MASTER_COL);
-                buf.append("\t");
-                buf.append(ShardTable.SHARD_CRIT_COL);
-                buf.append("\t");
-                buf.append(ShardTable.SHARD_CHANNEL_COL);
-                buf.append("\t\n");
-
-                for (Iterator<Map<String, String>> iterator = list.iterator(); iterator
-                        .hasNext();)
+                else
                 {
-                    Map<String, String> map = iterator.next();
-                    buf.append(map.get(ShardTable.SHARD_ID_COL));
-                    buf.append("\t");
-                    buf.append(map.get(ShardTable.SHARD_MASTER_COL));
-                    buf.append("\t");
-                    buf.append(map.get(ShardTable.SHARD_CRIT_COL));
-                    buf.append("\t");
-                    buf.append(map.get(ShardTable.SHARD_CHANNEL_COL));
-                    if (iterator.hasNext())
-                        buf.append("\n");
+                    CsvWriter csvWriter = new CsvWriter(new OutputStreamWriter(
+                            System.out));
+                    csvWriter.setSeparator('\t');
+                    csvWriter.addColumnName(ShardTable.SHARD_ID_COL);
+                    csvWriter.addColumnName(ShardTable.SHARD_MASTER_COL);
+                    csvWriter.addColumnName(ShardTable.SHARD_CRIT_COL);
+                    for (Iterator<Map<String, String>> iterator = list
+                            .iterator(); iterator.hasNext();)
+                    {
+                        Map<String, String> map = (Map<String, String>) iterator
+                                .next();
+                        csvWriter.put(ShardTable.SHARD_ID_COL,
+                                map.get(ShardTable.SHARD_ID_COL));
+                        csvWriter.put(ShardTable.SHARD_MASTER_COL,
+                                map.get(ShardTable.SHARD_MASTER_COL));
+                        csvWriter.put(ShardTable.SHARD_CRIT_COL,
+                                map.get(ShardTable.SHARD_CRIT_COL));
+                        csvWriter.write();
+                    }
+                    csvWriter.flush();
                 }
-                println(buf.toString());
+
                 break;
             default :
                 break;

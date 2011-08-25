@@ -30,7 +30,6 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.jmx.JmxManager;
-import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.database.Database;
 import com.continuent.tungsten.replicator.database.DatabaseFactory;
 
@@ -57,15 +56,6 @@ public class ShardManager implements ShardManagerMBean
         this.password = password;
         this.schema = tungstenSchema;
         this.tableType = tungstenTableType;
-    }
-
-    public ShardManager(String serviceName, ReplicatorRuntime context)
-    {
-        this(serviceName,
-                context.getJdbcUrl(context.getReplicatorSchemaName()), context
-                        .getJdbcUser(), context.getJdbcPassword(), context
-                        .getReplicatorSchemaName(), context
-                        .getTungstenTableType());
     }
 
     @Override

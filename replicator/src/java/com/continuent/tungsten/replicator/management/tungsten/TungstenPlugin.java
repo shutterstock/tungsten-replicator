@@ -71,6 +71,7 @@ import com.continuent.tungsten.replicator.management.events.OfflineNotification;
 import com.continuent.tungsten.replicator.pipeline.Pipeline;
 import com.continuent.tungsten.replicator.pipeline.ShardProgress;
 import com.continuent.tungsten.replicator.pipeline.TaskProgress;
+import com.continuent.tungsten.replicator.shard.ShardManager;
 import com.continuent.tungsten.replicator.storage.Store;
 
 /**
@@ -92,6 +93,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
     private ReplicatorRuntime     runtime;
     private Pipeline              pipeline;
     private OpenReplicatorContext context;
+    private ShardManager          shardManager;
 
     /**
      * Set event dispatcher and instantiate the Tungsten monitor. {@inheritDoc}
@@ -288,6 +290,29 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
 
         // Release existing runtime, if any, and generate a new one.
         doCreateRuntime();
+
+        // Start the shard manager if it is not already started. We must
+        // have a valid runtime at this point so it is safe to use it.
+        {
+            // Start the shard manager.
+            if (shardManager == null)
+                try
+                {
+                    shardManager = new ShardManager(runtime.getServiceName(),
+                            runtime.getJdbcUrl(null), runtime.getJdbcUser(),
+                            runtime.getJdbcPassword(),
+                            runtime.getReplicatorSchemaName(),
+                            runtime.getTungstenTableType());
+                    shardManager.advertiseInternal();
+                }
+                catch (Exception e)
+                {
+                    throw new ReplicatorException(String.format(
+                            "Unable to instantiate shard manager service '%s'",
+                            runtime.getServiceName()), e);
+                }
+
+        }
     }
 
     /**

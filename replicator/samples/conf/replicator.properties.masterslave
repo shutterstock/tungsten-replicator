@@ -356,6 +356,8 @@ replicator.event.checksum=none
 replicator.applier.consistency_policy=@{REPL_CONSISTENCY_POLICY}
 
 # Should consistency check be sensitive to column names and/or types? Settings
-# on a slave must be identical to master's. Values are 'true' or 'false'. 
+# on a slave must be identical to master's. Values are 'true' or 'false'.
 replicator.applier.consistency_column_names=true
-replicator.applier.consistency_column_types=true
+# TUC-20:  Must disable column type checking when going from
+# Connector/J on master to drizzle on slave.
+replicator.applier.consistency_column_types=false

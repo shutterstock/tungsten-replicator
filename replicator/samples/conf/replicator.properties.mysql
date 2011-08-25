@@ -151,12 +151,12 @@ replicator.pipeline.master.stores=thl,queue
 
 replicator.stage.binlog-to-q=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.binlog-to-q.extractor=mysql
+replicator.stage.binlog-to-q.filters=shardfilter
 replicator.stage.binlog-to-q.applier=queue
 
 replicator.stage.q-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.q-to-thl.extractor=queue
 replicator.stage.q-to-thl.applier=thl-applier
-replicator.stage.q-to-thl.filters=
 replicator.stage.q-to-thl.blockCommitRowCount=${replicator.global.buffer.size}
 
 # SLAVE PIPELINE:  three stages:  extract from remote THL to local THL;
@@ -167,6 +167,7 @@ replicator.pipeline.slave.syncTHLWithExtractor=false
 
 replicator.stage.remote-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.remote-to-thl.extractor=thl-remote
+replicator.stage.remote-to-thl.filters=shardfilter
 replicator.stage.remote-to-thl.applier=thl-applier
 
 replicator.stage.thl-to-q=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
@@ -500,6 +501,17 @@ replicator.filter.colnames=com.continuent.tungsten.replicator.filter.ColumnNameF
 # Transform enum's int to string before it reaches THL.
 replicator.filter.enumtostring=com.continuent.tungsten.replicator.filter.EnumToStringFilter
 replicator.filter.enumtostring.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_${service.name}
+
+# Shard filter.  Looks for and enforces shard master in remote services.  
+# Shards that are not mastered in the current service are ignored. 
+replicator.filter.shardfilter=com.continuent.tungsten.replicator.shard.ShardFilter
+# Decide whether to enforce homes.  If unset, this filter does nothing. 
+replicator.filter.shardfilter.enforceHome=false
+# Decide whether to permit shard rules to be created automatically. 
+replicator.filter.shardfilter.autoCreate=false
+# Policy for handling unknown shards.  Legal values are accept, drop, warn, 
+# and error. 
+replicator.filter.shardfilter.unknownMasterPolicy=error
 
 ################################
 # BACKUP/RESTORE CONFIGURATION #
