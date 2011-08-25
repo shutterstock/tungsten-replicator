@@ -1,4 +1,5 @@
 class ConfigureValidationHandler
+  @@skipped_classes = []
   include ConfigureMessages
   attr_reader :deployment_checks, :local_checks
   
@@ -109,6 +110,10 @@ class ConfigureValidationHandler
           unless Configurator.instance.enable_log_level?(Logger::INFO)
             extra_options << "-q"
           end
+          ConfigureValidationHandler.get_skipped_validation_classes.each{
+            |klass|
+            extra_options << "--skip-validation-check=#{klass}"
+          }
 
           validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}/"
 
@@ -182,13 +187,15 @@ class ConfigureValidationHandler
   end
   
   def self.skip_validation_class?(klass)
-    @skipped_classes ||= []
-    return @skipped_classes.include?(klass)
+    return @@skipped_classes.include?(klass)
   end
   
   def self.mark_skipped_validation_class(klass)
-    @skipped_classes ||= []
-    @skipped_classes << klass
+    @@skipped_classes << klass
+  end
+  
+  def self.get_skipped_validation_classes
+    @@skipped_classes
   end
 end
 

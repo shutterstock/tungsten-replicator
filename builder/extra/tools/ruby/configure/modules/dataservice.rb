@@ -858,39 +858,51 @@ end
 
 class ReplicationServiceExtractorFilters < ConfigurePrompt
   include ReplicationServicePrompt
-  include ConstantValueModule
+  include AdvancedPromptModule
   
   def initialize
     super(REPL_SVC_EXTRACTOR_FILTERS, "Replication service extractor filters")
   end
   
   def get_template_value(transform_values_method)
-    get_extractor_datasource().get_extractor_filters().join(",")
+    (get_value().to_s().split(",") + get_extractor_datasource().get_extractor_filters()).join(",")
+  end
+  
+  def required?
+    false
   end
 end
 
 class ReplicationServiceTHLFilters < ConfigurePrompt
   include ReplicationServicePrompt
-  include ConstantValueModule
+  include AdvancedPromptModule
   
   def initialize
     super(REPL_SVC_THL_FILTERS, "Replication service THL filters")
   end
   
   def get_template_value(transform_values_method)
-    get_extractor_datasource().get_thl_filters().join(",")
+    (get_value().to_s().split(",") + get_extractor_datasource().get_thl_filters()).join(",")
+  end
+  
+  def required?
+    false
   end
 end
 
 class ReplicationServiceApplierFilters < ConfigurePrompt
   include ReplicationServicePrompt
-  include ConstantValueModule
+  include AdvancedPromptModule
   
   def initialize
     super(REPL_SVC_APPLIER_FILTERS, "Replication service applier filters")
   end
   
   def get_template_value(transform_values_method)
-    get_extractor_datasource().get_applier_filters().join(",")
+    (get_value().to_s().split(",") + get_applier_datasource().get_applier_filters()).join(",")
+  end
+  
+  def required?
+    false
   end
 end

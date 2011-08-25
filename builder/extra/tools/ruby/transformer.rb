@@ -19,6 +19,10 @@ class Transformer
     @@global_replacements[key] = value
   end
   
+  def self.get_global_replacements
+    @@global_replacements
+  end
+  
   # Initialize with the name of the to -> from files. 
   def initialize(infile, outfile = nil, end_comment = "")
     @infile = infile
@@ -74,7 +78,7 @@ class Transformer
       |line|
       line_keys = line.scan(/[#]?([a-zA-Z0-9\._-]+)=.*/)
       if line_keys.length() > 0 && @@global_replacements.has_key?(line_keys[0][0])
-        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}"
+        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}\n"
       else
         block.call(line)
       end        
@@ -86,7 +90,7 @@ class Transformer
       |line|
       line_keys = line.scan(/[#]?([a-zA-Z0-9\._-]+)=.*/)
       if line_keys.length() > 0 && @@global_replacements.has_key?(line_keys[0][0])
-        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}"
+        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}\n"
       else
         line.gsub(/@\{[A-Za-z\._]+\}/){
           |match|
