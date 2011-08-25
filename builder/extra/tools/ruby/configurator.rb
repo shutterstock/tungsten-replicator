@@ -419,7 +419,13 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
                                           raise "Invalid value #{val} given for '--property'.  There should be a key/value pair joined by a single =."
                                         end
                                         
-                                        Transformer.add_global_replacement(val_parts[0], val_parts[1])
+                                        if val_parts[0].end_with?("+")
+                                          Transformer.add_global_addition(val_parts[0][0..-2], val_parts[1])
+                                        elsif val_parts[0].end_with?("~")
+                                          Transformer.add_global_match(val_parts[0][0..-2], val_parts[1])
+                                        else
+                                          Transformer.add_global_replacement(val_parts[0], val_parts[1])
+                                        end
                                       }
     opts.on("--skip-validation-check String")      {|val|
                                         ConfigureValidationHandler.mark_skipped_validation_class(val)
@@ -1136,6 +1142,10 @@ def output_usage_line(argument, msg = "", default = nil, max_line = nil, additio
   end
   
   if additional_help.to_s != ""
+    additional_help = additional_help.split("\n").map!{
+      |line|
+      line.strip()
+    }.join(' ')
     additional_help.split("<br>").each{
       |line|
       output_usage_line("", line, nil, max_line)

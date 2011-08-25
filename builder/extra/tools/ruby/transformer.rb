@@ -10,17 +10,50 @@ system_require 'date'
 
 class Transformer
   @@global_replacements = {}
+  @@global_additions = {}
+  @@global_matches = {}
   
   def self.add_global_replacement(key, value)
     if value == nil
-      raise("Unable to make a global replacement using a nil value")
+      raise("Unable to add a global replacement using a nil value")
     end
     
     @@global_replacements[key] = value
   end
   
+  def self.add_global_addition(key, value)
+    if value == nil
+      raise("Unable to add a global addition using a nil value")
+    end
+    
+    @@global_additions[key] = value
+  end
+  
+  def self.add_global_match(key, value)
+    if value == nil
+      raise("Unable to add a global match using a nil value")
+    end
+    
+    match = value.split("/")
+    match.shift
+    
+    if match.size != 2
+      raise("Unable to add a global match using '#{value}'.  Matches must be in the form of /search/replacement/.")
+    end
+    
+    @@global_matches[key] = match
+  end
+  
   def self.get_global_replacements
     @@global_replacements
+  end
+  
+  def self.get_global_additions
+    @@global_additions
+  end
+  
+  def self.get_global_matches
+    @@global_matches
   end
   
   # Initialize with the name of the to -> from files. 
@@ -38,7 +71,7 @@ class Transformer
     @output = []
     File.open(@infile) do |file|
       while line = file.gets
-        @output << line
+        @output << line.chomp()
       end
     end
   end
@@ -78,7 +111,7 @@ class Transformer
       |line|
       line_keys = line.scan(/[#]?([a-zA-Z0-9\._-]+)=.*/)
       if line_keys.length() > 0 && @@global_replacements.has_key?(line_keys[0][0])
-        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}\n"
+        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}"
       else
         block.call(line)
       end        
@@ -96,9 +129,9 @@ class Transformer
           end
         end
         
-        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}\n"
+        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}"
       else
-        line.gsub(/@\{[A-Za-z\._]+\}/){
+        line.gsub!(/@\{[A-Za-z\._]+\}/){
           |match|
           r = method.call(match.tr("\@{}", "").split("."))
           
@@ -108,12 +141,27 @@ class Transformer
             r
           end
         }
+        
+        line_keys = line.scan(/[#]?([a-zA-Z0-9\._-]+)=(.*)/)
+        if line_keys.size > 0
+          if line_keys.length() > 0 && @@global_additions.has_key?(line_keys[0][0])
+            line_keys[0][1] += @@global_additions[line_keys[0][0]]
+          end
+        
+          if line_keys.length() > 0 && @@global_matches.has_key?(line_keys[0][0])
+            line_keys[0][1].sub!(Regexp.new(@@global_matches[line_keys[0][0]][0]), @@global_matches[line_keys[0][0]][1])
+          end
+        
+          line_keys[0][0] + "=" + line_keys[0][1]
+        else
+          line
+        end
       end
     }
   end
   
   def to_s
-    return to_a.join('')
+    return to_a.join("\n")
   end
   
   def to_a

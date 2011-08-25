@@ -61,7 +61,15 @@ class ConfigurePackage
       output_usage_line("--no-validation", "Skip all validation checks")
       output_usage_line("--validate-only", "Skip all deployment steps")
       output_usage_line("--skip-validation-check String", "Do not run the specified validation check.  Validation checks are identified by the string included in their error they output.")
-      output_usage_line("--property=key=value", "Set the property key to the value in any file that is modified by the configure script")
+      output_usage_line("--property=key=value")
+      output_usage_line("--property=key+=value")
+      output_usage_line("--property=key~=/match/replace/", "Modify the value for key in any file that the configure script touches", "", nil, 
+        "key=value\t\t\tSet key to value without evaluating template values or other rules<br>
+        key+=value\t\tEvaluate template values and then append value to the end of the line<br>
+        key~=/match/replace/\tEvaluate template values then excecute the specified Ruby regex with sub<br>
+        <br>
+        --property=replicator.key~=/(.*)/somevalue,\\1/ will prepend 'somevalue' before the template value for 'replicator.key'<br><br>
+        Reference the String::sub! function for details on how to build the match or replace parameters.<br>http://ruby-doc.org/core/classes/String.html#M001185")
     end
   end
   
