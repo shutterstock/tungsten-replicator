@@ -139,13 +139,13 @@ replicator.pipeline.direct.syncTHLWithExtractor=false
 replicator.stage.d-binlog-to-q=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.d-binlog-to-q.extractor=dbms
 replicator.stage.d-binlog-to-q.applier=queue
-replicator.stage.d-binlog-to-q.filters=${replicator.global.filters.extractor}
+replicator.stage.d-binlog-to-q.filters=@{REPL_SVC_EXTRACTOR_FILTERS}
 
 # Write from queue to Tungsten log. 
 replicator.stage.d-q-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.d-q-to-thl.extractor=queue
 replicator.stage.d-q-to-thl.applier=thl-applier
-replicator.stage.d-q-to-thl.filters=${replicator.global.filters.thl}
+replicator.stage.d-q-to-thl.filters=@{REPL_SVC_THL_FILTERS}
 
 # Extract from Tungsten log to parallel queue. 
 replicator.stage.d-thl-to-pq=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
@@ -157,7 +157,7 @@ replicator.stage.d-thl-to-pq.blockCommitRowCount=${replicator.global.buffer.size
 replicator.stage.d-pq-to-dbms=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.d-pq-to-dbms.extractor=parallel-q-extractor
 replicator.stage.d-pq-to-dbms.applier=dbms
-replicator.stage.d-pq-to-dbms.filters=${replicator.global.filters.applier}
+replicator.stage.d-pq-to-dbms.filters=@{REPL_SVC_APPLIER_FILTERS}
 replicator.stage.d-pq-to-dbms.taskCount=${replicator.global.apply.channels}
 replicator.stage.d-pq-to-dbms.blockCommitRowCount=${replicator.global.buffer.size}
 
@@ -295,10 +295,6 @@ replicator.applier.parallel-q-applier.storeName=parallel-queue
 ###########
 # FILTERS # 
 ###########
-
-replicator.global.filters.extractor=@{REPL_SVC_EXTRACTOR_FILTERS}
-replicator.global.filters.thl=@{REPL_SVC_THL_FILTERS}
-replicator.global.filters.applier=@{REPL_SVC_APPLIER_FILTERS}
 
 @{REPL_SVC_FILTER_CONFIG}
 
