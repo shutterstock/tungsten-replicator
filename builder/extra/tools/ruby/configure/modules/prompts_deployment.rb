@@ -149,9 +149,16 @@ class HomeDirectoryPrompt < ConfigurePrompt
   
   def get_default_value
     begin
-      unless Configurator.instance.is_localhost?(@config.getProperty(get_member_key(HOST)))
-        return ssh_result('pwd', @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
+      if Configurator.instance.display_help? && !Configurator.instance.display_preview?
+        raise ""
       end
+      
+      unless Configurator.instance.is_localhost?(@config.getProperty(get_member_key(HOST)))
+        Timeout.timeout(2) {
+          return ssh_result('pwd', @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
+        }
+      end
+    rescue Timeout::Error
     rescue => e
     end
     

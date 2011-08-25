@@ -10,15 +10,7 @@ class ConfigurePackage
   end
   
   def read_config_file?
-    if Configurator.instance.is_interactive?()
-      return true
-    end
-    
-    if Configurator.instance.is_batch?()
-      return true
-    end
-    
-    false
+    true
   end
   
   def allow_interactive?
@@ -58,6 +50,7 @@ class ConfigurePackage
     output_usage_line("-c, --config file", "Sets name of config file (default: tungsten.cfg)")
     output_usage_line("-f, --force", "Do not display confirmation prompts or stop the configure process for errors")
     output_usage_line("-h, --help", "Displays help message")
+    output_usage_line("-p, --preview", "Displays the help message and preview the effect of the command line options")
     output_usage_line("-q, --quiet", "Only display error messages")
     output_usage_line("-v, --verbose", "Display all messages")
     output_usage_line("--net-ssh-option=key=value", "Set the Net::SSH option for remote system calls", nil, nil, "Valid options can be found at http://net-ssh.github.com/ssh/v2/api/classes/Net/SSH.html#M000002")
@@ -68,7 +61,6 @@ class ConfigurePackage
       output_usage_line("--no-validation", "Skip all validation checks")
       output_usage_line("--validate-only", "Skip all deployment steps")
       output_usage_line("--skip-validation-check String", "Do not run the specified validation check.  Validation checks are identified by the string included in their error they output.")
-      output_usage_line("--configure=key=value", "Set the default configure script value for the given key to the value")
       output_usage_line("--property=key=value", "Set the property key to the value in any file that is modified by the configure script")
     end
   end

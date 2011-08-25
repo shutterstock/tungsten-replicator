@@ -95,6 +95,10 @@ module PGDatasourcePrompt
   
   def get_default_value
     begin
+      if Configurator.instance.display_help? && !Configurator.instance.display_preview?
+        raise ""
+      end
+      
       get_pgsql_default_value()
     rescue => e
       super()

@@ -122,6 +122,7 @@ class Configurator
     @options.advanced = false
     @options.stream_output = false
     @options.display_help = false
+    @options.display_preview = false
     @options.display_config_file_help = false
     @options.display_template_file_help = false
     @options.validate_only = false
@@ -401,21 +402,17 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       @options.display_template_file_help = true
     }
     opts.on("-f", "--force")          {@options.force = true}
-    opts.on("-h", "--help")           {|val| @options.display_help = true }
+    opts.on("-h", "--help")           {@options.display_help = true}
+    opts.on("-p", "--preview")        {
+      @options.display_help = true
+      @options.display_preview = true
+    }
     opts.on("-i", "--interactive")    {|val| @options.interactive = true}
     opts.on("-n", "--info")           {@options.output_threshold = Logger::INFO}
     opts.on("-q", "--quiet")          {@options.output_threshold = Logger::WARN}
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
     opts.on("--no-validation")        {|val| @options.no_validation = true }
     opts.on("--output-config")        { @options.output_config = true }
-    opts.on("--configure String")      {|val|
-                                        val_parts = val.split("=")
-                                        if val_parts.length() !=2
-                                          raise "Invalid value #{val} given for '--configure'.  There should be a key/value pair joined by a single =."
-                                        end
-                                        
-                                        ConfigurePrompt.add_global_default(val_parts[0], val_parts[1])
-                                      }
     opts.on("--property String")      {|val|
                                         val_parts = val.split("=")
                                         if val_parts.length() !=2
@@ -464,11 +461,15 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
         begin
           unless @package.parsed_options?(remainder)
             error("There was a problem parsing the arguments")
-            exit 1
+            unless display_help?()
+              exit 1
+            end
           end
         rescue => e
           error(e.to_s() + e.backtrace().join("\n"))
-          exit 1
+          unless display_help?()
+            exit 1
+          end
         end
       end
     end
@@ -559,7 +560,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
           raise io
         end
       rescue => e
-        if @options.display_help
+        if display_help?()
           output_help
           exit 0
         end
@@ -612,6 +613,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     end
     
     return @options.display_help || @options.display_config_file_help || @options.display_template_file_help
+  end
+  
+  def display_preview?
+    return @options.display_preview
   end
   
   def display_config_file_help?(enabled = nil)

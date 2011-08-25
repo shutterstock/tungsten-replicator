@@ -5,7 +5,13 @@ class ConfigureServicePackage < ConfigurePackage
   SERVICE_DELETE = "delete_service"
   SERVICE_UPDATE = "update_service"
   
+  @deploy_service_key = nil
+  
   def parsed_options?(arguments)
+    if Configurator.instance.display_help? && !Configurator.instance.display_preview?()
+      return true
+    end
+    
     deployment_host = @config.getNestedProperty([DEPLOYMENT_HOST])
     if deployment_host.to_s == ""
       deployment_host = DEFAULTS
@@ -117,7 +123,6 @@ class ConfigureServicePackage < ConfigurePackage
     opts.on("--master-host String") {
       |val|
       service_config.setProperty(REPL_MASTERHOST, val)
-      ConfigurePrompt.add_global_default(REPL_MASTERHOST, val)
       warning("--master-host is deprecated, use --master-thl-host instead.")
     }
     
@@ -154,10 +159,9 @@ class ConfigureServicePackage < ConfigurePackage
         error(e.message)
       end
       
-      
       begin
         master_alias = service_config.getProperty(REPL_MASTER_DATASOURCE)
-        if master_alias && @config.getProperty(DATASOURCES).keys().include?(master_alias)
+        if master_alias && @config.getPropertyOr(DATASOURCES, {}).keys().include?(master_alias)
           if datasource_options.getPropertyOr([DATASOURCES, "master"], {}).size > 0
             raise "The '#{master_alias}' master datasource already exists, but you provided configuration settings for it."
           else
@@ -168,7 +172,7 @@ class ConfigureServicePackage < ConfigurePackage
             unless master_alias
               master_alias = datasource_options.getProperty([DATASOURCES, "master", REPL_DBHOST]).gsub(".", "_") + "_" + datasource_options.getProperty([DATASOURCES, "master", REPL_DBPORT])
             end
-            if @config.getProperty(DATASOURCES).keys().include?(master_alias)
+            if @config.getPropertyOr(DATASOURCES, {}).keys().include?(master_alias)
               raise "The '#{master_alias}' master datasource already exists, but you provided configuration settings for it."
             end
             service_config.setProperty(REPL_MASTER_DATASOURCE, master_alias)
@@ -183,34 +187,34 @@ class ConfigureServicePackage < ConfigurePackage
       when 0
         raise "No service_name specified"
       when 1
-        deploy_service_key = false
+        @deploy_service_key = false
         @config.getPropertyOr(REPL_SERVICES, {}).each_key{
           |s_key|
           if @config.getProperty([REPL_SERVICES, s_key, DEPLOYMENT_SERVICE]) == remainder[0]
-            deploy_service_key = s_key
+            @deploy_service_key = s_key
           end
         }
         
         case @config.getProperty(DEPLOYMENT_TYPE)
         when SERVICE_CREATE
-          if deploy_service_key != false
+          if @deploy_service_key != false
             raise "A service named '#{remainder[0]}' already exists"
           else
-            deploy_service_key = remainder[0]
-            service_config.setProperty(DEPLOYMENT_SERVICE, deploy_service_key)
+            @deploy_service_key = remainder[0]
+            service_config.setProperty(DEPLOYMENT_SERVICE, @deploy_service_key)
             @config.setProperty([REPL_SERVICES, remainder[0]], service_config.props)
           end
         when SERVICE_UPDATE
-          if deploy_service_key == false
+          if @deploy_service_key == false
             raise "Unable to find an existing service config for '#{remainder[0]}'"
           else
             service_config.props.each{
               |sc_key, sc_val|
-              @config.setProperty([REPL_SERVICES, deploy_service_key, sc_key], sc_val)
+              @config.setProperty([REPL_SERVICES, @deploy_service_key, sc_key], sc_val)
             }
           end
         when SERVICE_DELETE
-          if deploy_service_key == false
+          if @deploy_service_key == false
             raise "Unable to find an existing service config for '#{remainder[0]}'"
           end
         end
@@ -221,26 +225,29 @@ class ConfigureServicePackage < ConfigurePackage
       error("Argument parsing failed: #{e.to_s()}")
     end
     
-    @config.setProperty(DEPLOYMENT_SERVICE, deploy_service_key)
-    
-    if Configurator.instance.display_help?()
-      svc = @config.getProperty(DEPLOYMENT_SERVICE)
-      if svc == ""
-        svc = DEFAULTS
+    if Configurator.instance.display_preview?()
+      if @deploy_service_key == nil
+        @deploy_service_key = 'service-name'
       end
+      
       service_config.props.each{
         |sc_key, sc_val|
-        @config.setProperty([REPL_SERVICES, svc, sc_key], sc_val)
+        @config.setProperty([REPL_SERVICES, @deploy_service_key, sc_key], sc_val)
       }
-      @config.setDefault([REPL_SERVICES, svc, DEPLOYMENT_HOST], DEFAULTS)
-      
-      reset_errors()
     end
+    
+    @config.setProperty(DEPLOYMENT_SERVICE, @deploy_service_key)
     
     is_valid?()
   end
   
   def output_usage
+    if Configurator.instance.display_preview?
+      svc = @deploy_service_key
+      applier = @config.getProperty([REPL_SERVICES, svc, REPL_DATASOURCE])
+      extractor = @config.getProperty([REPL_SERVICES, svc, REPL_MASTER_DATASOURCE])
+    end
+    
     puts "Usage: configure-service [general-options] {-C|-D|-U} [target-options] [service-options] service-name"
     output_general_usage()
     
@@ -256,14 +263,11 @@ class ConfigureServicePackage < ConfigurePackage
     output_usage_line("-D", "Delete a replication service")
     output_usage_line("-U", "Update a replication service")
     
-    svc = @config.getProperty(DEPLOYMENT_SERVICE)
-    if svc == ""
-      svc = DEFAULTS
-    end
-    
     each_service_prompt{
       |prompt|
-      prompt.set_member(svc)
+      if Configurator.instance.display_preview?
+        prompt.set_member(svc)
+      end
       prompt.output_usage()
       
       if Configurator.instance.advanced_mode?()
@@ -271,11 +275,19 @@ class ConfigureServicePackage < ConfigurePackage
         when "ReplicationServiceDatasource"
           each_datasource_prompt{
             |prompt|
+            if Configurator.instance.display_preview?
+              prompt.set_member(applier)
+            end
+            
             prompt.output_usage()
           }
         when "ReplicationServiceMasterDatasource"
           each_datasource_prompt{
             |prompt|
+            if Configurator.instance.display_preview?
+              prompt.set_member(extractor)
+            end
+            
             output_usage_line("--master-#{prompt.get_command_line_argument()}", prompt.get_prompt(), prompt.get_value(true, true), nil, prompt.get_prompt_description())
           }
         end
@@ -304,10 +316,6 @@ class ConfigureServicePackage < ConfigurePackage
     [
       ReplicationServiceChecks.new()
     ]
-  end
-  
-  def read_config_file?
-    true
   end
   
   def allow_interactive?

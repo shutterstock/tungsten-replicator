@@ -69,9 +69,13 @@ end
 class OracleConfigurePrompt < ConfigurePrompt
   def get_default_value
     begin
+      if Configurator.instance.display_help? && !Configurator.instance.display_preview?
+        raise ""
+      end
+      
       get_oracle_default_value()
     rescue => e
-      @default
+      super()
     end
   end
   

@@ -30,8 +30,16 @@ class ConfigurePackageCluster < ConfigurePackage
   end
   
   def parsed_options?(arguments)
+    if Configurator.instance.display_help? && !Configurator.instance.display_preview?()
+      return true
+    end
+    
     reset_errors()
-    @config.props = {}
+    
+    if @config.props.size > 0
+      error("Unable to run configure because this directory is already configured")
+      return false
+    end
     
     cluster_hosts = [Configurator.instance.hostname()]
     host_config = Properties.new()
@@ -43,7 +51,6 @@ class ConfigurePackageCluster < ConfigurePackage
       opts.on("--#{prompt.get_command_line_argument()} String") {
         |val|
         host_config.setProperty(prompt.name, val)
-        ConfigurePrompt.add_global_default(prompt.name, val)
       }
     }
     
@@ -62,14 +69,12 @@ class ConfigurePackageCluster < ConfigurePackage
       @config.setProperty([HOSTS, host_alias], host_config.props)
     }
     
-    if Configurator.instance.display_help?()
-      reset_errors()
-    end
-    
     is_valid?()
   end
   
   def output_usage()
+    host = @config.getPropertyOr(HOSTS, {}).keys.at(0)
+    
     puts "Usage: configure [general-options] [install-options]"
     output_general_usage()
     
@@ -80,6 +85,7 @@ class ConfigurePackageCluster < ConfigurePackage
     
     each_host_prompt{
       |prompt|
+      prompt.set_member(host || DEFAULTS)
       prompt.output_usage()
     }
   end
