@@ -386,23 +386,18 @@ public class SingleThreadStageTask implements Runnable
                         }
                         catch (ApplierException e)
                         {
-                            String message = "Event application failed: seqno="
-                                    + event.getSeqno() + " fragno="
-                                    + event.getFragno() + " message="
-                                    + e.getMessage();
                             if (context.getApplierFailurePolicy() == FailurePolicy.STOP)
                             {
-                                // Don't log the full stack trace here, but just
-                                // the error message
-                                logError(message, null);
-                                eventDispatcher
-                                        .handleEvent(new ErrorNotification(
-                                                message, event.getSeqno(),
-                                                event.getEventId(), e));
-                                break;
+                                throw e;
                             }
                             else
                             {
+                                String message = "Event application failed: seqno="
+                                        + event.getSeqno()
+                                        + " fragno="
+                                        + event.getFragno()
+                                        + " message="
+                                        + e.getMessage();
                                 logError(message, e);
                                 continue;
                             }
@@ -505,22 +500,16 @@ public class SingleThreadStageTask implements Runnable
                 }
                 catch (ApplierException e)
                 {
-                    String message = "Event application failed: seqno="
-                            + event.getSeqno() + " fragno=" + event.getFragno()
-                            + " message=" + e.getMessage();
                     if (context.getApplierFailurePolicy() == FailurePolicy.STOP)
                     {
-                        // Don't log the full stack trace here, but just the
-                        // error message
-                        logError(message, null);
-
-                        eventDispatcher.handleEvent(new ErrorNotification(
-                                message, event.getSeqno(), event.getEventId(),
-                                e));
-                        break;
+                        throw e;
                     }
                     else
                     {
+                        String message = "Event application failed: seqno="
+                                + event.getSeqno() + " fragno="
+                                + event.getFragno() + " message="
+                                + e.getMessage();
                         logError(message, e);
                         continue;
                     }
@@ -550,6 +539,15 @@ public class SingleThreadStageTask implements Runnable
                 logWarn("Task cancelled while trying to rollback following cancellation",
                         null);
             }
+        }
+        catch (ApplierException e)
+        {
+            String message = "Event application failed: seqno="
+                    + event.getSeqno() + " fragno=" + event.getFragno()
+                    + " message=" + e.getMessage();
+            logError(message, e);
+            dispatchErrorEvent(new ErrorNotification(message, event.getSeqno(),
+                    event.getEventId(), e));
         }
         catch (Throwable e)
         {
