@@ -34,8 +34,6 @@ class ConfigurePackageCluster < ConfigurePackage
       return true
     end
     
-    reset_errors()
-    
     if @config.props.size > 0
       error("Unable to run configure because this directory is already configured")
       return false
@@ -73,7 +71,7 @@ class ConfigurePackageCluster < ConfigurePackage
   end
   
   def output_usage()
-    host = @config.getPropertyOr(HOSTS, {}).keys.at(0)
+    host_alias = @config.getPropertyOr(HOSTS, {}).keys.at(0)
     
     puts "Usage: configure [general-options] [install-options]"
     output_general_usage()
@@ -85,7 +83,7 @@ class ConfigurePackageCluster < ConfigurePackage
     
     each_host_prompt{
       |prompt|
-      prompt.set_member(host || DEFAULTS)
+      prompt.set_member(host_alias || DEFAULTS)
       prompt.output_usage()
     }
   end

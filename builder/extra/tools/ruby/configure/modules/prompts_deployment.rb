@@ -128,6 +128,7 @@ end
 
 class UserIDPrompt < ConfigurePrompt
   include ClusterHostPrompt
+  include NotTungstenUpdatePrompt
   
   def initialize
     super(USERID, "System User", 
@@ -142,6 +143,7 @@ end
 
 class HomeDirectoryPrompt < ConfigurePrompt
   include ClusterHostPrompt
+  include NotTungstenUpdatePrompt
   
   def initialize
     super(HOME_DIRECTORY, "Installation directory", PV_FILENAME)
@@ -252,6 +254,7 @@ end
 
 class THLStorageDirectory < ConfigurePrompt
   include ClusterHostPrompt
+  include NotTungstenUpdatePrompt
   
   def initialize
     super(REPL_LOG_DIR, "Replicator log directory", PV_FILENAME)
@@ -273,6 +276,7 @@ end
 
 class RelayLogStorageDirectory < ConfigurePrompt
   include ClusterHostPrompt
+  include NotTungstenUpdatePrompt
   
   def initialize
     super(REPL_RELAY_LOG_DIR, "Directory for logs transferred from the master",

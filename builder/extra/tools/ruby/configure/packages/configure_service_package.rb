@@ -12,47 +12,7 @@ class ConfigureServicePackage < ConfigurePackage
       return true
     end
     
-    deployment_host = @config.getNestedProperty([DEPLOYMENT_HOST])
-    if deployment_host.to_s == ""
-      deployment_host = DEFAULTS
-    end
-    
-    if deployment_host == DEFAULTS
-      @target_host = Configurator.instance.hostname
-    else
-      @target_host = @config.getProperty([HOSTS, deployment_host, HOST])
-    end
-    @target_user = @config.getProperty([HOSTS, deployment_host, USERID])
-    @target_home_directory = @config.getProperty([HOSTS, deployment_host, CURRENT_RELEASE_DIRECTORY])
-    @load_remote_config = false
-    
-    opts=OptionParser.new
-    opts.on("--host String")    { |val| 
-      @load_remote_config = true
-      @target_host = val }
-    opts.on("--user String")    { |val| 
-      @target_user = val }
-    opts.on("--release-directory String")  { |val| 
-      @load_remote_config = true
-      @target_home_directory = val }
-    
-    arguments = Configurator.instance.run_option_parser(opts, arguments)
-
-    if @load_remote_config == true
-      info "Load the current config from #{@target_user}@#{@target_host}:#{@target_home_directory}"
-      
-      begin
-        command = "cd #{@target_home_directory}; tools/configure --output-config"    
-        config_output = ssh_result(command, @target_host, @target_user)
-        parsed_contents = JSON.parse(config_output)
-        unless parsed_contents.instance_of?(Hash)
-          raise "invalid object"
-        end
-        @config.props = parsed_contents.dup
-      rescue
-        raise "Unable to load the current config from #{@target_user}@#{@target_host}:#{@target_home_directory}"
-      end
-    end
+    arguments = load_target_config(arguments)
     
     @config.setProperty(DEPLOYMENT_TYPE, nil)
     @config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)

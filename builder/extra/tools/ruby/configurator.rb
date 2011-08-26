@@ -64,6 +64,7 @@ REPL_ROLE_S = "slave"
 REPL_ROLE_DI = "direct"
 
 DISTRIBUTED_DEPLOYMENT_NAME = "regular"
+UPDATE_DEPLOYMENT_NAME = "update_deployment"
 DIRECT_DEPLOYMENT_HOST_ALIAS = "local"
 
 DEFAULT_SERVICE_NAME = "default"
