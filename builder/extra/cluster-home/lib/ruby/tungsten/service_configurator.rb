@@ -31,20 +31,22 @@ class ServiceConfigurator
   DELETE = "delete"
   UPDATE = "update"
 
+  # Local service parameters. 
+  REPL_SVC_ALLOW_ANY_SERVICE = "repl_svc_allow_any_remote_service"
+  REPL_SVC_ALLOW_BIDI_UNSAFE = "repl_svc_allow_bidi_unsafe"
   REPL_SVC_BINLOG_MODE = "repl_svc_binlog_mode"
   REPL_SVC_CHANNELS = "repl_svc_channels"
-  REPL_SVC_MASTERPORT = "repl_svc_masterport"
-  REPL_SVC_SERVICE_TYPE = "repl_svc_service_type"
-  REPL_SVC_THL_PORT = "repl_svc_thl_port"
-  REPL_SVC_SHARD_DEFAULT_DB = "repl_svc_shard_default_db"
-  REPL_SVC_ALLOW_BIDI_UNSAFE = "repl_svc_allow_bidi_unsafe"
-  REPL_SVC_ALLOW_ANY_SERVICE = "repl_svc_allow_any_remote_service"
+  REPL_SVC_ENFORCE_HOME = "repl_svc_enforce_home"
   REPL_SVC_EXTRACT_DB_HOST = "repl_svc_extract_db_host"
+  REPL_SVC_EXTRACT_DB_PASSWORD = "repl_svc_extract_db_password"
   REPL_SVC_EXTRACT_DB_PORT = "repl_svc_extract_db_port"
   REPL_SVC_EXTRACT_DB_USER = "repl_svc_extract_db_user"
-  REPL_SVC_EXTRACT_DB_PASSWORD = "repl_svc_extract_db_password"
-  REPL_SVC_PARALLELIZATION_TYPE = "repl_svc_parallelization_type"
+  REPL_SVC_MASTERPORT = "repl_svc_masterport"
   REPL_SVC_NATIVE_SLAVE_TAKEOVER = "repl_svc_native_slave_takeover"
+  REPL_SVC_PARALLELIZATION_TYPE = "repl_svc_parallelization_type"
+  REPL_SVC_SERVICE_TYPE = "repl_svc_service_type"
+  REPL_SVC_SHARD_DEFAULT_DB = "repl_svc_shard_default_db"
+  REPL_SVC_THL_PORT = "repl_svc_thl_port"
 
   # Initialize configuration arguments.
   def initialize(arguments, stdin)
@@ -123,6 +125,8 @@ class ServiceConfigurator
       @config_overrides.setProperty(REPL_BUFFER_SIZE, val)}
     opts.on("--channels String")    {|val| 
       @config_overrides.setProperty(REPL_SVC_CHANNELS, val)}
+    opts.on("--enforce-home String")    {|val| 
+      @config_overrides.setProperty(REPL_SVC_ENFORCE_HOME, val)}
     opts.on("--local-service-name String")    {|val| 
       @config_overrides.setProperty(GLOBAL_DSNAME, val)}
     opts.on("--extract-db-host String")    {|val| 
@@ -235,6 +239,8 @@ class ServiceConfigurator
       output_param(cfg_loaded, REPL_BUFFER_SIZE)
     printf "--channels         Number of channels for parallel apply [%s]\n", 
       output_param(cfg_loaded, REPL_SVC_CHANNELS)
+    printf "--enforce-home     Enforce shard homes [%s]\n", 
+      output_param(cfg_loaded, REPL_SVC_ENFORCE_HOME)
     printf "--extract-db-host  Extractor DBMS host name [%s]\n", 
       output_param(cfg_loaded, REPL_DATASERVER_HOST)
     printf "--extract-db-password  Extractor DBMS password[%s]\n", 
@@ -299,6 +305,7 @@ class ServiceConfigurator
 
     # Set local default values. 
     @config.setProperty(REPL_SVC_CHANNELS, "1")
+    @config.setProperty(REPL_SVC_ENFORCE_HOME, "false")
     @config.setProperty(REPL_SVC_MASTERPORT, "2112")
     @config.setProperty(REPL_SVC_THL_PORT, "2112")
     @config.setProperty(REPL_SVC_BINLOG_MODE, "master")
@@ -626,6 +633,8 @@ class ServiceConfigurator
         "replicator.filter.bidiSlave.allowBidiUnsafe=" + @config.props[REPL_SVC_ALLOW_BIDI_UNSAFE]
       elsif line =~ /replicator.filter.bidiSlave.allowAnyRemoteService=/
         "replicator.filter.bidiSlave.allowAnyRemoteService=" + @config.props[REPL_SVC_ALLOW_ANY_SERVICE]
+      elsif line =~ /replicator.filter.shardfilter.enforceHome=/
+        "replicator.filter.shardfilter.enforceHome=" + @config.props[REPL_SVC_ENFORCE_HOME]
       else
         line
       end
