@@ -142,20 +142,20 @@ class Transformer
           end
         }
         
-        line_keys = line.scan(/[#]?([a-zA-Z0-9\._-]+)=(.*)/)
+        line_keys = line.scan(/^[#]?([a-zA-Z0-9\._-]+)=(.*)/)
         if line_keys.size > 0
-          if line_keys.length() > 0 && @@global_additions.has_key?(line_keys[0][0])
+          if @@global_additions.has_key?(line_keys[0][0])
             line_keys[0][1] += @@global_additions[line_keys[0][0]]
+            line = line_keys[0][0] + "=" + line_keys[0][1]
           end
         
-          if line_keys.length() > 0 && @@global_matches.has_key?(line_keys[0][0])
+          if @@global_matches.has_key?(line_keys[0][0])
             line_keys[0][1].sub!(Regexp.new(@@global_matches[line_keys[0][0]][0]), @@global_matches[line_keys[0][0]][1])
+            line = line_keys[0][0] + "=" + line_keys[0][1]
           end
-        
-          line_keys[0][0] + "=" + line_keys[0][1]
-        else
-          line
         end
+        
+        line
       end
     }
   end

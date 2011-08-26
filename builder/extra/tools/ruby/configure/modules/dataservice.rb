@@ -804,7 +804,7 @@ class ReplicationServiceFilterConfig < ConfigurePrompt
       transformer = Transformer.new(file)
       transformer.transform_values(transform_values_method)
       
-      output_lines = output_lines + transformer.to_a + ["\n"] + ["\n"]
+      output_lines = output_lines + transformer.to_a + [""]
     end
     
     if get_applier_datasource().class != get_extractor_datasource.class
@@ -812,7 +812,7 @@ class ReplicationServiceFilterConfig < ConfigurePrompt
         transformer = Transformer.new(file)
         transformer.transform_values(transform_values_method)
       
-        output_lines = output_lines + transformer.to_a + ["\n"] + ["\n"]
+        output_lines = output_lines + transformer.to_a + [""]
       end
     end
     
@@ -820,10 +820,10 @@ class ReplicationServiceFilterConfig < ConfigurePrompt
       transformer = Transformer.new(file)
       transformer.transform_values(transform_values_method)
       
-      output_lines = output_lines + transformer.to_a + ["\n"] + ["\n"]
+      output_lines = output_lines + transformer.to_a + [""]
     end
     
-    return output_lines.join
+    return output_lines.join("\n")
   end
 end
 
@@ -842,17 +842,17 @@ class ReplicationServiceBackupConfig < ConfigurePrompt
       transformer = Transformer.new(file)
       transformer.transform_values(transform_values_method)
       
-      output_lines = output_lines + transformer.to_a + ["\n"] + ["\n"]
+      output_lines = output_lines + transformer.to_a + [""]
     end
     
     Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/tungsten-replicator/samples/conf/backup_methods/#{get_applier_datasource().get_uri_scheme()}/*.tpl"].sort().each do |file| 
       transformer = Transformer.new(file)
       transformer.transform_values(transform_values_method)
       
-      output_lines = output_lines + transformer.to_a + ["\n"] + ["\n"]
+      output_lines = output_lines + transformer.to_a + [""]
     end
     
-    return output_lines.join
+    return output_lines.join("\n")
   end
 end
 
