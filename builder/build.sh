@@ -313,7 +313,7 @@ mkdir -p $tools_dir
 cp $extra_tools/configure $tools_dir
 cp $extra_tools/configure-service $tools_dir
 cp $extra_tools/tungsten-installer $tools_dir
-cp $extra_tools/upgrade $tools_dir
+cp $extra_tools/update $tools_dir
 rsync -Ca $extra_tools/ruby $tools_dir
 
 ##########################################################################
