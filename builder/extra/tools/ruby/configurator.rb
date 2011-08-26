@@ -418,10 +418,11 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
                                         if val_parts.length() !=2
                                           raise "Invalid value #{val} given for '--property'.  There should be a key/value pair joined by a single =."
                                         end
-                                        
-                                        if val_parts[0].end_with?("+")
+
+                                        last_char=val_parts[0][-1,1]
+                                        if last_char == "+"
                                           Transformer.add_global_addition(val_parts[0][0..-2], val_parts[1])
-                                        elsif val_parts[0].end_with?("~")
+                                        elsif ast_char == "~"
                                           Transformer.add_global_match(val_parts[0][0..-2], val_parts[1])
                                         else
                                           Transformer.add_global_replacement(val_parts[0], val_parts[1])
