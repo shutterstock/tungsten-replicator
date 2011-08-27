@@ -423,7 +423,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
                                         last_char=val_parts[0][-1,1]
                                         if last_char == "+"
                                           Transformer.add_global_addition(val_parts[0][0..-2], val_parts[1])
-                                        elsif ast_char == "~"
+                                        elsif last_char == "~"
                                           Transformer.add_global_match(val_parts[0][0..-2], val_parts[1])
                                         else
                                           Transformer.add_global_replacement(val_parts[0], val_parts[1])
