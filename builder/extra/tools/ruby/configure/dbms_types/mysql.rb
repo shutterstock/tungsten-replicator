@@ -4,7 +4,7 @@ DBMS_MYSQL = "mysql"
 REPL_MYSQL_DATADIR = "repl_datasource_mysql_data_directory"
 REPL_MYSQL_MYCNF = "repl_datasource_mysql_mycnf"
 REPL_MYSQL_RO_SLAVE = "repl_mysql_ro_slave"
-REPL_MYSQL_SERVER_ID = "repl_datasource_mysql_server_id"
+REPL_MYSQL_SERVER_ID = "repl_mysql_server_id"
 REPL_MYSQL_ENABLE_ENUMTOSTRING = "repl_mysql_enable_enumtostring"
 REPL_MYSQL_XTRABACKUP_DIR = "repl_mysql_xtrabackup_dir"
 REPL_MYSQL_XTRABACKUP_FILE = "repl_mysql_xtrabackup_file"
@@ -165,21 +165,37 @@ class MySQLDataDirectory < MySQLConfigurePrompt
   end
 end
 
-class MySQLServerID < MySQLConfigurePrompt
-  include DatasourcePrompt
+class MySQLServerID < ConfigurePrompt
+  include ReplicationServicePrompt
   
   def initialize
     super(REPL_MYSQL_SERVER_ID, "MySQL server ID", 
       PV_INTEGER)
   end
   
-  def get_mysql_default_value
-    server_id = get_datasource().get_value("SHOW VARIABLES LIKE 'server_id'", "Value")
-    if server_id == nil
-      raise "Unable to determine server_id"
+  def get_default_value
+    begin
+      if Configurator.instance.display_help? && !Configurator.instance.display_preview?
+        raise ""
+      end
+      
+      server_id = get_applier_datasource().get_value("SHOW VARIABLES LIKE 'server_id'", "Value")
+      if server_id == nil
+        raise "Unable to determine server_id"
+      end
+
+      server_id
+    rescue => e
+      super()
     end
-    
-    server_id
+  end
+  
+  def enabled?
+    super() && (get_extractor_datasource().is_a?(MySQLDatabasePlatform))
+  end
+  
+  def enabled_for_config?
+    super() && (get_extractor_datasource().is_a?(MySQLDatabasePlatform))
   end
 end
 

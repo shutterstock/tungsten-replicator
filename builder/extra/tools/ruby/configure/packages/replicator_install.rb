@@ -232,6 +232,10 @@ class ReplicatorInstallPackage < ConfigurePackage
     
     each_service_prompt{
       |prompt|
+      if prompt.is_a?(MySQLServerID)
+        next
+      end
+      
       if (av = prompt.get_command_line_argument_value()) != nil
         opts.on("--#{prompt.get_command_line_argument()}") {
           service_options.setProperty(prompt.name, av)
@@ -413,6 +417,10 @@ class ReplicatorInstallPackage < ConfigurePackage
       
       each_service_prompt{
         |prompt|
+        if prompt.is_a?(MySQLServerID)
+          next
+        end
+        
         if Configurator.instance.display_preview? && @method == METHOD_MS
           prompt.set_member(svc)
         end

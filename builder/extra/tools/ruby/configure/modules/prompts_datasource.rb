@@ -62,9 +62,9 @@ class DatasourceDBType < ConfigurePrompt
   def get_default_value
     case Configurator.instance.whoami()
     when "postgres"
-      return "pgsql"
+      return "postgresql"
     when "enterprisedb"
-      return "pgsql"
+      return "postgresql"
     else
       return "mysql"
     end
