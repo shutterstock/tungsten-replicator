@@ -337,6 +337,24 @@ class MySQLPermissionsCheck < ConfigureValidationCheck
   end
 end
 
+class MySQLBinaryLogsEnabledCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  include MySQLExtractorCheck
+
+  def set_vars
+    @title = "Binary logs enabled check"
+  end
+  
+  def validate
+    log_bin = get_extractor_datasource.get_value("show variables like 'log_bin'", "Value")
+    if log_bin != "ON"
+      help("Check that the MySQL user can run \"show variables like 'log_bin'\"")
+      help("Add \"log-bin=mysql-bin\" to the MySQL configuration file.")
+      error("Binary logs are not enabled on #{get_extractor_datasource.get_connection_summary}")
+    end
+  end
+end
+
 class MySQLReadableLogsCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   include MySQLExtractorCheck
@@ -346,7 +364,7 @@ class MySQLReadableLogsCheck < ConfigureValidationCheck
   end
   
   def validate
-    master_file = get_applier_datasource.get_value("show master status", "File")
+    master_file = get_extractor_datasource.get_value("show master status", "File")
     if master_file == nil
       help("Check that the MySQL user can run \"show master status\"")
       help("Add \"log-bin=mysql-bin\" to the MySQL configuration file.")
