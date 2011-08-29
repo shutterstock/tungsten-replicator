@@ -1,4 +1,3 @@
-raise IgnoreError
 DBMS_POSTGRESQL = "postgresql"
 
 # PostgreSQL-specific parameters.
@@ -487,6 +486,29 @@ class PgdumpAvailableCheck < ConfigureValidationCheck
   
   def enabled?
     super() && @config.getProperty(get_member_key(REPL_BACKUP_METHOD)) == "pg_dump"
+  end
+end
+
+class PostgresSSHLoginCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  include PGApplierCheck
+  
+  def set_vars
+    @title = "Postgres SSH login check"
+  end
+  
+  def validate
+    repl_host = @config.getProperty(get_member_key(REPL_MASTERHOST))
+    remote_user = ssh_result("echo $USER", repl_host, @config.getProperty(USERID))
+    if remote_user != @config.getProperty(USERID)
+      error("SSH login failed from #{@config.getProperty(HOST)} to #{repl_host}")
+    else
+      info("SSH login successful from #{@config.getProperty(HOST)} to #{repl_host}")
+    end
+  end
+  
+  def enabled?
+    super() && (@config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_S)
   end
 end
 
