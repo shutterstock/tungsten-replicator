@@ -19,10 +19,10 @@ class PgWalPlugin < Plugin
   # GLOBAL VARIABLES
   PG_WAL_ARCHIVE   = "/bin/pg/pg-wal-archive"
   PG_WAL_RESTORE   = "/bin/pg/pg-wal-restore"
-  PG_WAL_CONF_DIR  = "/conf"
-  PG_WAL_PROPERTIES = "/postgresql-wal.properties"
+  PG_WAL_CONF_DIR  = "/conf/pg-wal"
+  PG_WAL_PROPERTIES = "/pg-wal.properties"
   PG_TUNGSTEN_CONF = "/postgresql.tungsten.conf"
-  PG_TUNGSTEN_CONF_S = "/sample.postgresql.tungsten.conf"
+  PG_TUNGSTEN_CONF_S = "/postgresql.tungsten.conf.tpl"
   INITIALIZED      = "/initialized"
   GOING_ONLINE     = "/going_online"
   ONLINE           = "/online"
