@@ -13,4 +13,4 @@ replicator.extractor.dbms.useRelayLogs=@{EXTRACTOR.REPL_DISABLE_RELAY_LOGS}
 replicator.extractor.dbms.relayLogDir=@{SERVICE.REPL_RELAY_LOG_DIR}
 replicator.extractor.dbms.relayLogWaitTimeout=0
 replicator.extractor.dbms.relayLogRetention=10
-replicator.extractor.dbms.serverId=@{APPLIER.REPL_MYSQL_SERVER_ID}
+replicator.extractor.dbms.serverId=@{REPL_MYSQL_SERVER_ID}
