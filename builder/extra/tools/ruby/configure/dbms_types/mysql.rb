@@ -8,6 +8,7 @@ REPL_MYSQL_SERVER_ID = "repl_datasource_mysql_server_id"
 REPL_MYSQL_ENABLE_ENUMTOSTRING = "repl_mysql_enable_enumtostring"
 REPL_MYSQL_XTRABACKUP_DIR = "repl_mysql_xtrabackup_dir"
 REPL_MYSQL_XTRABACKUP_FILE = "repl_mysql_xtrabackup_file"
+REPL_MYSQL_USE_BYTES_FOR_STRING = "repl_mysql_use_bytes_for_string"
 
 class MySQLDatabasePlatform < ConfigureDatabasePlatform
   def get_uri_scheme
@@ -193,6 +194,24 @@ class MySQLEnableEnumToString < ConfigurePrompt
   def get_default_value
     if get_extractor_datasource().class != get_applier_datasource().class
       return "true"
+    end
+    
+    super()
+  end
+end
+
+class MySQLUseBytesForStrings < ConfigurePrompt
+  include ReplicationServicePrompt
+  include AdvancedPromptModule
+  
+  def initialize
+    super(REPL_MYSQL_USE_BYTES_FOR_STRING, "Transfer strings as their byte representation?", 
+      PV_BOOLEAN, "true")
+  end
+  
+  def get_default_value
+    if get_extractor_datasource().class != get_applier_datasource().class
+      return "false"
     end
     
     super()
