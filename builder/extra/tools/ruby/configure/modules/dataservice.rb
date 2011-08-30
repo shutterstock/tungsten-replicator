@@ -551,6 +551,10 @@ class ReplicationServiceSlaveTakeover < ConfigurePrompt
     replace_deprecated_key(get_member_key('repl_svc_native_slave_takeover'))
     super()
   end
+  
+  def get_command_line_argument_value
+    "true"
+  end
 end
 
 class BackupMethod < ConfigurePrompt
