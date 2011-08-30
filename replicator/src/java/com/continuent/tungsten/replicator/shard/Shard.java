@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Stephane Giron
- * Contributor(s):
+ * Contributor(s): Robert Hodges
  */
 
 package com.continuent.tungsten.replicator.shard;
@@ -25,27 +25,29 @@ package com.continuent.tungsten.replicator.shard;
 import java.util.Map;
 
 /**
+ * Holds information about a single shard, whose name is given by the shardId
+ * property.
+ * 
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
  * @version 1.0
  */
 public class Shard
 {
+    /**
+     * Master name that denotes a short that is local to current service only.
+     */
+    public String   LOCAL = "#LOCAL";
 
-    public static enum ShardDisposition
-    {
-        ACCEPT, REJECT, WARN, ERROR
-    }
-
+    // Shard properties.
     private String  shardId;
     private boolean critical;
-    private String  disposition;
     private String  master;
 
-    public Shard(String shardId, boolean critical, String home)
+    public Shard(String shardId, boolean critical, String master)
     {
         this.shardId = shardId;
         this.critical = critical;
-        this.master = home;
+        this.master = master;
     }
 
     public Shard(Map<String, String> shard)
@@ -55,24 +57,29 @@ public class Shard
         this.master = shard.get(ShardTable.SHARD_MASTER_COL);
     }
 
+    /** Returns the shard name. */
     public String getShardId()
     {
         return shardId;
     }
 
+    /** Returns true if shard is critical. */
     public boolean isCritical()
     {
         return critical;
     }
 
-    public String getDisposition()
-    {
-        return disposition;
-    }
-
+    /** Returns name of master service. */
     public String getMaster()
     {
         return master;
     }
 
+    /**
+     * Returns true if shard is local-only, i.e., does not cross services.
+     */
+    public boolean isLocal()
+    {
+        return LOCAL.equals(master);
+    }
 }

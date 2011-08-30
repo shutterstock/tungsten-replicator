@@ -629,7 +629,7 @@ public class OpenReplicatorManagerCtrl
                     fromEvent = argvIterator.next();
                 else if ("-skip".equals(curArg))
                 {
-                    fatal("The -skip flag is now longer supported; use -skip-seqno instead",
+                    fatal("The -skip flag is no longer supported; use -skip-seqno instead",
                             null);
                 }
                 else if ("-event".equals(curArg))

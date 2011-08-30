@@ -60,16 +60,16 @@ public class ShardFilter implements Filter
     }
 
     // Plugin properties.
-    private boolean    autoCreate                = false;
-    private boolean    enforceHome               = false;
-    private Policy     unknownMasterPolicy       = Policy.error;
-    private String     unknownMasterPolicyString = null;
-    private boolean    criticalByDef             = false;
+    private boolean    enabled                  = false;
+    private boolean    autoCreate               = false;
+    private boolean    enforceHome              = false;
+    private Policy     unknownShardPolicy       = Policy.error;
+    private String     unknownShardPolicyString = null;
 
     PluginContext      context;
     Map<String, Shard> shards;
 
-    Database           conn                      = null;
+    Database           conn                     = null;
 
     private String     user;
     private String     url;
@@ -93,18 +93,18 @@ public class ShardFilter implements Filter
         tableType = ((ReplicatorRuntime) context).getTungstenTableType();
 
         // If policy string is set, convert to an enum.
-        if (this.unknownMasterPolicyString != null)
+        if (this.unknownShardPolicyString != null)
         {
             try
             {
-                this.unknownMasterPolicy = Policy
-                        .valueOf(unknownMasterPolicyString.toLowerCase());
+                this.unknownShardPolicy = Policy
+                        .valueOf(unknownShardPolicyString.toLowerCase());
             }
             catch (IllegalArgumentException e)
             {
                 throw new ReplicatorException(
-                        "Invalid value for unknownMasterPolicy: "
-                                + unknownMasterPolicyString);
+                        "Invalid value for unknownShardPolicy: "
+                                + unknownShardPolicyString);
             }
         }
 
@@ -185,18 +185,10 @@ public class ShardFilter implements Filter
             throws ReplicatorException, InterruptedException
     {
         // If we are not enforcing homes, we need to stop now.
-        if (!enforceHome)
+        if (!enabled)
         {
             if (logger.isDebugEnabled())
-                logger.debug("Enforcing home check is disabled");
-            return event;
-        }
-
-        // Filtering only applies if we are running a remote service.
-        if (!remote)
-        {
-            if (logger.isDebugEnabled())
-                logger.debug("Local service - not filtering events");
+                logger.debug("Shard filtering is not enabled");
             return event;
         }
 
@@ -220,7 +212,7 @@ public class ShardFilter implements Filter
                             + " shardId="
                             + eventShard
                             + " master=" + shardService);
-                updateShardCatalog(eventShard, shardService);
+                shard = updateShardCatalog(eventShard, shardService);
             }
             else if (autoCreate)
             {
@@ -230,14 +222,14 @@ public class ShardFilter implements Filter
                             + " shardId="
                             + eventShard
                             + " master=" + service);
-                updateShardCatalog(eventShard, service);
+                shard = updateShardCatalog(eventShard, service);
             }
         }
 
         // If the shard is null, we refer to the policy for unknown shards.
         if (shard == null)
         {
-            switch (this.unknownMasterPolicy)
+            switch (this.unknownShardPolicy)
             {
                 case accept :
                 {
@@ -275,39 +267,62 @@ public class ShardFilter implements Filter
                 }
             }
         }
-        // Otherwise if it matches the service, apply it.
-        else if (shard.getMaster().equals(service))
+
+        // Handle home enforcement if enabled.
+        if (enforceHome)
         {
-            // Shard home matches the service name, apply this event
-            if (logger.isDebugEnabled())
+            // Home enforcement only applies to remote services, which will only
+            // apply events mastered in the same service.
+            if (remote)
             {
-                logger.debug("Event master matches local home; processing event: seqno="
-                        + event.getSeqno()
-                        + " shard ID="
-                        + event.getShardId()
-                        + " shard master="
-                        + shard.getMaster()
-                        + " local service=" + service);
+                if (shard.getMaster().equals(service))
+                {
+                    // Shard home matches the service name, apply this event
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Event mastered in this service; processing event: seqno="
+                                + event.getSeqno()
+                                + " shard ID="
+                                + event.getShardId()
+                                + " shard master="
+                                + shard.getMaster() + " service=" + service);
+
+                    }
+                    logger.debug("Event shard matches shard home definition. Processing event.");
+                    return event;
+                }
+                else
+                {
+                    // Shard home does not match, discard this event
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Event master does not match this service; dropping event: seqno="
+                                + event.getSeqno()
+                                + " shard ID="
+                                + event.getShardId()
+                                + " shard master="
+                                + shard.getMaster() + " service=" + service);
+                    }
+                    return null;
+                }
 
             }
-            logger.debug("Event shard matches shard home definition. Processing event.");
-            return event;
+            else
+            {
+                // Local services do not enforce homes.
+                if (logger.isDebugEnabled())
+                    logger.debug("Local service - home enforcement does not apply");
+                return event;
+            }
         }
         else
         {
-            // Shard home does not match, discard this event
             if (logger.isDebugEnabled())
-            {
-                logger.debug("Event master does not match local home; dropping event: seqno="
-                        + event.getSeqno()
-                        + " shard ID="
-                        + event.getShardId()
-                        + " shard master="
-                        + shard.getMaster()
-                        + " local service=" + service);
-            }
-            return null;
+                logger.debug("Home enforcement is not enabled");
+            return event;
         }
+
+        // Otherwise if it matches the service, apply it.
     }
 
     /**
@@ -316,9 +331,10 @@ public class ShardFilter implements Filter
      * 
      * @param eventShard Id of the shard to be created
      * @param shardService Service to which shard is assigned
+     * @return New shard definition
      * @throws ReplicatorException
      */
-    private void updateShardCatalog(String eventShard, String shardService)
+    private Shard updateShardCatalog(String eventShard, String shardService)
             throws ReplicatorException
     {
         if (logger.isDebugEnabled())
@@ -330,7 +346,6 @@ public class ShardFilter implements Filter
         List<Map<String, String>> params = new ArrayList<Map<String, String>>();
         Map<String, String> newShard = new HashMap<String, String>();
         newShard.put(ShardTable.SHARD_ID_COL, eventShard);
-        newShard.put(ShardTable.SHARD_CRIT_COL, Boolean.toString(criticalByDef));
         newShard.put(ShardTable.SHARD_MASTER_COL, shardService);
         params.add(newShard);
         try
@@ -342,25 +357,39 @@ public class ShardFilter implements Filter
         {
             throw new ReplicatorException(e);
         }
+        
+        return shards.get(eventShard);
     }
 
+    /**
+     * If true the shard is enabled.
+     */
+    public void setEnabled(boolean enabled)
+    {
+        this.enabled = enabled;
+    }
+
+    /**
+     * If true, we enforce shard homes in remote services.
+     */
     public void setEnforceHome(boolean enforceHome)
     {
         this.enforceHome = enforceHome;
     }
 
+    /**
+     * If true we auto-create shards when new shard appears.
+     */
     public void setAutoCreate(boolean autoCreate)
     {
         this.autoCreate = autoCreate;
     }
 
-    public void setUnknownMasterPolicy(String policy)
+    /**
+     * Defines policy for unknown shards.
+     */
+    public void setUnknownShardPolicy(String policy)
     {
-        this.unknownMasterPolicyString = policy;
-    }
-
-    public void setCriticalByDef(boolean criticalByDef)
-    {
-        this.criticalByDef = criticalByDef;
+        this.unknownShardPolicyString = policy;
     }
 }

@@ -47,25 +47,24 @@ import com.continuent.tungsten.replicator.database.Table;
  */
 public class ShardTable
 {
-    private static Logger       logger            = Logger.getLogger(ShardTable.class);
+    private static Logger       logger           = Logger.getLogger(ShardTable.class);
 
-    public static final String  TABLE_NAME        = "trep_shard";
+    public static final String  TABLE_NAME       = "trep_shard";
 
-    public static final String  SHARD_ID_COL      = "name";
-    public static final String  SHARD_CRIT_COL    = "critical";
-    public static final String  SHARD_DISPO_COL   = "disposition";
-    public static final String  SHARD_MASTER_COL  = "master";
+    public static final String  SHARD_ID_COL     = "shard_id";
+    public static final String  SHARD_CRIT_COL   = "critical";
+    public static final String  SHARD_MASTER_COL = "master";
 
-    private static final String SELECT            = "SELECT " + SHARD_ID_COL
-                                                          + ", "
-                                                          + SHARD_MASTER_COL
-                                                          + ", "
-                                                          + SHARD_CRIT_COL
-                                                          + " FROM "
-                                                          + TABLE_NAME
-                                                          + " ORDER BY "
-                                                          + SHARD_MASTER_COL
-                                                          + ", " + SHARD_ID_COL;
+    private static final String SELECT           = "SELECT " + SHARD_ID_COL
+                                                         + ", "
+                                                         + SHARD_MASTER_COL
+                                                         + ", "
+                                                         + SHARD_CRIT_COL
+                                                         + " FROM "
+                                                         + TABLE_NAME
+                                                         + " ORDER BY "
+                                                         + SHARD_MASTER_COL
+                                                         + ", " + SHARD_ID_COL;
 
     private Table               shardTable;
     private Column              shardName;
@@ -80,6 +79,9 @@ public class ShardTable
         initialize(schema);
     }
 
+    /**
+     * Initialize DBMS access structures.
+     */
     private void initialize(String schema)
     {
         shardTable = new Table(schema, TABLE_NAME);
@@ -108,6 +110,10 @@ public class ShardTable
         database.createTable(this.shardTable, false, tableType);
     }
 
+    /**
+     * Insert a shard definition into the database. The shard may not already
+     * exist.
+     */
     public int insert(Database database, Shard shard) throws SQLException
     {
         shardName.setValue(shard.getShardId());
@@ -116,6 +122,9 @@ public class ShardTable
         return database.insert(shardTable);
     }
 
+    /**
+     * Update an existing shard definition. The shard must exist.
+     */
     public int update(Database database, Shard shard) throws SQLException
     {
         ArrayList<Column> whereClause = new ArrayList<Column>();
@@ -132,11 +141,17 @@ public class ShardTable
         return database.update(shardTable, whereClause, values);
     }
 
+    /**
+     * Drop all shard definitions.
+     */
     public int deleleAll(Database database) throws SQLException
     {
         return database.delete(shardTable, true);
     }
 
+    /**
+     * Delete a single existing shard definition.
+     */
     public int delete(Database database, String id) throws SQLException
     {
         shardName.setValue(id);
@@ -144,6 +159,9 @@ public class ShardTable
         return database.delete(shardTable, false);
     }
 
+    /**
+     * Return a list of currently known shards.
+     */
     public List<Map<String, String>> list(Database conn) throws SQLException
     {
         ResultSet rs = null;
@@ -174,5 +192,4 @@ public class ShardTable
         }
         return shards;
     }
-
 }
