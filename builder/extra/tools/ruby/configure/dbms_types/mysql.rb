@@ -193,6 +193,10 @@ class MySQLServerID < ConfigurePrompt
   def enabled_for_config?
     super() && (get_extractor_datasource().is_a?(MySQLDatabasePlatform))
   end
+  
+  def required?
+    false
+  end
 end
 
 class MySQLEnableEnumToString < ConfigurePrompt
@@ -409,7 +413,7 @@ class MySQLApplierServerIDCheck < ConfigureValidationCheck
   end
   
   def validate
-    server_id = @config.getProperty(get_applier_key(REPL_MYSQL_SERVER_ID))
+    server_id = @config.getProperty(get_member_key(REPL_MYSQL_SERVER_ID))
     if server_id.to_i <= 0
       error("The server-id '#{server_id}' for #{get_applier_datasource.get_connection_summary()} is too small")
     elsif server_id.to_i > 4294967296
