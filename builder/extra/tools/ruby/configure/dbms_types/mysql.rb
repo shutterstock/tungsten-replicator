@@ -110,13 +110,9 @@ class MySQLDatabasePlatform < ConfigureDatabasePlatform
 	    []
 	  end
 	end
-	
+
 	def get_applier_filters()
-	  ["mysqlsessions", "shardfilter"] + super()
-	end
-	
-	def get_extractor_filters()
-	  ["shardfilter"] + super()
+	  ["mysqlsessions"] + super()
 	end
 end
 
