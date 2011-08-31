@@ -412,6 +412,33 @@ class HostReplicatorServiceRunningCheck < ConfigureValidationCheck
   end
 end
 
+class HostReplicatorPortAvailableCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  
+  def set_vars
+    @title = "Replicator RMI port is available check"
+  end
+  
+  def validate
+    debug("Check if port #{@config.getProperty(REPL_RMI_PORT)} is available on #{@config.getProperty(HOST)}")
+    if is_port_available?(@config.getProperty(HOST), @config.getProperty(REPL_RMI_PORT))
+      info("The replicator RMI port is available")
+    else
+      error("The replicator RMI port '#{@config.getProperty(REPL_RMI_PORT)}' is already in use for #{@config.getProperty(HOST)}")
+      
+      begin
+        cmd_result("#{@config.getProperty(SVC_PATH_REPLICATOR)} status")
+        help("The replicator in this path is running and may be the process using port '#{@config.getProperty(REPL_RMI_PORT)}'")
+      rescue
+      end
+    end
+  end
+  
+  def enabled?
+    super() && @config.getProperty(HOST_ENABLE_REPLICATOR) == "true"
+  end
+end
+
 class TransferredLogStorageCheck < ConfigureValidationCheck
   include ClusterHostCheck
   
