@@ -9,51 +9,59 @@ require 'system_require'
 system_require 'date'
 
 class Transformer
-  @@global_replacements = {}
-  @@global_additions = {}
-  @@global_matches = {}
+  @fixed_replacements = {}
+  @fixed_additions = {}
+  @fixed_matches = {}
   
-  def self.add_global_replacement(key, value)
+  def add_fixed_replacement(key, value)
     if value == nil
-      raise("Unable to add a global replacement using a nil value")
+      raise("Unable to add a fixed replacement using a nil value")
     end
     
-    @@global_replacements[key] = value
+    @fixed_replacements[key] = value
   end
   
-  def self.add_global_addition(key, value)
+  def add_fixed_addition(key, value)
     if value == nil
-      raise("Unable to add a global addition using a nil value")
+      raise("Unable to add a fixed addition using a nil value")
     end
     
-    @@global_additions[key] = value
+    @fixed_additions[key] = value
   end
   
-  def self.add_global_match(key, value)
+  def add_fixed_match(key, value)
     if value == nil
-      raise("Unable to add a global match using a nil value")
+      raise("Unable to add a fixed match using a nil value")
     end
     
     match = value.split("/")
     match.shift
     
     if match.size != 2
-      raise("Unable to add a global match using '#{value}'.  Matches must be in the form of /search/replacement/.")
+      raise("Unable to add a fixed match using '#{value}'.  Matches must be in the form of /search/replacement/.")
     end
     
-    @@global_matches[key] = match
+    @fixed_matches[key] = match
   end
   
-  def self.get_global_replacements
-    @@global_replacements
-  end
-  
-  def self.get_global_additions
-    @@global_additions
-  end
-  
-  def self.get_global_matches
-    @@global_matches
+  def set_fixed_properties(fixed_properties = [])
+    @fixed_replacements = {}
+    @fixed_additions = {}
+    @fixed_matches = {}
+    
+    fixed_properties.each{
+      |val|
+      
+      val_parts = val.split("=")
+      last_char=val_parts[0][-1,1]
+      if last_char == "+"
+        add_fixed_addition(val_parts[0][0..-2], val_parts[1])
+      elsif last_char == "~"
+        add_fixed_match(val_parts[0][0..-2], val_parts[1])
+      else
+        add_fixed_replacement(val_parts[0], val_parts[1])
+      end
+    }
   end
   
   # Initialize with the name of the to -> from files. 
@@ -110,8 +118,8 @@ class Transformer
     @output.map!{
       |line|
       line_keys = line.scan(/[#]?([a-zA-Z0-9\._-]+)=.*/)
-      if line_keys.length() > 0 && @@global_replacements.has_key?(line_keys[0][0])
-        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}"
+      if line_keys.length() > 0 && @fixed_replacements.has_key?(line_keys[0][0])
+        "#{line_keys[0][0]}=#{@fixed_replacements[line_keys[0][0]]}"
       else
         block.call(line)
       end        
@@ -122,14 +130,14 @@ class Transformer
     @output.map!{
       |line|
       line_keys = line.scan(/[#]?([a-zA-Z0-9\._-]+)=.*/)
-      if line_keys.length() > 0 && @@global_replacements.has_key?(line_keys[0][0])
+      if line_keys.length() > 0 && @fixed_replacements.has_key?(line_keys[0][0])
         if line =~ /@\{[A-Za-z\._]+\}/
           if defined?(Configurator)
-            Configurator.instance.warning("Property value for '#{line_keys[0][0]}' is overriding a template value")
+            Configurator.instance.debug("Fixed property value for '#{line_keys[0][0]}' is overriding a template value")
           end
         end
         
-        "#{line_keys[0][0]}=#{@@global_replacements[line_keys[0][0]]}"
+        "#{line_keys[0][0]}=#{@fixed_replacements[line_keys[0][0]]}"
       else
         line.gsub!(/@\{[A-Za-z\._]+\}/){
           |match|
@@ -144,13 +152,13 @@ class Transformer
         
         line_keys = line.scan(/^[#]?([a-zA-Z0-9\._-]+)=(.*)/)
         if line_keys.size > 0
-          if @@global_additions.has_key?(line_keys[0][0])
-            line_keys[0][1] += @@global_additions[line_keys[0][0]]
+          if @fixed_additions.has_key?(line_keys[0][0])
+            line_keys[0][1] += @fixed_additions[line_keys[0][0]]
             line = line_keys[0][0] + "=" + line_keys[0][1]
           end
         
-          if @@global_matches.has_key?(line_keys[0][0])
-            line_keys[0][1].sub!(Regexp.new(@@global_matches[line_keys[0][0]][0]), @@global_matches[line_keys[0][0]][1])
+          if @fixed_matches.has_key?(line_keys[0][0])
+            line_keys[0][1].sub!(Regexp.new(@fixed_matches[line_keys[0][0]][0]), @fixed_matches[line_keys[0][0]][1])
             line = line_keys[0][0] + "=" + line_keys[0][1]
           end
         end

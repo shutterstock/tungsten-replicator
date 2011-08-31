@@ -85,6 +85,7 @@ module ConfigureDeploymentCore
   # Update the RUN_AS_USER in a service script.
   def set_run_as_user(script)
     transformer = Transformer.new(script, script, nil)
+    transformer.set_fixed_properties(@config.getProperty(get_host_key(FIXED_PROPERTY_STRINGS)))
 
     # Have to be careful to set first RUN_AS_USER= only or it
     # corrupts the start script.

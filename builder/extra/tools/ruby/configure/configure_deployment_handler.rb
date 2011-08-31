@@ -65,18 +65,6 @@ class ConfigureDeploymentHandler
       unless Configurator.instance.enable_log_level?(Logger::INFO)
         extra_options << "-q"
       end
-      Transformer.get_global_replacements.each{
-        |p_key,p_value|
-        extra_options << "--property=#{p_key}=#{p_value}"
-      }
-      Transformer.get_global_additions.each{
-        |p_key,p_value|
-        extra_options << "--property=#{p_key}+=#{p_value}"
-      }
-      Transformer.get_global_matches.each{
-        |p_key,p_value|
-        extra_options << "--property=\"#{p_key}~=/#{p_value[0]}/#{p_value[1]}/\""
-      }
       
       Configurator.instance.write ""
       Configurator.instance.write_header "Remote deploy #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"

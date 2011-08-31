@@ -40,7 +40,8 @@ class ConfigurePackageCluster < ConfigurePackage
     end
     
     cluster_hosts = [Configurator.instance.hostname()]
-    host_config = Properties.new()
+    host_options = Properties.new()
+    host_options.setProperty(FIXED_PROPERTY_STRINGS, Configurator.instance.fixed_properties)
     
     opts = OptionParser.new    
     opts.on("--cluster-hosts String")  {|val| cluster_hosts = val.split(",")}
@@ -48,23 +49,23 @@ class ConfigurePackageCluster < ConfigurePackage
       |prompt|
       opts.on("--#{prompt.get_command_line_argument()} String") {
         |val|
-        host_config.setProperty(prompt.name, val)
+        host_options.setProperty(prompt.name, val)
       }
     }
     
     remainder = Configurator.instance.run_option_parser(opts, arguments)
     
-    if host_config.getProperty("home-directory") == Configurator.instance.get_base_path()
-      host_config.setProperty("home-directory", Configurator.instance.get_base_path())
-      host_config.setProperty("current-release-directory", Configurator.instance.get_base_path())
+    if host_options.getProperty("home-directory") == Configurator.instance.get_base_path()
+      host_options.setProperty("home-directory", Configurator.instance.get_base_path())
+      host_options.setProperty("current-release-directory", Configurator.instance.get_base_path())
     end
     
     cluster_hosts.each{
       |host|
       host_alias = host.tr('.', '_')
       
-      host_config.setProperty(HOST, host)
-      @config.setProperty([HOSTS, host_alias], host_config.props)
+      host_options.setProperty(HOST, host)
+      @config.setProperty([HOSTS, host_alias], host_options.props)
     }
     
     is_valid?()

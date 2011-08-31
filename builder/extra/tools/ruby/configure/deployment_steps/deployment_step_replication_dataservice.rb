@@ -17,6 +17,7 @@ module ConfigureDeploymentStepReplicationDataservice
 		  get_replication_dataservice_template(),
 			@config.getProperty(REPL_SVC_CONFIG_FILE), "#")
 		
+		transformer.set_fixed_properties(@config.getProperty(get_service_key(FIXED_PROPERTY_STRINGS)))
 		transformer.transform_values(method(:transform_replication_dataservice_values))
     transformer.output
 		

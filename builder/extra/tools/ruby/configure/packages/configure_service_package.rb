@@ -111,7 +111,7 @@ class ConfigureServicePackage < ConfigurePackage
             end
             service_config.setProperty(REPL_DATASOURCE, ds_alias)
             @config.setProperty([DATASOURCES, ds_alias], datasource_options.getProperty([DATASOURCES, "ds"]))
-          else
+          elsif @config.getNestedProperty([DEPLOYMENT_TYPE]) == SERVICE_CREATE
             raise "You must specify a datasource alias or datasource configuration information"
           end
         end
@@ -164,6 +164,9 @@ class ConfigureServicePackage < ConfigurePackage
             service_config.setProperty(DEPLOYMENT_SERVICE, @deploy_service_key)
             @config.setProperty([REPL_SERVICES, remainder[0]], service_config.props)
           end
+          
+          @config.setProperty([REPL_SERVICES, remainder[0], FIXED_PROPERTY_STRINGS], 
+            Configurator.instance.fixed_properties)
         when SERVICE_UPDATE
           if @deploy_service_key == false
             raise "Unable to find an existing service config for '#{remainder[0]}'"
@@ -172,6 +175,10 @@ class ConfigureServicePackage < ConfigurePackage
               |sc_key, sc_val|
               @config.setProperty([REPL_SERVICES, @deploy_service_key, sc_key], sc_val)
             }
+            
+            @config.setProperty([REPL_SERVICES, @deploy_service_key, FIXED_PROPERTY_STRINGS], 
+              @config.getPropertyOr([REPL_SERVICES, @deploy_service_key, FIXED_PROPERTY_STRINGS], []) + 
+              Configurator.instance.fixed_properties)
           end
         when SERVICE_DELETE
           if @deploy_service_key == false

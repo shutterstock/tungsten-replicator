@@ -23,6 +23,7 @@ DEPLOY_CURRENT_PACKAGE = "deploy_current_package"
 GLOBAL_DEPLOY_PACKAGE_URI = "global_deploy_package_uri"
 DEPLOY_PACKAGE_URI = "deploy_package_uri"
 HOST_ENABLE_REPLICATOR = "host_enable_replicator"
+FIXED_PROPERTY_STRINGS = "fixed_property_strings"
 
 # Operating system service parameters.
 SVC_INSTALL = "install"

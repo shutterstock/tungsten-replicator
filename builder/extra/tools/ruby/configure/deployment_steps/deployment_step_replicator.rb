@@ -48,6 +48,7 @@ module ConfigureDeploymentStepReplicator
 		  "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/sample.services.properties",
 			"#{get_deployment_basedir()}/tungsten-replicator/conf/services.properties", "#")
 
+    transformer.set_fixed_properties(@config.getProperty(get_host_key(FIXED_PROPERTY_STRINGS)))
 	  transformer.transform_values(method(:transform_values))
 
     transformer.output
@@ -58,6 +59,7 @@ module ConfigureDeploymentStepReplicator
       "#{get_deployment_basedir()}/tungsten-replicator/conf/wrapper.conf",
       "#{get_deployment_basedir()}/tungsten-replicator/conf/wrapper.conf", nil)
 
+    transformer.set_fixed_properties(@config.getProperty(get_host_key(FIXED_PROPERTY_STRINGS)))
     transformer.transform { |line|
       if line =~ /wrapper.java.maxmemory=/
         "wrapper.java.maxmemory=" + @config.getProperty(REPL_JAVA_MEM_SIZE)

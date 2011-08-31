@@ -772,7 +772,9 @@ class ReplicationServiceApplierConfig < ConfigurePrompt
   def get_template_value(transform_values_method)
     transformer = Transformer.new(@config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
       get_applier_datasource().get_applier_template())
+    transformer.set_fixed_properties(@config.getProperty(get_member_key(FIXED_PROPERTY_STRINGS)))
     transformer.transform_values(transform_values_method)
+    
     return transformer.to_s
   end
 end
@@ -788,7 +790,9 @@ class ReplicationServiceExtractorConfig < ConfigurePrompt
   def get_template_value(transform_values_method)
     transformer = Transformer.new(@config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
       get_extractor_datasource().get_extractor_template())
+    transformer.set_fixed_properties(@config.getProperty(get_member_key(FIXED_PROPERTY_STRINGS)))
     transformer.transform_values(transform_values_method)
+    
     return transformer.to_s
   end
 end
@@ -806,6 +810,7 @@ class ReplicationServiceFilterConfig < ConfigurePrompt
     
     Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + '/tungsten-replicator/samples/conf/filters/default/*.tpl'].sort().each do |file| 
       transformer = Transformer.new(file)
+      transformer.set_fixed_properties(@config.getProperty(get_member_key(FIXED_PROPERTY_STRINGS)))
       transformer.transform_values(transform_values_method)
       
       output_lines = output_lines + transformer.to_a + [""]
@@ -814,6 +819,7 @@ class ReplicationServiceFilterConfig < ConfigurePrompt
     if get_applier_datasource().class != get_extractor_datasource.class
       Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/tungsten-replicator/samples/conf/filters/#{get_extractor_datasource().get_uri_scheme()}/*.tpl"].sort().each do |file| 
         transformer = Transformer.new(file)
+        transformer.set_fixed_properties(@config.getProperty(get_member_key(FIXED_PROPERTY_STRINGS)))
         transformer.transform_values(transform_values_method)
       
         output_lines = output_lines + transformer.to_a + [""]
@@ -822,6 +828,7 @@ class ReplicationServiceFilterConfig < ConfigurePrompt
     
     Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/tungsten-replicator/samples/conf/filters/#{get_applier_datasource().get_uri_scheme()}/*.tpl"].sort().each do |file| 
       transformer = Transformer.new(file)
+      transformer.set_fixed_properties(@config.getProperty(get_member_key(FIXED_PROPERTY_STRINGS)))
       transformer.transform_values(transform_values_method)
       
       output_lines = output_lines + transformer.to_a + [""]
@@ -844,6 +851,7 @@ class ReplicationServiceBackupConfig < ConfigurePrompt
     
     Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + '/tungsten-replicator/samples/conf/backup_methods/default/*.tpl'].sort().each do |file| 
       transformer = Transformer.new(file)
+      transformer.set_fixed_properties(@config.getProperty(get_member_key(FIXED_PROPERTY_STRINGS)))
       transformer.transform_values(transform_values_method)
       
       output_lines = output_lines + transformer.to_a + [""]
@@ -851,6 +859,7 @@ class ReplicationServiceBackupConfig < ConfigurePrompt
     
     Dir[@config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/tungsten-replicator/samples/conf/backup_methods/#{get_applier_datasource().get_uri_scheme()}/*.tpl"].sort().each do |file| 
       transformer = Transformer.new(file)
+      transformer.set_fixed_properties(@config.getProperty(get_member_key(FIXED_PROPERTY_STRINGS)))
       transformer.transform_values(transform_values_method)
       
       output_lines = output_lines + transformer.to_a + [""]
@@ -904,6 +913,19 @@ class ReplicationServiceApplierFilters < ConfigurePrompt
   
   def get_template_value(transform_values_method)
     (get_value().to_s().split(",") + get_applier_datasource().get_applier_filters()).join(",")
+  end
+  
+  def required?
+    false
+  end
+end
+
+class ReplicationServiceGlobalProperties < ConfigurePrompt
+  include ReplicationServicePrompt
+  include ConstantValueModule
+  
+  def initialize
+    super(FIXED_PROPERTY_STRINGS, "Fixed properties for this service", PV_ANY, [])
   end
   
   def required?

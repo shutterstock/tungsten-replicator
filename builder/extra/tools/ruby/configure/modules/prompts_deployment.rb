@@ -498,3 +498,16 @@ class HostServicePathReplicator < ConfigurePrompt
     @config.getProperty(get_member_key(CURRENT_RELEASE_DIRECTORY)) + "/tungsten-replicator/bin/replicator"
   end
 end
+
+class HostGlobalProperties < ConfigurePrompt
+  include ClusterHostPrompt
+  include ConstantValueModule
+  
+  def initialize
+    super(FIXED_PROPERTY_STRINGS, "Fixed properties for this host", PV_ANY, [])
+  end
+  
+  def required?
+    false
+  end
+end

@@ -19,23 +19,26 @@ class UpdatePackage < ConfigurePackage
     @config.setProperty(DEPLOYMENT_TYPE, UPDATE_DEPLOYMENT_NAME)
     
     host_alias = @config.getPropertyOr(HOSTS).keys.at(0)
-    host_config = Properties.new()
+    host_options = Properties.new()
     
     opts = OptionParser.new
     each_host_prompt{
       |prompt|
       opts.on("--#{prompt.get_command_line_argument()} String") {
         |val|
-        host_config.setProperty(prompt.name, val)
+        host_options.setProperty(prompt.name, val)
       }
     }
     
     remainder = Configurator.instance.run_option_parser(opts, arguments)
     
-    host_config.props.each{
+    host_options.props.each{
       |h_key, h_value|
       @config.setProperty([HOSTS, host_alias, h_key], h_value)
     }
+    @config.setProperty([HOSTS, host_alias, FIXED_PROPERTY_STRINGS], 
+      @config.getPropertyOr([HOSTS, host_alias, FIXED_PROPERTY_STRINGS], []) + 
+      Configurator.instance.fixed_properties)
     
     is_valid?()
   end

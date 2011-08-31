@@ -92,7 +92,7 @@ end
 class Configurator
   include Singleton
   
-  attr_reader :package, :options
+  attr_reader :package, :options, :fixed_properties
   
   TUNGSTEN_COMMUNITY = "Community"
   TUNGSTEN_ENTERPRISE = "Enterprise"
@@ -130,6 +130,8 @@ class Configurator
     @options.no_validation = false
     @options.output_config = false
     @options.ssh_options = {}
+    
+    @fixed_properties = []
 
     if is_full_tungsten_package?()
       configs_path = File.expand_path(ENV['PWD'] + "/../../configs/")
@@ -415,19 +417,11 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("--no-validation")        {|val| @options.no_validation = true }
     opts.on("--output-config")        { @options.output_config = true }
     opts.on("--property String")      {|val|
-                                        val_parts = val.split("=")
-                                        if val_parts.length() !=2
+                                        if val.index('=') == nil
                                           raise "Invalid value #{val} given for '--property'.  There should be a key/value pair joined by a single =."
                                         end
-
-                                        last_char=val_parts[0][-1,1]
-                                        if last_char == "+"
-                                          Transformer.add_global_addition(val_parts[0][0..-2], val_parts[1])
-                                        elsif last_char == "~"
-                                          Transformer.add_global_match(val_parts[0][0..-2], val_parts[1])
-                                        else
-                                          Transformer.add_global_replacement(val_parts[0], val_parts[1])
-                                        end
+                                        
+                                        @fixed_properties << val
                                       }
     opts.on("--skip-validation-check String")      {|val|
                                         ConfigureValidationHandler.mark_skipped_validation_class(val)

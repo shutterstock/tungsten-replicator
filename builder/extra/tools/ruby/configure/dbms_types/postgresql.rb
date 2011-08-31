@@ -536,6 +536,7 @@ module ConfigureDeploymentStepPostgresql
         "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/postgresql-wal.properties.tpl",
         "#{get_deployment_basedir()}/tungsten-replicator/conf/postgresql-wal.properties", "# ")
     
+    transformer.set_fixed_properties(@config.getProperty(get_service_key(FIXED_PROPERTY_STRINGS)))
     transformer.transform_values(method(:transform_replication_dataservice_values))
     transformer.output
     

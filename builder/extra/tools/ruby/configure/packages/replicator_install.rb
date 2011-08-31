@@ -67,10 +67,12 @@ class ReplicatorInstallPackage < ConfigurePackage
     opts = OptionParser.new
     host_options = Properties.new()
     host_options.setProperty(HOST, Configurator.instance.hostname())
+    host_options.setProperty(FIXED_PROPERTY_STRINGS, Configurator.instance.fixed_properties)
     
     service_options = Properties.new()
     service_options.setProperty(DEPLOYMENT_HOST, DIRECT_DEPLOYMENT_HOST_ALIAS)
     service_options.setProperty(REPL_ROLE, REPL_ROLE_DI)
+    service_options.setProperty(FIXED_PROPERTY_STRINGS, Configurator.instance.fixed_properties)
     
     datasource_options = Properties.new()
     datasource_options.setProperty([DATASOURCES, "master"], {})
@@ -187,9 +189,11 @@ class ReplicatorInstallPackage < ConfigurePackage
     
     host_options = Properties.new()
     host_options.setProperty(HOST, Configurator.instance.hostname())
+    host_options.setProperty(FIXED_PROPERTY_STRINGS, Configurator.instance.fixed_properties)
     
     service_options = Properties.new()
     service_options.setProperty(DEPLOYMENT_HOST, DIRECT_DEPLOYMENT_HOST_ALIAS)
+    service_options.setProperty(FIXED_PROPERTY_STRINGS, Configurator.instance.fixed_properties)
     
     datasource_options = Properties.new()
     datasource_options.setProperty([DATASOURCES, "ds"], {})
