@@ -129,6 +129,7 @@ class Configurator
     @options.validate_only = false
     @options.no_validation = false
     @options.output_config = false
+    @options.output_manifest = false
     @options.ssh_options = {}
     
     @fixed_properties = []
@@ -416,6 +417,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     opts.on("-v", "--verbose")        {@options.output_threshold = Logger::DEBUG}
     opts.on("--no-validation")        {|val| @options.no_validation = true }
     opts.on("--output-config")        { @options.output_config = true }
+    opts.on("--output-manifest")      { @options.output_manifest = true }
     opts.on("--property String")      {|val|
                                         if val.index('=') == nil
                                           raise "Invalid value #{val} given for '--property'.  There should be a key/value pair joined by a single =."
@@ -453,6 +455,14 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     
     if @options.output_config
       @config.output
+      exit 0
+    end
+    
+    if @options.output_manifest
+      manifest = Properties.new()
+      manifest.load(get_manifest_json_file_path())
+      manifest.output()
+      
       exit 0
     end
     
@@ -854,6 +864,10 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   
   def get_manifest_file_path
     "#{get_base_path()}/.manifest"
+  end
+  
+  def get_manifest_json_file_path
+    "#{get_base_path()}/.manifest.json"
   end
   
   def get_release_details
