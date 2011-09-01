@@ -1202,7 +1202,7 @@ public class OpenReplicatorManagerCtrl
         // Construct formating strings.
         String headerFormat = "%-" + maxName + "s  %-" + maxValue + "s\n";
         String valueFormat = "%-" + maxName + "s: %s\n";
-
+        String nextValFormat = "%-" + maxName + "s  %s\n";
         // Print values.
         for (Map<String, String> props : propList)
         {
@@ -1212,7 +1212,24 @@ public class OpenReplicatorManagerCtrl
             TreeSet<String> treeSet = new TreeSet<String>(props.keySet());
             for (String key : treeSet)
             {
-                printf(valueFormat, key, props.get(key));
+                String value = props.get(key);
+                if (value != null)
+                {
+                    String[] split = value.split("\n");
+                    boolean first = true;
+                    for (String string : split)
+                    {
+                        if (first)
+                        {
+                            printf(valueFormat, key, string);
+                            first = false;
+                        }
+                        else
+                            printf(nextValFormat, "", string);
+                    }
+                }
+                else
+                    printf(valueFormat, key, value);
             }
         }
     }

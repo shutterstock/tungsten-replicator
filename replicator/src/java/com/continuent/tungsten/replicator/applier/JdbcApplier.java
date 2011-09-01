@@ -122,7 +122,7 @@ public class JdbcApplier implements RawApplier
      * because some statements may be very large. TODO: make this configurable
      * via replicator.properties
      */
-    private int                       maxSQLLogLength      = 1000;
+    protected int                     maxSQLLogLength      = 1000;
 
     private TableMetadataCache        tableMetadataCache;
 
@@ -1009,8 +1009,10 @@ public class JdbcApplier implements RawApplier
         }
         catch (SQLException e)
         {
-            logFailedRowChangeSQL(stmt, oneRowChange);
-            throw new ApplierException(e);
+            ApplierException applierException = new ApplierException(e);
+            applierException.setExtraData(logFailedRowChangeSQL(stmt,
+                    oneRowChange));
+            throw applierException;
         }
         finally
         {
@@ -1033,8 +1035,9 @@ public class JdbcApplier implements RawApplier
      * 
      * @see #maxSQLLogLength
      * @param stmt SQL template for PreparedStatement
+     * @return
      */
-    private void logFailedRowChangeSQL(StringBuffer stmt,
+    private String logFailedRowChangeSQL(StringBuffer stmt,
             OneRowChange oneRowChange)
     {
         // TODO: use THLManagerCtrl for logging exact failing SQL after
@@ -1049,7 +1052,7 @@ public class JdbcApplier implements RawApplier
                     .getKeyValues();
             ArrayList<ArrayList<OneRowChange.ColumnVal>> columnValues = oneRowChange
                     .getColumnValues();
-            String log = "PreparedStatement failed: " + stmt.toString()
+            String log = "Failing statement : " + stmt.toString()
                     + "\nArguments:";
             for (int row = 0; row < columnValues.size()
                     || row < keyValues.size(); row++)
@@ -1087,7 +1090,8 @@ public class JdbcApplier implements RawApplier
             // Output the error message, truncate it if too large.
             if (log.length() > maxSQLLogLength)
                 log = log.substring(0, maxSQLLogLength);
-            logger.error(log);
+
+            return log;
         }
         catch (Exception e)
         {
@@ -1095,6 +1099,7 @@ public class JdbcApplier implements RawApplier
                 logger.debug("logFailedRowChangeSQL failed to log, because: "
                         + e.getMessage());
         }
+        return null;
     }
 
     protected void applyRowChangeData(RowChangeData data,

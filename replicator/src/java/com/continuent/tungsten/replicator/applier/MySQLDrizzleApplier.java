@@ -76,8 +76,8 @@ public class MySQLDrizzleApplier extends MySQLApplier
 
             url = sb.toString();
         }
-        else
-            logger.info("Property url already set; ignoring host and port properties");
+        else if (logger.isDebugEnabled())
+            logger.debug("Property url already set; ignoring host and port properties");
         super.configure(context);
     }
 
@@ -179,8 +179,13 @@ public class MySQLDrizzleApplier extends MySQLApplier
         }
         catch (SQLException e)
         {
-            // logFailedStatementSQL(data.getQuery());
-            throw new ApplierException(e);
+            ApplierException applierException = new ApplierException(e);
+            String query = data.getQuery();
+            if (query.length() > maxSQLLogLength)
+                query = query.substring(0, maxSQLLogLength);
+
+            applierException.setExtraData(query);
+            throw applierException;
         }
 
     }

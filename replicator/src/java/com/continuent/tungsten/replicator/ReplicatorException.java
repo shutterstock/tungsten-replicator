@@ -34,11 +34,13 @@ public class ReplicatorException extends Exception
     /**
      * 
      */
-    private static final long serialVersionUID = -2849591301389282829L;
+    private static final long serialVersionUID     = -2849591301389282829L;
+
+    private String            originalErrorMessage = null;
+    private String            extraData            = null;
 
     /**
      * Creates a new <code>ReplicatorException</code> object
-     * 
      */
     public ReplicatorException()
     {
@@ -63,6 +65,12 @@ public class ReplicatorException extends Exception
     public ReplicatorException(Throwable arg0)
     {
         super(arg0);
+        if (arg0 instanceof ReplicatorException)
+        {
+            ReplicatorException exc = (ReplicatorException) arg0;
+            this.extraData = exc.extraData;
+            this.originalErrorMessage = exc.originalErrorMessage;
+        }
     }
 
     /**
@@ -74,6 +82,34 @@ public class ReplicatorException extends Exception
     public ReplicatorException(String arg0, Throwable arg1)
     {
         super(arg0, arg1);
+        if (arg1 instanceof ReplicatorException)
+        {
+            ReplicatorException exc = (ReplicatorException) arg1;
+            this.extraData = exc.extraData;
+            this.originalErrorMessage = exc.originalErrorMessage;
+        }
+        else 
+            this.originalErrorMessage = arg0;
     }
 
+    public void setOriginalErrorMessage(String originalErrorMessage)
+    {
+        this.originalErrorMessage = originalErrorMessage;
+    }
+    
+
+    public String getOriginalErrorMessage()
+    {
+        return originalErrorMessage;
+    }
+
+    public String getExtraData()
+    {
+        return extraData;
+    }
+
+    public void setExtraData(String extraData)
+    {
+        this.extraData = extraData;
+    }
 }

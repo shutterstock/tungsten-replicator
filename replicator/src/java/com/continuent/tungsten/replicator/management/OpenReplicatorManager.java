@@ -544,8 +544,10 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             msg.append(e.getTransition().getName());
             msg.append(" event=");
             msg.append(e.getEvent().getClass().getSimpleName());
-            endUserLog.error(msg.toString());
-            throw new ReplicatorStateException(msg.toString(), e);
+            String errMsg = msg.toString();
+            endUserLog.error(errMsg);
+            displayErrorMessages(e);
+            throw getStateMachineException(e, errMsg);
         }
         catch (TransitionFailureException e)
         {
@@ -558,8 +560,10 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             msg.append(e.getTransition().getName());
             msg.append(" event=");
             msg.append(e.getEvent().getClass().getSimpleName());
-            logger.error(msg.toString(), e);
-            throw new ReplicatorStateException(e.getMessage());
+            String errMsg = msg.toString();
+            endUserLog.error(errMsg);
+            displayErrorMessages(e);
+            throw getStateMachineException(e, errMsg);
         }
         catch (FiniteStateException e)
         {
@@ -569,6 +573,28 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             throw new ReplicatorException(
                     "Operation failed unexpectedly--see log for details");
         }
+    }
+
+    /**
+     * getStateMachineException
+     * 
+     * @param e
+     * @param msg
+     * @return
+     */
+    private ReplicatorStateException getStateMachineException(
+            FiniteStateException e, String msg)
+    {
+        ReplicatorStateException replicatorStateException = new ReplicatorStateException(
+                msg, e);
+        if (e.getCause() != null && e.getCause() instanceof ReplicatorException)
+        {
+            ReplicatorException exc = (ReplicatorException) e.getCause();
+            replicatorStateException.setOriginalErrorMessage(exc
+                    .getOriginalErrorMessage());
+            replicatorStateException.setExtraData(exc.getExtraData());
+        }
+        return replicatorStateException;
     }
 
     /**
@@ -936,32 +962,73 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         {
             // Log the error condition.
             ErrorNotification en = (ErrorNotification) event;
-            endUserLog.error("Received error notification: "
-                    + displayErrorMessages(en));
-            logger.error(
-                    "Received error notification, shutting down services: "
-                            + en.getUserMessage(), en.getThrowable());
+
+            displayErrorMessages(en);
+            String message = "Received error notification, shutting down services :\n"
+                    + en.getUserMessage();
+            if (en.getThrowable() instanceof ReplicatorException
+                    && ((ReplicatorException) en.getThrowable()).getExtraData() != null)
+            {
+                message += "\n"
+                        + ((ReplicatorException) en.getThrowable())
+                                .getExtraData();
+            }
+            logger.error(message, en.getThrowable());
 
             // Store the user error message.
             pendingError = en.getUserMessage();
             pendingExceptionMessage = en.getThrowable().getMessage();
+            if (en.getThrowable() instanceof ReplicatorException)
+            {
+                ReplicatorException exc = (ReplicatorException) en
+                        .getThrowable();
+                if (exc.getExtraData() != null)
+                    pendingExceptionMessage += "\n" + exc.getExtraData();
+            }
             pendingErrorSeqno = en.getSeqno();
             pendingErrorEventId = en.getEventId();
         }
 
-        private String displayErrorMessages(ErrorNotification event)
+    }
+
+    private void displayErrorMessages(ErrorNotification event)
+    {
+        endUserLog.error(event.getUserMessage());
+        Throwable error = event.getThrowable();
+        if (error instanceof ReplicatorException
+                && ((ReplicatorException) error).getExtraData() != null)
         {
-            StringBuffer errorMsg = new StringBuffer(event.getUserMessage());
-            Throwable exception = event.getThrowable();
-            while (exception != null)
+            for (String line : ((ReplicatorException) error).getExtraData()
+                    .split("\n"))
             {
-                errorMsg.append('\n');
-                errorMsg.append("Caused by : ");
-                errorMsg.append(exception.getMessage());
-                exception = exception.getCause();
+                endUserLog.error(line);
             }
 
-            return errorMsg.toString();
+        }
+    }
+
+    private void displayErrorMessages(Exception exception)
+    {
+        endUserLog.error(exception.getMessage());
+
+        Throwable error = exception.getCause();
+        boolean stop = false;
+        while (error != null)
+        {
+            if (!(error instanceof ReplicatorException))
+            {
+                // Break after the second non tungsten ReplicatorException in a
+                // row is found
+                if (stop)
+                    break;
+
+                stop = true;
+            }
+            else
+                stop = false;
+
+            endUserLog.error(error.getMessage());
+            error = error.getCause();
         }
     }
 
@@ -1741,10 +1808,18 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
                 tp.setString(ReplicatorConf.MASTER_CONNECT_URI, uri);
             handleEventSynchronous(new SetRoleEvent(tp));
         }
-        catch (Exception e)
+        catch (ReplicatorException e)
         {
-            logger.error("Set role operation failed", e);
-            throw new Exception("Set role operation failed: " + e.getMessage());
+            String message = "set role operation failed";
+
+            logger.error(message, e);
+            if (e.getOriginalErrorMessage() != null)
+            {
+                message += " (" + e.getOriginalErrorMessage() + ")";
+            }
+            else
+                message += " (" + e.getMessage() + ")";
+            throw new Exception(message);
         }
     }
 
@@ -1953,10 +2028,19 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         {
             handleEventSynchronous(goOnlineEvent);
         }
-        catch (Exception e)
+        catch (ReplicatorException e)
         {
-            logger.error("Online operation failed", e);
-            throw new Exception("Online operation failed: " + e.toString());
+            String message = "Online operation failed";
+
+            logger.error(message, e);
+            if (e.getOriginalErrorMessage() != null)
+            {
+                message += " (" + e.getOriginalErrorMessage() + ")";
+            }
+            else
+                message += " (" + e.getMessage() + ")";
+            throw new Exception(message);
+            // throw new Exception("Online operation failed", e);
         }
     }
 
@@ -2632,8 +2716,10 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     /**
      * Wrapper method for methods that submits a synchronous event with proper
      * MBean error handling.
+     * 
+     * @throws ReplicatorException
      */
-    private void handleEventSynchronous(Event event) throws Exception
+    private void handleEventSynchronous(Event event) throws ReplicatorException
     {
         try
         {
@@ -2650,7 +2736,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         {
             if (logger.isDebugEnabled())
                 logger.debug("Event processing failed", e);
-            throw new Exception("Event processing failed", e);
+            throw new ReplicatorException("Event processing failed", e);
         }
     }
 

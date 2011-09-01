@@ -514,8 +514,6 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
         }
         catch (ReplicatorException e)
         {
-            String pendingError = "Unable to start replication service";
-            logger.error(pendingError, e);
             throw e;
         }
         catch (Throwable e)
