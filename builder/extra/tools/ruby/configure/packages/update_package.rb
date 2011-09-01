@@ -16,6 +16,13 @@ class UpdatePackage < ConfigurePackage
     
     arguments = load_target_config(arguments)
     
+    unless Configurator.instance.display_preview?
+      unless @config.props.size > 0
+        error("Unable to run update because this directory has not been setup")
+        return false
+      end
+    end
+    
     @config.setProperty(DEPLOYMENT_TYPE, UPDATE_DEPLOYMENT_NAME)
     
     host_alias = @config.getPropertyOr(HOSTS).keys.at(0)
@@ -46,7 +53,7 @@ class UpdatePackage < ConfigurePackage
   def output_usage()
     host_alias = @config.getPropertyOr(HOSTS, {}).keys.at(0)
     
-    puts "Usage: configure [general-options] [target-options] [install-options]"
+    puts "Usage: update [general-options] [target-options] [install-options]"
     output_general_usage()
     
     Configurator.instance.write_divider()

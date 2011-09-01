@@ -34,14 +34,15 @@ class ConfigurePackageCluster < ConfigurePackage
       return true
     end
     
-    if @config.props.size > 0
-      error("Unable to run configure because this directory is already configured")
-      return false
+    unless Configurator.instance.display_preview?
+      if @config.props.size > 0
+        error("Unable to run configure because this directory is already setup")
+        return false
+      end
     end
     
-    cluster_hosts = [Configurator.instance.hostname()]
+    cluster_hosts = nil
     host_options = Properties.new()
-    host_options.setProperty(FIXED_PROPERTY_STRINGS, Configurator.instance.fixed_properties)
     
     opts = OptionParser.new    
     opts.on("--cluster-hosts String")  {|val| cluster_hosts = val.split(",")}
@@ -55,10 +56,22 @@ class ConfigurePackageCluster < ConfigurePackage
     
     remainder = Configurator.instance.run_option_parser(opts, arguments)
     
+    unless Configurator.instance.display_preview?
+      if cluster_hosts == nil && host_options.props.size == 0
+        confirm("This process will configure the current directory to run the replicator with all defaults.  You will need to run tools/configure-service to add replication services.")
+      end
+    end
+    
+    if cluster_hosts == nil
+      cluster_hosts = [Configurator.instance.hostname()]
+    end
+    
     if host_options.getProperty("home-directory") == Configurator.instance.get_base_path()
       host_options.setProperty("home-directory", Configurator.instance.get_base_path())
       host_options.setProperty("current-release-directory", Configurator.instance.get_base_path())
     end
+    
+    host_options.setProperty(FIXED_PROPERTY_STRINGS, Configurator.instance.fixed_properties)
     
     cluster_hosts.each{
       |host|

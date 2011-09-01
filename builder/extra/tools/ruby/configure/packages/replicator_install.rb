@@ -22,7 +22,7 @@ class ReplicatorInstallPackage < ConfigurePackage
     reset_errors()
     
     if @config.props.size > 0
-      error("Unable to run tungsten-installer because this directory is already configured")
+      error("Unable to run tungsten-installer because this directory is already setup")
       return false
     end
     @config.setProperty(DEPLOY_CURRENT_PACKAGE, "true")

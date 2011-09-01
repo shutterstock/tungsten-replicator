@@ -14,6 +14,13 @@ class ConfigureServicePackage < ConfigurePackage
     
     arguments = load_target_config(arguments)
     
+    unless Configurator.instance.display_preview?
+      unless @config.props.size > 0
+        error("Unable to run configure-service because this directory has not been setup")
+        return false
+      end
+    end
+    
     @config.setProperty(DEPLOYMENT_TYPE, nil)
     @config.setProperty(DEPLOY_CURRENT_PACKAGE, nil)
     @config.setProperty(DEPLOY_PACKAGE_URI, nil)
