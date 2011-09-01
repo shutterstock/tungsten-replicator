@@ -172,7 +172,7 @@ class Properties
   end
   
   def setHashProperty(hash, key, value)
-    if value == nil
+    if value == nil  || value == []
       return (hash.delete(key))
     else
       if value.is_a?(Hash)

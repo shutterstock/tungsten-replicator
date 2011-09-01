@@ -504,7 +504,11 @@ class HostGlobalProperties < ConfigurePrompt
   include ConstantValueModule
   
   def initialize
-    super(FIXED_PROPERTY_STRINGS, "Fixed properties for this host", PV_ANY, [])
+    super(FIXED_PROPERTY_STRINGS, "Fixed properties for this host", PV_ANY)
+  end
+  
+  def get_default_value
+    []
   end
   
   def required?
