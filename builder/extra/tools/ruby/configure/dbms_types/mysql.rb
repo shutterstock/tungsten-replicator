@@ -533,6 +533,26 @@ class XtrabackupAvailableCheck < ConfigureValidationCheck
   end
 end
 
+class XtrabackupUsesSudoCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  include MySQLApplierCheck
+  
+  def set_vars
+    @title = "Xtrabackup uses sudo check"
+  end
+  
+  def validate
+    if @config.getProperty(get_member_key(REPL_BACKUP_COMMAND_PREFIX)) != "true"
+      error("You must enable sudo for the backup script to use xtrabackup")
+      help("Add --backup-command-prefix=true to your command")
+    end
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_BACKUP_METHOD)) == "xtrabackup"
+  end
+end
+
 module ConfigureDeploymentStepMySQL
   include DatabaseTypeDeploymentStep
   

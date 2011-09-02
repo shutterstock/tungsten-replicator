@@ -12,6 +12,10 @@ module ConfigureDeploymentStepReplicationDataservice
       mkdir_if_absent(@config.getProperty(get_service_key(REPL_RELAY_LOG_DIR)))
     end
     
+    if @config.getProperty(get_service_key(REPL_BACKUP_STORAGE_DIR))
+      mkdir_if_absent(@config.getProperty(get_service_key(REPL_BACKUP_STORAGE_DIR)))
+    end
+    
     # Configure replicator.properties.service.template
     transformer = Transformer.new(
 		  get_replication_dataservice_template(),

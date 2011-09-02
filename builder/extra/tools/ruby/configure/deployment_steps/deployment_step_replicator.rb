@@ -1,14 +1,9 @@
 module ConfigureDeploymentStepReplicator
   def get_deployment_methods
-    unless Configurator.instance.package.is_a?(ConfigureServicePackage)
-      [
-        ConfigureDeploymentMethod.new("deploy_replicator"),
-        ConfigureDeploymentMethod.new("deploy_replication_dataservices", 50)
-#        ConfigureDeploymentMethod.new("postgresql_configuration", ConfigureDeployment::FINAL_STEP_WEIGHT-1)
-      ]
-    else
-      []
-    end
+    [
+      ConfigureDeploymentMethod.new("deploy_replicator"),
+      ConfigureDeploymentMethod.new("deploy_replication_dataservices", 50)
+    ]
   end
   module_function :get_deployment_methods
   
