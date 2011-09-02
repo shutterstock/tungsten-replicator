@@ -324,7 +324,7 @@ replicator.backup.default=@{APPLIER.REPL_DBDEFAULTBACKUPAGENT}
 @{REPL_SVC_BACKUP_CONFIG}
 
 # List of configured storage agents.  Uncomment appropriately for your site. 
-#replicator.storage.agents=fs
+replicator.storage.agents=fs
 
 # Default storage agent.
 replicator.storage.default=fs
