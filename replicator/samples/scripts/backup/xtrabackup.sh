@@ -54,10 +54,22 @@ do
   eval $parts=${parts[1]}
 done
 
-if [ ! -f "$mysql_service_command" ];
+service_command=`which service`
+if [ ! -f "$service_command" ];
 then
-  echo "Unable to determine the service command to start/stop mysql"
-  exit 1
+  if [ -f "/etc/init.d/mysqld" ];
+  then
+    mysql_service_command="/etc/init.d/mysqld"
+  elif [ -f "/etc/init.d/mysql" ];
+  then
+    mysql_service_command="$/etc/init.d/mysql"
+  fi
+else
+  if [ ! -f "$mysql_service_command" ];
+  then
+    echo "Unable to determine the service command to start/stop mysql" >&2
+    exit 1
+  fi
 fi
 
 # Handle operation. 
@@ -97,9 +109,9 @@ elif [ "$operation" = "restore" ]; then
   # We are expecting the exit code to be 3 so we have to turn off the 
   # error trapping
   set +e
-  $mysql_service_command status 1>&2
-  if [ $? -ne 3 ]; then
-    echo "Unable to properly shutdown the MySQL service"
+  `mysql -u$user -p$password -h$host -P$port -e "select 1"` > /dev/null 2>&1
+  if [ $? -ne 1 ]; then
+    echo "Unable to properly shutdown the MySQL service" >&2
     exit 1
   fi
   set -e
@@ -107,10 +119,10 @@ elif [ "$operation" = "restore" ]; then
   rm -rf $mysqldatadir/*
 
   # Copy the backup files to the mysql data directory
-  innobackupex-1.5.1 --copy-back $directory
+  innobackupex-1.5.1 --ibbackup=xtrabackup_51 --copy-back $directory
 
   # Fix the permissions and restart the service
-  chown -R $mysqluser:$mysqlgroup $mysqldatadir
+  chown -RL $mysqluser:$mysqlgroup $mysqldatadir
   $mysql_service_command start 1>&2
 
   # Remove the staging directory
