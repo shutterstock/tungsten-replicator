@@ -87,8 +87,7 @@ public class EventMetadataFilter implements Filter
     private static String       RELAXED                 = "relaxed";
 
     // Class and instance variables.
-    private static Logger       logger                  = Logger
-                                                                .getLogger(EventMetadataFilter.class);
+    private static Logger       logger                  = Logger.getLogger(EventMetadataFilter.class);
     private PluginContext       context;
     private SqlOperationMatcher opMatcher;
     private SqlCommentEditor    commentEditor;
@@ -155,10 +154,22 @@ public class EventMetadataFilter implements Filter
         // update on trep_commit_seqno.
         boolean needsServiceSessionVar = false;
         String serviceSessionVar = null;
+
+        StatementData sd = null;
         if (dbmsDataValues.size() >= 1
                 && dbmsDataValues.get(0) instanceof StatementData)
         {
-            StatementData sd = (StatementData) dbmsDataValues.get(0);
+            sd = (StatementData) dbmsDataValues.get(0);
+
+        }
+        else if (dbmsDataValues.size() >= 2
+                && dbmsDataValues.get(0) instanceof RowIdData
+                && dbmsDataValues.get(1) instanceof StatementData)
+        {
+            sd = (StatementData) dbmsDataValues.get(1);
+        }
+        if (sd != null)
+        {
             String query = sd.getQuery();
             SqlOperation op = (SqlOperation) sd.getParsingMetadata();
             if (op == null)
@@ -196,15 +207,15 @@ public class EventMetadataFilter implements Filter
                 // schema name on the event or from the database on the
                 // statement
                 // itself.
-                StatementData sd = (StatementData) dbmsData;
-                String query = sd.getQuery();
+                StatementData statData = (StatementData) dbmsData;
+                String query = statData.getQuery();
 
                 // See if there is an explicit schema on the statement.
-                SqlOperation op = (SqlOperation) sd.getParsingMetadata();
+                SqlOperation op = (SqlOperation) statData.getParsingMetadata();
                 if (op == null)
                 {
                     op = opMatcher.match(query);
-                    sd.setParsingMetadata(op);
+                    statData.setParsingMetadata(op);
                 }
                 String opSchema = op.getSchema();
 
@@ -217,10 +228,10 @@ public class EventMetadataFilter implements Filter
                 }
                 else if (op.isGlobal())
                 {
-                    // Global operations are not assigned to a shard. 
+                    // Global operations are not assigned to a shard.
                     affectedSchema = ReplOptionParams.SHARD_ID_UNKNOWN;
                 }
-                else if (sd.getDefaultSchema() != null)
+                else if (statData.getDefaultSchema() != null)
                 {
                     // Use default schema unless we don't recognize SQL and
                     // use does not want default.
@@ -228,7 +239,7 @@ public class EventMetadataFilter implements Filter
                             && !this.unknownSqlUsesDefaultDb)
                         affectedSchema = ReplOptionParams.SHARD_ID_UNKNOWN;
                     else
-                        affectedSchema = sd.getDefaultSchema();
+                        affectedSchema = statData.getDefaultSchema();
                 }
 
                 // If we found a schema, add it to the list. Statements have
@@ -282,7 +293,8 @@ public class EventMetadataFilter implements Filter
                 logger.debug("Unable to infer database: seqno="
                         + event.getSeqno());
         }
-        else if (schemaStats.getDbMap().size() == schemaStats.getNormalDbCount())
+        else if (schemaStats.getDbMap().size() == schemaStats
+                .getNormalDbCount())
         {
             // Need to split this into a couple of cases...
             if (serviceSessionVar == null)
@@ -332,7 +344,8 @@ public class EventMetadataFilter implements Filter
                 // This looks legal.
                 metadataTags.put(ReplOptionParams.SHARD_ID,
                         schemaStats.getSingleDbName());
-                metadataTags.put(ReplOptionParams.SERVICE, schemaStats.getService());
+                metadataTags.put(ReplOptionParams.SERVICE,
+                        schemaStats.getService());
                 metadataTags.put(ReplOptionParams.TUNGSTEN_METADATA, "true");
             }
         }
@@ -433,7 +446,14 @@ public class EventMetadataFilter implements Filter
             // However, don't let replication break if we are somehow wrong.
             try
             {
-                StatementData sd = (StatementData) event.getData().get(0);
+                StatementData sd;
+                // Here StatementData is either in first position or in second
+                // position if it comes after a RowId event
+                if (event.getData().get(0) instanceof StatementData)
+                    sd = (StatementData) event.getData().get(0);
+                else
+                    sd = (StatementData) event.getData().get(1);
+
                 String query = sd.getQuery();
                 SqlOperation op = (SqlOperation) sd.getParsingMetadata();
                 if (op == null)
@@ -450,7 +470,9 @@ public class EventMetadataFilter implements Filter
                     // Have to edit the SQL because we don't have a way to make
                     // an appendable comment.
                     String queryCommented = this.commentEditor.addComment(
-                            query, op, "___SERVICE___ = ["
+                            query,
+                            op,
+                            "___SERVICE___ = ["
                                     + tags.get(ReplOptionParams.SERVICE) + "]");
                     sd.setQuery(queryCommented);
                 }
