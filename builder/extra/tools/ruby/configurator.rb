@@ -569,7 +569,13 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
           if invalid_option_prefix != nil
             io.reason = invalid_option_prefix
           end
-          raise io
+          
+          error(io.to_s)
+          
+          unless advanced_mode?
+            error("Try adding -a to enable advanced command line options")
+          end
+          exit 1
         end
       rescue => e
         if display_help?()

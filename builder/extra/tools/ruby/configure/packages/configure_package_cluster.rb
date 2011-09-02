@@ -54,7 +54,7 @@ class ConfigurePackageCluster < ConfigurePackage
       }
     }
     
-    remainder = Configurator.instance.run_option_parser(opts, arguments)
+    remainder = Configurator.instance.run_option_parser(opts, arguments, false, "Invalid option for configure")
     
     unless Configurator.instance.display_preview?
       if cluster_hosts == nil && host_options.props.size == 0

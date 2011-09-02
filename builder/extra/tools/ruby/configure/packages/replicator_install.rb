@@ -138,7 +138,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       end
     }
     
-    remainder = Configurator.instance.run_option_parser(opts, arguments, false, "invalid option for --direct")
+    remainder = Configurator.instance.run_option_parser(opts, arguments, false, "Invalid option for tungsten-installer --direct")
     
     unless datasource_options.getNestedProperty([DATASOURCES, "master", REPL_DBHOST])
       error("You must specify a value for --master-host")
@@ -273,7 +273,7 @@ class ReplicatorInstallPackage < ConfigurePackage
       end
     }
     
-    remainder = Configurator.instance.run_option_parser(opts, arguments, false, "invalid option for --master-slave")
+    remainder = Configurator.instance.run_option_parser(opts, arguments, false, "Invalid option for tungsten-installer --master-slave")
     
     if master_host == nil
       error("You must specify a value for --master-host")

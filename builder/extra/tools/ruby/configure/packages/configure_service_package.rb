@@ -94,7 +94,7 @@ class ConfigureServicePackage < ConfigurePackage
     }
     
     begin
-      remainder = Configurator.instance.run_option_parser(opts, arguments)
+      remainder = Configurator.instance.run_option_parser(opts, arguments, false, "Invalid option for configure-service")
       
       unless @config.getNestedProperty([DEPLOYMENT_TYPE])
         error("You must specify -C, -D or -U")

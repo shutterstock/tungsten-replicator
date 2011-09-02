@@ -37,7 +37,7 @@ class UpdatePackage < ConfigurePackage
       }
     }
     
-    remainder = Configurator.instance.run_option_parser(opts, arguments)
+    remainder = Configurator.instance.run_option_parser(opts, arguments, false, "Invalid option for update")
     
     host_options.props.each{
       |h_key, h_value|
