@@ -515,7 +515,7 @@ replicator.filter.shardfilter=com.continuent.tungsten.replicator.shard.ShardFilt
 replicator.filter.shardfilter.autoCreate=false
 # Policy for handling unknown shards.  Legal values are accept, drop, warn, 
 # and error. 
-replicator.filter.shardfilter.unknownMasterPolicy=error
+replicator.filter.shardfilter.unknownShardPolicy=error
 
 ################################
 # BACKUP/RESTORE CONFIGURATION #
