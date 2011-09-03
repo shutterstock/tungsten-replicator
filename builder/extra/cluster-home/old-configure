@@ -13,6 +13,9 @@ if [ "$RUBY" = "" -o ! -x "$RUBY" ]; then
   exit 1
 fi
 
+# Note deprecation of this script. 
+echo "WARNING: deprecated script.  Please use tools directory scripts instead."
+
 # Set home and cd to it to ensure consistent working directory. 
 THOME=`dirname $0`
 cd $THOME

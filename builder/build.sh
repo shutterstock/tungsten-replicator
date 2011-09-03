@@ -299,10 +299,10 @@ echo "# Moving wrapper libraries"
 
 echo "### Adding configuration files"
 echo "# Adding and setting permissions for configure script"
-cp $extra_cluster_home/configure $reldir
-chmod 755 $reldir/configure
-cp $extra_cluster_home/configure-service $reldir
-chmod 755 $reldir/configure-service
+cp $extra_cluster_home/old-configure $reldir
+chmod 755 $reldir/old-configure
+cp $extra_cluster_home/old-configure-service $reldir
+chmod 755 $reldir/old-configure-service
 
 echo "# Copying in Ruby configuration libraries"
 cp -r $extra_cluster_home/lib $cluster_home
