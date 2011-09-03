@@ -54,22 +54,27 @@ do
   eval $parts=${parts[1]}
 done
 
-service_command=`which service`
-if [ ! -f "$service_command" ];
+# Note 1.
+# Do not use 'which' to determine where the 'service' command is.
+# The command will fail if 'service' is not in the PATH, and the whole script will fail.
+# Moreover, a simple 'sudo' will not get '/sbin' in $PATH, and the comamnd is likely to fail.
+#
+# Note 2.
+# Use '-x' to check for executables. Using '-f' will fail if the file is there but it is 
+# not executable.
+service_command=/sbin/service
+if [ -x $service_command ]
 then
-  if [ -f "/etc/init.d/mysqld" ];
-  then
+    mysql_service_command="$service_command mysql"
+elif [ -x "/etc/init.d/mysqld" ]
+then
     mysql_service_command="/etc/init.d/mysqld"
-  elif [ -f "/etc/init.d/mysql" ];
-  then
+elif [ -x "/etc/init.d/mysql" ]
+then
     mysql_service_command="$/etc/init.d/mysql"
-  fi
 else
-  if [ ! -f "$mysql_service_command" ];
-  then
     echo "Unable to determine the service command to start/stop mysql" >&2
     exit 1
-  fi
 fi
 
 # Handle operation. 
