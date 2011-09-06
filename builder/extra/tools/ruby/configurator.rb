@@ -22,7 +22,6 @@ system_require 'ifconfig'
 system_require 'pp'
 system_require 'timeout'
 system_require 'cgi'
-system_require 'net/ssh'
 system_require 'json'
 system_require 'transformer'
 system_require 'validator'
@@ -42,6 +41,14 @@ system_require 'configure/group_validation_check'
 system_require 'configure/configure_deployment_handler'
 system_require 'configure/configure_deployment'
 system_require 'configure/database_platform'
+
+class String
+  if RUBY_VERSION < "1.9"
+    def getbyte(index)
+      self[index]
+    end
+  end
+end
 
 DEFAULTS = "__defaults__"
 
@@ -226,6 +233,9 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     
     # Make sure that basic connectivity to the hosts works
     unless deployment_method.prevalidate()
+      write_header("Validation failed", Logger::ERROR)
+      deployment_method.get_validation_handler().output_errors()
+      
       unless forced?()
         exit 1
       end
@@ -371,9 +381,9 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     arguments = arguments.map{|arg|
       newarg = ''
       arg.split("").each{|b| 
-        unless b[0].to_i< 33 || b[0].to_i>127 then 
+        unless b.getbyte(0)<33 || b.getbyte(0)>127 then 
           newarg.concat(b) 
-        end 
+        end
       }
       newarg
     }
@@ -1085,6 +1095,15 @@ def ssh_result(command, host, user, return_object = false)
       user == Configurator.instance.whoami()
     return cmd_result(command)
   end
+  
+  begin
+    require "openssl"
+  rescue LoadError
+    puts "Unable to find the Ruby openssl library"
+    puts "Try installing the openssl package for your version of Ruby.  The package name for Ruby 1.9 is 'libopenssl-ruby1.9'."
+    exit 1
+  end
+  system_require 'net/ssh'
 
   Configurator.instance.debug("Execute `#{command}` on #{host}")
   result = ""

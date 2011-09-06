@@ -9,6 +9,31 @@ module ClusterHostCheck
   end
 end
 
+class OpensslLibraryCheck < ConfigureValidationCheck
+  include ClusterHostCheck
+  include LocalValidationCheck
+  
+  def set_vars
+    @title = "OpenSSL Library Check"
+    @description = "Look for the Ruby OpenSSL library needed to connecto to remote hosts"
+    @fatal_on_error = true
+    @weight = -10
+  end
+  
+  def validate
+    begin
+      require "openssl"
+    rescue LoadError
+      error "Unable to find the Ruby openssl library"
+      help "Try installing the openssl package for your version of Ruby.  The package name for Ruby 1.9 is 'libopenssl-ruby1.9'."
+    end
+  end
+  
+  def enabled?
+    super() && !(Configurator.instance.is_localhost?(@config.getProperty(HOST)))
+  end
+end
+
 class SSHLoginCheck < ConfigureValidationCheck
   include ClusterHostCheck
   include LocalValidationCheck
@@ -38,7 +63,7 @@ class SSHLoginCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    (@config.getProperty(HOST) != Configurator.instance.hostname())
+    super() && !(Configurator.instance.is_localhost?(@config.getProperty(HOST)))
   end
 end
 
@@ -83,7 +108,7 @@ class WriteableTempDirectoryCheck < ConfigureValidationCheck
   end
   
   def enabled?
-    (@config.getProperty(HOST) != Configurator.instance.hostname())
+    super() && !(Configurator.instance.is_localhost?(@config.getProperty(HOST)))
   end
 end
 
@@ -177,6 +202,23 @@ class RubyVersionCheck < ConfigureValidationCheck
     else
       error "Unrecognizable Ruby version: #{ruby_version}"
     end
+    
+    if is_valid?
+      begin
+        openssl_available = ssh_result("ruby -e \"require 'openssl'\" 2> /dev/null; echo $?", @config.getProperty(HOST), @config.getProperty(USERID))
+        if openssl_available.to_i != 0
+          error "Unable to find the Ruby openssl library"
+          help "Try installing the openssl package for your version of Ruby.  The package name for Ruby 1.9 is 'libopenssl-ruby1.9'."
+        end
+      rescue RemoteCommandError => rce
+        error "Unable to find the Ruby openssl library"
+        help "Try installing the openssl package for your version of Ruby.  The package name for Ruby 1.9 is 'libopenssl-ruby1.9'."
+      end
+    end
+  end
+  
+  def enabled?
+    super() && (!Configurator.instance.is_localhost?(@config.getProperty(HOST)))
   end
 end
 
