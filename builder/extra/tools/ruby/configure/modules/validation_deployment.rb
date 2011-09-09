@@ -114,7 +114,6 @@ end
 
 class WriteableHomeDirectoryCheck < ConfigureValidationCheck
   include ClusterHostCheck
-  include LocalValidationCheck
   
   def set_vars
     @title = "Writeable home directory"

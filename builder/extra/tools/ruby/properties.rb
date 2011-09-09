@@ -189,11 +189,13 @@ class Properties
   # Get a property value. 
   def getProperty(key, allow_disabled = false)
     if key.is_a?(String)
+      key_string = key
       key = key.split('.')
+    else
+      key_string = key.join('.')
     end
     
     findProperty = lambda do |keys|
-      key_string = keys.join('.')
       if @in_prompt_handler[key_string] == true
         return nil
       end
@@ -214,10 +216,8 @@ class Properties
       return value
     end
     
-    value = getNestedProperty(key)
-    if value == nil
-      value = findProperty.call(key)
-    end
+    
+    value = findProperty.call(key)
     
     if value == nil && key.size == 1 && (host = getNestedProperty([DEPLOYMENT_HOST]))
       value = findProperty.call([HOSTS, host, key[0]])
@@ -227,17 +227,23 @@ class Properties
       value = findProperty.call([REPL_SERVICES, svc, key[0]])
     end
     
+    if value == nil
+      value = getNestedProperty(key)
+    end
+    
     value
   end
   
   # Get the config file value for a property. 
   def getTemplateValue(key, transform_values_method)
     if key.is_a?(String)
+      key_string = key
       key = key.split('.')
+    else
+      key_string = key.join('.')
     end
     
     findProperty = lambda do |keys|
-      key_string = keys.join('.')
       if @in_template_value_prompt_handler[key_string] == true
         return nil
       end

@@ -63,7 +63,7 @@ class PGDatabasePlatform < ConfigureDatabasePlatform
   end
   
   def getJdbcUrl()
-    "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/"
+    "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/${DBNAME}"
   end
   
   def getJdbcDriver()

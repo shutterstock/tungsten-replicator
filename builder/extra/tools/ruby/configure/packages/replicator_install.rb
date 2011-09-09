@@ -414,8 +414,6 @@ class ReplicatorInstallPackage < ConfigurePackage
         prompt.output_usage()
       }
       
-      output_usage_line("--master-log-file", "PENDING")
-      output_usage_line("--master-log-pos", "PENDING")
       prompt = ph.find_prompt(ReplicationServiceTHLMasterPort)
       prompt.output_usage()
       

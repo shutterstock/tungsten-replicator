@@ -106,13 +106,13 @@ module ConfigureDeploymentStepDeployment
 
     # Create share/env.sh script.
     script = "#{@config.getProperty(HOME_DIRECTORY)}/share/env.sh"
+    debug("Generate environment at #{script}")
     out = File.open(script, "w")
     out.puts "# Source this file to set your environment."
     out.puts "export TUNGSTEN_HOME=#{@config.getProperty(HOME_DIRECTORY)}"
     out.puts "export PATH=$TUNGSTEN_HOME/#{Configurator::CURRENT_RELEASE_DIRECTORY}/tungsten-manager/bin:$TUNGSTEN_HOME/#{Configurator::CURRENT_RELEASE_DIRECTORY}/tungsten-replicator/bin:$PATH"
     out.chmod(0755)
     out.close
-    debug("Generate environment at #{script}")
     
     # Remove any copied config files to keep the deployment directory clean
     FileUtils.rm_f("#{get_deployment_basedir()}/#{Configurator::CLUSTER_CONFIG}")

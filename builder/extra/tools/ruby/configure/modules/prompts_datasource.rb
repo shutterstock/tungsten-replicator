@@ -46,6 +46,36 @@ module DatasourcePrompt
   def get_command_line_argument()
     super.gsub("repl-", "")
   end
+  
+  def get_host_alias
+    host_alias = nil
+    @config.getPropertyOr(HOSTS, {}).keys.each{
+      |h_key|
+      if @config.getProperty([HOSTS, h_key, HOST]) == @config.getProperty(get_member_key(REPL_DBHOST))
+        host_alias = h_key
+      end
+    }
+    
+    host_alias
+  end
+  
+  def get_userid
+    host_alias = get_host_alias()
+    if host_alias == nil
+      super
+    end
+    
+    @config.getProperty([HOSTS, host_alias, USERID])
+  end
+  
+  def get_hostname
+    host_alias = get_host_alias()
+    if host_alias == nil
+      super
+    end
+    
+    @config.getProperty([HOSTS, host_alias, HOST])
+  end
 end
 
 class DatasourceDBType < ConfigurePrompt

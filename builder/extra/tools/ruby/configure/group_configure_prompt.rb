@@ -463,27 +463,6 @@ module GroupConfigurePromptMember
     "#{@parent_group.singular.capitalize} #{get_member()}: #{get_prompt()}"
   end
   
-  # Get the value for this member-property pair from the current config 
-  # or the default value if none is found
-  def get_value(allow_default = true, allow_disabled = false)
-    value = @config.getProperty(get_name())
-    if value == nil && allow_default && (enabled_for_config?() || allow_disabled)
-      global_default = ConfigurePrompt.get_global_default(@name)
-      
-      if global_default == nil
-        value = get_default_value()
-      else
-        begin
-          value = accept?(global_default)
-        rescue
-          value = global_default
-        end
-      end
-    end
-    
-    value
-  end
-  
   # Does this prompt support a group-wide default value to be specified
   def allow_group_default
     true

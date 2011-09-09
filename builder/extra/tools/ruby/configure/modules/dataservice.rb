@@ -100,6 +100,14 @@ module ReplicationServicePrompt
     super.gsub("repl-", "")
   end
   
+  def get_userid
+    @config.getProperty(get_host_key(USERID))
+  end
+  
+  def get_hostname
+    @config.getProperty(get_host_key(HOST))
+  end
+  
   def self.included(subclass)
     @subclasses ||= []
     @subclasses << subclass
@@ -925,7 +933,7 @@ class ReplicationServiceGlobalProperties < ConfigurePrompt
   include ConstantValueModule
   
   def initialize
-    super(FIXED_PROPERTY_STRINGS, "Fixed properties for this service", PV_ANY)
+    super(FIXED_PROPERTY_STRINGS, "Fixed properties for this service")
   end
   
   def get_default_value

@@ -1085,6 +1085,10 @@ def is_port_available?(ip, port)
 end
 
 def ssh_result(command, host, user, return_object = false)
+  if Configurator.instance.display_help? && !Configurator.instance.display_preview?
+    raise RemoteCommandNotAllowed.new("Command '#{command}' not allowed because help mode is enabled")
+  end
+  
   if host == DEFAULTS
     debug("Unable to run '#{command}' because '#{host}' is not valid")
     raise RemoteCommandError.new(user, host, command, nil, '')
@@ -1259,4 +1263,7 @@ class RemoteCommandError < CommandError
   def build_message
     "Failed: #{command}, RC: #{rc}, Result: #{result}"
   end
+end
+
+class RemoteCommandNotAllowed < CommandError
 end

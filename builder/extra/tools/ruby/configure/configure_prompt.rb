@@ -109,7 +109,7 @@ class ConfigurePrompt
   # Get the current value for the prompt, use the default if the config does
   # not have a response for the given config key
   def get_value(allow_default = true, allow_disabled = false)
-    value = @config.getProperty(get_name())
+    value = @config.getProperty(get_name(), allow_disabled)
     if value == nil && allow_default && (enabled_for_config?() || allow_disabled)
       global_default = ConfigurePrompt.get_global_default(@name)
       
@@ -225,7 +225,38 @@ class ConfigurePrompt
       raise "Unable to get_property:#{attrs.join('.')} for #{self.class.name}"
     end
     
-    get_value(true, allow_disabled)
+    value = get_value(true, allow_disabled)
+    if @validator.is_a?(FilePropertyValidator) || @validator == PV_FILENAME
+      value = format_filename_property(value)
+    end
+    
+    return value
+  end
+  
+  def format_filename_property(value)
+    begin
+      if value == ""
+        return value
+      end
+      
+      @cache ||= {}
+      userid = get_userid()
+      host = get_hostname()
+      
+      if userid == nil || host == nil
+        raise IgnoreError
+      end
+      
+      cache_key = "#{userid}@#{host}:#{value}"
+      unless @cache.has_key?(cache_key)
+        @cache[cache_key] = ssh_result("echo #{value}", host, userid)
+      end
+      
+      value = @cache[cache_key]
+    rescue
+    end
+    
+    return value
   end
   
   def find_template_value(attrs, transform_values_method)

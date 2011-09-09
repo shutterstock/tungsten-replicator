@@ -221,6 +221,14 @@ module ConfigurePromptInterface
   # Update the config object so that old values are set to their new keys
   def update_deprecated_keys()
   end
+  
+  def get_userid
+    nil
+  end
+  
+  def get_hostname
+    nil
+  end
 end
 
 module NoTemplateValuePrompt

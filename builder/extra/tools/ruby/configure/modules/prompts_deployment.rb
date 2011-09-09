@@ -36,6 +36,14 @@ module ClusterHostPrompt
   def get_command_line_argument()
     super.gsub("repl-", "")
   end
+  
+  def get_userid
+    @config.getProperty(get_member_key(USERID))
+  end
+  
+  def get_hostname
+    @config.getProperty(get_member_key(HOST))
+  end
 end
 
 class DeploymentTypePrompt < ConfigurePrompt
@@ -151,16 +159,13 @@ class HomeDirectoryPrompt < ConfigurePrompt
   
   def get_default_value
     begin
-      if Configurator.instance.display_help? && !Configurator.instance.display_preview?
-        raise ""
-      end
-      
       unless Configurator.instance.is_localhost?(@config.getProperty(get_member_key(HOST)))
         Timeout.timeout(2) {
           return ssh_result('pwd', @config.getProperty(get_member_key(HOST)), @config.getProperty(get_member_key(USERID)))
         }
       end
     rescue Timeout::Error
+    rescue RemoteCommandNotAllowed
     rescue => e
     end
     
@@ -504,7 +509,7 @@ class HostGlobalProperties < ConfigurePrompt
   include ConstantValueModule
   
   def initialize
-    super(FIXED_PROPERTY_STRINGS, "Fixed properties for this host", PV_ANY)
+    super(FIXED_PROPERTY_STRINGS, "Fixed properties for this host")
   end
   
   def get_default_value
