@@ -136,6 +136,18 @@ public class ReplicateFilter implements Filter
                 if (schema == null)
                     schema = sdata.getDefaultSchema();
 
+                if (schema == null)
+                {
+                    final String query = sdata.getQuery();
+                    logger.warn("Ignoring event : No schema found for this event "
+                            + event.getSeqno()
+                            + (query != null ? " ("
+                                    + query.substring(0,
+                                            Math.min(query.length(), 200))
+                                    + "...)" : ""));
+                    continue;
+                }
+
                 if (filterEvent(schema, table))
                 {
                     if (logger.isDebugEnabled())
@@ -191,7 +203,7 @@ public class ReplicateFilter implements Filter
         }
 
         // From this point, if table not provided, cannot filter
-        if (table.length() == 0)
+        if (table != null && table.length() == 0)
             return false;
 
         String searchedTable = schema + "." + table;
