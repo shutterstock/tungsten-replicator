@@ -260,14 +260,18 @@ class PostgresStandbyPath < ConfigurePrompt
   end
   
   def get_default_value
-    pg_standby = cmd_result("which pg_standby", true)
+    begin
+      pg_standby = cmd_result("which pg_standby")
     
-    # If that does not work, try looking for the binaries under roo. 
-    if pg_standby.to_s == ""
-      pg_standby = @config.getProperty(get_applier_key(REPL_PG_ROOT), true) + "/bin/pg_standby"
-    end
+      # If that does not work, try looking for the binaries under roo. 
+      if pg_standby.to_s == ""
+        pg_standby = @config.getProperty(get_applier_key(REPL_PG_ROOT), true) + "/bin/pg_standby"
+      end
 
-    return pg_standby
+      return pg_standby
+    rescue CommandError
+      return nil
+    end
   end
 end
 
@@ -293,14 +297,18 @@ class PostgresArchiveCleanupPath < ConfigurePrompt
   end
   
   def get_default_value
-    pg_archivecleanup = cmd_result("which pg_archivecleanup", true)
+    begin
+      pg_archivecleanup = cmd_result("which pg_archivecleanup")
     
-    # If that does not work, try looking for the binaries under roo. 
-    if pg_archivecleanup.to_s == ""
-      pg_archivecleanup = @config.getProperty(get_applier_key(REPL_PG_ROOT), true) + "/bin/pg_archivecleanup"
+      # If that does not work, try looking for the binaries under roo. 
+      if pg_archivecleanup.to_s == ""
+        pg_archivecleanup = @config.getProperty(get_applier_key(REPL_PG_ROOT), true) + "/bin/pg_archivecleanup"
+      end
+    
+      return pg_archivecleanup
+    rescue CommandError
+      return nil
     end
-    
-    return pg_archivecleanup
   end
 end
 
