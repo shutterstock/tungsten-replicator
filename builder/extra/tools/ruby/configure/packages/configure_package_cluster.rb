@@ -14,7 +14,8 @@ class ConfigurePackageCluster < ConfigurePackage
       DeploymentHost.new(),
       ClusterHosts.new(),
       datasources,
-      services
+      services,
+      DeploymentServicePrompt.new()
     ]
   end
   
