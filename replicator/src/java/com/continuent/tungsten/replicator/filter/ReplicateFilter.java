@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
+import com.continuent.tungsten.replicator.database.SqlOperation;
 import com.continuent.tungsten.replicator.dbms.DBMSData;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 import com.continuent.tungsten.replicator.dbms.RowChangeData;
@@ -82,7 +83,7 @@ public class ReplicateFilter implements Filter
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.filter.Filter#filter(com.continuent.tungsten.replicator.event.ReplDBMSEvent)
      */
     public ReplDBMSEvent filter(ReplDBMSEvent event)
@@ -116,7 +117,31 @@ public class ReplicateFilter implements Filter
             }
             else if (dataElem instanceof StatementData)
             {
-                // TODO this requires some parsing ?
+                StatementData sdata = (StatementData) dataElem;
+                String schema = null;
+                String table = null;
+
+                Object parsingMetadata = sdata.getParsingMetadata();
+                if (parsingMetadata != null
+                        && parsingMetadata instanceof SqlOperation)
+                {
+                    SqlOperation parsed = (SqlOperation) parsingMetadata;
+                    schema = parsed.getSchema();
+                    table = parsed.getName();
+                    if (logger.isDebugEnabled())
+                        logger.debug("Parsing found schema = " + schema
+                                + " / table = " + table);
+                }
+
+                if (schema == null)
+                    schema = sdata.getDefaultSchema();
+
+                if (filterEvent(schema, table))
+                {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Filtering event");
+                    iterator.remove();
+                }
             }
         }
 
@@ -138,13 +163,20 @@ public class ReplicateFilter implements Filter
 
         if (doDbPattern != null)
         {
+            if (logger.isDebugEnabled())
+                logger.debug("Checking if database should be replicated : "
+                        + schema);
             if (doDbMatcher == null)
                 doDbMatcher = doDbPattern.matcher(schema);
             else
                 doDbMatcher.reset(schema);
 
             if (doDbMatcher.matches())
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug("Match do filter - keeping event");
                 return false;
+            }
         }
 
         if (ignoreDbPattern != null)
@@ -209,14 +241,20 @@ public class ReplicateFilter implements Filter
                 return true;
         }
 
-        return (doTablePattern != null && doTablePattern.pattern().length() > 0)
-                || (doWildTablePattern != null && doWildTablePattern.pattern()
-                        .length() > 0);
+        /*
+         * At this point check whether the do filters were used or not : if they
+         * were, then it means that the table/schema that was looked for did not
+         * match any of the filters => drop the event. If they were not used
+         * (ignore instead) then at this point, event should have been dropped
+         * elsewhere if needed.
+         */
+        return doDbPattern != null || doTablePattern != null
+                || doWildTablePattern != null;
     }
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException,
@@ -228,7 +266,7 @@ public class ReplicateFilter implements Filter
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void prepare(PluginContext context) throws ReplicatorException,
@@ -278,17 +316,23 @@ public class ReplicateFilter implements Filter
                     table.append(filter);
                 }
             }
+            final String tablePattern = table.toString();
+            final String wildTablePattern = wildTable.toString();
+            final String dbPattern = db.toString();
             if (ignore)
             {
-                ignoreDbPattern = Pattern.compile(db.toString());
-                ignoreTablePattern = Pattern.compile(table.toString());
-                ignoreWildTablePattern = Pattern.compile(wildTable.toString());
+                ignoreDbPattern = Pattern.compile(dbPattern);
+                ignoreTablePattern = Pattern.compile(tablePattern);
+                ignoreWildTablePattern = Pattern.compile(wildTablePattern);
             }
             else
             {
-                doDbPattern = Pattern.compile(db.toString());
-                doTablePattern = Pattern.compile(table.toString());
-                doWildTablePattern = Pattern.compile(wildTable.toString());
+                if (dbPattern.length() > 0)
+                    doDbPattern = Pattern.compile(dbPattern);
+                if (tablePattern.length() > 0)
+                    doTablePattern = Pattern.compile(tablePattern);
+                if (wildTablePattern.length() > 0)
+                    doWildTablePattern = Pattern.compile(wildTablePattern);
 
             }
         }
@@ -296,7 +340,7 @@ public class ReplicateFilter implements Filter
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void release(PluginContext context) throws ReplicatorException,
