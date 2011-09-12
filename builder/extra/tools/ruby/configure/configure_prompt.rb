@@ -123,7 +123,7 @@ class ConfigurePrompt
         end
       end
     end
-    
+        
     value
   end
   
@@ -225,7 +225,7 @@ class ConfigurePrompt
       raise "Unable to get_property:#{attrs.join('.')} for #{self.class.name}"
     end
     
-    value = get_value(true, allow_disabled)
+    value = get_value(true, allow_disabled)    
     if @validator.is_a?(FilePropertyValidator) || @validator == PV_FILENAME
       value = format_filename_property(value)
     end
@@ -235,7 +235,7 @@ class ConfigurePrompt
   
   def format_filename_property(value)
     begin
-      if value == ""
+      if value.to_s == ""
         return value
       end
       

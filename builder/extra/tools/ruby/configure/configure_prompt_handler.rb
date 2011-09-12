@@ -208,13 +208,16 @@ class ConfigurePromptHandler
       Configurator.instance.error "> Message: #{error.message}"
       
       arg = error.prompt.get_command_line_argument
-      if arg.to_s != ""
+      if error.prompt.enabled_for_command_line?
+        arg = error.prompt.get_command_line_argument
         Configurator.instance.error "> Argument: --#{arg}"
       end
       
       if error.current_value.to_s() != ""
         Configurator.instance.error "> Current Value: #{error.current_value}"
       end
+      
+      Configurator.instance.error "> Prompt Class: #{error.prompt.class.name}"
     }
     Configurator.instance.write_divider(Logger::ERROR)
   end

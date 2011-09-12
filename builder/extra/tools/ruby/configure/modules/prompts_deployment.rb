@@ -68,7 +68,7 @@ class DeploymentTypePrompt < ConfigurePrompt
 end
 
 class DeploymentServicePrompt < ConfigurePrompt
-  include AdvancedPromptModule
+  include ConstantValueModule
   include NoTemplateValuePrompt
   
   def initialize
