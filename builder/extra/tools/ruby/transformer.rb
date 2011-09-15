@@ -9,10 +9,6 @@ require 'system_require'
 system_require 'date'
 
 class Transformer
-  @fixed_replacements = {}
-  @fixed_additions = {}
-  @fixed_matches = {}
-  
   def add_fixed_replacement(key, value)
     if value == nil
       raise("Unable to add a fixed replacement using a nil value")
@@ -69,6 +65,9 @@ class Transformer
     @infile = infile
     @outfile = outfile
     @end_comment = end_comment
+    @fixed_replacements = {}
+    @fixed_additions = {}
+    @fixed_matches = {}
     
     if defined?(Configurator)
       Configurator.instance.info("INPUT FROM: " + @infile)

@@ -781,12 +781,12 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     elsif ENV['LOGNAME']
       ENV['LOGNAME']
     else
-      `whoami`.chomp
+      `whoami 2>/dev/null`.chomp
     end
   end
   
   def hostname
-    `hostname`.chomp
+    `hostname 2>/dev/null`.chomp
   end
   
   def is_localhost?(hostname)
