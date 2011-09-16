@@ -44,6 +44,9 @@ class Properties
       begin
         parsed_contents = JSON.parse(file_contents)
       rescue Exception => e
+        if file_contents[0,1] == "{"
+          raise "There was an error parsing the config file: #{e.message}"
+        end
       end
       
       if parsed_contents && parsed_contents.instance_of?(Hash)
