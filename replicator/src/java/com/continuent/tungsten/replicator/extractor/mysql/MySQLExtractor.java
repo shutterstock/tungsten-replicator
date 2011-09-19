@@ -1352,6 +1352,19 @@ public class MySQLExtractor implements RawExtractor
                             "Relay logging is enabled but relay log directory is not set");
                 }
                 File relayLogs = new File(relayLogDir);
+
+                if (!relayLogs.exists())
+                {
+                    logger.info("Relay log does not exist, creating: "
+                            + relayLogs.getAbsolutePath());
+                    if (!relayLogs.mkdirs())
+                    {
+                        throw new ExtractorException(
+                                "Unable to create relay log directory: "
+                                        + relayLogs.getAbsolutePath());
+                    }
+                }
+
                 if (!relayLogs.canWrite())
                 {
                     throw new ReplicatorException(

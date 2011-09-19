@@ -45,6 +45,8 @@
     <property name="jars.dir" value="${build.dir}/jars"/>
     <property name="dist.dir" value="${build.dir}/${build.name}"/>
     <property name="build.jar" value="${jars.dir}/${build.name}.jar"/>
+    <property name="fsm.build.dir" value="${project.fsm}/build"/>
+    <property name="fsm.classes.dir" value="${fsm.build.dir}/java/classes"/>
     <property name="commons.build.dir" value="${project.commons}/build"/>
     <property name="commons.classes.dir" value="${commons.build.dir}/java/classes"/>
 
@@ -52,6 +54,7 @@
     <property name="deploy.dir" value="${user.home}/tungsten"/>
 
     <path id="compile.classpath">
+    	<path location="${fsm.classes.dir}"/>
     	<path location="${commons.classes.dir}"/>
 	<fileset dir="lib/">
 		<include name="*.jar"/>
@@ -72,6 +75,12 @@
 	</fileset>
     </path>
 
+    <path id="javadoc.src.path">
+        <path location="${project.fsm}/src/java"/>
+        <path location="${project.commons}/src/java"/>
+        <path location="${java.src.dir}"/>
+    </path>
+
     <target name="all" depends="clean, build-dependencies, releases"
         description="--> creates the release without running JUnit tests"/>
     <target name="allPlusJunit" depends="clean,build-dependencies,test,releases"
@@ -82,6 +91,7 @@
     </target>
 
     <target name="build-dependencies">
+	<ant antfile="${project.fsm}/build.xml" inheritall="false" target="all"/>
 	<ant antfile="${project.commons}/build.xml" inheritall="false" target="all"/>
     </target>
 
@@ -255,6 +265,9 @@
             <fileset dir="${commons.build.dir}/jars"/>
         </copy>
         <copy todir="${dist.dir}/lib">
+            <fileset dir="${fsm.build.dir}/jars"/>
+        </copy>
+        <copy todir="${dist.dir}/lib">
              <fileset dir="lib/">
              	<include name="*.jar" unless="library.compile.files"/>
              	<include name="${library.compile.files}" if="library.compile.files"/>
@@ -298,8 +311,8 @@
 
     <target name="javadoc">
         <javadoc packagenames="com.continuent.*"
-            sourcepath="${java.src.dir}"
             classpathref="compile.classpath"
+            sourcepathref="javadoc.src.path"
             defaultexcludes="yes"
             destdir="${dist.dir}/doc/javadoc"
             author="true"
