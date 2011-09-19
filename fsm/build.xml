@@ -44,8 +44,8 @@
     <property name="dist.dir" value="${build.dir}/tungsten-fsm"/>
     <property name="dist.src.dir" value="${build.dir}/tungsten-fsm-src"/>
     <property name="tungsten.prefix" value="tungsten-fsm-${version}" />
-    <property name="tungsten-fsm.jar" value="${jars.dir}/${tungsten.prefix}.jar"/>
-    <property name="tungsten-fsm-src.jar" value="${jars.dir}/${tungsten.prefix}-src.jar"/>
+    <property name="tungsten-fsm.jar" value="${jars.dir}/tungsten-fsm.jar"/>
+    <property name="tungsten-fsm-src.jar" value="${jars.dir}/tungsten-fsm-src.jar"/>
 
     <path id="compile.classpath">
         <fileset dir="lib/">

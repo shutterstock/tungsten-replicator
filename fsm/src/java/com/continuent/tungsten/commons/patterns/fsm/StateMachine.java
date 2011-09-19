@@ -85,9 +85,8 @@ import org.apache.log4j.Logger;
  */
 public class StateMachine
 {
-    private static Logger             logger              = Logger
-                                                                  .getLogger(StateMachine.class);
-    private State                     state;
+    private static Logger             logger              = Logger.getLogger(StateMachine.class);
+    private volatile State            state;
     private final Entity              entity;
     private final StateTransitionMap  map;
     private int                       transitions         = 0;
@@ -185,9 +184,8 @@ public class StateMachine
                 // if it exists.
                 State exitState = state;
                 if (logger.isDebugEnabled())
-                    logger
-                            .debug("Searching for exit actions for current state: "
-                                    + state.getName());
+                    logger.debug("Searching for exit actions for current state: "
+                            + state.getName());
 
                 while (exitState != null && exitState != leastCommonParent)
                 {
@@ -228,7 +226,7 @@ public class StateMachine
                     logger.debug("Searching for entry actions for next state: "
                             + nextState.getName());
 
-                // We now set the state to the next state. 
+                // We now set the state to the next state.
                 setState(nextState);
 
                 // Fire entry actions from the state below the least common
@@ -337,15 +335,15 @@ public class StateMachine
                     if (logger.isDebugEnabled())
                     {
                         if (logger.isDebugEnabled())
-                            logger
-                                    .debug("Executing entry action for error state: "
-                                            + errorState.getName());
+                            logger.debug("Executing entry action for error state: "
+                                    + errorState.getName());
                     }
                     errorStateEntryAction.doAction(event, entity, transition,
                             Action.ENTER_ACTION);
                 }
 
-                // Make the error state official and call listeners to inform them.
+                // Make the error state official and call listeners to inform
+                // them.
                 setState(errorState);
                 for (StateChangeListener listener : listeners)
                 {
@@ -365,15 +363,16 @@ public class StateMachine
     }
 
     /**
-     * Returns the current state.
+     * Returns the current state. This call is non-blocking to allow other
+     * threads to check status easily.
      */
-    public synchronized State getState()
+    public State getState()
     {
         return state;
     }
 
     /**
-     * Returns the current state.
+     * Sets the current state.
      */
     private synchronized void setState(State state)
     {
@@ -423,10 +422,10 @@ public class StateMachine
     /**
      * Creates a latch on a state in the state machine.
      */
-    public synchronized StateTransitionLatch createStateTransitionLatch(State expected,
-            boolean exitOnError)
+    public synchronized StateTransitionLatch createStateTransitionLatch(
+            State expected, boolean exitOnError)
     {
-        // Must be synchronized when instantiating latch. 
+        // Must be synchronized when instantiating latch.
         return new StateTransitionLatch(this, expected, exitOnError);
     }
 }
