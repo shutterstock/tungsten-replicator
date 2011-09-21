@@ -15,7 +15,6 @@ REPL_PG_ARCHIVECLEANUP = "repl_pg_archivecleanup"
 
 PG_REPL_METHOD_STREAMING = "streaming"
 PG_REPL_METHOD_SHIPPING = "shipping"
-PG_REPL_METHOD_SLONY = "slony"
 
 class PGDatabasePlatform < ConfigureDatabasePlatform
   def get_uri_scheme
@@ -115,17 +114,9 @@ class PostgresStreamingReplication < ConfigurePrompt
   
   def initialize
     super(REPL_PG_METHOD, "Postgres Replication method",
-      PV_BOOLEAN)
+      PV_BOOLEAN, PG_REPL_METHOD_STREAMING)
   end
-  
-  def get_default_value
-    if (get_applier_datasource().is_a?(PGDatabasePlatform) && get_extractor_datasource().is_a?(PGDatabasePlatform))
-      PG_REPL_METHOD_STREAMING
-    else
-      PG_REPL_METHOD_SLONY
-    end
-  end
-  
+    
   def enabled?
     super() && get_extractor_datasource().is_a?(PGDatabasePlatform)
   end
@@ -526,10 +517,6 @@ end
 
 module ConfigureDeploymentStepPostgresql
   include DatabaseTypeDeploymentStep
-  
-  def apply_config_replicator
-    write_wal_shipping_properties()
-  end
   
   def deploy_replication_dataservice()
     if [PG_REPL_METHOD_STREAMING, PG_REPL_METHOD_SHIPPING].include?(@config.getProperty(REPL_PG_METHOD))
