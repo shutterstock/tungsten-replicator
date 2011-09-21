@@ -48,14 +48,18 @@ class Transformer
     fixed_properties.each{
       |val|
       
+      unless val =~ /=/
+        raise "Invalid value #{val} given for '--property'.  There should be a key/value pair joined by a single =."
+      end
+      
       val_parts = val.split("=")
       last_char=val_parts[0][-1,1]
       if last_char == "+"
-        add_fixed_addition(val_parts[0][0..-2], val_parts[1])
+        add_fixed_addition(val_parts[0][0..-2], val_parts[1].to_s)
       elsif last_char == "~"
-        add_fixed_match(val_parts[0][0..-2], val_parts[1])
+        add_fixed_match(val_parts[0][0..-2], val_parts[1].to_s)
       else
-        add_fixed_replacement(val_parts[0], val_parts[1])
+        add_fixed_replacement(val_parts[0], val_parts[1].to_s)
       end
     }
   end
