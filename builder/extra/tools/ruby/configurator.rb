@@ -356,10 +356,8 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
   def get_deployment
     get_deployments().each{
       |deployment|
-      if deployment.include_deployment_for_package?(@package)
-        if deployment.get_name() == @config.getProperty(DEPLOYMENT_TYPE)
-          return deployment
-        end
+      if deployment.get_name() == @config.getProperty(DEPLOYMENT_TYPE)
+        return deployment
       end
     }
     
