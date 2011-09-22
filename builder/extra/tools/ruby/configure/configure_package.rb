@@ -152,19 +152,25 @@ class ConfigurePackage
     arguments = Configurator.instance.run_option_parser(opts, arguments)
 
     if @load_remote_config == true
-      unless ssh_result("if [ -d #{@target_home_directory} ]; then echo 0; else echo 1; fi", @target_host, @target_user) == "0"
+      @target_validated = false
+      
+      if ssh_result("if [ -d #{@target_home_directory} ]; then if [ -x #{@target_home_directory}/tools/configure ]; then echo 0; else echo 1; fi else echo 1; fi", @target_host, @target_user) == "0"
+        @target_validated = true
+      else
         unless @target_home_directory =~ /tungsten[\/]?$/
           @target_home_directory = @target_home_directory + "/tungsten"
-          unless ssh_result("if [ -d #{@target_home_directory} ]; then echo 0; else echo 1; fi", @target_host, @target_user) == "0"
-            raise "Unable to find a Tungsten directory at #{@target_home_directory}"
+          if ssh_result("if [ -d #{@target_home_directory} ]; then if [ -x #{@target_home_directory}/tools/configure ]; then echo 0; else echo 1; fi else echo 1; fi", @target_host, @target_user) == "0"
+            @target_validated = true
           end
-        else
-          raise "Unable to find a Tungsten directory at #{@target_home_directory}"
         end
       end
       
-      unless ssh_result("if [ -x #{@target_home_directory}/tools/configure ]; then echo 0; else echo 1; fi", @target_host, @target_user) == "0"
-        raise "Unable to find #{@target_home_directory}/tools/configure.  Make sure that you have installed version 2.0.4 or greater"
+      if @target_validated == false
+        unless ssh_result("if [ -d #{@target_home_directory} ]; then echo 0; else echo 1; fi", @target_host, @target_user) == "0"
+          raise "Unable to find a Tungsten directory at #{@target_home_directory}"
+        else
+          raise "Unable to find #{@target_home_directory}/tools/configure.  Make sure that you have installed version 2.0.4 or greater"
+        end
       end
       
       info "Load the current config from #{@target_user}@#{@target_host}:#{@target_home_directory}"
