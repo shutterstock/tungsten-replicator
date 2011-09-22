@@ -152,6 +152,21 @@ class ConfigurePackage
     arguments = Configurator.instance.run_option_parser(opts, arguments)
 
     if @load_remote_config == true
+      unless ssh_result("if [ -d #{@target_home_directory} ]; then echo 0; else echo 1; fi", @target_host, @target_user) == "0"
+        unless @target_home_directory =~ /tungsten[\/]?$/
+          @target_home_directory = @target_home_directory + "/tungsten"
+          unless ssh_result("if [ -d #{@target_home_directory} ]; then echo 0; else echo 1; fi", @target_host, @target_user) == "0"
+            raise "Unable to find a Tungsten directory at #{@target_home_directory}"
+          end
+        else
+          raise "Unable to find a Tungsten directory at #{@target_home_directory}"
+        end
+      end
+      
+      unless ssh_result("if [ -x #{@target_home_directory}/tools/configure ]; then echo 0; else echo 1; fi", @target_host, @target_user) == "0"
+        raise "Unable to find #{@target_home_directory}/tools/configure.  Make sure that you have installed version 2.0.4 or greater"
+      end
+      
       info "Load the current config from #{@target_user}@#{@target_host}:#{@target_home_directory}"
       
       begin
@@ -162,18 +177,6 @@ class ConfigurePackage
           raise "invalid object"
         end
         @config.props = parsed_contents.dup
-      rescue CommandError => ce
-        unless @target_home_directory =~ /tungsten$/
-          command = "#{@target_home_directory}/tungsten/tools/configure --output-config"    
-          config_output = ssh_result(command, @target_host, @target_user)
-          parsed_contents = JSON.parse(config_output)
-          unless parsed_contents.instance_of?(Hash)
-            raise "invalid object"
-          end
-          @config.props = parsed_contents.dup
-        else
-          raise ce
-        end
       rescue => e
         exception(e)
         raise "Unable to load the current config from #{@target_user}@#{@target_host}:#{@target_home_directory}"
