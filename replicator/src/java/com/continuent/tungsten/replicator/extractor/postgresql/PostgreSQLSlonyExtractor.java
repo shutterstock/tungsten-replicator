@@ -306,10 +306,10 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
                                 cmdData, tableSchema + "." + tableName);
 
                         StatementData statement = new StatementData(queryString);
-                        statement.addOption(ReplOptionParams.SERVICE,
+                        /*statement.addOption(ReplOptionParams.SERVICE,
                                 logOrigin.toString());
                         statement.addOption("log_actionseq",
-                                actionSeq.toString());
+                                actionSeq.toString());*/
                         dataArray.add(statement);
                     }
 
