@@ -210,14 +210,6 @@ class DatasourceMasterLogDirectory < ConfigurePrompt
     replace_deprecated_key(get_member_key('repl_mysql_binlog_dir'))
     super()
   end
-  
-  def get_template_value(transform_values_method)
-    if @config.getProperty(get_member_key(REPL_DISABLE_RELAY_LOGS)) == "true"
-      super(transform_values_method)
-    else
-      ""
-    end
-  end
 end
 
 class DatasourceMasterLogPattern < ConfigurePrompt

@@ -238,7 +238,11 @@ class Properties
   end
   
   # Get the config file value for a property. 
-  def getTemplateValue(key, transform_values_method)
+  def getTemplateValue(key, transform_values_method = nil)
+    if transform_values_method == nil
+      transform_values_method = method(:blank_transform_values_method)
+    end
+    
     if key.is_a?(String)
       key_string = key
       key = key.split('.')
@@ -278,6 +282,10 @@ class Properties
     end
     
     value
+  end
+  
+  def blank_transform_values_method(matches)
+    ""
   end
   
   # Get the property value or return the default if nil

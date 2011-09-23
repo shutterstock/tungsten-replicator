@@ -155,6 +155,15 @@ class MySQLDataDirectory < MySQLConfigurePrompt
       PV_FILENAME, "/var/lib/mysql/")
   end
   
+  def get_mysql_default_value
+    datadir = get_applier_datasource().get_value("SHOW VARIABLES LIKE 'datadir'", "Value")
+    if datadir == nil
+      raise "Unable to determine datadir"
+    end
+    
+    return datadir
+  end
+  
   def update_deprecated_keys()
     replace_deprecated_key(get_member_key('repl_mysql_data_dir'))
     super()
@@ -456,15 +465,6 @@ class MySQLSettingsCheck < ConfigureValidationCheck
       warning("The value of max_allowed_packet is too small for #{get_applier_datasource.get_connection_summary()}")
       help("Add \"max_allowed_packet=52m\" to the MySQL configuration file for #{get_applier_datasource.get_connection_summary()}")
     end
-    
-    if Configurator.instance.is_localhost?(@config.getProperty(HOST))
-      info("Check for datadir")
-      datadir = get_applier_datasource.get_value("show variables like 'datadir'", "Value")
-      unless File.readable?(datadir)
-        warning("The datadir setting is not readable for #{get_applier_datasource.get_connection_summary()}")
-        help("Specify a readable directory for datadir in your my.cnf file to ensure that all utilities work properly for #{get_applier_datasource.get_connection_summary()}")
-      end
-    end
   end
 end
 
@@ -533,18 +533,50 @@ class XtrabackupAvailableCheck < ConfigureValidationCheck
   end
 end
 
-class XtrabackupUsesSudoCheck < ConfigureValidationCheck
+class XtrabackupSettingsCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   include MySQLApplierCheck
   
   def set_vars
-    @title = "Xtrabackup uses sudo check"
+    @title = "Xtrabackup settings"
   end
   
   def validate
+    unless Configurator.instance.is_localhost?(@config.getProperty(get_applier_key(REPL_DBHOST)))
+      error("Xtrabackup may only be used to backup a database server running on the same host as Tungsten Replicator")
+      return
+    end
+    
+    unless File.executable?(@config.getProperty(get_applier_key(REPL_BOOT_SCRIPT)))
+      if File.exists?(@config.getProperty(get_applier_key(REPL_BOOT_SCRIPT)))
+        error("The MySQL service script #{@config.getProperty(get_applier_key(REPL_BOOT_SCRIPT))} is not executable")
+      else
+        error("The MySQL service script #{@config.getProperty(get_applier_key(REPL_BOOT_SCRIPT))} does not exist")
+      end
+      help("Try providing a value for ---datasource-boot-script")
+    end
+    
     if @config.getProperty(get_member_key(REPL_BACKUP_COMMAND_PREFIX)) != "true"
-      error("You must enable sudo for the backup script to use xtrabackup")
+      error("You must enable sudo  to use xtrabackup")
       help("Add --backup-command-prefix=true to your command")
+    end
+    
+    info("Check for datadir")
+    datadir = get_applier_datasource.get_value("show variables like 'datadir'", "Value")
+    unless File.directory?(datadir)
+      warning("The datadir setting #{datadir} is not readable for #{get_applier_datasource.get_connection_summary()}")
+      help("Specify a readable directory for datadir in your my.cnf file to ensure that all utilities work properly for #{get_applier_datasource.get_connection_summary()}")
+    end
+    unless @config.getProperty(get_applier_key(REPL_MYSQL_DATADIR)) == datadir
+      error("The MySQL datadir setting does not match the provided value: #{@config.getProperty(get_applier_key(REPL_MYSQL_DATADIR))}")
+      help("Fix the datadir value in my.cnf or use '--datasource-mysql-data-directory=#{datadir}'")
+    end
+    
+    info("Check for binary logs")
+    binary_count = cmd_result("#{@config.getTemplateValue(get_member_key(REPL_BACKUP_COMMAND_PREFIX))} ls #{@config.getProperty(get_applier_key(REPL_MASTER_LOGDIR))}/#{@config.getProperty(get_applier_key(REPL_MASTER_LOGPATTERN))}.* 2>/dev/null | wc -l")
+    unless binary_count.to_i > 0
+      error("#{@config.getProperty(get_applier_key(REPL_MASTER_LOGDIR))} does not contain any files starting with #{@config.getProperty(get_applier_key(REPL_MASTER_LOGPATTERN))}")
+      help("Try providing a value for --datasource-log-directory or --datasource-log-pattern")
     end
   end
   

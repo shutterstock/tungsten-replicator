@@ -16,4 +16,4 @@ replicator.backup.agent.xtrabackup.hotBackupEnabled=true
 #   mysqlgroup      - The os group that mysql runs as [default: mysql]
 #		mysql_service_comand	- The command to call when stopping/starting MySQL [default: /etc/init.d/mysql]
 # replicator.backup.agent.xtrabackup.options=user=tungsten&password=secret&directory=/tmp/backup
-replicator.backup.agent.xtrabackup.options=user=${replicator.global.db.user}&password=${replicator.global.db.password}&host=${replicator.global.db.host}&port=${replicator.global.db.port}&directory=@{REPL_MYSQL_XTRABACKUP_DIR}&archive=@{REPL_MYSQL_XTRABACKUP_FILE}&mysqldatadir=@{APPLIER.REPL_MYSQL_DATADIR}&mysql_service_command=@{APPLIER.REPL_BOOT_SCRIPT}
+replicator.backup.agent.xtrabackup.options=user=${replicator.global.db.user}&password=${replicator.global.db.password}&host=${replicator.global.db.host}&port=${replicator.global.db.port}&directory=@{REPL_MYSQL_XTRABACKUP_DIR}&archive=@{REPL_MYSQL_XTRABACKUP_FILE}&mysqllogdir=@{APPLIER.REPL_MASTER_LOGDIR}&mysqllogpattern=@{APPLIER.REPL_MASTER_LOGPATTERN}&mysqldatadir=@{APPLIER.REPL_MYSQL_DATADIR}&mysql_service_command=@{APPLIER.REPL_BOOT_SCRIPT}

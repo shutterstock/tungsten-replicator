@@ -23,6 +23,8 @@ directory=/tmp/innobackup
 archive=/tmp/innobackup.tar.gz
 mysql_service_command="/etc/init.d/mysql"
 mysqldatadir=/var/lib/mysql
+mysqllogdir=/var/lib/mysql
+mysqllogpattern=mysql-bin
 mysqluser=mysql
 mysqlgroup=mysql
 
@@ -62,19 +64,22 @@ done
 # Note 2.
 # Use '-x' to check for executables. Using '-f' will fail if the file is there but it is 
 # not executable.
-service_command=/sbin/service
-if [ -x $service_command ]
+if [ ! -x $mysql_service_command ]
 then
-    mysql_service_command="$service_command mysql"
-elif [ -x "/etc/init.d/mysqld" ]
-then
-    mysql_service_command="/etc/init.d/mysqld"
-elif [ -x "/etc/init.d/mysql" ]
-then
-    mysql_service_command="$/etc/init.d/mysql"
-else
-    echo "Unable to determine the service command to start/stop mysql" >&2
-    exit 1
+  service_command=/sbin/service
+  if [ -x $service_command ]
+  then
+      mysql_service_command="$service_command mysql"
+  elif [ -x "/etc/init.d/mysqld" ]
+  then
+      mysql_service_command="/etc/init.d/mysqld"
+  elif [ -x "/etc/init.d/mysql" ]
+  then
+      mysql_service_command="$/etc/init.d/mysql"
+  else
+      echo "Unable to determine the service command to start/stop mysql" >&2
+      exit 1
+  fi
 fi
 
 # Handle operation. 
@@ -97,6 +102,16 @@ if [ "$operation" = "backup" ]; then
 
   exit 0
 elif [ "$operation" = "restore" ]; then
+  if [ ! -d "$mysqllogdir" ]; then
+    echo "The MySQL log dir '$mysqllogdir' is not a directory" >&2
+    exit 1
+  fi
+  
+  if [ ! -d "$mysqldatadir" ]; then
+    echo "The MySQL data dir '$mysqldatadir' is not a directory" >&2
+    exit 1
+  fi
+  
   # Get the name of the backup file and restore.  
   . $properties
 
@@ -122,6 +137,7 @@ elif [ "$operation" = "restore" ]; then
   set -e
   
   rm -rf $mysqldatadir/*
+  rm -rf $mysqllogdir/$mysqllogpattern.*
 
   # Copy the backup files to the mysql data directory
   innobackupex-1.5.1 --ibbackup=xtrabackup_51 --copy-back $directory
