@@ -21,7 +21,7 @@ class ConfigureDeploymentHandler
   def prepare_config(config)
     @config.props = config.props
     
-    unless Configurator.instance.is_localhost?(@config.getProperty(HOST))
+    unless Configurator.instance.is_localhost?(@config.getProperty(HOST)) && @config.getProperty(USERID) == Configurator.instance.whoami()
       validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}/"
       
       # Transfer validation code
