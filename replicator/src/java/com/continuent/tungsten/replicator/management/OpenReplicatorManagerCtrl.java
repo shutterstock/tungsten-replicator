@@ -111,6 +111,7 @@ public class OpenReplicatorManagerCtrl
         println("  -verbose         - Print verbose messages");
         println("  -retry N         - Retry connections up to N times [default: 10]");
         println("Replicator-Wide Commands:");
+        println("  version           - Show replicator version and build");
         println("  services          - List replication services");
         println("  shutdown          - Shut down replication services cleanly and exit");
         println("  kill              - Exit immediately without shutting down services");
