@@ -22,27 +22,28 @@
 package com.continuent.tungsten.commons.patterns.event;
 
 /**
- * Defines an event request, which contains the event to be processed 
- * as well as an optional response queue to receive the result of 
- * processing. 
+ * Defines the status of processing an event in the state machine.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class EventStatus
 {
-    private final boolean successful;
-    private final Exception exception;
+    private final boolean   successful;
+    private final boolean   cancelled;
+    private final Throwable exception;
 
     /**
      * Creates a new <code>EventStatus</code> object
      * 
      * @param successful True if event processing succeeded
-     * @param exception Error, if unsuccessful. 
+     * @param exception Error, if unsuccessful.
      */
-    public EventStatus(boolean successful, Exception exception)
+    public EventStatus(boolean successful, boolean cancelled,
+            Throwable exception)
     {
         this.successful = successful;
+        this.cancelled = cancelled;
         this.exception = exception;
     }
 
@@ -51,8 +52,48 @@ public class EventStatus
         return successful;
     }
 
-    public Exception getException()
+    public Throwable getException()
     {
         return exception;
+    }
+
+    public boolean isCancelled()
+    {
+        return cancelled;
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see java.lang.Object#equals(java.lang.Object)
+     */
+    public boolean equals(Object o)
+    {
+        if (!(o instanceof EventStatus))
+            return false;
+        EventStatus other = (EventStatus) o;
+        if (successful != other.isSuccessful())
+            return false;
+        else if (cancelled != other.isCancelled())
+            return false;
+        else if (exception != other.getException())
+            return false;
+        else
+            return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see java.lang.Object#toString()
+     */
+    public String toString()
+    {
+        StringBuffer sb = new StringBuffer();
+        sb.append(this.getClass().getName());
+        sb.append(" successful=").append(successful);
+        sb.append(" cancelled=").append(cancelled);
+        sb.append(" exception=").append(exception);
+        return sb.toString();
     }
 }

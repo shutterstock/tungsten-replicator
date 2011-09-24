@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,167 +22,42 @@
 
 package com.continuent.tungsten.commons.patterns.event;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.log4j.Logger;
-
 import com.continuent.tungsten.commons.patterns.fsm.Event;
 
 /**
- * This class defines an event dispatcher. The dispatcher is a separate thread
- * that dispatches events to listeners.
+ * Denotes a class that can dispatch events to a state machine. It handles
+ * normal events, out-of-band events, and event cancellation.
  * 
  * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
+ * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
-public class EventDispatcher implements Runnable
+public interface EventDispatcher
 {
-    private static Logger               logger        = Logger
-                                                              .getLogger(EventDispatcher.class);
-    private Thread                      th            = null;
-    private BlockingQueue<EventRequest> notifications = new LinkedBlockingQueue<EventRequest>();
-    private boolean                     running       = false;
-    private List<EventListener>         listeners     = new ArrayList<EventListener>();
-    private CountDownLatch              runLatch      = new CountDownLatch(1);
-
-    public void addListener(EventListener listener)
-    {
-        listeners.add(listener);
-    }
+    /**
+     * Set a listenener for event completion.
+     */
+    public void setListener(EventCompletionListener listener);
 
     /**
-     * Runs the thread, which continues until interrupted or running is set to
-     * false. {@inheritDoc}
+     * Puts an event in the queue for normal processing. This method returns a
+     * Future that callers can call to obtain the event status.
+     */
+    public EventRequest put(Event event) throws InterruptedException;
+
+    /**
+     * Cancel all pending events and put a new event in the queue for immediate
+     * processing.
+     */
+    public EventRequest putOutOfBand(Event event) throws InterruptedException;
+
+    /**
+     * Cancel a currently running request.
      * 
-     * @see java.lang.Runnable#run()
+     * @param request Request to cancel
+     * @param mayInterruptIfRunning If true we can cancel running as opposed to
+     *            enqueued request
      */
-    public void run()
-    {
-        try
-        {
-            do
-            {
-                boolean succeeded = true;
-                Exception exception = null;
-
-                EventRequest request = notifications.take();
-                Event event = request.getEvent();
-                try
-                {
-                    for (EventListener listener : listeners)
-                    {
-                        if (logger.isDebugEnabled())
-                        {
-                            logger.debug(String.format("Dispatching event=%s",
-                                    event));
-                        }
-                        listener.onEvent(event);
-                    }
-                }
-                catch (Exception e)
-                {
-                    succeeded = false;
-                    exception = e;
-                    logger.debug(String.format(
-                            "Failed to apply event %s, reason=%s", event, e
-                                    .getLocalizedMessage()));
-                }
-
-                // Return a response if desired.
-                if (request.getResponseQueue() != null)
-                {
-                    EventStatus status = new EventStatus(succeeded, exception);
-                    request.getResponseQueue().put(status);
-                }
-            }
-            while (running);
-        }
-        catch (InterruptedException e)
-        {
-            logger.debug("Dispatcher loop terminated by InterruptedException");
-        }
-        running = false;
-    }
-
-    /**
-     * Puts a single event in the queue for asynchronous processing. This model
-     * supports one-way processing where the client does not worry about when
-     * the event is handled or the result of such processing.
-     */
-    public void putEvent(Event event) throws InterruptedException
-    {
-        notifications.put(new EventRequest(event, null));
-    }
-
-    /**
-     * Puts an event in the queue for synchronous processing. This method
-     * returns when the event is processed and puts a response back in the
-     * response queue. The thread is blocked until the response returns.
-     */
-    public EventStatus handleEvent(Event event) throws InterruptedException,
-            Exception
-    {
-        BlockingQueue<EventStatus> responseQueue = new LinkedBlockingQueue<EventStatus>();
-        notifications.put(new EventRequest(event, responseQueue));
-        EventStatus status = responseQueue.take();
-        Exception Exception = status.getException();
-        if (Exception != null)
-            throw Exception;
-
-        return status;
-    }
-
-    /**
-     * Handle a specific event synchronously
-     * 
-     * @param event
-     * @throws InterruptedException
-     * @throws Exception
-     */
-    public void handleEventSynchronous(Event event)
-            throws InterruptedException, Exception
-    {
-        handleEvent(event);
-    }
-
-    /**
-     * Start the event dispatcher, which spawns a separate thread.
-     */
-    public synchronized void start() throws Exception
-    {
-        logger.debug("Starting event dispatcher");
-        if (running == true)
-            throw new Exception("NotificationListener already running");
-        th = new Thread(this, getClass().getSimpleName());
-        running = true;
-        th.start();
-    }
-
-    /**
-     * Cancel the event dispatcher and wait for the thread to complete.
-     */
-    public synchronized void stop() throws InterruptedException
-    {
-        if (running == false)
-            return;
-        logger.info("Event dispatcher is exiting....");
-        running = false;
-        th.interrupt();
-        th.join();
-        runLatch.countDown();
-    }
-
-    /**
-     * Wait for the dispatcher to exit.
-     * 
-     * @throws InterruptedException
-     */
-    public void await() throws InterruptedException
-    {
-        runLatch.await();
-    }
+    public boolean cancelActive(EventRequest request,
+            boolean mayInterruptIfRunning) throws InterruptedException;
 }

@@ -143,9 +143,10 @@ public class StateMachine
      * @throws TransitionRollbackException Thrown if the transition is rolled
      *             back cleanly by action code
      * @throws FiniteStateException Thrown if a generic error occurs
+     * @throws InterruptedException Thrown if event processing is cancelled
      */
     public synchronized void applyEvent(Event event)
-            throws FiniteStateException
+            throws FiniteStateException, InterruptedException
     {
         if (maxTransitions > 0)
         {
@@ -291,6 +292,22 @@ public class StateMachine
                 }
 
             }
+        }
+        catch (InterruptedException e)
+        {
+            // Interrupts are treated as rollbacks. This enables state
+            // operations to be cancelled.
+            if (prevState != state)
+            {
+                setState(prevState);
+            }
+
+            // Log and rethrow the interrupt exception.
+            if (logger.isDebugEnabled())
+                logger.debug("Transition interrupted and rolled back: state="
+                        + state.getName() + " transition="
+                        + transition.getName() + " actionType=" + actionType);
+            throw e;
         }
         catch (TransitionRollbackException e)
         {

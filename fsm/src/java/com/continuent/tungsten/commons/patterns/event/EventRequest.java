@@ -21,36 +21,211 @@
 
 package com.continuent.tungsten.commons.patterns.event;
 
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.continuent.tungsten.commons.patterns.fsm.Event;
 
 /**
- * Defines an event request, which contains the event to be processed 
- * as well as an optional response queue to receive the result of 
- * processing. 
+ * Defines an event request, which contains the event to be processed as well as
+ * the status of it. This class implements the Future interface so that it can
+ * be returned to clients that track status of events.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
-public class EventRequest
+public class EventRequest implements Future<EventStatus>
 {
-    private final Event event; 
-    private final BlockingQueue<EventStatus> responseQueue;
+    private final EventDispatcher dispatcher;
+    private final Event           event;
+    private boolean               cancelRequested = false;
+    private boolean               started         = false;
+    private EventStatus           status;
+    private Object                annotation;
 
-    public EventRequest(Event event, BlockingQueue<EventStatus> responseQueue)
+    /**
+     * Instantiates request for this event.
+     * 
+     * @param dispatcher Event dispatcher handling the event
+     * @param request Pending request
+     */
+    EventRequest(EventDispatcher dispatcher, Event event)
     {
+        this.dispatcher = dispatcher;
         this.event = event;
-        this.responseQueue = responseQueue; 
     }
-    
-    public Event getEvent()
+
+    public synchronized Event getEvent()
     {
         return event;
     }
-    
-    public BlockingQueue<EventStatus> getResponseQueue()
+
+    /**
+     * Adds a client annotation to this event request.
+     */
+    public synchronized void setAnnotation(Object annotation)
     {
-        return responseQueue;
+        this.annotation = annotation;
+    }
+
+    /**
+     * Returns the client annotation or null if no annotation has been added.
+     */
+    public synchronized Object getAnnotation()
+    {
+        return annotation;
+    }
+
+    /**
+     * Marks the event as having started processing.
+     */
+    public synchronized void started()
+    {
+        started = true;
+    }
+
+    /**
+     * Sets the status on a processed event and notifies anyone waiting for
+     * status to arrive.
+     */
+    public synchronized void setStatus(EventStatus status)
+    {
+        this.status = status;
+        this.notifyAll();
+    }
+
+    /**
+     * Cancels the event if still pending, returning true if cancellation is
+     * successful.
+     * 
+     * @see java.util.concurrent.Future#cancel(boolean)
+     */
+    public synchronized boolean cancel(boolean mayInterruptIfRunning)
+    {
+        // Perform cancellation based on where we are.
+        if (!started)
+        {
+            // If we have not started, just mark ourselves for cancellation.
+            this.cancelRequested = true;
+            return true;
+        }
+        else if (isDone())
+        {
+            // Cannot cancel after we are finished.
+            return false;
+        }
+        else
+        {
+            // We are not done and not running, so try to cancel.
+            try
+            {
+                return dispatcher.cancelActive(this, mayInterruptIfRunning);
+            }
+            catch (InterruptedException e)
+            {
+                // Show that we were interrupted. This seems kind of unlikely.
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Returns the event status, waiting indefinitely if necessary until it
+     * completes.
+     * 
+     * @see java.util.concurrent.Future#get()
+     */
+    public synchronized EventStatus get() throws InterruptedException,
+            ExecutionException
+    {
+        while (!isDone())
+        {
+            wait();
+        }
+        return status;
+    }
+
+    /**
+     * Returns the event status, waiting up to a timeout for completion.
+     * 
+     * @throws TimeoutException Thrown if the wait times out
+     * @see java.util.concurrent.Future#get(long, java.util.concurrent.TimeUnit)
+     */
+    public synchronized EventStatus get(long timeout, TimeUnit unit)
+            throws InterruptedException, TimeoutException
+    {
+        // Try to wait on status.
+        if (!isDone())
+        {
+            // Normalize time units to millis. To prevent nanoseconds and
+            // microseconds from being cleared to 0, make sure that any
+            // non-zero value results in 1ms. Java changed its mind
+            // about time units in a kind of messy way, hence this code.
+            long timeoutMillis = convertTimeToMillis(timeout, unit);
+            if (timeout > 0 && timeoutMillis == 0)
+                timeoutMillis = 1;
+            this.wait(timeoutMillis);
+        }
+
+        // If we finished, return status; otherwise signal a timeout.
+        if (isDone())
+            return status;
+        else
+            throw new TimeoutException();
+    }
+
+    /**
+     * Returns true if cancel was requested. It may not have been processed yet.
+     */
+    public synchronized boolean isCancelRequested()
+    {
+        return cancelRequested;
+    }
+
+    /**
+     * Returns true if the event was processed and was cancelled.
+     * 
+     * @see java.util.concurrent.Future#isCancelled()
+     */
+    public synchronized boolean isCancelled()
+    {
+        return (status != null && status.isCancelled());
+    }
+
+    /**
+     * Returns true if event is complete.
+     * 
+     * @see java.util.concurrent.Future#isDone()
+     */
+    public synchronized boolean isDone()
+    {
+        return (status != null);
+    }
+
+    // Converts time to milliseconds.
+    public long convertTimeToMillis(long time, TimeUnit unit)
+    {
+        switch (unit)
+        {
+            case NANOSECONDS :
+                return time / (1000 * 1000);
+            case MICROSECONDS :
+                return time / 1000;
+            case MILLISECONDS :
+                return time;
+            case SECONDS :
+                return time * 1000;
+            case MINUTES :
+                return time * 1000 * 60;
+            case HOURS :
+                return time * 1000 * 60 * 60;
+            case DAYS :
+                return time * 1000 * 60 * 60 * 24;
+            default :
+                return time;
+        }
     }
 }

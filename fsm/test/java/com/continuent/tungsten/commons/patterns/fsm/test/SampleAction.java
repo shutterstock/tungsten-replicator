@@ -19,6 +19,7 @@
  * Initial developer(s): Robert Hodges
  * Contributor(s):
  */
+
 package com.continuent.tungsten.commons.patterns.fsm.test;
 
 import com.continuent.tungsten.commons.patterns.fsm.Action;
@@ -29,60 +30,90 @@ import com.continuent.tungsten.commons.patterns.fsm.TransitionFailureException;
 import com.continuent.tungsten.commons.patterns.fsm.TransitionRollbackException;
 
 /**
- * Sample class to test different kinds of action outcomes. 
+ * Sample class to test different kinds of action outcomes.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class SampleAction implements Action
 {
-    public enum Outcome {SUCCEED, ROLLBACK, FAILURE, BUG, ILLEGAL};
-    
+    public enum Outcome
+    {
+        SUCCEED, ROLLBACK, FAILURE, BUG, ILLEGAL
+    };
+
     private Outcome outcome = Outcome.SUCCEED;
-    private int count = 0;
-    
-    public void setSucceed() 
+    private int     wait    = 0;
+    private int     count   = 0;
+
+    // Set the number of seconds to wait before proceeding to outcome.
+    public void setWaitSeconds(int wait)
+    {
+        this.wait = wait;
+    }
+
+    // Set the outcome.
+    public void setSucceed()
     {
         outcome = Outcome.SUCCEED;
     }
-    public void setRollback() 
+
+    public void setRollback()
     {
         outcome = Outcome.ROLLBACK;
     }
+
     public void setFailure()
     {
         outcome = Outcome.FAILURE;
     }
-    public void setBug() 
+
+    public void setBug()
     {
         outcome = Outcome.BUG;
     }
+
     public void setIllegal()
     {
         outcome = Outcome.ILLEGAL;
     }
+
+    public void setOutcome(Outcome outcome)
+    {
+        this.outcome = outcome;
+    }
+
     public int getCount()
     {
-        return count; 
+        return count;
     }
+
     public void clearCount()
     {
         count = 0;
     }
 
     public void doAction(Event event, Entity entity, Transition transition,
-            int actionType) throws TransitionRollbackException, TransitionFailureException
+            int actionType) throws TransitionRollbackException,
+            TransitionFailureException, InterruptedException
     {
+        // If we have a wait of more than 0, delay for that many seconds.
+        if (wait > 0)
+        {
+            Thread.sleep(wait * 1000L);
+        }
+
+        // Process the outcome.
         if (outcome == Outcome.SUCCEED)
         {
             count++;
             return;
         }
         else if (outcome == Outcome.ROLLBACK)
-            throw new TransitionRollbackException("rollback", event, entity, 
+            throw new TransitionRollbackException("rollback", event, entity,
                     transition, actionType, null);
         else if (outcome == Outcome.FAILURE)
-            throw new TransitionFailureException("rollback", event, entity, 
+            throw new TransitionFailureException("rollback", event, entity,
                     transition, actionType, null);
         else if (outcome == Outcome.BUG)
             throw new RuntimeException("fail");

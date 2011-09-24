@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -16,29 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
- * Initial developer(s):  Teemu Ollakka
- * Contributor(s):  Robert Hodges
+ * Initial developer(s): Robert Hodges
+ * Contributor(s): 
  */
 
 package com.continuent.tungsten.commons.patterns.event;
 
-import com.continuent.tungsten.commons.patterns.fsm.Event;
-
 /**
+ * Denotes an event that should always be submitted out-of-band. If an event
+ * implements this interface it will always be submitted via the #
+ * {@link EventDispatcher#putOutOfBand(com.continuent.tungsten.commons.patterns.fsm.Event)}
+ * method.
  * 
- * This class defines a EventListener, which handles pending events.  
- * 
- * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
- * @version 1.0
+ * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  */
-public interface EventListener
+public interface OutOfBandEvent
 {
-    /**
-     * Hands an event over for processing.
-     * 
-     * @param event Event that listener must process
-     * @throws ReplicatorException Thrown if there is a failure when processing
-     *             the event
-     */
-    public abstract void onEvent(Event event) throws Exception;
 }
