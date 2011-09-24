@@ -39,8 +39,7 @@ import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndia
 public class MysqlBinlog
 {
 
-    static Logger                               logger                              = Logger
-                                                                                            .getLogger(MysqlBinlog.class);
+    static Logger                               logger                              = Logger.getLogger(MysqlBinlog.class);
 
     public static final int                     EVENT_TYPE_OFFSET                   = 4;
     public static final int                     SERVER_ID_OFFSET                    = 5;
@@ -55,6 +54,12 @@ public class MysqlBinlog
     public static final byte[]                  BINLOG_MAGIC                        = {
             (byte) 0xfe, 0x62, 0x69, 0x6e                                           };
 
+    // Binlog versions.
+    public static final int                     VERSION_NONE                        = 0;
+    public static final int                     BINLOG_V1                           = 1;
+    public static final int                     BINLOG_V3                           = 2;
+    public static final int                     BINLOG_V4                           = 3;
+
     /* binlog event types */
     public static final int                     UNKNOWN_EVENT                       = 0;
     public static final int                     START_EVENT_V3                      = 1;
@@ -68,12 +73,6 @@ public class MysqlBinlog
     public static final int                     APPEND_BLOCK_EVENT                  = 9;
     public static final int                     EXEC_LOAD_EVENT                     = 10;
     public static final int                     DELETE_FILE_EVENT                   = 11;
-
-    /*
-     * NEW_LOAD_EVENT is like LOAD_EVENT except that it has a longer sql_ex,
-     * allowing multibyte TERMINATED BY etc; both types share the same class
-     * (Load_log_event)
-     */
     public static final int                     NEW_LOAD_EVENT                      = 12;
     public static final int                     RAND_EVENT                          = 13;
     public static final int                     USER_VAR_EVENT                      = 14;
@@ -710,7 +709,7 @@ public class MysqlBinlog
         // 0x00000005 0x1b38b060 0x00
         // 5 456700000 0
         // 54567000000 / 10^{10} = 5.4567
-        // 
+        //
         // int_size below shows how long is integer part
         //
 

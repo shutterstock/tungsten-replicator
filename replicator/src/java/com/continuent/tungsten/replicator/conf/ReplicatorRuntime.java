@@ -32,7 +32,7 @@ import org.apache.log4j.MDC;
 
 import com.continuent.tungsten.commons.config.PropertyException;
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.filter.FilterManualProperties;
 import com.continuent.tungsten.replicator.management.OpenReplicatorContext;

@@ -32,7 +32,7 @@ import org.junit.After;
 import org.junit.Before;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
+import com.continuent.tungsten.replicator.management.MockEventDispatcher;
 
 /**
  * This class tests the backup manager class (BackupManager) using a dummy
@@ -73,7 +73,7 @@ public class TestBackupManager extends TestCase
     public void testConfiguration() throws Exception
     {
         TungstenProperties props = createProperties("testConfig", false);
-        BackupManager bmgr = new BackupManager(new EventDispatcher());
+        BackupManager bmgr = new BackupManager(new MockEventDispatcher());
         bmgr.initialize(props);
         bmgr.release();
     }
@@ -85,7 +85,7 @@ public class TestBackupManager extends TestCase
      */
     public void testBackupOnEmpty() throws Exception
     {
-        BackupManager bmgr = new BackupManager(new EventDispatcher());
+        BackupManager bmgr = new BackupManager(new MockEventDispatcher());
         bmgr.initialize(new TungstenProperties());
         try
         {
@@ -122,7 +122,7 @@ public class TestBackupManager extends TestCase
     public void testBadNamesAndUris() throws Exception
     {
         TungstenProperties props = createProperties("testConfig", false);
-        BackupManager bmgr = new BackupManager(new EventDispatcher());
+        BackupManager bmgr = new BackupManager(new MockEventDispatcher());
         bmgr.initialize(props);
 
         // Bad backup name.
@@ -166,7 +166,7 @@ public class TestBackupManager extends TestCase
     public void testNoHotBackupAvailable() throws Exception
     {
         TungstenProperties props = createProperties("testConfig", false);
-        BackupManager bmgr = new BackupManager(new EventDispatcher());
+        BackupManager bmgr = new BackupManager(new MockEventDispatcher());
         bmgr.initialize(props);
 
         try
@@ -248,7 +248,7 @@ public class TestBackupManager extends TestCase
     {
         // NOTE: Use timeouts to prevent build hangs.
         TungstenProperties props = createProperties(testName, false);
-        BackupManager bmgr = new BackupManager(new EventDispatcher());
+        BackupManager bmgr = new BackupManager(new MockEventDispatcher());
         bmgr.initialize(props);
 
         // Run a backup and wait for URI to be returned.

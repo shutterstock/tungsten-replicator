@@ -535,7 +535,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
         {
             // Now we go ahead and shutdown completely.
             doShutdown(params);
-            context.getEventDispatcher().handleEvent(new OfflineNotification());
+            context.getEventDispatcher().put(new OfflineNotification());
         }
         catch (ReplicatorException e)
         {
@@ -569,7 +569,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                 logger.info("Initiating clean shutdown at next transaction");
                 pipeline.shutdown(false);
                 pipeline.getContext().getEventDispatcher()
-                        .handleEvent(new GoOfflineEvent());
+                        .put(new GoOfflineEvent());
             }
             else if (params.get(OpenReplicatorParams.OFFLINE_AT_SEQNO) != null)
             {
@@ -617,7 +617,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
             else
             {
                 logger.info("Initiating immediate pipeline shutdown");
-                context.getEventDispatcher().handleEvent(new GoOfflineEvent());
+                context.getEventDispatcher().put(new GoOfflineEvent());
             }
         }
         catch (ReplicatorException e)

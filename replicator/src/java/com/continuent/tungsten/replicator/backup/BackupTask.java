@@ -27,8 +27,8 @@ import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 import com.continuent.tungsten.replicator.ErrorNotification;
-import com.continuent.tungsten.replicator.EventDispatcher;
 
 /**
  * Processes a backup command including dumping data from the database and
@@ -86,7 +86,7 @@ public class BackupTask implements Callable<String>
             logger.error(message, e);
             try
             {
-                eventDispatcher.handleEvent(new ErrorNotification(message, e));
+                eventDispatcher.put(new ErrorNotification(message, e));
             }
             catch (InterruptedException ie)
             {
@@ -109,7 +109,7 @@ public class BackupTask implements Callable<String>
             logger.info("Backup completed normally: uri=" + uri);
             try
             {
-                eventDispatcher.handleEvent(new BackupCompletionNotification(
+                eventDispatcher.put(new BackupCompletionNotification(
                         uri));
             }
             catch (InterruptedException ie)

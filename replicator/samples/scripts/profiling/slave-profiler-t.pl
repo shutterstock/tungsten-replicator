@@ -114,7 +114,13 @@ if ($TARGET eq "mysql") {
   print "MySQL command: $cmd\n";
 }
 else {
-  $cmd = "/opt/rhodges/tungsten/tungsten-replicator/bin/trepctl status";
+  my $trepctl = `which trepctl`;
+  chomp $trepctl;
+  if ($trepctl eq "") {
+    print "Unable to find trepctl command in path!\n";
+    exit 1;
+  } 
+  $cmd = "$trepctl status";
   print "Tungsten command: $cmd\n";
 }
 
@@ -154,7 +160,7 @@ while ($iterations < $ITERATIONS or $ITERATIONS == 0) {
 
     # Compute bytes processed and change thereon.  MySQL and Tungsten 
     # regular expressions are provided. 
-    if (/Exec_Master_Log_Pos: ([0-9]+)/ || /appliedLastEventId\s*: \d+:(\d+);/) {
+    if (/Exec_Master_Log_Pos: ([0-9]+)/ || /appliedLastEventId\s*: .*\.\d+:(\d+);/) {
       my $log_pos = $1;
       if (defined $last_log_pos) {
         if ($last_log_pos > $log_pos) {

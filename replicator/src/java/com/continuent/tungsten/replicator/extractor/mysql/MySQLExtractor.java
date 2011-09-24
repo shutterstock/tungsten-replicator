@@ -22,7 +22,6 @@
 
 package com.continuent.tungsten.replicator.extractor.mysql;
 
-import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.sql.ResultSet;
@@ -30,7 +29,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 
@@ -58,7 +56,6 @@ import com.continuent.tungsten.replicator.event.ReplOption;
 import com.continuent.tungsten.replicator.event.ReplOptionParams;
 import com.continuent.tungsten.replicator.extractor.ExtractorException;
 import com.continuent.tungsten.replicator.extractor.RawExtractor;
-import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndianConversion;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
@@ -98,7 +95,7 @@ public class MySQLExtractor implements RawExtractor
     private String                          url;
 
     private static long                     binlogPositionMaxLength = 10;
-    BinlogPosition                          binlogPosition          = null;
+    BinlogReader                            binlogPosition          = null;
 
     // Number of milliseconds to wait before checking log index for a missing
     // log-rotate event.
@@ -309,244 +306,75 @@ public class MySQLExtractor implements RawExtractor
         bufferSize = size;
     }
 
-    /*
-     * Read binlog file header and verify it.
-     */
-    private void check_header(BinlogPosition position)
-            throws ReplicatorException
-    {
-
-        byte header[] = new byte[MysqlBinlog.BIN_LOG_HEADER_SIZE];
-        byte buf[] = new byte[MysqlBinlog.PROBE_HEADER_LEN];
-        long tmp_pos = 0;
-
-        FormatDescriptionLogEvent description_event = new FormatDescriptionLogEvent(
-                3);
-        try
-        {
-            if (position.getFileInputStream().read(header) != header.length)
-            {
-                throw new MySQLExtractException(
-                        "Failed reading header;  Probably an empty file");
-            }
-            tmp_pos = header.length;
-        }
-        catch (IOException e1)
-        {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
-
-        if (!Arrays.equals(header, MysqlBinlog.BINLOG_MAGIC))
-        {
-            throw new MySQLExtractException(
-                    "File is not a binary log file - found : "
-                            + LogEvent.hexdump(header) + " / expected : "
-                            + LogEvent.hexdump(MysqlBinlog.BINLOG_MAGIC));
-        }
-
-        /*
-         * Imagine we are running with --start-position=1000. We still need to
-         * know the binlog format's. So we still need to find, if there is one,
-         * the Format_desc event, or to know if this is a 3.23 binlog. So we
-         * need to first read the first events of the log, those around offset
-         * 4. Even if we are reading a 3.23 binlog from the start (no
-         * --start-position): we need to know the header length (which is 13 in
-         * 3.23, 19 in 4.x) to be able to successfully print the first event
-         * (Start_log_event_v3). So even in this case, we need to "probe" the
-         * first bytes of the logbefore we do a real read_log_event(). Because
-         * read_log_event() needs to know the header's length to work fine.
-         */
-        for (;;)
-        {
-            try
-            {
-                /* mark a savepoint for further reset call */
-                position.getFileInputStream().mark(2048);
-
-                position.getDataInputStream().readFully(buf);
-                tmp_pos += buf.length;
-
-                logger.debug("buf[4]=" + buf[4]);
-                long start_position = 0;
-                /* always test for a Start_v3, even if no --start-position */
-                if (buf[4] == MysqlBinlog.START_EVENT_V3)
-                {
-                    /* This is 3.23 or 4.x */
-                    if (LittleEndianConversion.convert4BytesToLong(buf,
-                            MysqlBinlog.EVENT_LEN_OFFSET) < (MysqlBinlog.LOG_EVENT_MINIMAL_HEADER_LEN + MysqlBinlog.START_V3_HEADER_LEN))
-                    {
-                        /* This is 3.23 (format 1) */
-                        description_event = new FormatDescriptionLogEvent(1);
-                    }
-                    break;
-                }
-                else if (tmp_pos >= start_position)
-                    break;
-                else if (buf[4] == MysqlBinlog.FORMAT_DESCRIPTION_EVENT)
-                {
-                    /* This is 5.0 */
-                    FormatDescriptionLogEvent new_description_event;
-                    position.getFileInputStream().reset(); /*
-                                                            * seek back to
-                                                            * event's start
-                                                            */
-                    new_description_event = (FormatDescriptionLogEvent) LogEvent
-                            .readLogEvent(runtime, position, description_event,
-                                    parseStatements, useBytesForStrings,
-                                    prefetchSchemaNameLDI);
-                    if (new_description_event == null)
-                    /* EOF can't be hit here normally, so it's a real error */
-                    {
-                        throw new MySQLExtractException(
-                                "Could not read a Format_description_log_event event "
-                                        + "at offset "
-                                        + tmp_pos
-                                        + "this could be a log format error or read error");
-                    }
-                    description_event = new_description_event;
-                    logger.debug("Setting description_event");
-                }
-                else if (buf[4] == MysqlBinlog.ROTATE_EVENT)
-                {
-                    LogEvent ev;
-                    position.getFileInputStream().reset(); /*
-                                                            * seek back to
-                                                            * event's start
-                                                            */
-                    ev = LogEvent.readLogEvent(runtime, position,
-                            description_event, parseStatements,
-                            useBytesForStrings, prefetchSchemaNameLDI);
-                    if (ev == null)
-                    /* EOF can't be hit here normally, so it's a real error */
-                    {
-                        throw new MySQLExtractException(
-                                "Could not read a Rotate_log_event event "
-                                        + "at offset "
-                                        + tmp_pos
-                                        + " this could be a log format error or "
-                                        + "read error");
-                    }
-                }
-                else
-                {
-                    break;
-                }
-            }
-            catch (EOFException e)
-            {
-                /*
-                 * Otherwise this is just EOF : this log currently contains 0-2
-                 * events. Maybe it's going to be filled in the next
-                 * milliseconds; then we are going to have a problem if this a
-                 * 3.23 log (imagine we are locally reading a 3.23 binlog which
-                 * is being written presently): we won't know it in
-                 * read_log_event() and will fail(). Similar problems could
-                 * happen with hot relay logs if --start-position is used (but a
-                 * --start-position which is posterior to the current size of
-                 * the log). These are rare problems anyway (reading a hot log +
-                 * when we read the first events there are not all there yet +
-                 * when we read a bit later there are more events + using a
-                 * strange --start-position).
-                 */
-                break;
-            }
-            catch (IOException e)
-            {
-                throw new MySQLExtractException(
-                        "Could not read entry at offset " + tmp_pos
-                                + " : Error in log format or read error", e);
-            }
-        }
-        try
-        {
-            position.getFileInputStream().reset();
-        }
-        catch (IOException e)
-        {
-            throw new MySQLExtractException("Error while resetting stream", e);
-        } /* seek back to event's start */
-    }
-
-    private LogEvent processFile(BinlogPosition position)
+    // Reads the next log from the file.
+    private LogEvent processFile(BinlogReader position)
             throws ReplicatorException, InterruptedException
     {
         try
         {
-            if (position.getFileInputStream() == null)
+            // Open up the binlog if we have not done so already.
+            if (!position.isOpen())
             {
-                position.openFile();
+                position.open();
             }
             if (logger.isDebugEnabled())
                 logger.debug("extracting from pos, file: "
                         + position.getFileName() + " pos: "
                         + position.getPosition());
-            if (position.getFileInputStream() != null)
+            long indexCheckStart = System.currentTimeMillis();
+
+            // Read from the binlog.
+            while (position.available() == 0)
             {
-                long indexCheckStart = System.currentTimeMillis();
-                // read from the ready stream
-                while (position.getDataInputStream().available() == 0)
+                // TREP-301 - If we are waiting at the end of the file we
+                // must check that we are not reading a log file that is
+                // missing a log-rotate record.
+                if (System.currentTimeMillis() - indexCheckStart > INDEX_CHECK_INTERVAL)
                 {
-                    // TREP-301 - If we are waiting at the end of the file we
-                    // must check that we are not reading a log file that is
-                    // missing a log-rotate record.
-                    if (System.currentTimeMillis() - indexCheckStart > INDEX_CHECK_INTERVAL)
+                    BinlogIndex bi = new BinlogIndex(binlogDir,
+                            binlogFilePattern, true);
+                    File nextBinlog = bi.nextBinlog(position.getFileName());
+                    if (nextBinlog != null)
                     {
-                        BinlogIndex bi = new BinlogIndex(binlogDir,
-                                binlogFilePattern, true);
-                        File nextBinlog = bi.nextBinlog(position.getFileName());
-                        if (nextBinlog != null)
-                        {
-                            // We are stuck at the tail of one binlog with more
-                            // to follow. Generate and return fake log-rotate
-                            // event.
-                            logger.warn("Current log file appears to be missing log-rotate event: "
-                                    + position.getFileName());
-                            logger.info("Auto-generating log-rotate event for next binlog file: "
-                                    + nextBinlog.getName());
-                            return new RotateLogEvent(nextBinlog.getName());
-                        }
-
-                        // Ensure relay logs are running.
-                        assertRelayLogsEnabled();
-
-                        // Update index check time.
-                        indexCheckStart = System.currentTimeMillis();
+                        // We are stuck at the tail of one binlog with more
+                        // to follow. Generate and return fake log-rotate
+                        // event.
+                        logger.warn("Current log file appears to be missing log-rotate event: "
+                                + position.getFileName());
+                        logger.info("Auto-generating log-rotate event for next binlog file: "
+                                + nextBinlog.getName());
+                        return new RotateLogEvent(nextBinlog.getName());
                     }
 
-                    // Sleep for a while.
-                    Thread.sleep(10);
-                }
-                /* TODO assume version 5.0 log */
-                FormatDescriptionLogEvent description_event = new FormatDescriptionLogEvent(
-                        4);
+                    // Ensure relay logs are running.
+                    assertRelayLogsEnabled();
 
-                if (position.getPosition() == 0)
-                {
-                    check_header(position);
-                    position.setPosition(0);
-                    position.openFile();
-                    byte[] buf = new byte[MysqlBinlog.BIN_LOG_HEADER_SIZE];
-                    position.getDataInputStream().readFully(buf);
-                    position.setPosition(MysqlBinlog.BIN_LOG_HEADER_SIZE);
+                    // Update index check time.
+                    indexCheckStart = System.currentTimeMillis();
                 }
 
-                LogEvent event = LogEvent.readLogEvent(runtime, position,
-                        description_event, parseStatements, useBytesForStrings,
-                        prefetchSchemaNameLDI);
-                position.setEventID(position.getEventID() + 1);
-
-                return event;
-
+                // Sleep for a while.
+                Thread.sleep(10);
             }
-            else
-            {
-                throw new MySQLExtractException("binlog file channel not open");
-            }
+
+            // We can assume a V4 format description as we don't support MySQL
+            // versions prior to 5.0.
+            FormatDescriptionLogEvent description_event = new FormatDescriptionLogEvent(
+                    4);
+
+            // Read from the log.
+            LogEvent event = LogEvent.readLogEvent(runtime, position,
+                    description_event, parseStatements, useBytesForStrings,
+                    prefetchSchemaNameLDI);
+            position.setEventID(position.getEventID() + 1);
+
+            return event;
         }
         catch (IOException e)
         {
-            throw new MySQLExtractException("binlog file read error", e);
+            throw new MySQLExtractException("Binlog file read error: file="
+                    + position.getFileName() + " offset="
+                    + position.getPosition(), e);
         }
     }
 
@@ -554,7 +382,7 @@ public class MySQLExtractor implements RawExtractor
      * Return BinlogPosition in String representation. This serves as EventId
      * for DBMSEvent.
      */
-    private static String getDBMSEventId(BinlogPosition binlogPosition,
+    private static String getDBMSEventId(BinlogReader binlogPosition,
             long sessionId)
     {
         String fileName = binlogPosition.getFileName();
@@ -573,7 +401,7 @@ public class MySQLExtractor implements RawExtractor
      * head of the newly opened log. If flush parameter is set, perform log
      * flushing as well
      */
-    private BinlogPosition positionBinlogMaster(boolean flush)
+    private BinlogReader positionBinlogMaster(boolean flush)
             throws ReplicatorException
     {
         Database conn = null;
@@ -607,7 +435,7 @@ public class MySQLExtractor implements RawExtractor
 
             logger.info("Starting from master binlog position: " + binlogFile
                     + ":" + binlogOffset);
-            return new BinlogPosition(binlogOffset, binlogFile, binlogDir,
+            return new BinlogReader(binlogOffset, binlogFile, binlogDir,
                     binlogFilePattern, bufferSize);
         }
         catch (SQLException e)
@@ -626,7 +454,7 @@ public class MySQLExtractor implements RawExtractor
      * Find current position on running MySQL slave, stop the slave, and
      * position on the master binlog where the slave stopped.
      */
-    private BinlogPosition positionFromSlaveStatus() throws ReplicatorException
+    private BinlogReader positionFromSlaveStatus() throws ReplicatorException
     {
         Database conn = null;
         Statement st = null;
@@ -658,7 +486,7 @@ public class MySQLExtractor implements RawExtractor
 
             logger.info("Starting from position: " + binlogFile + ":"
                     + binlogOffset);
-            return new BinlogPosition(binlogOffset, binlogFile, binlogDir,
+            return new BinlogReader(binlogOffset, binlogFile, binlogDir,
                     binlogFilePattern, bufferSize);
         }
         catch (SQLException e)
@@ -677,10 +505,9 @@ public class MySQLExtractor implements RawExtractor
      * Extract single event from binlog. Note that this method assumes that
      * given position does not point in the middle of transaction.
      */
-    private DBMSEvent extractEvent(BinlogPosition position)
+    private DBMSEvent extractEvent(BinlogReader position)
             throws ReplicatorException, InterruptedException
     {
-
         boolean inTransaction = fragmentedTransaction;
         fragmentedTransaction = false;
         boolean autocommitMode = true;
@@ -701,7 +528,6 @@ public class MySQLExtractor implements RawExtractor
             int serverId = -1;
             while (true)
             {
-                BinlogPosition previousPosition = position.clone();
                 DBMSEvent dbmsEvent = null;
                 LogEvent logEvent = processFile(position);
                 if (logEvent == null)
@@ -836,7 +662,7 @@ public class MySQLExtractor implements RawExtractor
                     }
                     else
                     {
-                        // some optimisation: it makes sense to check for
+                        // some optimization: it makes sense to check for
                         // 'CREATE DATABASE' only if we know that it is not
                         // regular DML - this is a fix for TREP-52 - attempt
                         // to use DB which hasn't been created yet.
@@ -991,8 +817,7 @@ public class MySQLExtractor implements RawExtractor
                     // be reading an old log file. We therefore ignore them
                     // and reread which makes us treat the file like a binlog
                     // with a missing ROTATE_LOG event.
-                    String stopEventId = getDBMSEventId(previousPosition,
-                            sessionId);
+                    String stopEventId = getDBMSEventId(position, sessionId);
                     logger.info("Skipping over server stop event in log: "
                             + stopEventId);
                 }
@@ -1016,10 +841,10 @@ public class MySQLExtractor implements RawExtractor
                     else
                     {
                         // It's real so we need to rotate the log.
-                        position.reset();
+                        position.close();
                         position.setFileName(((RotateLogEvent) logEvent)
                                 .getNewBinlogFilename());
-                        position.openFile();
+                        position.open();
                         // Kick off an asynchronous scan for old relay logs.
                         if (useRelayLogs)
                             purgeRelayLogs(false);
@@ -1247,6 +1072,7 @@ public class MySQLExtractor implements RawExtractor
     /**
      * {@inheritDoc}
      * 
+     * @throws InterruptedException
      * @see com.continuent.tungsten.replicator.extractor.RawExtractor#setLastEventId(java.lang.String)
      */
     public void setLastEventId(String eventId) throws ReplicatorException
@@ -1280,7 +1106,7 @@ public class MySQLExtractor implements RawExtractor
                 binlogFile = binlogFilePattern + "." + binlogFileIndex;
 
             // Set the binlog position.
-            binlogPosition = new BinlogPosition(binlogOffset, binlogFile,
+            binlogPosition = new BinlogReader(binlogOffset, binlogFile,
                     binlogDir, binlogFilePattern, bufferSize);
         }
         else
@@ -1305,9 +1131,6 @@ public class MySQLExtractor implements RawExtractor
         // position.
         startRelayLogs(binlogPosition.getFileName(),
                 binlogPosition.getPosition());
-
-        // Now open the binlog file.
-        binlogPosition.openFile();
     }
 
     /**

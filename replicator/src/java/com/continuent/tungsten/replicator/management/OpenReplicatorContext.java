@@ -22,7 +22,7 @@
 
 package com.continuent.tungsten.replicator.management;
 
-import com.continuent.tungsten.replicator.EventDispatcher;
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 
 /**
  * This class defines a context passed into replicator plugins that exposes

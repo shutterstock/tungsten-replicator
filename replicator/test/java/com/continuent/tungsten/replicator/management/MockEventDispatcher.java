@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,27 +22,44 @@
 
 package com.continuent.tungsten.replicator.management;
 
-import com.continuent.tungsten.commons.jmx.JmxManager;
+import com.continuent.tungsten.commons.patterns.event.EventCompletionListener;
 import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
+import com.continuent.tungsten.commons.patterns.event.EventRequest;
+import com.continuent.tungsten.commons.patterns.fsm.Event;
 
 /**
- * Dummy OpenReplicatorContext used for testing.
+ * Dummy event dispatcher used for testing.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
-public class MockOpenReplicatorContext implements OpenReplicatorContext
+public class MockEventDispatcher implements EventDispatcher
 {
-    private EventDispatcher eventDispatcher = new MockEventDispatcher();
-
-    public EventDispatcher getEventDispatcher()
+    @Override
+    public void setListener(EventCompletionListener listener)
     {
-        return eventDispatcher;
+        // Do nothing.
     }
 
-    public void registerMBean(Object mbean, Class<?> mbeanClass, String name)
+    @Override
+    public EventRequest put(Event event) throws InterruptedException
     {
-        // TODO: Handle names correctly.
-        JmxManager.registerMBean(mbean, mbeanClass);
+        // Do nothing.
+        return null;
+    }
+
+    @Override
+    public EventRequest putOutOfBand(Event event) throws InterruptedException
+    {
+        // Do nothing.
+        return null;
+    }
+
+    @Override
+    public boolean cancelActive(EventRequest request,
+            boolean mayInterruptIfRunning) throws InterruptedException
+    {
+        // Do nothing.
+        return false;
     }
 }

@@ -27,6 +27,8 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.io.BufferedFileDataInput;
+import com.continuent.tungsten.commons.io.BufferedFileDataOutput;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.thl.THLException;
 

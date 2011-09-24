@@ -34,7 +34,7 @@ import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.config.PropertyException;
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 
 /**
  * Implements a manager that tracks all backup agents.

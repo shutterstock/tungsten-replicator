@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -53,6 +54,11 @@ import com.continuent.tungsten.commons.jmx.DynamicMBeanHelper;
 import com.continuent.tungsten.commons.jmx.JmxManager;
 import com.continuent.tungsten.commons.jmx.MethodDesc;
 import com.continuent.tungsten.commons.jmx.ParamDesc;
+import com.continuent.tungsten.commons.patterns.event.EventCompletionListener;
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
+import com.continuent.tungsten.commons.patterns.event.EventDispatcherTask;
+import com.continuent.tungsten.commons.patterns.event.EventRequest;
+import com.continuent.tungsten.commons.patterns.event.EventStatus;
 import com.continuent.tungsten.commons.patterns.fsm.Action;
 import com.continuent.tungsten.commons.patterns.fsm.Entity;
 import com.continuent.tungsten.commons.patterns.fsm.EntityAdapter;
@@ -72,8 +78,6 @@ import com.continuent.tungsten.commons.patterns.fsm.TransitionFailureException;
 import com.continuent.tungsten.commons.patterns.fsm.TransitionNotFoundException;
 import com.continuent.tungsten.commons.patterns.fsm.TransitionRollbackException;
 import com.continuent.tungsten.replicator.ErrorNotification;
-import com.continuent.tungsten.replicator.EventDispatcher;
-import com.continuent.tungsten.replicator.EventListener;
 import com.continuent.tungsten.replicator.InSequenceNotification;
 import com.continuent.tungsten.replicator.OutOfSequenceNotification;
 import com.continuent.tungsten.replicator.ReplicatorException;
@@ -105,7 +109,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             OpenReplicatorManagerMBean,
             OpenReplicatorContext,
             StateChangeListener,
-            EventListener
+            EventCompletionListener
 {
     public static final int         MAJOR                   = 1;
     public static final int         MINOR                   = 0;
@@ -124,7 +128,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     private PropertiesManager       propertiesManager       = null;
 
     // Subsystems
-    private EventDispatcher         eventDispatcher         = null;
+    private EventDispatcherTask     eventDispatcher         = null;
     private BackupManager           backupManager           = null;
 
     // State machine
@@ -430,9 +434,9 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         sm.addListener(this);
 
         // Start the event dispatcher.
-        eventDispatcher = new EventDispatcher();
-        eventDispatcher.addListener(this);
-        eventDispatcher.start();
+        eventDispatcher = new EventDispatcherTask(sm);
+        eventDispatcher.setListener(this);
+        eventDispatcher.start(serviceName + "-dispatcher");
 
         // Start the property manager.
         ReplicatorRuntimeConf runtimeConf = ReplicatorRuntimeConf
@@ -501,78 +505,91 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     }
 
     /**
-     * Event listener interface. This drives all processing manager by turning
-     * events into appropriate state machine changes. {@inheritDoc}
+     * Log events as they are processed in the replicator state machine.
      * 
-     * @see com.continuent.tungsten.replicator.EventListener#onEvent(com.continuent.tungsten.commons.patterns.fsm.Event)
+     * @see com.continuent.tungsten.commons.patterns.event.EventCompletionListener#onCompletion(com.continuent.tungsten.commons.patterns.event.EventRequest)
      */
-    public void onEvent(Event event) throws ReplicatorException
+    public Object onCompletion(Event event, EventStatus status)
+            throws InterruptedException
     {
-        if (logger.isDebugEnabled())
-            logger.debug("ReplEvent: " + event.getClass().getSimpleName());
-
-        // Process next event.
-        try
+        // Log according to status of the event.
+        Object annotation = null;
+        if (status.isSuccessful())
         {
-            sm.applyEvent(event);
             if (logger.isDebugEnabled())
                 logger.debug("Applied event: "
                         + event.getClass().getSimpleName());
         }
-        catch (TransitionNotFoundException e)
+        else if (status.isCancelled())
         {
-            // This is just a warning. We received an event that is
-            // inappropriate for the current state.
-            StringBuffer msg = new StringBuffer();
-            msg.append("Received irrelevant event for current state: state=");
-            msg.append(e.getState().getName());
-            msg.append(" event=");
-            msg.append(e.getEvent().getClass().getSimpleName());
-            logger.warn(msg.toString());
-            endUserLog.warn(msg.toString());
-            throw new ReplicatorStateException(
-                    "Operation irrelevant in current state");
+            logger.warn("Event processing was cancelled: "
+                    + event.getClass().getSimpleName());
         }
-        catch (TransitionRollbackException e)
+        else if (status.getException() != null)
         {
-            // A transition could not complete and rolled back to the
-            // original state.
-            StringBuffer msg = new StringBuffer();
-            msg.append("State transition could not complete and was rolled back: state=");
-            msg.append(e.getTransition().getInput().getName());
-            msg.append(" transition=");
-            msg.append(e.getTransition().getName());
-            msg.append(" event=");
-            msg.append(e.getEvent().getClass().getSimpleName());
-            String errMsg = msg.toString();
-            endUserLog.error(errMsg);
-            displayErrorMessages(e);
-            throw getStateMachineException(e, errMsg);
+            Throwable t = status.getException();
+
+            if (t instanceof TransitionNotFoundException)
+            {
+                // This is just a warning. We received an event that is
+                // inappropriate for the current state.
+                TransitionNotFoundException e = (TransitionNotFoundException) t;
+                StringBuffer msg = new StringBuffer();
+                msg.append("Received irrelevant event for current state: state=");
+                msg.append(e.getState().getName());
+                msg.append(" event=");
+                msg.append(e.getEvent().getClass().getSimpleName());
+                logger.warn(msg.toString());
+                endUserLog.warn(msg.toString());
+                annotation = new ReplicatorStateException(
+                        "Operation irrelevant in current state");
+            }
+            else if (t instanceof TransitionRollbackException)
+            {
+                // A transition could not complete and rolled back to the
+                // original state.
+                TransitionRollbackException e = (TransitionRollbackException) t;
+                StringBuffer msg = new StringBuffer();
+                msg.append("State transition could not complete and was rolled back: state=");
+                msg.append(e.getTransition().getInput().getName());
+                msg.append(" transition=");
+                msg.append(e.getTransition().getName());
+                msg.append(" event=");
+                msg.append(e.getEvent().getClass().getSimpleName());
+                String errMsg = msg.toString();
+                endUserLog.error(errMsg);
+                displayErrorMessages(e);
+                annotation = getStateMachineException(e, errMsg);
+            }
+            else if (t instanceof TransitionFailureException)
+            {
+                // A transition failed, causing the replicator to go into the
+                // OFFLINE:ERROR state.
+                TransitionFailureException e = (TransitionFailureException) t;
+                StringBuffer msg = new StringBuffer();
+                msg.append("State transition failed causing emergency recovery: state=");
+                msg.append(e.getTransition().getInput().getName());
+                msg.append(" transition=");
+                msg.append(e.getTransition().getName());
+                msg.append(" event=");
+                msg.append(e.getEvent().getClass().getSimpleName());
+                String errMsg = msg.toString();
+                endUserLog.error(errMsg);
+                displayErrorMessages(e);
+                annotation = getStateMachineException(e, errMsg);
+            }
+            else if (t instanceof FiniteStateException)
+            {
+                // Should not exit here, this event may be result of
+                // user operation
+                logger.error("Unexpected state transition processing error", t);
+                annotation = new ReplicatorException(
+                        "Operation failed unexpectedly--see log for details");
+            }
         }
-        catch (TransitionFailureException e)
-        {
-            // A transition failed, causing the replicator to go into the
-            // OFFLINE:ERROR state.
-            StringBuffer msg = new StringBuffer();
-            msg.append("State transition failed causing emergency recovery: state=");
-            msg.append(e.getTransition().getInput().getName());
-            msg.append(" transition=");
-            msg.append(e.getTransition().getName());
-            msg.append(" event=");
-            msg.append(e.getEvent().getClass().getSimpleName());
-            String errMsg = msg.toString();
-            endUserLog.error(errMsg);
-            displayErrorMessages(e);
-            throw getStateMachineException(e, errMsg);
-        }
-        catch (FiniteStateException e)
-        {
-            // Should not exit here, this event may be result of
-            // user operation
-            logger.error("Unexpected state transition processing error", e);
-            throw new ReplicatorException(
-                    "Operation failed unexpectedly--see log for details");
-        }
+
+        // Return the annotation we have attached to the event.
+        return annotation;
     }
 
     /**
@@ -1007,9 +1024,12 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         }
     }
 
+    // Echo error messages to the user log.
     private void displayErrorMessages(Exception exception)
     {
-        endUserLog.error(exception.getMessage());
+        String message = exception.getMessage();
+        endUserLog.error(String.format("[%s] message: %s", exception.getClass()
+                .getSimpleName(), message));
 
         Throwable error = exception.getCause();
         boolean stop = false;
@@ -1027,7 +1047,9 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             else
                 stop = false;
 
-            endUserLog.error(error.getMessage());
+            String message2 = error.getMessage();
+            endUserLog.error(String.format("[%s] message: %s", error.getClass()
+                    .getSimpleName(), message2));
             error = error.getCause();
         }
     }
@@ -1150,7 +1172,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
              */
             try
             {
-                eventDispatcher.handleEvent(new ConfiguredNotification());
+                eventDispatcher.put(new ConfiguredNotification());
             }
             catch (InterruptedException e)
             {
@@ -1200,7 +1222,7 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     {
         public void doAction(Event event, Entity entity, Transition transition,
                 int actionType) throws TransitionRollbackException,
-                TransitionFailureException
+                TransitionFailureException, InterruptedException
         {
             // This is a pass-through to the enclosed action.
             ExtendedActionEvent extendedEvent = (ExtendedActionEvent) event;
@@ -2715,15 +2737,18 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
 
     /**
      * Wrapper method for methods that submits a synchronous event with proper
-     * MBean error handling.
+     * MBean error handling. This translates the various state machine
+     * exceptions into a proper replicator exception.
      * 
      * @throws ReplicatorException
      */
     private void handleEventSynchronous(Event event) throws ReplicatorException
     {
+        EventRequest request = null;
         try
         {
-            eventDispatcher.handleEventSynchronous(event);
+            request = eventDispatcher.put(event);
+            request.get();
         }
         catch (InterruptedException e)
         {
@@ -2731,12 +2756,23 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             logger.warn("Event processing was interrupted: "
                     + event.getClass().getName());
             Thread.currentThread().interrupt();
+            return;
         }
-        catch (ReplicatorException e)
+        catch (ExecutionException e)
         {
+            logger.warn("Event processing failed: "
+                    + event.getClass().getName(), e);
+            return;
+        }
+
+        // Check for errors.
+        Object annotation = request.getAnnotation();
+        if (annotation instanceof ReplicatorException)
+        {
+            ReplicatorException e = (ReplicatorException) annotation;
             if (logger.isDebugEnabled())
                 logger.debug("Event processing failed", e);
-            throw new ReplicatorException("Event processing failed", e);
+            throw e;
         }
     }
 

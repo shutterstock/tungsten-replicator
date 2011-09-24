@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,16 +22,19 @@
 
 package com.continuent.tungsten.replicator;
 
+import com.continuent.tungsten.commons.patterns.event.OutOfBandEvent;
 import com.continuent.tungsten.commons.patterns.fsm.Event;
 
 /**
  * This class defines a ErrorNotification, which denotes a severe replication
- * error that causes replication to fail. 
+ * error that causes replication to fail. It implements the OutOfBandEvent
+ * interface to ensure it is processed out-of-band no matter how it is submitted
+ * to the state machine.
  * 
  * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
  * @version 1.0
  */
-public class ErrorNotification extends Event
+public class ErrorNotification extends Event implements OutOfBandEvent
 {
     private final String userMessage;
     private final long   seqno;

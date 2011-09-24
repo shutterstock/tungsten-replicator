@@ -34,7 +34,6 @@ import org.junit.After;
 import org.junit.Before;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
 import com.continuent.tungsten.replicator.applier.ApplierWrapper;
 import com.continuent.tungsten.replicator.applier.DummyApplier;
 import com.continuent.tungsten.replicator.applier.RawApplier;
@@ -44,6 +43,7 @@ import com.continuent.tungsten.replicator.dbms.StatementData;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.extractor.DummyExtractor;
 import com.continuent.tungsten.replicator.extractor.ExtractorWrapper;
+import com.continuent.tungsten.replicator.management.MockEventDispatcher;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
 
 /**
@@ -105,7 +105,7 @@ public class PipelineTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
         pipeline.shutdown(false);
         pipeline.release(runtime);
     }
@@ -122,7 +122,7 @@ public class PipelineTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
         Thread.sleep(1000);
         long seqno = pipeline.getLastExtractedSeqno();
         assertEquals("Expect seqno to be 9 after 10 Xacts", 9, seqno);
@@ -152,7 +152,7 @@ public class PipelineTest extends TestCase
         // Set the skip count.
         Stage stage = pipeline.getStages().get(0);
         stage.applySkipCount = 5;
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
         Thread.sleep(1000);
 
         // Ensure that we have gotten the right count of extract transactions.
@@ -214,7 +214,7 @@ public class PipelineTest extends TestCase
     private void startAndAssertEventsApplied(Pipeline pipeline,
             Future<Pipeline> wait) throws Exception
     {
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
         Thread.sleep(1000);
 
         // Ensure future completes.
@@ -251,7 +251,7 @@ public class PipelineTest extends TestCase
 
         // Start pipeline and let it run.
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
         Thread.sleep(1000);
 
         // Shut down at an event we have already reached and assert that
@@ -280,7 +280,7 @@ public class PipelineTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Set dummy extractor to do 1M transactions, but don't store anything.
         Stage stage0 = pipeline.getStages().get(0);
@@ -327,7 +327,7 @@ public class PipelineTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Test for successfully applied and extracted sequence numbers.
         Future<ReplDBMSHeader> future = pipeline
@@ -399,7 +399,7 @@ public class PipelineTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Test for successfully applied and extracted sequence numbers.
         Future<ReplDBMSHeader> future = pipeline
@@ -437,7 +437,7 @@ public class PipelineTest extends TestCase
 
         // Prepare and start the pipeline.
         runtime.prepare();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Wait for and verify events.
         Future<ReplDBMSHeader> wait = pipeline.watchForAppliedSequenceNumber(9);
@@ -467,7 +467,7 @@ public class PipelineTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Set dummy extractor to do 1M transactions, but don't store anything.
         Stage stage0 = pipeline.getStages().get(0);

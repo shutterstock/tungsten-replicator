@@ -25,7 +25,7 @@ package com.continuent.tungsten.replicator.plugin;
 import java.util.List;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 import com.continuent.tungsten.replicator.conf.FailurePolicy;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.storage.Store;

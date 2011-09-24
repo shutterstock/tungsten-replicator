@@ -33,7 +33,6 @@ import junit.framework.TestCase;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
 import com.continuent.tungsten.replicator.applier.ApplierWrapper;
 import com.continuent.tungsten.replicator.applier.DummyApplier;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
@@ -46,6 +45,7 @@ import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplOptionParams;
 import com.continuent.tungsten.replicator.extractor.DummyExtractor;
+import com.continuent.tungsten.replicator.management.MockEventDispatcher;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
 import com.continuent.tungsten.replicator.pipeline.Pipeline;
 import com.continuent.tungsten.replicator.pipeline.PipelineConfigBuilder;
@@ -82,7 +82,7 @@ public class TestTHL2 extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Wait for and verify events.
         Future<ReplDBMSHeader> wait = pipeline.watchForAppliedSequenceNumber(9);
@@ -175,8 +175,8 @@ public class TestTHL2 extends TestCase
         Pipeline clientPipeline = clientRuntime.getPipeline();
 
         // Start both pipelines.
-        serverPipeline.start(new EventDispatcher());
-        clientPipeline.start(new EventDispatcher());
+        serverPipeline.start(new MockEventDispatcher());
+        clientPipeline.start(new MockEventDispatcher());
 
         // Wait for both pipelines to finish.
         Future<ReplDBMSHeader> waitServer = serverPipeline
@@ -263,8 +263,8 @@ public class TestTHL2 extends TestCase
         Pipeline clientPipeline = clientRuntime.getPipeline();
 
         // Start both pipelines.
-        serverPipeline.start(new EventDispatcher());
-        clientPipeline.start(new EventDispatcher());
+        serverPipeline.start(new MockEventDispatcher());
+        clientPipeline.start(new MockEventDispatcher());
 
         // Wait for both pipelines to finish.
         Future<ReplDBMSHeader> waitServer = serverPipeline
@@ -330,7 +330,7 @@ public class TestTHL2 extends TestCase
         runtime1.configure();
         runtime1.prepare();
         Pipeline pipeline1 = runtime1.getPipeline();
-        pipeline1.start(new EventDispatcher());
+        pipeline1.start(new MockEventDispatcher());
 
         // Wait for pipeline to finish.
         Future<ReplDBMSHeader> wait1 = pipeline1
@@ -350,7 +350,7 @@ public class TestTHL2 extends TestCase
         runtime2.configure();
         runtime2.prepare();
         Pipeline pipeline2 = runtime2.getPipeline();
-        pipeline2.start(new EventDispatcher());
+        pipeline2.start(new MockEventDispatcher());
 
         // Wait for pipeline to finish. It should get to event #19.
         Future<ReplDBMSHeader> wait2 = pipeline2
@@ -415,7 +415,7 @@ public class TestTHL2 extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Wait for and verify events.
         Future<ReplDBMSHeader> wait = pipeline.watchForAppliedSequenceNumber(9);
@@ -458,7 +458,7 @@ public class TestTHL2 extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Fetch out the queue store so we can write events thereunto.
         InMemoryQueueStore queue = (InMemoryQueueStore) pipeline
@@ -491,7 +491,7 @@ public class TestTHL2 extends TestCase
         runtime.configure();
         runtime.prepare();
         pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Feed events into the pipeline and confirm they reach the other side.
         // We have a sleep to simulate not getting events into the THL for a

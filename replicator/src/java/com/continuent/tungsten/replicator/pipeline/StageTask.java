@@ -24,7 +24,7 @@ package com.continuent.tungsten.replicator.pipeline;
 
 import java.util.SortedSet;
 
-import com.continuent.tungsten.replicator.EventDispatcher;
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 
 /**
  * Denotes a Runnable task that implements stage processing.  Set methods are

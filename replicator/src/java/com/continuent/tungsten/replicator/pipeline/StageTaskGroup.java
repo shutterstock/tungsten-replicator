@@ -28,7 +28,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.continuent.tungsten.replicator.EventDispatcher;
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.applier.Applier;
 import com.continuent.tungsten.replicator.applier.ApplierWrapper;

@@ -37,7 +37,7 @@ import java.util.concurrent.Future;
 
 import org.apache.log4j.Logger;
 
-import com.continuent.tungsten.replicator.EventDispatcher;
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.applier.Applier;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
@@ -662,7 +662,7 @@ class DeferredShutdownTask implements Callable<Pipeline>
         // TODO: This probably should not be here--pipelines should not know
         // about the state machine.
         pipeline.getContext().getEventDispatcher()
-                .handleEvent(new GoOfflineEvent());
+                .put(new GoOfflineEvent());
         return pipeline;
     }
 }

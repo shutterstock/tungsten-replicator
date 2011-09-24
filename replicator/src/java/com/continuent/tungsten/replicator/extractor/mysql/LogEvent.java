@@ -22,7 +22,6 @@
 
 package com.continuent.tungsten.replicator.extractor.mysql;
 
-import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -30,7 +29,6 @@ import java.sql.Timestamp;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
-import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndianConversion;
 
@@ -306,12 +304,11 @@ public abstract class LogEvent
     }
 
     public static LogEvent readLogEvent(ReplicatorRuntime runtime,
-            BinlogPosition position,
-            FormatDescriptionLogEvent descriptionEvent,
+            BinlogReader position, FormatDescriptionLogEvent descriptionEvent,
             boolean parseStatements, boolean useBytesForString,
-            boolean prefetchSchemaNameLDI) throws ReplicatorException
+            boolean prefetchSchemaNameLDI) throws ReplicatorException,
+            InterruptedException
     {
-        DataInputStream dis = position.getDataInputStream();
         int eventLength = 0;
         byte[] header = new byte[descriptionEvent.commonHeaderLength];
 
@@ -319,8 +316,7 @@ public abstract class LogEvent
         {
             // read the header part
             // timeout is set to 2 minutes.
-            readDataFromBinlog(runtime, dis, header, 0, header.length, 120,
-                    ReplicatorMonitor.REAL_EXTHEAD);
+            readDataFromBinlog(runtime, position, header, 0, header.length, 120);
 
             // Extract event length
             eventLength = (int) LittleEndianConversion.convert4BytesToLong(
@@ -332,16 +328,13 @@ public abstract class LogEvent
 
             // read the event data part
             // timeout is set to 2 minutes
-            readDataFromBinlog(runtime, dis, fullEvent, header.length,
-                    eventLength, 120, ReplicatorMonitor.REAL_EXTBODY);
+            readDataFromBinlog(runtime, position, fullEvent, header.length,
+                    eventLength, 120);
 
             System.arraycopy(header, 0, fullEvent, 0, header.length);
 
             LogEvent event = readLogEvent(parseStatements, fullEvent,
                     fullEvent.length, descriptionEvent, useBytesForString);
-
-            // Update the position
-            position.setPosition(position.getPosition() + fullEvent.length);
 
             // If schema name has to be prefetched, check if it is a BEGIN LOAD
             // EVENT
@@ -353,10 +346,9 @@ public abstract class LogEvent
 
                 BeginLoadQueryLogEvent beginLoadEvent = (BeginLoadQueryLogEvent) event;
                 // Spawn a new data input stream
-                BinlogPosition tempPosition = position.clone();
+                BinlogReader tempPosition = position.clone();
                 tempPosition.setEventID(position.getEventID() + 1);
-                tempPosition.setPosition(position.getPosition());
-                tempPosition.openFile();
+                tempPosition.open();
 
                 if (logger.isDebugEnabled())
                     logger.debug("Reading from " + tempPosition);
@@ -365,10 +357,8 @@ public abstract class LogEvent
 
                 while (!found)
                 {
-                    readDataFromBinlog(runtime,
-                            tempPosition.getDataInputStream(), tmpHeader, 0,
-                            tmpHeader.length, 60,
-                            ReplicatorMonitor.REAL_EXTHEAD);
+                    readDataFromBinlog(runtime, tempPosition, tmpHeader, 0,
+                            tmpHeader.length, 60);
 
                     // Extract event length
                     eventLength = (int) LittleEndianConversion
@@ -379,10 +369,8 @@ public abstract class LogEvent
                     if (tmpHeader[MysqlBinlog.EVENT_TYPE_OFFSET] == MysqlBinlog.EXECUTE_LOAD_QUERY_EVENT)
                     {
                         fullEvent = new byte[tmpHeader.length + eventLength];
-                        readDataFromBinlog(runtime,
-                                tempPosition.getDataInputStream(), fullEvent,
-                                tmpHeader.length, eventLength, 120,
-                                ReplicatorMonitor.REAL_EXTBODY);
+                        readDataFromBinlog(runtime, tempPosition, fullEvent,
+                                tmpHeader.length, eventLength, 120);
 
                         System.arraycopy(tmpHeader, 0, fullEvent, 0,
                                 tmpHeader.length);
@@ -412,13 +400,12 @@ public abstract class LogEvent
                         long skip = 0;
                         while (skip != eventLength)
                         {
-                            skip += tempPosition.getDataInputStream().skip(
-                                    eventLength - skip);
+                            skip += tempPosition.skip(eventLength - skip);
                         }
                     }
                 }
                 // Release the file handler
-                tempPosition.reset();
+                tempPosition.close();
             }
 
             return event;
@@ -444,24 +431,18 @@ public abstract class LogEvent
      * @param offset Position in the previous array where data should be written
      * @param length Data length to be read
      * @param timeout Maximum time to wait for data to be available
-     * @param monitorType Monitoring type
      * @throws IOException if an error occurs while reading from the stream
      * @throws ReplicatorException if the timeout is reached
      */
     private static void readDataFromBinlog(ReplicatorRuntime runtime,
-            DataInputStream dis, byte[] data, int offset, int length,
-            int timeout, int monitorType) throws IOException,
-            ReplicatorException
+            BinlogReader binlog, byte[] data, int offset, int length,
+            int timeout) throws IOException, ReplicatorException
     {
-        long metricID = 0L;
-        if (runtime.getMonitor().getDetailEnabled())
-            metricID = runtime.getMonitor().startRealEvent(monitorType);
-
         boolean alreadyLogged = false;
         int spentTime = 0;
         int timeoutInMs = timeout * 1000;
 
-        while (length > dis.available())
+        while (length > binlog.available())
         {
             if (!alreadyLogged)
             {
@@ -488,10 +469,7 @@ public abstract class LogEvent
             {
             }
         }
-        dis.readFully(data, offset, length);
-
-        if (runtime.getMonitor().getDetailEnabled())
-            runtime.getMonitor().stopRealEvent(monitorType, metricID);
+        binlog.read(data, offset, length);
     }
 
     public int getType()

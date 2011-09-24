@@ -309,7 +309,7 @@ public class ScriptPlugin extends NotificationBroadcasterSupport
         /*
          * assuming the backend is ready by now, sending insequence notification
          */
-        context.getEventDispatcher().handleEvent(new InSequenceNotification());
+        context.getEventDispatcher().put(new InSequenceNotification());
     }
 
     /**
@@ -321,7 +321,7 @@ public class ScriptPlugin extends NotificationBroadcasterSupport
         /*
          * assuming the backend is offline, send notification
          */
-        context.getEventDispatcher().handleEvent(new OfflineNotification());
+        context.getEventDispatcher().put(new OfflineNotification());
     }
 
     /**
@@ -337,7 +337,7 @@ public class ScriptPlugin extends NotificationBroadcasterSupport
         /*
          * assuming the backend is offline, send notification
          */
-        context.getEventDispatcher().handleEvent(new GoOfflineEvent());
+        context.getEventDispatcher().put(new GoOfflineEvent());
     }
 
     /**
@@ -424,7 +424,7 @@ public class ScriptPlugin extends NotificationBroadcasterSupport
         runScript(CMD_PROVISION, args);
 
         // Send notification.
-        context.getEventDispatcher().handleEvent(
+        context.getEventDispatcher().put(
                 new RestoreCompletionNotification(real_uri));
     }
 

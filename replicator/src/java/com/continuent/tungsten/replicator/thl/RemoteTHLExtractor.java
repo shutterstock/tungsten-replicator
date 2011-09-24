@@ -272,7 +272,7 @@ public class RemoteTHLExtractor implements Extractor
     {
         // Reconnect after lost connection.
         logger.info("Connection to remote thl lost; reconnecting");
-        pluginContext.getEventDispatcher().handleEvent(
+        pluginContext.getEventDispatcher().put(
                 new OutOfSequenceNotification());
         openConnector();
     }
@@ -343,7 +343,7 @@ public class RemoteTHLExtractor implements Extractor
 
         // Announce the happy event.
         logger.info("Connected to master after " + retryCount + " retries");
-        pluginContext.getEventDispatcher().handleEvent(
+        pluginContext.getEventDispatcher().put(
                 new InSequenceNotification());
     }
 }

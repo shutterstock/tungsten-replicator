@@ -11,7 +11,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/commons"/>
 	<classpathentry kind="lib" path="lib/mysql-connector-java-5.1.6WithEscapeProcessingFix-bin.jar"/>
-	<classpathentry kind="lib" path="lib/drizzle-jdbc-0.91-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="lib/drizzle-jdbc-0.91-SNAPSHOT.jar" sourcepath="lib/drizzle-jdbc-0.91-SNAPSHOT-sources.jar"/>
 	<classpathentry kind="lib" path="lib/protobuf-java-2.3.0.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/fsm"/>
 	<classpathentry kind="lib" path="/commons/lib/log4j-1.2.16.jar" sourcepath="/commons/lib/log4j-1.2.16-sources.jar"/>

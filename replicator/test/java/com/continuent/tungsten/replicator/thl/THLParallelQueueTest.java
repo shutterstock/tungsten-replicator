@@ -33,7 +33,6 @@ import junit.framework.TestCase;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
 import com.continuent.tungsten.replicator.applier.DummyApplier;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
@@ -45,6 +44,7 @@ import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplOptionParams;
 import com.continuent.tungsten.replicator.extractor.DummyExtractor;
+import com.continuent.tungsten.replicator.management.MockEventDispatcher;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
 import com.continuent.tungsten.replicator.pipeline.Pipeline;
 import com.continuent.tungsten.replicator.pipeline.PipelineConfigBuilder;
@@ -82,7 +82,7 @@ public class THLParallelQueueTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Close down pipeline.
         pipeline.shutdown(false);
@@ -106,7 +106,7 @@ public class THLParallelQueueTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Wait for and verify events.
         Future<ReplDBMSHeader> wait = pipeline.watchForAppliedSequenceNumber(9);
@@ -141,7 +141,7 @@ public class THLParallelQueueTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Fetch references to stores.
         THL thl = (THL) pipeline.getStore("thl");
@@ -213,7 +213,7 @@ public class THLParallelQueueTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Fetch references to stores.
         THL thl = (THL) pipeline.getStore("thl");
@@ -271,7 +271,7 @@ public class THLParallelQueueTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Fetch references to stores.
         THL thl = (THL) pipeline.getStore("thl");
@@ -346,7 +346,7 @@ public class THLParallelQueueTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Fetch references to stores.
         THL thl = (THL) pipeline.getStore("thl");

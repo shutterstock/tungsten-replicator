@@ -32,10 +32,10 @@ import org.junit.After;
 import org.junit.Before;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
+import com.continuent.tungsten.replicator.management.MockEventDispatcher;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
 
 /**
@@ -80,7 +80,7 @@ public class PipelineProgressTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Check a selection of default values.
         assertEquals("default latency", 0.0, pipeline.getApplyLatency());
@@ -118,7 +118,7 @@ public class PipelineProgressTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Wait for and verify events.
         Future<ReplDBMSHeader> wait = pipeline.watchForAppliedSequenceNumber(9);

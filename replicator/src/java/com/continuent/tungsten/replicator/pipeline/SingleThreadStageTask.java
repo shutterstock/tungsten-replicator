@@ -26,8 +26,8 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 import com.continuent.tungsten.replicator.ErrorNotification;
-import com.continuent.tungsten.replicator.EventDispatcher;
 import com.continuent.tungsten.replicator.InSequenceNotification;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.applier.Applier;
@@ -193,7 +193,7 @@ public class SingleThreadStageTask implements Runnable
             if (stage.isAutoSync())
             {
                 // Indicate that we are ready to go.
-                eventDispatcher.handleEvent(new InSequenceNotification());
+                eventDispatcher.put(new InSequenceNotification());
             }
             boolean syncTHLWithExtractor = stage.getPipeline()
                     .syncTHLWithExtractor();
@@ -228,7 +228,9 @@ public class SingleThreadStageTask implements Runnable
                     String message = "Event extraction failed";
                     if (context.getExtractorFailurePolicy() == FailurePolicy.STOP)
                     {
-                        eventDispatcher.handleEvent(new ErrorNotification(
+                        if (logger.isDebugEnabled())
+                            logger.debug(message, e);
+                        eventDispatcher.put(new ErrorNotification(
                                 message, e));
                         break;
                     }
@@ -526,9 +528,13 @@ public class SingleThreadStageTask implements Runnable
         }
         catch (InterruptedException e)
         {
+            // Provide appropriate logging.
             if (!schedule.isCancelled())
                 logger.warn("Received unexpected interrupt in stage task: "
                         + stage.getName());
+            else if (logger.isDebugEnabled())
+                logger.debug("Task loop interrupted", e);
+
             // Roll back to release locks and clear partial work.
             try
             {
@@ -631,7 +637,7 @@ public class SingleThreadStageTask implements Runnable
     {
         try
         {
-            eventDispatcher.handleEvent(en);
+            eventDispatcher.put(en);
         }
         catch (InterruptedException e)
         {

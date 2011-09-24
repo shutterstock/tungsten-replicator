@@ -31,7 +31,6 @@ import org.junit.After;
 import org.junit.Before;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.EventDispatcher;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
@@ -41,6 +40,7 @@ import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplEvent;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
+import com.continuent.tungsten.replicator.management.MockEventDispatcher;
 import com.continuent.tungsten.replicator.pipeline.Pipeline;
 import com.continuent.tungsten.replicator.pipeline.PipelineConfigBuilder;
 import com.continuent.tungsten.replicator.storage.parallel.ParallelQueueApplier;
@@ -90,8 +90,8 @@ public class ParallelStageTest extends TestCase
 
         // Generate context and configure pipeline.
         ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
@@ -107,14 +107,14 @@ public class ParallelStageTest extends TestCase
         }
 
         // Start the pipeline.
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Fetch events back out of the output store, to which they should
         // transfer automatically.
         ParallelQueueStore outputPqs = (ParallelQueueStore) pipeline
                 .getStore("output");
-        assertEquals("3 output partitions defined", 3, outputPqs
-                .getPartitions());
+        assertEquals("3 output partitions defined", 3,
+                outputPqs.getPartitions());
         for (int i = 0; i < 3 * 3; i++)
         {
             int partId = i % 3;
@@ -145,8 +145,8 @@ public class ParallelStageTest extends TestCase
 
         // Generate context and configure pipeline.
         ReplicatorRuntime runtime = new ReplicatorRuntime(conf,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
@@ -169,12 +169,12 @@ public class ParallelStageTest extends TestCase
         }
 
         // Start the pipeline.
-        pipeline.start(new EventDispatcher());
+        pipeline.start(new MockEventDispatcher());
 
         // Fetch events back out of the output store, to which they should
         // transfer automatically.
-        assertEquals("3 output partitions defined", 3, outputPqs
-                .getPartitions());
+        assertEquals("3 output partitions defined", 3,
+                outputPqs.getPartitions());
         for (int i = 0; i < 12; i++)
         {
             int partId = i % 3;
@@ -206,12 +206,8 @@ public class ParallelStageTest extends TestCase
         builder.setProperty(ReplicatorConf.METADATA_SCHEMA,
                 "testBasicParallelStage");
         builder.addPipeline("master", "transfer", "input,output");
-        builder
-                .addStage("transfer", "parallel-extract", "parallel-apply",
-                        null);
-        builder
-                .addProperty("stage", "transfer", "taskCount",
-                        taskCountAsString);
+        builder.addStage("transfer", "parallel-extract", "parallel-apply", null);
+        builder.addProperty("stage", "transfer", "taskCount", taskCountAsString);
 
         builder.addComponent("extractor", "parallel-extract",
                 ParallelQueueExtractor.class);

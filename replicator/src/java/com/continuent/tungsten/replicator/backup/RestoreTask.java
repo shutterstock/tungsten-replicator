@@ -27,8 +27,8 @@ import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 import com.continuent.tungsten.replicator.ErrorNotification;
-import com.continuent.tungsten.replicator.EventDispatcher;
 
 /**
  * Processes a restore command including retrieving the backup file and loading
@@ -81,11 +81,11 @@ public class RestoreTask implements Callable<Boolean>
         }
         catch (Exception e)
         {
-            String message = "Backup operation failed: " + e.getMessage();
+            String message = "Restore operation failed: " + e.getMessage();
             logger.error(message, e);
             try
             {
-                eventDispatcher.handleEvent(new ErrorNotification(message, e));
+                eventDispatcher.put(new ErrorNotification(message, e));
             }
             catch (InterruptedException ie)
             {
@@ -102,7 +102,7 @@ public class RestoreTask implements Callable<Boolean>
             logger.info("Restore task completed normally: uri=" + uri);
             try
             {
-                eventDispatcher.handleEvent(new RestoreCompletionNotification(
+                eventDispatcher.put(new RestoreCompletionNotification(
                         uri));
             }
             catch (InterruptedException ie)
