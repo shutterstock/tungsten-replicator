@@ -26,7 +26,7 @@ class SlonyDatabasePlatform < ConfigureDatabasePlatform
   end
   
   def get_thl_uri
-	  "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/"
+	  "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/${replicator.extractor.dbms.database}"
 	end
   
   def get_default_port
@@ -35,6 +35,10 @@ class SlonyDatabasePlatform < ConfigureDatabasePlatform
   
   def get_default_start_script
     "/etc/init.d/postgres"
+  end
+  
+  def get_thl_filters()
+    ["dropcomments"] + super()
   end
   
   def get_default_master_log_directory
@@ -46,7 +50,7 @@ class SlonyDatabasePlatform < ConfigureDatabasePlatform
   end
   
   def getJdbcUrl()
-    "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/${DBNAME}"
+    "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/${replicator.extractor.dbms.database}"
   end
   
   def getJdbcDriver()
@@ -86,6 +90,24 @@ module SlonyDatasourcePrompt
   def get_slony_default_value
     raise "Undefined function"
   end
+end
+
+REPL_SLONY_DBNAME = "repl_slony_dbname"
+class SlonyDatabaseName < ConfigurePrompt
+ include ReplicationServicePrompt
+ 
+ def initialize
+   super(REPL_SLONY_DBNAME, "Name of the database to replicate",
+     PV_ANY)
+ end
+   
+ def enabled?
+   super() && get_extractor_datasource().is_a?(SlonyDatabasePlatform)
+ end
+ 
+ def enabled_for_config?
+   super() && get_extractor_datasource().is_a?(SlonyDatabasePlatform)
+ end
 end
 
 #
