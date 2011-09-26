@@ -584,7 +584,15 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
                 // user operation
                 logger.error("Unexpected state transition processing error", t);
                 annotation = new ReplicatorException(
-                        "Operation failed unexpectedly--see log for details");
+                        "Operation failed unexpectedly--see log for details", t);
+            }
+            else
+            {
+                // We probably have some sort of bug. We need to wrap it in a
+                // replicator exception.
+                logger.error("Unexpected processing error", t);
+                annotation = new ReplicatorException(
+                        "Operation failed unexpectedly--see log for details", t);
             }
         }
 
