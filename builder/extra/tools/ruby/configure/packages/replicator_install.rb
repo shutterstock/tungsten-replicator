@@ -319,8 +319,21 @@ class ReplicatorInstallPackage < ConfigurePackage
     }
   
     unless Configurator.instance.display_preview?
-      unless cluster_hosts.include?(master_host)
-        confirm("The master-host (#{master_host}) does not appear in the cluster-hosts (#{cluster_hosts.join(', ')}).")
+      begin
+        ms_check = InstallerMasterSlaveCheck.new(@config)
+        ms_check.run()
+        
+        unless ms_check.is_valid?
+          (ms_check.get_help || []).each{
+            |help|
+            puts help
+          }
+          raise ""
+        end
+      rescue => e
+        unless cluster_hosts.include?(master_host)
+          confirm("The master-host (#{master_host}) does not appear in the cluster-hosts (#{cluster_hosts.join(', ')}).")
+        end
       end
     end
   end
@@ -440,5 +453,39 @@ module NotTungstenInstallerPrompt
     else
       false
     end
+  end
+end
+
+class InstallerMasterSlaveCheck < ConfigureValidationCheck
+  def initialize(config)
+    super()
+    set_config(config)
+  end
+  
+  def set_vars
+    @title = "Check that the master-host is part of the config"
+    @fatal_on_error = true
+  end
+  
+  def validate
+    @config.getPropertyOr(REPL_SERVICES, {}).keys.each{
+      |s_key|
+      if @config.getProperty([REPL_SERVICES, s_key, REPL_ROLE]) == REPL_ROLE_S
+        found_master = false
+        master_host = @config.getProperty([REPL_SERVICES, s_key, REPL_MASTERHOST])
+        
+        @config.getPropertyOr(HOSTS, {}).keys.each{
+          |h_key|
+          if @config.getProperty([HOSTS, h_key, HOST]) == master_host
+            found_master = true
+          end
+        }
+        
+        if found_master == false
+          error("Unable to find master host '#{master_host}' for service '#{@config.getProperty([REPL_SERVICES, s_key, DEPLOYMENT_SERVICE])}'")
+          help("You can skip this check by adding --skip-validation-check=InstallerMasterSlaveCheck")
+        end
+      end
+    }
   end
 end
