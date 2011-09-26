@@ -113,6 +113,7 @@ public class OpenReplicatorManagerCtrl
         println("Replicator-Wide Commands:");
         println("  version           - Show replicator version and build");
         println("  services          - List replication services");
+        println("  capabilities      - List replicator capabilities");
         println("  shutdown          - Shut down replication services cleanly and exit");
         println("  kill              - Exit immediately without shutting down services");
         println("Service-Specific Commands (Require -service option)");
@@ -286,8 +287,9 @@ public class OpenReplicatorManagerCtrl
                 doBackup();
             else if (command.equals(Commands.RESTORE))
                 doRestore();
-            else if (command.equals(Commands.PROVISION))
-                doProvision();
+            // Remove undocumented "provision" command
+            //else if (command.equals(Commands.PROVISION))
+            //    doProvision();
             else if (command.equals(Commands.STATS))
                 doStatus();
             else if (command.equals(Commands.HELP))
@@ -1179,7 +1181,7 @@ public class OpenReplicatorManagerCtrl
         println("Replicator Capabilities");
         println("  Roles:             " + capabilities.getRoles());
         println("  Replication Model: " + capabilities.getModel());
-        println("  Provision Driver:  " + capabilities.getProvisionDriver());
+        // println("  Provision Driver:  " + capabilities.getProvisionDriver());
         println("  Consistency Check: " + capabilities.isConsistencyCheck());
         println("  Heartbeat:         " + capabilities.isHeartbeat());
         println("  Flush:             " + capabilities.isFlush());
