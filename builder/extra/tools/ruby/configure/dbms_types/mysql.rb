@@ -6,6 +6,8 @@ REPL_MYSQL_MYCNF = "repl_datasource_mysql_mycnf"
 REPL_MYSQL_RO_SLAVE = "repl_mysql_ro_slave"
 REPL_MYSQL_SERVER_ID = "repl_mysql_server_id"
 REPL_MYSQL_ENABLE_ENUMTOSTRING = "repl_mysql_enable_enumtostring"
+REPL_MYSQL_ENABLE_ANSIQUOTES = "repl_mysql_enable_ansiquotes"
+REPL_MYSQL_ENABLE_NOONLYKEYWORDS = "repl_mysql_enable_noonlykeywords"
 REPL_MYSQL_XTRABACKUP_DIR = "repl_mysql_xtrabackup_dir"
 REPL_MYSQL_XTRABACKUP_FILE = "repl_mysql_xtrabackup_file"
 REPL_MYSQL_USE_BYTES_FOR_STRING = "repl_mysql_use_bytes_for_string"
@@ -112,7 +114,14 @@ class MySQLDatabasePlatform < ConfigureDatabasePlatform
 	end
 
 	def get_applier_filters()
-	  ["mysqlsessions"] + super()
+   filters =  []
+   if @config.getProperty(REPL_MYSQL_ENABLE_ANSIQUOTES) == "true"
+      filters += ["ansiquotes"]
+   end
+   if @config.getProperty(REPL_MYSQL_ENABLE_NOONLYKEYWORDS) == "true"
+      filters += ["noonlykeywords"]
+   end
+	 filters + ["mysqlsessions"] + super()
 	end
 end
 
@@ -222,6 +231,24 @@ class MySQLEnableEnumToString < ConfigurePrompt
     end
     
     super()
+  end
+end
+
+class MySQLEnableAnsiQuotes < ConfigurePrompt
+  include ReplicationServicePrompt
+  
+  def initialize
+    super(REPL_MYSQL_ENABLE_ANSIQUOTES, "Enables ANSI_QUOTES mode for incoming events?", 
+      PV_BOOLEAN, "false")
+  end
+end
+
+class MySQLEnableNoOnlyKeywords < ConfigurePrompt
+  include ReplicationServicePrompt
+  
+  def initialize
+    super(REPL_MYSQL_ENABLE_NOONLYKEYWORDS, "Translates DELETE FROM ONLY -> DELETE FROM and UPDATE ONLY -> UPDATE.", 
+      PV_BOOLEAN, "false")
   end
 end
 
