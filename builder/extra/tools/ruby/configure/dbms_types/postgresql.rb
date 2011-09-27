@@ -15,7 +15,7 @@ class PostgreSQLDatabasePlatform < ConfigureDatabasePlatform
   
   def run(command)
     begin
-      ssh_result("echo '#{command}' | psql -q -A -t -p #{port}", @host, @username)
+      ssh_result("echo '#{command}' | psql -q -A -t -p #{@port}", @host, @username)
     rescue RemoteError
       return ""
     end
@@ -110,6 +110,47 @@ class PostgreSQLDatabaseName < ConfigurePrompt
  end
 end
 
+REPL_POSTGRESQL_SLONIK = "repl_postgresql_slonik"
+class PostgreSQLSlonikPath < ConfigurePrompt
+ include ReplicationServicePrompt
+ 
+ def initialize
+   super(REPL_POSTGRESQL_SLONIK, "Path to the slonik executable",
+     PV_FILENAME)
+ end
+   
+ def enabled?
+   super() && get_extractor_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_M
+ end
+ 
+ def enabled_for_config?
+   super() && get_extractor_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_M
+ end
+end
+
+REPL_POSTGRESQL_TABLES = "repl_postgresql_tables"
+class PostgreSQLTables < ConfigurePrompt
+ include ReplicationServicePrompt
+ 
+ def initialize
+   super(REPL_POSTGRESQL_TABLES, "Tables to replicate in form: schema1.table1,schema2.table2,...",
+     PV_ANY)
+ end
+   
+ def enabled?
+   super() && get_extractor_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_M
+ end
+ 
+ def enabled_for_config?
+   super() && get_extractor_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_M
+ end
+end
+
+
 #
 # Validation
 #
@@ -134,11 +175,45 @@ module ConfigureDeploymentStepPostgreSQL
   include DatabaseTypeDeploymentStep
   
   def deploy_replication_dataservice()
-    if (get_extractor_datasource().is_a?(PostgreSQLDatabasePlatform) || get_applier_datasource().is_a?(PostgreSQLDatabasePlatform))
+    info("deploy_slony")
+    if (get_extractor_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_service_key(REPL_ROLE)) == REPL_ROLE_M)
+      deploy_slony()
+    end
+    if (get_applier_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_service_key(REPL_ROLE)) == REPL_ROLE_S)
       deploy_postgresql()
     end
     
     super()
+  end
+  
+  def deploy_slony()
+    Configurator.instance.write_divider()
+
+    cmd_prefix = "#{@config.getProperty(get_service_key(REPL_POSTGRESQL_SLONIK))} <<_EOF_\n" +
+           "cluster name = #{@config.getProperty(get_service_key(DEPLOYMENT_SERVICE))};\n" +
+           "node 1 admin conninfo = 'dbname=#{@config.getProperty(get_service_key(REPL_POSTGRESQL_DBNAME))} host=#{@config.getProperty(get_extractor_key(REPL_DBHOST))} port=#{@config.getProperty(get_extractor_key(REPL_DBPORT))} user=#{@config.getProperty(get_extractor_key(REPL_DBLOGIN))}';\n"
+    
+    warning("Running procedure to clean (uninstall) any available Slony triggers...")
+    cmd1 = cmd_prefix +
+           "uninstall node ( id = 1 );\n" +
+           "_EOF_\n"    
+    warning(cmd1)
+    cmd_result(cmd1, true)
+    
+    warning("Running procedure to deploy Slony triggers...")
+    cmd2 = cmd_prefix +
+          "init cluster ( id=1, comment = 'Tungsten service #{@config.getProperty(get_service_key(DEPLOYMENT_SERVICE))}' );\n" +
+          "create set ( id=1, origin=1, comment='' );\n"
+    @config.getProperty(get_service_key(REPL_POSTGRESQL_TABLES)).split(",").each_with_index { |table, i|     
+      cmd2 += "set add table ( set id=1, origin=1, id=#{i}, fully qualified name = '#{table.strip}', comment='' );\n"
+    }
+    cmd2 += "_EOF_\n"
+    warning(cmd2)
+    cmd_result(cmd2, false)
+    
+    Configurator.instance.write_divider()
   end
   
   def deploy_postgresql()

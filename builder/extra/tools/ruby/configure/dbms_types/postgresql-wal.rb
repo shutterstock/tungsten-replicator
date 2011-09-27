@@ -515,7 +515,7 @@ end
 # Deployment
 #
 
-module ConfigureDeploymentStepPostgresql
+module ConfigureDeploymentStepPostgreSQLWAL
   include DatabaseTypeDeploymentStep
   
   def deploy_replication_dataservice()
