@@ -92,6 +92,11 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
     {
         return database;
     }
+    
+    public String getSlonySchema()
+    {
+        return slonySchema;
+    }
 
     /**
      * PostgreSQL database to connect to. Important to specify, as Slony logs
@@ -120,6 +125,11 @@ public class PostgreSQLSlonyExtractor implements RawExtractor
     public void setPassword(String password)
     {
         this.password = password;
+    }
+    
+    public void setSlonySchema(String slonySchema)
+    {
+        this.slonySchema = slonySchema;
     }
 
     /**
