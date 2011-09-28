@@ -41,6 +41,14 @@ class PostgreSQLDatabasePlatform < ConfigureDatabasePlatform
     ["dropcomments"] + super()
   end
   
+  def get_applier_filters()
+    if @config.getProperty(REPL_POSTGRESQL_ENABLE_MYSQL2PGDDL) == "true"
+      ["pgddl"] + super()
+    else
+      super()
+    end
+  end
+  
   def get_default_master_log_directory
     nil
   end
@@ -150,6 +158,27 @@ class PostgreSQLTables < ConfigurePrompt
  end
 end
 
+REPL_POSTGRESQL_ENABLE_MYSQL2PGDDL = "repl_postgresql_enable_mysql2pgddl"
+class PostgreSQLDDL < ConfigurePrompt
+ include ReplicationServicePrompt
+ 
+ def initialize
+   super(REPL_POSTGRESQL_ENABLE_MYSQL2PGDDL, "Enable MySQL -> PostgreSQL DDL dialect converting filter placeholder",
+     PV_ANY)
+ end
+   
+ def enabled?
+   super() &&
+     get_applier_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_S
+ end
+ 
+ def enabled_for_config?
+   super() &&
+     get_applier_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_S
+ end
+end
 
 #
 # Validation
