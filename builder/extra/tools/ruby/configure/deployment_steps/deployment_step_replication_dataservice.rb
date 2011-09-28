@@ -38,7 +38,9 @@ module ConfigureDeploymentStepReplicationDataservice
         end
       else
         info("Start the replicator")
+        self.trigger_event(:before_service_start, 'replicator')
         cmd_result(get_svc_command("#{get_deployment_basedir()}/tungsten-replicator/bin/replicator start"))
+        self.trigger_event(:after_service_start, 'replicator')
       end
     end
     

@@ -1,24 +1,50 @@
 module ConfigureDeploymentCore
   include ConfigureMessages
+  include EventHandler
   
-  def initialize(config)
+  def initialize(config, modules)
     super()
     @config = config
     @services = []
     @deployment_methods = []
-  end
-  
-  def set_deployment_methods(deployment_methods)
-    @deployment_methods = deployment_methods.sort{|a,b| a.weight <=> b.weight}
+    
+    modules.each{
+      |module_def|
+      self.extend(module_def)
+      begin
+        begin
+          module_def.get_deployment_methods.each{
+            |dm|
+            @deployment_methods << dm
+          }
+        rescue NoMethodError
+        end
+        
+        begin
+          module_def.bind_listeners(self, @config)
+        rescue NoMethodError
+        end
+      rescue => e
+        exception(e)
+      end
+    }
+    @deployment_methods.sort!{|a,b| a.weight <=> b.weight}
   end
   
   def deploy
     begin
+      trigger_event(:before_deployment)
+      
       @deployment_methods.each{
         |deployment_method|
+        trigger_event(:before_deployment_step_method, deployment_method.method_name)
         self.send(alter_deployment_method_name(deployment_method.method_name))
+        trigger_event(:after_deployment_step_method, deployment_method.method_name)
       }
+      
+      trigger_event(:after_deployment)
     rescue => e
+      pp e
       error(e.to_s() + ":\n" + e.backtrace.join("\n"))
     end
     

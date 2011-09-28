@@ -27,14 +27,26 @@ module ConfigureDeploymentStepServices
     end
     
     if @config.getProperty(SVC_REPORT) == "true" || @config.getProperty(SVC_START) == "true"
+      self.trigger_event(:before_services_start)
+      
       @services.each {
         |svc| 
         unless svc_is_running?("#{get_deployment_basedir()}/#{svc}")
+          self.trigger_event(:before_service_start, svc)
           cmd_result(get_svc_command("#{get_deployment_basedir()}/#{svc} start"))
+          self.trigger_event(:after_service_start, svc)
         else
-          cmd_result(get_svc_command("#{get_deployment_basedir()}/#{svc} restart"))
+          self.trigger_event(:before_service_stop, svc)
+          cmd_result(get_svc_command("#{get_deployment_basedir()}/#{svc} stop"))
+          self.trigger_event(:after_service_stop, svc)
+
+          self.trigger_event(:before_service_start, svc)
+          cmd_result(get_svc_command("#{get_deployment_basedir()}/#{svc} start"))
+          self.trigger_event(:after_service_start, svc)
         end
       }
+      
+      self.trigger_event(:after_services_start)
     end
     
     if @config.getProperty(SVC_REPORT) == "true"

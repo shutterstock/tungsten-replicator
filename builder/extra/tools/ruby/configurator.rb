@@ -119,7 +119,7 @@ class Configurator
     # This is the configuration object that will be stored
     @config = Properties.new
     
-    @package = ConfigurePackageCluster.new(@config)
+    @package = get_default_package_class().new(@config)
 
     # Set command line argument defaults.
     @options = OpenStruct.new
@@ -157,6 +157,10 @@ class Configurator
         @options.config = "#{get_base_path()}/#{HOST_CONFIG}"
       end
     end
+  end
+  
+  def get_default_package_class
+    ConfigurePackageCluster
   end
 
   # The standard process, collect prompt values, validate on each host
@@ -245,7 +249,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
       # Copy over configuration script code and the host configuration file
       unless deployment_method.prepare()
         unless forced?()
-          raise
+          raise IgnoreError.new()
         end
       end
     
@@ -255,7 +259,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
           deployment_method.get_validation_handler().output_errors()
       
           unless forced?()
-            raise
+            raise IgnoreError.new()
           end
         end
     
@@ -270,13 +274,17 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
           deployment_method.get_deployment_handler().output_errors()
       
           unless forced?()
-            raise
+            raise IgnoreError.new()
           end
         end
       end
       
       deployment_method.cleanup()
-    rescue
+    rescue IgnoreError
+      deployment_method.cleanup()
+      exit 1
+    rescue => e
+      exception(e)
       deployment_method.cleanup()
       exit 1
     end
@@ -1264,4 +1272,27 @@ class RemoteCommandError < CommandError
 end
 
 class RemoteCommandNotAllowed < CommandError
+end
+
+module EventHandler
+  def listen_event(name, obj = nil, func = nil, &p)
+    @_EventListeners ||= {}
+    if block_given?
+      (@_EventListeners[name] ||= []) << p
+    else
+      (@_EventListeners[name] ||= []) << obj.method(func)
+    end
+  end
+
+  def ignore_event(name, obj, func)
+    @_EventListeners ||= {}
+    return if !@_EventListeners.has_key?(name)
+    @_EventListeners[name].delete_if { |o| o == obj.method(func) }
+  end
+
+  def trigger_event(name, *args)
+    @_EventListeners ||= {}
+    return if !@_EventListeners.has_key?(name)
+    @_EventListeners[name].each { |f|  f.call(*args) }
+  end
 end

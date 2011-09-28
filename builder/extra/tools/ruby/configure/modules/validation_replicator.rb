@@ -179,7 +179,7 @@ class THLStorageCheck < ConfigureValidationCheck
       thl_schema = "tungsten_#{@config.getProperty(get_member_key(DEPLOYMENT_SERVICE))}"
       get_applier_datasource.check_thl_schema(thl_schema)
     rescue => e
-      warn(e.message)
+      warning(e.message)
     end
   end
 end

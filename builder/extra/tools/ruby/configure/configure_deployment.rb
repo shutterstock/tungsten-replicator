@@ -52,19 +52,7 @@ class ConfigureDeployment
     # Get an object that represents the deployment steps required by the config
     obj = Class.new{
       include ConfigureDeploymentCore
-    }.new(deployment_config)
-
-    deployment_methods = []
-    get_deployment_object_modules(deployment_config).each{
-      |module_name|
-      obj.extend(module_name)
-      begin
-        deployment_methods = deployment_methods + module_name.get_deployment_methods()
-      rescue
-      end
-    }
-
-    obj.set_deployment_methods(deployment_methods)
+    }.new(deployment_config, get_deployment_object_modules(deployment_config))
 
     # Execute each of the deployment steps
     obj.deploy()

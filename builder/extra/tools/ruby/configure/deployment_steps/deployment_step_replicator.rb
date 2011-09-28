@@ -32,7 +32,9 @@ module ConfigureDeploymentStepReplicator
       
       @config.setProperty(DEPLOYMENT_SERVICE, service_alias)
       
+      trigger_event(:before_deploy_replication_service)
       deploy_replication_dataservice()
+      trigger_event(:after_deploy_replication_service)
         
       @config.setProperty(DEPLOYMENT_SERVICE, nil)
     }

@@ -203,6 +203,26 @@ end
 module ConfigureDeploymentStepPostgreSQL
   include DatabaseTypeDeploymentStep
   
+  def bind_listeners(obj, config_obj)
+    obj.listen_event(:before_deploy_replication_service, obj, "postgresql_before_deploy_replication_service")
+    obj.listen_event(:after_deploy_replication_service, obj, "postgresql_after_deploy_replication_service")
+  end
+  module_function :bind_listeners
+  
+  def postgresql_before_deploy_replication_service
+    if (get_applier_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_service_key(REPL_ROLE)) == REPL_ROLE_S)
+      # Do Stuff
+    end
+  end
+  
+  def postgresql_after_deploy_replication_service
+    if (get_extractor_datasource().is_a?(PostgreSQLDatabasePlatform) &&
+     @config.getProperty(get_service_key(REPL_ROLE)) == REPL_ROLE_M)
+      # Do Stuff
+    end
+  end
+  
   def deploy_replication_dataservice()
     info("deploy_slony")
     if (get_extractor_datasource().is_a?(PostgreSQLDatabasePlatform) &&
