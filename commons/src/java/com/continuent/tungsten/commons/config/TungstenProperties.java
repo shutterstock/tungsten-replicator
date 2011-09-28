@@ -63,8 +63,7 @@ import org.apache.log4j.Logger;
 public class TungstenProperties implements Serializable
 {
     private static final long   serialVersionUID    = 1;
-    private static Logger       logger              = Logger
-                                                            .getLogger(TungstenProperties.class);
+    private static Logger       logger              = Logger.getLogger(TungstenProperties.class);
     public static final String  ENDOFPROPERTIES_TAG = "#EOF";
     public static final String  ENDOFLINE_TAG       = "#EOL";
     private static final String MAP_KEY_SEPARATOR   = "#TP_KEY#";
@@ -216,7 +215,7 @@ public class TungstenProperties implements Serializable
     public static int substituteSystemValues(Properties props, int iterations)
     {
         int substitutions = 0;
-        // Substitute until we exhaust either iterations or substitutions. 
+        // Substitute until we exhaust either iterations or substitutions.
         for (int i = 0; i < iterations; i++)
         {
             int count = substituteSystemValues(props);
@@ -534,28 +533,48 @@ public class TungstenProperties implements Serializable
             // Handle primitive types
             if (arg0Type.isPrimitive())
             {
-                if (arg0Type == Integer.TYPE)
-                    arg = new Integer(value);
-                else if (arg0Type == Long.TYPE)
-                    arg = new Long(value);
-                else if (arg0Type == Boolean.TYPE)
-                    arg = new Boolean(value);
-                else if (arg0Type == Character.TYPE)
-                    arg = new Character(value.charAt(0));
-                else if (arg0Type == Float.TYPE)
-                    arg = new Float(value);
-                else if (arg0Type == Double.TYPE)
-                    arg = new Double(value);
-                else if (arg0Type == Byte.TYPE)
-                    arg = new Byte(value);
-                else if (arg0Type == Short.TYPE)
-                    arg = new Short(value);
+                try
+                {
+                    if (arg0Type == Integer.TYPE)
+                        arg = new Integer(value);
+                    else if (arg0Type == Long.TYPE)
+                        arg = new Long(value);
+                    else if (arg0Type == Boolean.TYPE)
+                        arg = new Boolean(value);
+                    else if (arg0Type == Character.TYPE)
+                        arg = new Character(value.charAt(0));
+                    else if (arg0Type == Float.TYPE)
+                        arg = new Float(value);
+                    else if (arg0Type == Double.TYPE)
+                        arg = new Double(value);
+                    else if (arg0Type == Byte.TYPE)
+                        arg = new Byte(value);
+                    else if (arg0Type == Short.TYPE)
+                        arg = new Short(value);
+                }
+                catch (Exception e)
+                {
+                    throw new PropertyException(
+                            "Unable to translate property value: key=" + key
+                                    + " value = " + value, e);
+                }
             }
             // Special storage methods:
             else if (arg0Type == Date.class)
-                // Date type is stored as a long provided by
-                // java.util.Date#getTime()
-                arg = new Date(new Long(value));
+            {
+                try
+                {
+                    // Date type is stored as a long provided by
+                    // java.util.Date#getTime()
+                    arg = new Date(new Long(value));
+                }
+                catch (Exception e)
+                {
+                    throw new PropertyException(
+                            "Unable to translate property value: key=" + key
+                                    + " value = " + value, e);
+                }
+            }
             else if (arg0Type == List.class)
             {
                 arg = Arrays.asList(value.split(","));
@@ -590,17 +609,15 @@ public class TungstenProperties implements Serializable
                     catch (Exception e1)
                     {
                         if (logger.isDebugEnabled())
-                            logger
-                                    .debug("No valueOf(String) method found for arg type "
-                                            + arg0Type + " - Giving up");
+                            logger.debug("No valueOf(String) method found for arg type "
+                                    + arg0Type + " - Giving up");
                         if (ignoreIfMissing)
                         {
                             continue;
                         }
-                        logger
-                                .warn("Could not instanciate arg of type "
-                                        + arg0Type
-                                        + ". No Constructor(String) nor valueOf(String) found in this class");
+                        logger.warn("Could not instantiate arg of type "
+                                + arg0Type
+                                + ". No Constructor(String) nor valueOf(String) found in this class");
                         throw new PropertyException(
                                 "Unsupported property type: key=" + key
                                         + " type=" + arg0Type + " value="
@@ -691,9 +708,8 @@ public class TungstenProperties implements Serializable
                     {
                         if (logger.isDebugEnabled())
                         {
-                            logger
-                                    .debug("Skipping property with unsupported type, prop="
-                                            + field.getName());
+                            logger.debug("Skipping property with unsupported type, prop="
+                                    + field.getName());
                         }
                         continue;
                     }
@@ -704,11 +720,10 @@ public class TungstenProperties implements Serializable
             }
             catch (IllegalAccessException i)
             {
-                logger
-                        .error("Exception while trying to extract values from field="
-                                + field.getName()
-                                + " of class="
-                                + o.getClass().getName());
+                logger.error("Exception while trying to extract values from field="
+                        + field.getName()
+                        + " of class="
+                        + o.getClass().getName());
             }
         }
 
@@ -1204,9 +1219,7 @@ public class TungstenProperties implements Serializable
             String key = keys.iterator().next();
             String realKey = key.substring(0, key.indexOf(MAP_KEY_SEPARATOR));
 
-            result
-                    .put(realKey, subset(realKey + MAP_KEY_SEPARATOR, true,
-                            true));
+            result.put(realKey, subset(realKey + MAP_KEY_SEPARATOR, true, true));
             keys = keyNames();
         }
         return result;
@@ -1232,10 +1245,12 @@ public class TungstenProperties implements Serializable
                 result = new HashMap<String, TungstenProperties>();
             }
             String valKey = key.substring(key.indexOf(MAP_KEY_SEPARATOR)
-                    + MAP_KEY_SEPARATOR.length(), key
-                    .lastIndexOf(MAP_KEY_SEPARATOR));
-            result.put(valKey, subset(serviceKey + MAP_KEY_SEPARATOR + valKey
-                    + MAP_KEY_SEPARATOR, true, true));
+                    + MAP_KEY_SEPARATOR.length(),
+                    key.lastIndexOf(MAP_KEY_SEPARATOR));
+            result.put(
+                    valKey,
+                    subset(serviceKey + MAP_KEY_SEPARATOR + valKey
+                            + MAP_KEY_SEPARATOR, true, true));
             fullResult.put(serviceKey, result);
             keys = keyNames();
         }
@@ -1359,8 +1374,8 @@ public class TungstenProperties implements Serializable
             if (++propCount > 1)
                 builder.append("\n");
 
-            builder.append("  ").append(key).append("=").append(
-                    orderedProps.get(key));
+            builder.append("  ").append(key).append("=")
+                    .append(orderedProps.get(key));
         }
 
         builder.append("\n}");
@@ -1380,8 +1395,8 @@ public class TungstenProperties implements Serializable
         Map<String, String> propMap = props.hashMap();
         for (String key : propMap.keySet())
         {
-            builder.append(String.format("%s%s = %s\n", indent, key, propMap
-                    .get(key)));
+            builder.append(String.format("%s%s = %s\n", indent, key,
+                    propMap.get(key)));
         }
         builder.append(String.format("}"));
         return builder.toString();
