@@ -305,7 +305,7 @@ public class THL implements Store
             throws ReplicatorException, InterruptedException
     {
         // Prepare database connection.
-        if (url != null && url.length() > 0)
+        if (url != null && url.trim().length() > 0)
         {
             logger.info("Preparing SQL catalog tables");
             ReplicatorRuntime runtime = (ReplicatorRuntime) context;

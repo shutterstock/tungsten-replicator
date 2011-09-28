@@ -132,7 +132,6 @@ public class TableMetadataCache implements CacheResourceManager<Table>
                     sqlOperation.getName());
         }
         return 0;
-
     }
 
     // Generate a key for table.

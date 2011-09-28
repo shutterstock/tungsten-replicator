@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2011 Continuent Inc.
+ * Copyright (C) 2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
- * Initial developer(s): Teemu Ollakka
- * Contributor(s): Robert Hodges, Stephane Giron
+ * Initial developer(s): Robert Hodges
+ * Contributor(s): 
  */
 
 package com.continuent.tungsten.replicator.applier;
@@ -31,6 +31,8 @@ import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.consistency.ConsistencyException;
+import com.continuent.tungsten.replicator.database.Table;
+import com.continuent.tungsten.replicator.database.TableMetadataCache;
 import com.continuent.tungsten.replicator.dbms.DBMSData;
 import com.continuent.tungsten.replicator.dbms.LoadDataFileFragment;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
@@ -45,35 +47,40 @@ import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeaderData;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 import com.mongodb.BasicDBObject;
+import com.mongodb.BasicDBObjectBuilder;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.Mongo;
 
 /**
- * Implements an applier for MongoDB. The MongoDB applier This class defines a
- * MongoApplier
+ * Implements an applier for MongoDB. This class handles only row updates, as
+ * SQL statements are meaningless in MongoDB. We use a local version of the
+ * Tungsten trep_commit_seqno table to keep track of updates.
  * 
- * @author <a href="mailto:jussi-pekka.kurikka@continuent.com">Jussi-Pekka
- *         Kurikka</a>
+ * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class MongoApplier implements RawApplier
 {
-    private static Logger  logger        = Logger.getLogger(MongoApplier.class);
+    private static Logger      logger        = Logger.getLogger(MongoApplier.class);
 
     // Task management information.
-    private int            taskId;
-    private String         serviceSchema;
+    private int                taskId;
+    private String             serviceSchema;
 
     // Latest event.
-    private ReplDBMSHeader latestHeader;
+    private ReplDBMSHeader     latestHeader;
 
-    // Parameters for the extractor.
-    private String         connectString = null;
+    // Parameters for the applier.
+    private String             connectString = null;
+    private boolean            autoIndex     = false;
 
     // Private connection management.
-    private Mongo          m;
+    private Mongo              m;
+
+    // Table metadata to support auto-indexing.
+    private TableMetadataCache tableMetadataCache;
 
     /** Set the MongoDB connect string, e.g., "myhost:27071". */
     public void setConnectString(String connectString)
@@ -82,14 +89,25 @@ public class MongoApplier implements RawApplier
     }
 
     /**
+     * If set to true, generate indexes automatically on keys whenever we see a
+     * table for the first time.
+     */
+    public void setAutoIndex(boolean autoIndex)
+    {
+        this.autoIndex = autoIndex;
+    }
+
+    /**
      * Applies row updates to MongoDB. Statements are discarded. {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.applier.RawApplier#apply(com.continuent.tungsten.replicator.event.DBMSEvent,
-     *      com.continuent.tungsten.replicator.event.ReplDBMSHeader, boolean, boolean)
+     *      com.continuent.tungsten.replicator.event.ReplDBMSHeader, boolean,
+     *      boolean)
      */
     @Override
-    public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit, boolean doRollback)
-            throws ReplicatorException, ConsistencyException, InterruptedException
+    public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit,
+            boolean doRollback) throws ReplicatorException,
+            ConsistencyException, InterruptedException
     {
         ArrayList<DBMSData> dbmsDataValues = event.getData();
 
@@ -106,6 +124,7 @@ public class MongoApplier implements RawApplier
                 RowChangeData rd = (RowChangeData) dbmsData;
                 for (OneRowChange orc : rd.getRowChanges())
                 {
+                    // Get the action as well as the schema & table name.
                     ActionType action = orc.getAction();
                     String schema = orc.getSchemaName();
                     String table = orc.getTableName();
@@ -115,6 +134,7 @@ public class MongoApplier implements RawApplier
                                 + " schema=" + schema + " table=" + table);
                     }
 
+                    // Process the action.
                     if (action.equals(ActionType.INSERT))
                     {
                         // Connect to the schema and collection.
@@ -134,7 +154,11 @@ public class MongoApplier implements RawApplier
                             for (int i = 0; i < row.size(); i++)
                             {
                                 String name = colSpecs.get(i).getName();
-                                doc.put(name, row.get(i).getValue().toString());
+                                Object value = row.get(i).getValue();
+                                if (value == null)
+                                    doc.put(name, value);
+                                else
+                                    doc.put(name, value.toString());
                             }
                         }
                         if (logger.isDebugEnabled())
@@ -147,6 +171,9 @@ public class MongoApplier implements RawApplier
                         // Connect to the schema and collection.
                         DB db = m.getDB(schema);
                         DBCollection coll = db.getCollection(table);
+
+                        // Ensure required indexes are present.
+                        ensureIndexes(coll, orc);
 
                         // Fetch key and column names.
                         List<ColumnSpec> keySpecs = orc.getKeySpec();
@@ -177,8 +204,11 @@ public class MongoApplier implements RawApplier
                             for (int i = 0; i < colValuesOfRow.size(); i++)
                             {
                                 String name = colSpecs.get(i).getName();
-                                doc.put(name, colValuesOfRow.get(i).getValue()
-                                        .toString());
+                                Object value = colValuesOfRow.get(i).getValue();
+                                if (value == null)
+                                    doc.put(name, value);
+                                else
+                                    doc.put(name, value.toString());
                             }
                             if (logger.isDebugEnabled())
                             {
@@ -204,7 +234,9 @@ public class MongoApplier implements RawApplier
                         DB db = m.getDB(schema);
                         DBCollection coll = db.getCollection(table);
 
-                        // Fetch key and column names.
+                        // Ensure required indexes are present.
+                        ensureIndexes(coll, orc);
+
                         List<ColumnSpec> keySpecs = orc.getKeySpec();
                         ArrayList<ArrayList<OneRowChange.ColumnVal>> keyValues = orc
                                 .getKeyValues();
@@ -272,6 +304,44 @@ public class MongoApplier implements RawApplier
             commit();
     }
 
+    // Ensure that a collection has required indexes.
+    private void ensureIndexes(DBCollection coll, OneRowChange orc)
+    {
+        // If we have not seen this table before, check whether it
+        // needs an index.
+        if (autoIndex)
+        {
+            String schema = orc.getSchemaName();
+            String table = orc.getTableName();
+            Table t = tableMetadataCache.retrieve(schema, table);
+            if (t == null)
+            {
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Ensuring index exists on collection: db="
+                            + schema + " collection=" + table);
+                }
+
+                // Compute required index keys and ensure they
+                // exist in MongoDB.
+                List<ColumnSpec> keySpecs = orc.getKeySpec();
+                if (keySpecs.size() > 0)
+                {
+                    BasicDBObjectBuilder builder = BasicDBObjectBuilder.start();
+                    for (ColumnSpec keySpec : keySpecs)
+                    {
+                        builder.add(keySpec.getName(), 1);
+                    }
+                    coll.ensureIndex(builder.get());
+                }
+
+                // Note that we have processed the table.
+                t = new Table(schema, table);
+                tableMetadataCache.store(t);
+            }
+        }
+    }
+
     /**
      * {@inheritDoc}
      * 
@@ -306,7 +376,8 @@ public class MongoApplier implements RawApplier
         doc.put("source_id", latestHeader.getSourceId());
         doc.put("epoch_number", latestHeader.getEpochNumber());
         doc.put("event_id", latestHeader.getEventId());
-        doc.put("extract_timestamp", latestHeader.getExtractedTstamp().getTime());
+        doc.put("extract_timestamp", latestHeader.getExtractedTstamp()
+                .getTime());
 
         // Update trep_commit_seqno.
         DBObject updatedDoc = trepCommitSeqno.findAndModify(query, null, null,
@@ -435,6 +506,8 @@ public class MongoApplier implements RawApplier
                             + this.connectString, e);
         }
 
+        // Initialize table metadata cache.
+        tableMetadataCache = new TableMetadataCache(5000);
     }
 
     /**
@@ -452,5 +525,8 @@ public class MongoApplier implements RawApplier
             m.close();
             m = null;
         }
+
+        // Release table cache.
+        tableMetadataCache.invalidateAll();
     }
 }
