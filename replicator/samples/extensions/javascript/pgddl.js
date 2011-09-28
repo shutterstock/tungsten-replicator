@@ -1,12 +1,15 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * JavaScript example for JavaScriptFilter.
 
  * Reformats MySQL's DDL statements to support PostgreSQL slave. Currently reformats only:
  * 1. " integer autoincrement " -> " serial "
+ * 2. " tinyint" -> " smallint"
+ * 3. "create database " -> "create schema "
+ * 4. "drop database " -> "drop schema "
  *
  * NOTE: Case sensitive!
  * NOTE: Extend as needed per case by case basis.
@@ -21,6 +24,15 @@ function prepare()
 	transformers[0] = new Array(2);
 	transformers[0][0] = " integer auto_increment ";
 	transformers[0][1] = " serial ";
+	transformers[1] = new Array(2);
+	transformers[1][0] = " tinyint";
+	transformers[1][1] = " smallint";
+	transformers[2] = new Array(3);
+	transformers[2][0] = "create database ";
+	transformers[2][1] = "create schema ";
+	transformers[3] = new Array(3);
+	transformers[3][0] = "drop database ";
+	transformers[3][1] = "drop schema ";
 	
 	for (t = 0; t < transformers.length; t++)
 		logger.debug("pgddl: " + transformers[t][0] + " -> " + transformers[t][1]);
@@ -40,16 +52,14 @@ function filter(event)
         // Determine the underlying type of DBMSData event.
         if(d instanceof com.continuent.tungsten.replicator.dbms.StatementData)
         {
-            sql = d.toString();
-			
 			for (t = 0; t < transformers.length; t++)
 			{
+				sql = d.getQuery();
 				if(sql.indexOf(transformers[t][0]) != -1)
 				{
 					newSql = sql.replace(transformers[t][0], transformers[t][1]);
 					logger.debug("pgddl: " + sql + " -> " + newSql);
 					d.setQuery(newSql);
-					break;
 				}
 			}
         }
