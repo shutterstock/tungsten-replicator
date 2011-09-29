@@ -44,7 +44,6 @@ module ConfigureDeploymentCore
       
       trigger_event(:after_deployment)
     rescue => e
-      pp e
       error(e.to_s() + ":\n" + e.backtrace.join("\n"))
     end
     
