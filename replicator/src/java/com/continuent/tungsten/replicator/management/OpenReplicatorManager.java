@@ -172,38 +172,6 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
     private CountDownLatch          doneLatch               = null;
 
     /**
-     * Main method for ReplicatorManager.
-     * 
-     * @param argv
-     */
-    public static void main(String argv[])
-    {
-        if (argv.length != 1)
-        {
-            System.err.println(String.format("usage: %s <service-name>",
-                    argv[0]));
-            System.exit(1);
-        }
-
-        String serviceName = argv[0];
-        logger.info(String.format("Starting replication service '%s'",
-                serviceName));
-
-        try
-        {
-            OpenReplicatorManager service = new OpenReplicatorManager(
-                    serviceName);
-            service.advertise();
-            service.getDoneLatch().await();
-        }
-        catch (Exception e)
-        {
-            System.err.println(e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    /**
      * Creates a new <code>ReplicatorManager</code> object
      * 
      * @param serviceName name of the current replication service
@@ -449,25 +417,6 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
         // Clear properties if that is desired.
         if (runtimeConf.getClearDynamicProperties())
             propertiesManager.clearDynamicProperties();
-    }
-
-    /**
-     * Start replicator services.
-     */
-    public void advertise() throws ReplicatorException
-    {
-        this.rmiPort = getMasterListenPort()
-                - properties.getInt(ReplicatorConf.MASTER_LISTEN_PORT_START)
-                + properties.getInt(ReplicatorConf.SERVICE_RMI_PORT_START);
-
-        // Start JMX registry.
-        String rmiHost = getHostName();
-        JmxManager jmxManager = new JmxManager(rmiHost, rmiPort, serviceName);
-        jmxManager.start();
-
-        // Register ourselves as the master service manager bean.
-        JmxManager.registerMBean(this, OpenReplicatorManager.class,
-                serviceName, true);
     }
 
     public void advertiseInternal()
@@ -1893,8 +1842,6 @@ public class OpenReplicatorManager extends NotificationBroadcasterSupport
             pluginStatus.put(Replicator.SOURCEID, getSourceId());
             pluginStatus.put(Replicator.CLUSTERNAME, clusterName);
             pluginStatus.put(Replicator.ROLE, getRole());
-            pluginStatus.put(Replicator.HOST,
-                    properties.getString(ReplicatorConf.REPLICATOR_HOST));
             pluginStatus.put(Replicator.DATASERVER_HOST, properties
                     .getString(ReplicatorConf.RESOURCE_DATASERVER_HOST));
             pluginStatus.put(Replicator.UPTIME_SECONDS,

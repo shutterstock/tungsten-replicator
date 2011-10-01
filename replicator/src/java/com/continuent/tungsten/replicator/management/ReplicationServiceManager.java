@@ -600,6 +600,7 @@ public class ReplicationServiceManager
         try
         {
             OpenReplicatorManager orm = new OpenReplicatorManager(serviceName);
+            orm.setRmiPort(managerRMIPort);
             orm.advertiseInternal();
             return (OpenReplicatorManagerMBean) orm;
         }
