@@ -392,6 +392,7 @@ public class LogConnection
                 logger.debug("Using log file for read: "
                         + logFile.getFile().getName());
             }
+            pendingSeqno = logFile.getBaseSeqno();
             return true;
         }
     }

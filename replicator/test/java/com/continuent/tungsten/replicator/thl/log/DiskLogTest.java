@@ -569,11 +569,11 @@ public class DiskLogTest extends TestCase
         // at the end of each.
         long nextSeqno = 0;
         int nulls = 0;
-        LogConnection conn = log.connect(true);
         for (String name : logFileNames)
         {
             // Find next file start.
             logger.info("Opening file: " + name);
+            LogConnection conn = log.connect(true);
             assertTrue("Seeking next file: " + name, conn.seek(name));
 
             // Read all the events in the log.
@@ -584,6 +584,7 @@ public class DiskLogTest extends TestCase
             }
             logger.info("End of file: seqno=" + (nextSeqno - 1));
             nulls++;
+            conn.release();
         }
 
         // Expect as many nulls read as there are files.
