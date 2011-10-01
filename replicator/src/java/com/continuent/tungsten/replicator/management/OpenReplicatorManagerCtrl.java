@@ -114,26 +114,25 @@ public class OpenReplicatorManagerCtrl
         println("  version           - Show replicator version and build");
         println("  services          - List replication services");
         println("  capabilities      - List replicator capabilities");
-        println("  shutdown          - Shut down replication services cleanly and exit");
-        println("  kill              - Exit immediately without shutting down services");
+        println("  shutdown [-y]     - Shut down replication services cleanly and exit");
+        println("  kill [-y]         - Exit immediately without shutting down services");
         println("Service-Specific Commands (Require -service option)");
         println("  backup [-backup agent] [-storage agent] [-limit s]  - Backup database");
         println("  clear            - Clear one or all dynamic variables");
         println("  configure [file] - Reload replicator properties file");
         println("  flush [-limit s]  - Synchronize transaction history log to database");
         println("  heartbeat [-name name] - Insert a heartbeat event with optional name");
-        println("  kill [-y]        - Kill the replicator process immediately");
         println("  offline          - Set replicator to OFFLINE state");
         println("  offline-deferred [-seqno seqno] [-event event] [-heartbeat [name]] [-time YYYY-MM-DD_hh:mm:ss]");
         println("                   - Set replicator OFFLINE at future point");
         println("  online [-from-event event] [-skip-seqno x,y,z] [-seqno seqno] [-event event] [-heartbeat [name]] [-time YYYY-MM-DD_hh:mm:ss]");
         println("                   - Set Replicator to ONLINE with start and stop points");
-        println("  reset            - Deletes the replicator service");
+        println("  reset [-y]       - Deletes the replicator service");
         println("  restore [-uri uri] [-limit s]  - Restore database");
         println("  setrole -role role [-uri uri]  - Set replicator role");
         println("  start            - Start start replication service");
         println("  status [-name {tasks|shards}] - Print replicator status information");
-        println("  stop             - Stop replication service");
+        println("  stop [-y]        - Stop replication service");
         println("  wait -state s [-limit s] - Wait up to s seconds for replicator state s");
         println("  wait -applied n [-limit s] - Wait up to s seconds for seqno to be applied");
         println("  check <table> [-limit offset,limit] [-method m] - generate consistency check for the given table");
@@ -288,8 +287,8 @@ public class OpenReplicatorManagerCtrl
             else if (command.equals(Commands.RESTORE))
                 doRestore();
             // Remove undocumented "provision" command
-            //else if (command.equals(Commands.PROVISION))
-            //    doProvision();
+            // else if (command.equals(Commands.PROVISION))
+            // doProvision();
             else if (command.equals(Commands.STATS))
                 doStatus();
             else if (command.equals(Commands.HELP))
@@ -561,7 +560,12 @@ public class OpenReplicatorManagerCtrl
     // Stop a service.
     private void doStopService() throws Exception
     {
-        boolean yes = confirm("Do you really want to stop the replication service?");
+        // Make sure we have a service name.
+        if (service == null)
+            this.getOpenReplicator();
+
+        boolean yes = confirm(String.format(
+                "Do you really want to stop replication service %s?", service));
         if (yes)
         {
             boolean ok = serviceManagerMBean.stopService(service);
@@ -575,7 +579,13 @@ public class OpenReplicatorManagerCtrl
     // Reset (delete) a service.
     private void doResetService() throws Exception
     {
-        boolean yes = confirm("Do you really want to delete the replication service?");
+        if (service == null)
+            throw new Exception(
+                    "You must specify a service name using -service");
+
+        boolean yes = confirm(String
+                .format("Do you really want to delete replication service %s completely?",
+                        service));
         if (yes)
         {
             serviceManagerMBean.resetService(service);
@@ -1096,39 +1106,6 @@ public class OpenReplicatorManagerCtrl
             println("Restore completed successfully");
         else
             println("Restore is pending; check log for status");
-    }
-
-    // Handle a provision command.
-    private void doProvision() throws Exception
-    {
-        String uri = null;
-        long seconds = 0;
-        String curArg = null;
-        try
-        {
-            while (argvIterator.hasNext())
-            {
-                curArg = argvIterator.next();
-                if ("-uri".equals(curArg))
-                    uri = argvIterator.next();
-                else if ("-limit".equals(curArg))
-                    seconds = Long.parseLong(argvIterator.next());
-                else
-                {
-                    fatal("Unrecognized option: " + curArg, null);
-                }
-            }
-        }
-        catch (ArrayIndexOutOfBoundsException e)
-        {
-            fatal("Missing value for " + curArg, null);
-        }
-
-        boolean success = getOpenReplicator().provision(uri, seconds);
-        if (success)
-            println("Provision completed successfully");
-        else
-            println("Provision is pending; check log for status");
     }
 
     // Handle a request for status.

@@ -339,14 +339,27 @@ public class ReplicationServiceManager
 
         Map<String, String> progress = new LinkedHashMap<String, String>();
 
+        // Make sure we have heard of this replicator.
         if (!serviceConfigurations.keySet().contains(name))
         {
             throw new Exception("Unknown replication service name: " + name);
         }
 
+        // If the replicator is started, we cannot delete it.
+        OpenReplicatorManagerMBean orm = replicators.get(name);
+        if (orm != null)
+        {
+            throw new Exception(
+                    "Must stop replication service before trying to reset: "
+                            + name);
+        }
+
+        // Get service information.
+        logger.info("Resetting replication service: name=" + name);
         TungstenProperties serviceProps = serviceConfigurations.get(name);
         TungstenProperties.substituteSystemValues(serviceProps.getProperties());
 
+        // Remove schema.
         String schemaName = serviceProps.getString("replicator.schema");
         String userName = serviceProps.getString("replicator.global.db.user");
         String password = serviceProps
@@ -374,6 +387,7 @@ public class ReplicationServiceManager
                 db.close();
         }
 
+        // Remove THL files.
         String logDirName = serviceProps
                 .getString("replicator.store.thl.log_dir");
         File logDir = new File(logDirName);
@@ -384,10 +398,20 @@ public class ReplicationServiceManager
                     logDirName));
         }
 
+        // Remove relay logs, if present.
+        String relayLogDirName = serviceProps
+                .getString("replicator.extractor.dbms.relayLogDir");
+        File relayLogDir = new File(relayLogDirName);
+
+        if (!removeDirectory(relayLogDir, progress))
+        {
+            logger.error(String.format(
+                    "Could not remove the relay log directory %s", logDirName));
+        }
+
         logger.info("\n" + CLUtils.formatMap("progress", progress, "", false)
                 + "\n");
         return progress;
-
     }
 
     /**
@@ -523,7 +547,6 @@ public class ReplicationServiceManager
     private void startReplicationService(TungstenProperties replProps)
             throws ReplicatorException
     {
-
         String serviceName = replProps.getString(ReplicatorConf.SERVICE_NAME);
         String serviceType = replProps.getString(ReplicatorConf.SERVICE_TYPE);
         boolean isDetached = replProps.getBoolean(ReplicatorConf.DETACHED);
@@ -532,7 +555,6 @@ public class ReplicationServiceManager
 
         try
         {
-
             if (isDetached)
             {
                 orm = createDetachedService(serviceName);
@@ -574,6 +596,7 @@ public class ReplicationServiceManager
     private OpenReplicatorManagerMBean createInternalService(String serviceName)
             throws ReplicatorException
     {
+        logger.info("Starting replication service: name=" + serviceName);
         try
         {
             OpenReplicatorManager orm = new OpenReplicatorManager(serviceName);
@@ -630,7 +653,6 @@ public class ReplicationServiceManager
             logger.info(stdErr);
 
         return getReplicationServiceMBean(serviceName, serviceRMIPort);
-
     }
 
     // Utility routine to start a replication service.

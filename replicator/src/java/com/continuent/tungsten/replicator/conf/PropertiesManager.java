@@ -213,20 +213,20 @@ public class PropertiesManager
      */
     private void loadStaticProperties() throws ReplicatorException
     {
-        logger.info("Reading static properties file: "
+        logger.debug("Reading static properties file: "
                 + staticPropertiesFile.getAbsolutePath());
         staticProperties = loadProperties(staticPropertiesFile);
     }
 
     /**
      * Load dynamic properties from current dynamic.properties location. If the
-     * properties file does note exist, we make the properties empty.
+     * properties file does not exist, we make the properties empty.
      */
     private void loadDynamicProperties() throws ReplicatorException
     {
         if (dynamicPropertiesFile.exists())
         {
-            logger.info("Reading dynamic properties file: "
+            logger.debug("Reading dynamic properties file: "
                     + dynamicPropertiesFile.getAbsolutePath());
             dynamicProperties = loadProperties(dynamicPropertiesFile);
         }
