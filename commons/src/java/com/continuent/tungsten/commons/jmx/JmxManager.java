@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s): Edward Archibald
+ * Contributor(s): Edward Archibald, Stephane Giron
  */
 
 package com.continuent.tungsten.commons.jmx;
@@ -60,7 +60,7 @@ import org.apache.log4j.Logger;
  * Encapsulates JMX server start/stop and provides static utility methods to
  * register MBeans on the server side as well as get proxies for them on the
  * client side.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -87,7 +87,7 @@ public class JmxManager implements NotificationListener
 
     /**
      * Creates an instance to manage a JMX service
-     *
+     * 
      * @param host The host name or IP to use
      * @param registryPort The JMX server RMI registryPort
      * @param serviceName The JMX service name
@@ -359,7 +359,7 @@ public class JmxManager implements NotificationListener
      * combination of their MBean interface and the custom mbeanName argument.
      * The mbeanName permits multiple mBeans to be registered under the same
      * name.
-     *
+     * 
      * @param mbean The MBean instance that should be registered
      * @param mbeanInterface The MBean interface this instance implements
      * @param mbeanName A custom name for this MBean
@@ -395,7 +395,7 @@ public class JmxManager implements NotificationListener
      * combination of their MBean interface and the custom mbeanName argument.
      * The mbeanName permits multiple mBeans to be registered under the same
      * name.
-     *
+     * 
      * @param mbean The MBean instance that should be registered
      * @param mbeanClass The base class for the mbean
      * @throws ServerRuntimeException
@@ -428,7 +428,7 @@ public class JmxManager implements NotificationListener
      * combination of their MBean interface and the custom mbeanName argument.
      * The mbeanName permits multiple mBeans to be registered under the same
      * name.
-     *
+     * 
      * @param mbeanInterface The MBean interface this instance implements
      * @param mbeanName A custom name for this MBean
      * @throws ServerRuntimeException
@@ -465,7 +465,7 @@ public class JmxManager implements NotificationListener
      * combination of their MBean interface and the custom mbeanName argument.
      * The mbeanName permits multiple mBeans to be registered under the same
      * name.
-     *
+     * 
      * @param mbeanInterface The MBean interface this instance implements
      * @throws ServerRuntimeException
      */
@@ -498,7 +498,7 @@ public class JmxManager implements NotificationListener
     /**
      * Client helper method to return an RMI connection. The arguments match
      * those used when instantiating the JmxManager class itself.
-     *
+     * 
      * @param host the hostname to bind to in the jmx url
      * @param registryPort the registryPort number to bind to in the jmx url
      * @param serviceName the JMX service name
@@ -547,7 +547,7 @@ public class JmxManager implements NotificationListener
 
     /**
      * Create a connection to the JMX server.
-     *
+     * 
      * @return a connector to the JMXServer for the specified service
      */
     public JMXConnector connect(String host, int port, String serviceName)
@@ -557,7 +557,7 @@ public class JmxManager implements NotificationListener
 
     /**
      * Create a connection to the JMX server.
-     *
+     * 
      * @return a connector to the JMXServer for the specified service
      */
     public static JMXConnector connect2(String host, int port,
@@ -607,7 +607,7 @@ public class JmxManager implements NotificationListener
      * Client helper method to obtain a proxy that implements the given
      * interface by forwarding its methods through the given MBean server to the
      * named MBean.
-     *
+     * 
      * @param clientConnection the MBean server to forward to
      * @param mbeanClass The MBean interface this instance implements
      * @param mbeanName A custom name for this MBean
@@ -640,7 +640,7 @@ public class JmxManager implements NotificationListener
      * Client helper method to obtain a proxy that implements the given
      * interface by forwarding its methods through the given MBean server to the
      * named MBean.
-     *
+     * 
      * @param clientConnection the MBean server to forward to
      * @param mbeanClass The class for which an MBean exists
      * @param notificationBroadcaster If true make the returned proxy implement
@@ -685,7 +685,7 @@ public class JmxManager implements NotificationListener
     /**
      * Attach NotificationListener that can be used to listen notifications
      * emitted by MBean server.
-     *
+     * 
      * @param jmxConnector The MBean server connector.
      * @param mbeanInterface The MBean interface this instance implements.
      * @param mbeanName A custom name for the MBean.
@@ -714,7 +714,7 @@ public class JmxManager implements NotificationListener
     /**
      * Attach NotificationListener that can be used to listen notifications
      * emitted by MBean server.
-     *
+     * 
      * @param jmxConnector The MBean server connector.
      * @param mbeanClass The class for which an MBean exists.
      * @param notificationListener User provided NotificationListener instance.
@@ -733,7 +733,7 @@ public class JmxManager implements NotificationListener
 
     /**
      * Remove NotificationListener from this MBean.
-     *
+     * 
      * @param jmxConnector The MBean server connector.
      * @param mbeanInterface The MBean interface this instance implements.
      * @param mbeanName A custom name for the MBean.
@@ -754,7 +754,7 @@ public class JmxManager implements NotificationListener
 
     /**
      * Remove NotificationListener from this MBean.
-     *
+     * 
      * @param jmxConnector The MBean server connector.
      * @param mbeanClass The class for which an MBean exists.
      * @param notificationListener Previously added NotificationListener
@@ -775,8 +775,8 @@ public class JmxManager implements NotificationListener
             String serviceName)
     {
 
-        String serviceAddress = "service:jmx:rmi:///jndi/rmi://" + host + ":"
-                + port + "/" + serviceName;
+        String serviceAddress = "service:jmx:rmi://" + host + ":" + (port + 1)
+                + "/jndi/rmi://" + host + ":" + port + "/" + serviceName;
         if (logger.isDebugEnabled())
         {
             logger.debug("Service address for mbean is: " + serviceAddress);
@@ -872,7 +872,7 @@ public class JmxManager implements NotificationListener
     /**
      * Get the hostname from the local host. Returns the IP address, in textual
      * form, if no hostname can be found.
-     *
+     * 
      * @return the hostname for the local host
      */
     public static String getHostName()
