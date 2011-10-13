@@ -597,9 +597,18 @@ public abstract class RowsLogEvent extends LogEvent
 
             case MysqlBinlog.MYSQL_TYPE_DATETIME :
             {
-                long i64 = LittleEndianConversion.convertNBytesToLong_2(row,
-                        rowPos, 8); /* YYYYMMDDhhmmss */
+                long i64 = LittleEndianConversion.convert8BytesToLong(row,
+                        rowPos); /* YYYYMMDDhhmmss */
 
+                // Let's check for zero date
+                if (i64 == 0)
+                {
+                    value.setValueNull();
+                    if (spec != null)
+                        spec.setType(java.sql.Types.TIMESTAMP);
+                    return 8;
+                }
+                
                 // calculate year, month...sec components of timestamp
                 long d = i64 / 1000000;
                 int year = (int) (d / 10000);
@@ -645,6 +654,15 @@ public abstract class RowsLogEvent extends LogEvent
                 i32 = LittleEndianConversion.convert3BytesToInt(row, rowPos);
                 java.sql.Date date = null;
 
+                // Let's check if the date is 0000-00-00
+                if (i32 == 0)
+                {
+                    value.setValueNull();
+                    if (spec != null)
+                        spec.setType(java.sql.Types.DATE);
+                    return 3;
+                }
+                
                 Calendar cal = Calendar.getInstance();
                 cal.clear();
                 // Month value is 0-based. e.g., 0 for January.

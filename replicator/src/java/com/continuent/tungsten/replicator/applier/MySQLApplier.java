@@ -204,7 +204,16 @@ public class MySQLApplier extends JdbcApplier
     {
 
         int type = columnSpec.getType();
-        if (type == Types.INTEGER)
+        
+        if (type == Types.TIMESTAMP && value.getValue() == null)
+        {
+            prepStatement.setInt(bindLoc, 0);
+        }
+        else if (type == Types.DATE && value.getValue() == null)
+        {
+            prepStatement.setInt(bindLoc, 0);
+        }
+        else if (type == Types.INTEGER)
         {
             boolean isNegative = false;
             Object valToInsert = null;
