@@ -46,6 +46,7 @@ public class THLStoreApplier implements Applier
     private static Logger logger = Logger.getLogger(THLStoreApplier.class);
     private String        storeName;
     private THL           thl;
+    private PluginContext context;
     private LogConnection client;
 
     /**
@@ -72,7 +73,7 @@ public class THLStoreApplier implements Applier
      */
     public void configure(PluginContext context) throws ReplicatorException
     {
-        // Do nothing.
+        this.context = context;
     }
 
     /**
@@ -128,9 +129,11 @@ public class THLStoreApplier implements Applier
         try
         {
             client.store(thlEvent, doCommit);
-            if (doCommit && syncTHL)
+            if (doCommit)
             {
-                thl.updateCommitSeqno(thlEvent);
+                if (syncTHL)
+                    thl.updateCommitSeqno(thlEvent);
+                commit();
             }
             if (logger.isDebugEnabled())
                 logger.debug("Stored event " + event.getSeqno());
@@ -163,7 +166,13 @@ public class THLStoreApplier implements Applier
     {
         try
         {
+            // Commit the log records.
             client.commit();
+
+            // While we are at it check the end of the pipeline and update the
+            // log active sequence number to wherever we have committed.
+            long lastCommittedSeqno = context.getCommittedSeqno();
+            thl.updateActiveSeqno(lastCommittedSeqno);
         }
         catch (THLException e)
         {

@@ -37,7 +37,7 @@ public interface Schedule
      * Task must call this method after extracting event but before processing
      * to decide disposition.
      * 
-     * @return A disposition for the event. 
+     * @return A disposition for the event.
      * @throws InterruptedException Thrown if thread is interrupted
      */
     public int advise(ReplEvent replEvent) throws InterruptedException;
@@ -59,6 +59,15 @@ public interface Schedule
             throws InterruptedException;
 
     /**
+     * Marks the last processed exception as committed. This information is used
+     * by upstream stages that implement synchronous pipeline processing, e.g.,
+     * not dropping logs before they are safely committed downstream.
+     * 
+     * @throws InterruptedException Thrown if thread is interrupted.
+     */
+    public void commit() throws InterruptedException;
+
+    /**
      * Returns true if the task is canceled. Tasks must check this each
      * iteration to decide whether to continue.
      */
@@ -67,14 +76,14 @@ public interface Schedule
     // Processing dispositions for events.
 
     /** Proceed with event processing. */
-    public static int PROCEED       = 1;
+    public static int PROCEED              = 1;
 
     /** Commit current transaction and terminate task processing loop. */
-    public static int QUIT          = 2;
+    public static int QUIT                 = 2;
 
     /** Continue with the next event. */
-    public static int CONTINUE_NEXT = 3;
-    
+    public static int CONTINUE_NEXT        = 3;
+
     /** Continue with next event but commit current position. */
     public static int CONTINUE_NEXT_COMMIT = 4;
 }

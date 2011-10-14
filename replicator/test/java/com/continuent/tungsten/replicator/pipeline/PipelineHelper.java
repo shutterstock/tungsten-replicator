@@ -37,10 +37,7 @@ import com.continuent.tungsten.replicator.storage.InMemoryQueueStore;
 public class PipelineHelper
 {
     /**
-     * Generate a simple runtime configuration.
-     * 
-     * @return
-     * @throws Exception
+     * Generate a simple configuration with a single stage.
      */
     public TungstenProperties createSimpleRuntime() throws Exception
     {
@@ -71,8 +68,8 @@ public class PipelineHelper
         builder.addPipeline("master", "master", null);
         builder.addStage("master", "dummy", "dummy", null);
         builder.addComponent("extractor", "dummy", DummyExtractor.class);
-        builder.addProperty("extractor", "dummy", "nTrx", new Integer(nTrx)
-                .toString());
+        builder.addProperty("extractor", "dummy", "nTrx",
+                new Integer(nTrx).toString());
         builder.addComponent("applier", "dummy", DummyApplier.class);
 
         return builder.getConfig();
@@ -94,18 +91,19 @@ public class PipelineHelper
         builder.addStage("extract", "q-extract", "q-apply", null);
 
         // Stage components.
-        builder.addComponent("extractor", "q-extract", InMemoryQueueAdapter.class);
+        builder.addComponent("extractor", "q-extract",
+                InMemoryQueueAdapter.class);
         builder.addProperty("extractor", "q-extract", "storeName", "q1");
         builder.addComponent("applier", "q-apply", InMemoryQueueAdapter.class);
         builder.addProperty("applier", "q-apply", "storeName", "q2");
 
         // Storage definition.
         builder.addComponent("store", "q1", InMemoryQueueStore.class);
-        builder.addProperty("store", "q1", "maxSize", new Integer(size)
-                .toString());
+        builder.addProperty("store", "q1", "maxSize",
+                new Integer(size).toString());
         builder.addComponent("store", "q2", InMemoryQueueStore.class);
-        builder.addProperty("store", "q2", "maxSize", new Integer(size)
-                .toString());
+        builder.addProperty("store", "q2", "maxSize",
+                new Integer(size).toString());
 
         return builder.getConfig();
     }
@@ -126,8 +124,8 @@ public class PipelineHelper
 
         // Extract stage components.
         builder.addComponent("extractor", "dummy", DummyExtractor.class);
-        builder.addProperty("extractor", "dummy", "nFrags", new Integer(nfrags)
-                .toString());
+        builder.addProperty("extractor", "dummy", "nFrags",
+                new Integer(nfrags).toString());
         builder.addComponent("applier", "q-apply", InMemoryQueueAdapter.class);
         builder.addProperty("applier", "q-apply", "storeName", "queue");
 

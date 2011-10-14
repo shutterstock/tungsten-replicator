@@ -213,15 +213,4 @@ public class InMemoryMultiQueue implements Store
         props.setLong("eventCount", this.transactionCount);
         return props;
     }
-
-    /**
-     * {@inheritDoc}
-     * 
-     * @see com.continuent.tungsten.replicator.storage.Store#getMaxCommittedSeqno()
-     */
-    public long getMaxCommittedSeqno()
-    {
-        // No committed seqno into the queue store
-        return -1;
-    }
 }

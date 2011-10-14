@@ -156,7 +156,7 @@ public class SingleThreadStageTask implements Runnable
 
         logInfo("Terminating processing for stage task thread", null);
         ReplDBMSHeader lastEvent = stage.getProgressTracker()
-                .getLastProcessedEvent(taskId);
+                .getDirtyLastProcessedEvent(taskId);
         if (lastEvent != null)
         {
             String msg = "Last successfully processed event prior to termination: seqno="
@@ -206,6 +206,9 @@ public class SingleThreadStageTask implements Runnable
                 if (currentEvent != null && firstFilteredEvent == null)
                 {
                     schedule.setLastProcessedEvent(currentEvent);
+                    // If the block is empty, we have committed. 
+                    if (blockEventCount == 0)
+                        schedule.commit();
                     currentEvent = null;
                 }
 
@@ -230,8 +233,7 @@ public class SingleThreadStageTask implements Runnable
                     {
                         if (logger.isDebugEnabled())
                             logger.debug(message, e);
-                        eventDispatcher.put(new ErrorNotification(
-                                message, e));
+                        eventDispatcher.put(new ErrorNotification(message, e));
                         break;
                     }
                     else
@@ -302,13 +304,18 @@ public class SingleThreadStageTask implements Runnable
                 }
                 else if (disposition == Schedule.CONTINUE_NEXT)
                 {
+                    // Update processed event position but do not commit. 
                     updatePosition(genericEvent, false);
                     currentEvent = null;
                     continue;
                 }
                 else if (disposition == Schedule.CONTINUE_NEXT_COMMIT)
                 {
+                    // Update position and commit.  We must currently tell
+                    // the schedule explicitly about the commit so that 
+                    // progress tracking correctly marks it as committed. 
                     updatePosition(genericEvent, true);
+                    schedule.commit();
                     currentEvent = null;
                     continue;
                 }
@@ -422,6 +429,7 @@ public class SingleThreadStageTask implements Runnable
                 {
                     // Starting a new fragmented transaction
                     applier.commit();
+                    schedule.commit();
                     blockEventCount = 0;
                     taskProgress.incrementBlockCount();
                 }
@@ -523,8 +531,9 @@ public class SingleThreadStageTask implements Runnable
             }
 
             // At the end of the loop, issue commit to ensure partial block
-            // becomes persistent.
+            // becomes persistent and tell the schedule we are committing. 
             applier.commit();
+            schedule.commit();
         }
         catch (InterruptedException e)
         {

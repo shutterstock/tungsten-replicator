@@ -132,4 +132,11 @@ public interface PluginContext
 
     /** Return true if operating in native slave takeover mode. */
     public boolean nativeSlaveTakeover();
+
+    /**
+     * Returns the minimum safely committed sequence number from the end of the
+     * pipeline. This sequence number can be used to free resources such as log
+     * files used in upstream stages.  
+     */
+    public long getCommittedSeqno();
 }

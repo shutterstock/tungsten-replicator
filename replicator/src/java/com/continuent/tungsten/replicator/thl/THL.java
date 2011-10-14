@@ -285,6 +285,15 @@ public class THL implements Store
     }
 
     /**
+     * Updates the active sequence number on the log.  Log files can only be 
+     * deleted if their last sequence number is below this value. 
+     */
+    public void updateActiveSeqno(long activeSeqno)
+    {
+        diskLog.setActiveSeqno(activeSeqno);
+    }
+
+    /**
      * {@inheritDoc}
      * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
@@ -522,25 +531,13 @@ public class THL implements Store
         TungstenProperties props = new TungstenProperties();
         props.setLong(Replicator.MIN_STORED_SEQNO, getMinStoredSeqno());
         props.setLong(Replicator.MAX_STORED_SEQNO, getMaxStoredSeqno());
-        props.setInt("logFileSize", logFileSize);
+        props.setLong("activeSeqno", diskLog.getActiveSeqno());
         props.setBoolean("doChecksum", doChecksum);
-        props.setLong("logFileRetainMillis", logFileRetainMillis);
         props.setString("logDir", logDir);
+        props.setInt("logFileSize", logFileSize);
+        props.setLong("logFileRetainMillis", logFileRetainMillis);
+        props.setLong("logFileSize", diskLog.getLogFileSize());
+        props.setLong("timeoutMillis", diskLog.getTimeoutMillis());
         return props;
-    }
-
-    /**
-     * {@inheritDoc}
-     * 
-     * @throws InterruptedException
-     * @see com.continuent.tungsten.replicator.storage.Store#getMaxCommittedSeqno()
-     */
-    @Override
-    public long getMaxCommittedSeqno() throws ReplicatorException
-    {
-        // TODO: This could use getMaxSeqno() as the log is now cleaned up and
-        // has better commit semantics.
-        // return getLastAppliedEvent().getSeqno();
-        return this.getMaxStoredSeqno();
     }
 }

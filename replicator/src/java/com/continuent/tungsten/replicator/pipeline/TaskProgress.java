@@ -34,7 +34,8 @@ public class TaskProgress
 {
     private final String   stageName;
     private final int      taskId;
-    private ReplDBMSHeader lastEvent           = null;
+    private ReplDBMSHeader lastProcessedEvent  = null;
+    private ReplDBMSHeader lastCommittedEvent  = null;
     private boolean        cancelled           = false;
     private long           eventCount          = 0;
     private long           blockCount          = 0;
@@ -75,7 +76,8 @@ public class TaskProgress
         this.cancelled = other.isCancelled();
         this.eventCount = other.getEventCount();
         this.blockCount = other.getBlockCount();
-        this.lastEvent = other.getLastEvent();
+        this.lastProcessedEvent = other.getLastProcessedEvent();
+        this.lastCommittedEvent = other.getLastCommittedEvent();
         this.startMillis = other.getStartMillis();
         this.endMillis = other.getEndMillis();
         this.totalApplyMillis = other.getTotalApplyMillis();
@@ -104,14 +106,26 @@ public class TaskProgress
         return this.taskId;
     }
 
-    public ReplDBMSHeader getLastEvent()
+    public ReplDBMSHeader getLastProcessedEvent()
     {
-        return lastEvent;
+        return lastProcessedEvent;
     }
 
-    public void setLastEvent(ReplDBMSHeader lastEvent)
+    public void setLastProcessedEvent(ReplDBMSHeader lastEvent)
     {
-        this.lastEvent = lastEvent;
+        this.lastProcessedEvent = lastEvent;
+    }
+
+    public ReplDBMSHeader getLastCommittedEvent()
+    {
+        return lastCommittedEvent;
+    }
+
+    public void setLastCommittedEvent(ReplDBMSHeader lastCommittedEvent)
+    {
+        this.lastCommittedEvent = lastCommittedEvent;
+        if (lastCommittedEvent == null)
+            throw new RuntimeException();
     }
 
     public boolean isCancelled()

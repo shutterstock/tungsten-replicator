@@ -73,6 +73,7 @@ public class LogConnection
     private Serializer         eventSerializer;
     private int                logFileSize;
     private int                timeoutMillis;
+    private int                logRotateMillis;
 
     // Filter used to decide whether to deserialize events on input.
     private LogEventReadFilter readFilter;
@@ -92,6 +93,7 @@ public class LogConnection
         this.eventSerializer = diskLog.getEventSerializer();
         this.doChecksum = diskLog.isDoChecksum();
         this.timeoutMillis = diskLog.getTimeoutMillis();
+        this.logRotateMillis = diskLog.getLogRotateMillis();
 
         // Fetch log information required to handle writes if needed.
         if (!readonly)
@@ -124,6 +126,15 @@ public class LogConnection
     public void setTimeoutMillis(int timeoutMillis)
     {
         this.timeoutMillis = timeoutMillis;
+    }
+
+    /**
+     * Sets the local connection value for reading a new file after a log
+     * rotation.
+     */
+    public void setLogRotateMillis(int logRotateMillis)
+    {
+        this.logRotateMillis = logRotateMillis;
     }
 
     /**
@@ -502,8 +513,8 @@ public class LogConnection
                     // file or we may be reading an active log and just happen
                     // to look for the next file before the writer can finish
                     // flushing the first write to disk.
-                    int rotateTimeoutMillis = timeoutMillis;
-                    while (rotateTimeoutMillis > 0)
+                    int rotationTimeout = logRotateMillis;
+                    while (rotationTimeout > 0)
                     {
                         // Try to open file, exiting loop if successful.
                         data = diskLog.getLogFileForReading(newFileName);
@@ -524,10 +535,11 @@ public class LogConnection
                         Thread.sleep(50);
                         long sleepMillis = System.currentTimeMillis()
                                 - startSleepMillis;
-                        rotateTimeoutMillis -= sleepMillis;
-                        if (rotateTimeoutMillis <= 0)
+                        rotationTimeout -= sleepMillis;
+                        if (rotationTimeout <= 0)
                             throw new LogTimeoutException(
-                                    "Read timed out while waiting for next log file: "
+                                    "Read timed out while waiting for rotated log file; "
+                                            + "this may indicate log corruption: missing file="
                                             + newFileName);
                     }
 

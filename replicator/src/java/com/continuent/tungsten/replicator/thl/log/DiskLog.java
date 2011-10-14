@@ -79,6 +79,12 @@ public class DiskLog
     /** Wait timeout. This is used for testing to prevent infinite timeouts. */
     protected int                timeoutMillis              = Integer.MAX_VALUE;
 
+    /**
+     * Special timeout when waiting for a new log file after a rotate log. This
+     * timeout will normally only expire when there is a corrupt log.
+     */
+    protected int                logRotateMillis            = 60000;
+
     /** Number of milliseconds to retain old logs. */
     protected long               logFileRetainMillis        = 0;
 
@@ -227,6 +233,22 @@ public class DiskLog
     public int getTimeoutMillis()
     {
         return timeoutMillis;
+    }
+
+    /**
+     * Sets the timeout value for reading a new file after a log rotation.
+     */
+    public void setLogRotateMillis(int logRotateMillis)
+    {
+        this.logRotateMillis = logRotateMillis;
+    }
+
+    /**
+     * Returns the current timeout value for log rotation.
+     */
+    public int getLogRotateMillis()
+    {
+        return logRotateMillis;
     }
 
     /**
@@ -609,6 +631,26 @@ public class DiskLog
     }
 
     // Log metadata.
+
+    /**
+     * Updates the active sequence number. Log files will be retained if they
+     * contain this number or above.
+     */
+    public void setActiveSeqno(long activeSeqno)
+    {
+        index.setActiveSeqno(activeSeqno);
+    }
+
+    /**
+     * Returns the active sequence number.
+     */
+    public long getActiveSeqno()
+    {
+        if (index != null)
+            return index.getActiveSeqno();
+        else
+            return -1;
+    }
 
     /**
      * Return the maximum sequence number stored in the log.

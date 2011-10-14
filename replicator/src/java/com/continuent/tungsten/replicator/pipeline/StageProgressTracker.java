@@ -33,7 +33,9 @@ import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
+import com.continuent.tungsten.replicator.event.ReplDBMSHeaderData;
 import com.continuent.tungsten.replicator.storage.ParallelStore;
+import com.continuent.tungsten.replicator.util.AtomicIntervalGuard;
 import com.continuent.tungsten.replicator.util.EventIdWatchPredicate;
 import com.continuent.tungsten.replicator.util.HeartbeatWatchPredicate;
 import com.continuent.tungsten.replicator.util.SeqnoWatchPredicate;
@@ -44,7 +46,10 @@ import com.continuent.tungsten.replicator.util.WatchManager;
 import com.continuent.tungsten.replicator.util.WatchPredicate;
 
 /**
- * Tracks the current status of replication and implements event watches.
+ * Tracks the current status of replication and implements event watches. This
+ * class maintains a clear distinction between the latest event processed and
+ * the latest event committed. The methods for these values are designated
+ * "dirty" and "committed" respectively.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  */
@@ -93,6 +98,10 @@ public class StageProgressTracker
     private long                                 applySkipCount      = 0;
     private SortedSet<Long>                      seqnosToBeSkipped   = null;
 
+    // Task tracking for committed IDs. This is used to maintain the minimum and
+    // maximum committed sequence number.
+    AtomicIntervalGuard<ReplDBMSHeader>          committedSeqno;
+
     /**
      * Creates a new stage process tracker.
      * 
@@ -104,6 +113,8 @@ public class StageProgressTracker
         this.name = name;
         this.threadCount = threadCount;
         this.taskInfo = new TaskProgress[threadCount];
+        this.committedSeqno = new AtomicIntervalGuard<ReplDBMSHeader>(
+                threadCount);
 
         // Initialize task processing data.
         for (int i = 0; i < taskInfo.length; i++)
@@ -143,38 +154,21 @@ public class StageProgressTracker
     /**
      * Return last event that we have seen.
      */
-    public synchronized ReplDBMSHeader getLastProcessedEvent(int taskId)
+    public synchronized ReplDBMSHeader getDirtyLastProcessedEvent(int taskId)
     {
-        return taskInfo[taskId].getLastEvent();
+        return taskInfo[taskId].getLastProcessedEvent();
     }
 
     /**
-     * Return the last processed sequence number or -1 if no event exists. This
-     * event is the minimum value that has been reached.
+     * Return the last processed event or null if none such exists. This event
+     * may not be committed.
      */
-    public synchronized long getMinLastSeqno()
-    {
-        long minSeqno = Long.MAX_VALUE;
-        for (TaskProgress progress : taskInfo)
-        {
-            ReplDBMSHeader event = progress.getLastEvent();
-            if (event == null)
-                minSeqno = -1;
-            else
-                minSeqno = Math.min(minSeqno, event.getSeqno());
-        }
-        return minSeqno;
-    }
-
-    /**
-     * Return the last processed event or null if none such exists.
-     */
-    public synchronized ReplDBMSHeader getMinLastEvent()
+    public synchronized ReplDBMSHeader getDirtyMinLastEvent()
     {
         ReplDBMSHeader minEvent = null;
         for (TaskProgress progress : taskInfo)
         {
-            ReplDBMSHeader event = progress.getLastEvent();
+            ReplDBMSHeader event = progress.getLastProcessedEvent();
             if (event == null)
             {
                 minEvent = null;
@@ -189,15 +183,58 @@ public class StageProgressTracker
     }
 
     /**
-     * Return the current apply latency in milliseconds.
+     * Return the last processed sequence number or -1 if no event exists. This
+     * event is the minimum value that has been reached.
      */
-    public synchronized long getApplyLatencyMillis()
+    public synchronized long getDirtyMinLastSeqno()
     {
+        long minSeqno = Long.MAX_VALUE;
+        for (TaskProgress progress : taskInfo)
+        {
+            ReplDBMSHeader event = progress.getLastProcessedEvent();
+            if (event == null)
+                minSeqno = -1;
+            else
+                minSeqno = Math.min(minSeqno, event.getSeqno());
+        }
+        return minSeqno;
+    }
+
+    /**
+     * Return the last safely committed sequence number. This value represents
+     * the minimum value across tasks. It is very fast and minimizes lock
+     * contention.
+     */
+    public synchronized long getCommittedMinSeqno()
+    {
+        return committedSeqno.getLowSeqno();
+    }
+
+    /**
+     * Return the latency of the last committed event. This is the maximum
+     * latency as it fetches the minimum committed event.
+     */
+    public synchronized long getCommittedApplyLatency()
+    {
+        long timestamp = committedSeqno.getLowTime();
+        if (timestamp <= 0)
+            return 0;
+
         // Latency may be sub-zero due to clock differences.
-        if (applyLatencyMillis < 0)
+        long applyMillis = System.currentTimeMillis() - timestamp;
+        if (applyMillis < 0)
             return 0;
         else
-            return applyLatencyMillis;
+            return applyMillis;
+    }
+
+    /**
+     * Return the last committed event. This is the minimum committed event
+     * across tasks.
+     */
+    public synchronized ReplDBMSHeader getCommittedMinEvent()
+    {
+        return committedSeqno.getLowDatum();
     }
 
     /**
@@ -268,11 +305,11 @@ public class StageProgressTracker
         shardProgress.incrementEventCount();
 
         // Log last processed event if greater than stored sequence number.
-        if (taskInfo[taskId].getLastEvent() == null
-                || taskInfo[taskId].getLastEvent().getSeqno() < replEvent
+        if (taskInfo[taskId].getLastProcessedEvent() == null
+                || taskInfo[taskId].getLastProcessedEvent().getSeqno() < replEvent
                         .getSeqno())
         {
-            taskInfo[taskId].setLastEvent(replEvent);
+            taskInfo[taskId].setLastProcessedEvent(replEvent);
         }
 
         // If we have a real event, process watches.
@@ -285,6 +322,26 @@ public class StageProgressTracker
         }
         if (loggingInterval > 0 && eventCount % loggingInterval == 0)
             logger.info("Stage processing counter: event count=" + eventCount);
+    }
+
+    /**
+     * Records the last committed event.
+     */
+    public synchronized void commit(int taskId) throws InterruptedException
+    {
+        ReplDBMSHeader processed = taskInfo[taskId].getLastProcessedEvent();
+        if (processed != null)
+        {
+            ReplDBMSHeader committed = new ReplDBMSHeaderData(processed);
+            committedSeqno.report(taskId, committed.getSeqno(), committed
+                    .getExtractedTstamp().getTime(), committed);
+            taskInfo[taskId].setLastCommittedEvent(committed);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("[" + name + "] commit: taskId=" + taskId
+                        + " seqno=" + committed.getSeqno());
+            }
+        }
     }
 
     /**
@@ -420,7 +477,7 @@ public class StageProgressTracker
     {
         // Find the trailing event that has been processed across all
         // tasks.
-        ReplDBMSHeader lastEvent = getMinLastEvent();
+        ReplDBMSHeader lastEvent = getDirtyMinLastEvent();
         Watch<ReplDBMSHeader> watch;
         if (lastEvent == null || !predicate.match(lastEvent))
         {
@@ -461,7 +518,7 @@ public class StageProgressTracker
     {
         for (int i = 0; i < this.taskInfo.length; i++)
         {
-            ReplDBMSHeader event = taskInfo[i].getLastEvent();
+            ReplDBMSHeader event = taskInfo[i].getLastProcessedEvent();
             if (event != null)
                 watch.offer(event, i);
         }
@@ -485,7 +542,7 @@ public class StageProgressTracker
         else if (this.seqnosToBeSkipped != null)
         {
             // Purge skip numbers processing has already reached.
-            long minSeqno = getMinLastSeqno();
+            long minSeqno = getDirtyMinLastSeqno();
             while (!this.seqnosToBeSkipped.isEmpty()
                     && this.seqnosToBeSkipped.first() < minSeqno)
                 this.seqnosToBeSkipped.remove(this.seqnosToBeSkipped.first());

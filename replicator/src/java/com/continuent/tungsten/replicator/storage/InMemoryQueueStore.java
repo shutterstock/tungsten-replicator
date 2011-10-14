@@ -195,11 +195,4 @@ public class InMemoryQueueStore implements Store
         props.setLong("eventCount", this.transactionCount);
         return props;
     }
-
-    @Override
-    public long getMaxCommittedSeqno()
-    {
-        // No committed seqno into the queue store
-        return -1;
-    }
 }

@@ -75,8 +75,8 @@ public class PipelineProgressTest extends TestCase
         // Create pipeline.
         TungstenProperties config = helper.createSimpleRuntimeWithXacts(0);
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
@@ -85,10 +85,10 @@ public class PipelineProgressTest extends TestCase
         // Check a selection of default values.
         assertEquals("default latency", 0.0, pipeline.getApplyLatency());
         assertNull("default applied event", pipeline.getLastAppliedEvent());
-        assertEquals("default applied seqno", -1, pipeline
-                .getLastAppliedSeqno());
-        assertEquals("default extracted seqno", -1, pipeline
-                .getLastExtractedSeqno());
+        assertEquals("default applied seqno", -1,
+                pipeline.getLastAppliedSeqno());
+        assertEquals("default extracted seqno", -1,
+                pipeline.getLastExtractedSeqno());
 
         // Shard list should be empty.
         List<ShardProgress> shards = pipeline.getShardProgress();
@@ -98,7 +98,8 @@ public class PipelineProgressTest extends TestCase
         List<TaskProgress> tasks = pipeline.getTaskProgress();
         assertEquals("single task in list", 1, tasks.size());
         TaskProgress task = tasks.get(0);
-        assertNull("default applied event", task.getLastEvent());
+        assertNull("default processed event", task.getLastProcessedEvent());
+        assertNull("default committed event", task.getLastCommittedEvent());
         assertEquals("no events processed on task", 0, task.getEventCount());
 
         // Shut down.
@@ -111,10 +112,10 @@ public class PipelineProgressTest extends TestCase
      */
     public void testPipelineWithEvents() throws Exception
     {
-        TungstenProperties config = helper.createSimpleRuntime();
+        TungstenProperties config = helper.createRuntimeWithStore(1);
         ReplicatorRuntime runtime = new ReplicatorRuntime(config,
-                new MockOpenReplicatorContext(), ReplicatorMonitor
-                        .getInstance());
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
@@ -126,11 +127,10 @@ public class PipelineProgressTest extends TestCase
         assertEquals("Expected 10 sequence numbers", 9, lastEvent.getSeqno());
 
         // Check a selection of default values.
-        assertEquals("last applied event", lastEvent, pipeline
-                .getLastAppliedEvent());
-        assertEquals("default applied seqno", 9, pipeline.getLastAppliedSeqno());
-        assertEquals("default extracted seqno", 9, pipeline
-                .getLastExtractedSeqno());
+        assertEquals("committed event seqno", 9, pipeline.getLastAppliedEvent()
+                .getSeqno());
+        assertEquals("applied seqno", 9, pipeline.getLastAppliedSeqno());
+        assertEquals("extracted seqno", 9, pipeline.getLastExtractedSeqno());
 
         // Shard list should be empty.
         List<ShardProgress> shards = pipeline.getShardProgress();
@@ -138,9 +138,11 @@ public class PipelineProgressTest extends TestCase
 
         // Tasks should have a single task.
         List<TaskProgress> tasks = pipeline.getTaskProgress();
-        assertEquals("single task in list", 1, tasks.size());
-        TaskProgress task = tasks.get(0);
-        assertEquals("applied event", lastEvent, task.getLastEvent());
+        assertEquals("two tasks in list", 2, tasks.size());
+        TaskProgress task = tasks.get(1);
+        assertEquals("applied event", lastEvent, task.getLastProcessedEvent());
+        assertEquals("committed event seqno", lastEvent.getSeqno(), task
+                .getLastCommittedEvent().getSeqno());
         assertEquals("events processed on task", 10, task.getEventCount());
 
         // Shut down.

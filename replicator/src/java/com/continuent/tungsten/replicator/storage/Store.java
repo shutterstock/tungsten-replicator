@@ -23,7 +23,6 @@
 package com.continuent.tungsten.replicator.storage;
 
 import com.continuent.tungsten.commons.config.TungstenProperties;
-import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
 
 /**
@@ -41,24 +40,17 @@ public interface Store extends ReplicatorPlugin
     public void setName(String name);
 
     /**
-     * Returns the maximum stored sequence number.
+     * Returns the maximum persistently stored sequence number.
      */
     public long getMaxStoredSeqno();
 
     /**
-     * Returns the minimum stored sequence number.
+     * Returns the minimum persistently stored sequence number.
      */
     public long getMinStoredSeqno();
-    
-    /**
-     * Returns status information as a set of named properties. 
-     */
-    public TungstenProperties status();
 
     /**
-     * Returns the maximum committed sequence number. 
-     * TODO: This should be the same as the max stored seqno. 
-     * @throws InterruptedException 
+     * Returns status information as a set of named properties.
      */
-    public long getMaxCommittedSeqno() throws ReplicatorException;
+    public TungstenProperties status();
 }

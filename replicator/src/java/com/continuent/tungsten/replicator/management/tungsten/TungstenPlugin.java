@@ -896,7 +896,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                     props.put("otherTime",
                             Double.toString(progress.getTotalOtherSeconds()));
                     props.put("state", progress.getState().toString());
-                    ReplDBMSHeader lastEvent = progress.getLastEvent();
+                    ReplDBMSHeader lastEvent = progress.getLastCommittedEvent();
                     if (lastEvent == null)
                     {
                         props.put("appliedLastSeqno", "-1");

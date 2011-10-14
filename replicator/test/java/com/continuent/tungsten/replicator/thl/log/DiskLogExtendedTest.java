@@ -163,7 +163,7 @@ public class DiskLogExtendedTest extends TestCase
             }
         }
     }
-    
+
     /**
      * Confirm that if the log retention is set we will purge files after the
      * specified interval but that we always retain at least the last two log
@@ -178,7 +178,7 @@ public class DiskLogExtendedTest extends TestCase
         log.setReadOnly(false);
         log.setLogFileSize(3000);
         log.setTimeoutMillis(10000);
-        log.setLogFileRetainMillis(5000);
+        log.setLogFileRetainMillis(2000);
 
         log.prepare();
         writeEventsToLog(log, 200);
@@ -188,7 +188,7 @@ public class DiskLogExtendedTest extends TestCase
         assertTrue("More than two logs generated", fileCount > 2);
 
         // Wait for the retention to expire.
-        Thread.sleep(10000);
+        Thread.sleep(4000);
 
         // Write enough events to force log rotation by computing how many
         // events on average go into a single log.
@@ -198,15 +198,124 @@ public class DiskLogExtendedTest extends TestCase
         // Give the deletion thread time to do its work.
         Thread.sleep(3000);
 
-        // We should now have 2 logs because the old logs will age out.
+        // Confirm no logs are expired. The active seqno points to the start
+        // of the log so it would be a bug if they were dropped.
         int fileCount2 = log.fileCount();
-        assertEquals("Aging out should result in 2 logs", 2, fileCount2);
+        assertTrue("Aging out should delete no files", fileCount2 > fileCount);
+
+        // Now set the active sequence number in the log to the last event
+        // written.
+        log.setActiveSeqno(log.getMaxSeqno());
+
+        // Write enough events to force log rotation by computing how many
+        // events on average go into a single log.
+        writeEventsToLog(log, log.getMaxSeqno() + 1, logEvents);
+
+        // Give the deletion thread time to do its work.
+        Thread.sleep(3000);
+
+        // We should now have 3 logs because the old logs will age out. We
+        // have the file with the active seqno, plus two additional log files.
+        // (It turns out that the last set of transactions may write two
+        // files.)
+        int fileCount3 = log.fileCount();
+        assertEquals("Aging out should result in 3 logs", 3, fileCount3);
 
         // All done!
         log.release();
     }
 
+    /**
+     * Confirm that if a log file goes missing while the log is open, readers
+     * fail after the log rotation timeout expires.
+     */
+    public void testMissingLogFile() throws Exception
+    {
+        // Create the log with with 5K log files and a 5 second retention.
+        File logDir = prepareLogDir("testLogRetention");
+        DiskLog log = new DiskLog();
+        log.setLogDir(logDir.getAbsolutePath());
+        log.setReadOnly(false);
+        log.setLogFileSize(3000);
+        log.setLogRotateMillis(2000);
 
+        log.prepare();
+        writeEventsToLog(log, 200);
+
+        // Prove we can read the log.
+        long lastSeqno = scanLog(log);
+        assertEquals("scanned to end of log", log.getMaxSeqno(), lastSeqno);
+
+        // Get the log files and delete a file from the middle of the list.
+        String[] logFileNames = log.getLogFileNames();
+        int fileCount = logFileNames.length;
+        assertTrue("More than two logs generated", fileCount > 2);
+        int middle = (fileCount / 2) + 1;
+        deleteLogFile(logDir, logFileNames[middle]);
+
+        // Now read from the log again. We should get a timeout failure.
+        try
+        {
+            long lastSeqno2 = scanLog(log);
+            throw new Exception("Able to scan a broken log!! last seqno="
+                    + lastSeqno2);
+        }
+        catch (LogTimeoutException e)
+        {
+            logger.info("Caught expected timeout: " + e);
+        }
+
+        // All done!
+        log.release();
+    }
+
+    /**
+     * Confirm that if a file is deleted from the end of the log we will patch
+     * the log correctly on restart so that it can be scanned.
+     */
+    public void testMissingLogFile2() throws Exception
+    {
+        // Create the log with with 5K log files and a 5 second retention.
+        File logDir = prepareLogDir("testLogRetention");
+        DiskLog log = new DiskLog();
+        log.setLogDir(logDir.getAbsolutePath());
+        log.setReadOnly(false);
+        log.setLogFileSize(3000);
+
+        log.prepare();
+        writeEventsToLog(log, 200);
+        long maxSeqno = log.getMaxSeqno();
+        log.release();
+
+        // Get the log files and delete last file. This cuts off at least
+        // on event written to the log.
+        String[] logFileNames = log.getLogFileNames();
+        int fileCount = logFileNames.length;
+        assertTrue("More than two logs generated", fileCount > 2);
+        deleteLogFile(logDir, logFileNames[fileCount - 1]);
+
+        // Open the log and get the beginning and end positions.
+        DiskLog log2 = new DiskLog();
+        log2.setLogDir(logDir.getAbsolutePath());
+        log2.setReadOnly(false);
+        log2.setLogRotateMillis(2000);
+
+        // Open the log and write a few more events.
+        log2.prepare();
+        long maxSeqno2 = log2.getMaxSeqno();
+        assertTrue("Truncated log must be shorter than old log",
+                maxSeqno > maxSeqno2);
+        writeEventsToLog(log2, maxSeqno2 + 1, 200);
+
+        // Scan and confirm that the end of the log is the same as
+        // the reported maxSeqno value.
+        long scanSeqno2 = scanLog(log2);
+        assertEquals("Last event scanned must be maxSeqno", log2.getMaxSeqno(),
+                scanSeqno2);
+
+        // All done!
+        log2.release();
+    }
 
     // Create an empty log directory or if the directory exists remove
     // any files within it.
@@ -226,7 +335,7 @@ public class DiskLogExtendedTest extends TestCase
         }
         return logDir;
     }
-    
+
     // Write a prescribed number of events to the log starting at zero.
     private void writeEventsToLog(DiskLog log, int howMany)
             throws ReplicatorException, InterruptedException
@@ -251,8 +360,8 @@ public class DiskLogExtendedTest extends TestCase
         }
         conn.commit();
         conn.release();
-        assertEquals("Should have stored requested events", (seqno - 1), log
-                .getMaxSeqno());
+        assertEquals("Should have stored requested events", (seqno - 1),
+                log.getMaxSeqno());
         logger.info("Final seqno: " + (seqno - 1));
     }
 
@@ -270,5 +379,49 @@ public class DiskLogExtendedTest extends TestCase
     private THLEvent createTHLEvent(long seqno)
     {
         return createTHLEvent(seqno, (short) 0, true, "test");
+    }
+
+    // Scan the entire log and return the last sequence number.
+    private long scanLog(DiskLog log) throws ReplicatorException,
+            InterruptedException
+    {
+        LogConnection conn = log.connect(true);
+        long maxSeqno = log.getMaxSeqno();
+        long minSeqno = log.getMinSeqno();
+        long lastSeqno = -1;
+
+        assertTrue("Seeking to min log position", conn.seek(minSeqno));
+        for (long i = minSeqno; i <= maxSeqno; i++)
+        {
+            THLEvent e = conn.next(true);
+            lastSeqno = e.getSeqno();
+        }
+        conn.release();
+
+        return lastSeqno;
+    }
+
+    // Deletes a log file with suitable assertions.
+    private void deleteLogFile(File logDir, String logFileName)
+            throws Exception
+    {
+        File fileToDelete = new File(logDir, logFileName);
+        if (!fileToDelete.exists())
+        {
+            throw new Exception("File to delete does not exist: "
+                    + fileToDelete.getAbsolutePath());
+        }
+
+        if (!fileToDelete.delete())
+        {
+            throw new Exception("Unable to delete file: "
+                    + fileToDelete.getAbsolutePath());
+        }
+
+        if (fileToDelete.exists())
+        {
+            throw new Exception("Deleted file exists: "
+                    + fileToDelete.getAbsolutePath());
+        }
     }
 }

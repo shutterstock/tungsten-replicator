@@ -888,6 +888,16 @@ public class ReplicatorRuntime implements PluginContext
     /**
      * {@inheritDoc}
      * 
+     * @see com.continuent.tungsten.replicator.plugin.PluginContext#getCommittedSeqno()
+     */
+    public long getCommittedSeqno()
+    {
+        return pipeline.getLastAppliedSeqno();
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
      * @see com.continuent.tungsten.replicator.plugin.PluginContext#getApplierFailurePolicy()
      */
     public FailurePolicy getApplierFailurePolicy()

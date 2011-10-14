@@ -382,26 +382,26 @@ public class Pipeline implements ReplicatorPlugin
     /** Returns the last value processed in the first stage. */
     public long getLastExtractedSeqno()
     {
-        return stages.getFirst().getProgressTracker().getMinLastSeqno();
+        return stages.getFirst().getProgressTracker().getDirtyMinLastSeqno();
     }
 
     /** Returns the last sequence number applied in the last stage. */
     public long getLastAppliedSeqno()
     {
-        return stages.getLast().getProgressTracker().getMinLastSeqno();
+        return stages.getLast().getProgressTracker().getCommittedMinSeqno();
     }
 
     /** Returns the last event applied in the last stage. */
     public ReplDBMSHeader getLastAppliedEvent()
     {
-        return stages.getLast().getProgressTracker().getMinLastEvent();
+        return stages.getLast().getProgressTracker().getCommittedMinEvent();
     }
 
-    /** Returns the latency of applying the last event in seconds. */
+    /** Returns the latency of applying the last committed event in seconds. */
     public double getApplyLatency()
     {
         long applyLatencyMillis = stages.getLast().getProgressTracker()
-                .getApplyLatencyMillis();
+                .getCommittedApplyLatency();
         return applyLatencyMillis / 1000.0;
     }
 
@@ -594,7 +594,7 @@ public class Pipeline implements ReplicatorPlugin
         long seqno = -1;
         for (Store store : stores.values())
         {
-            long maxCommittedSeqno = store.getMaxCommittedSeqno();
+            long maxCommittedSeqno = store.getMaxStoredSeqno();
             if (seqno < maxCommittedSeqno)
                 seqno = maxCommittedSeqno;
         }
@@ -605,8 +605,8 @@ public class Pipeline implements ReplicatorPlugin
 // Interruptible task to wait for stage tasks to read a watch point.
 class DeferredShutdownTask implements Callable<Pipeline>
 {
-    private static final Logger               logger = Logger.getLogger(DeferredShutdownTask.class);
-    private final Pipeline                    pipeline;
+    private static final Logger                logger = Logger.getLogger(DeferredShutdownTask.class);
+    private final Pipeline                     pipeline;
     private final List<Future<ReplDBMSHeader>> taskWaits;
 
     DeferredShutdownTask(Pipeline pipeline,
@@ -661,8 +661,7 @@ class DeferredShutdownTask implements Callable<Pipeline>
                 + pipeline.getName());
         // TODO: This probably should not be here--pipelines should not know
         // about the state machine.
-        pipeline.getContext().getEventDispatcher()
-                .put(new GoOfflineEvent());
+        pipeline.getContext().getEventDispatcher().put(new GoOfflineEvent());
         return pipeline;
     }
 }

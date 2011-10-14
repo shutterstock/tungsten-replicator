@@ -33,34 +33,39 @@ import com.continuent.tungsten.replicator.ReplicatorException;
  * too far apart in the log. Class methods are fully synchronized, which results
  * in a large number of lock requests. Changes to these classes should be
  * carefully checked for performance via unit tests.
+ * <p>
+ * Since the initial implementation this class has been extended to add a datum
+ * that may optionally be stored with each thread. This allows clients to track
+ * additional hi/low properties for themselves.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  */
-public class AtomicIntervalGuard<T>
+public class AtomicIntervalGuard<D>
 {
     // Simple class to hold task information. The id value is the key.
     // The before and after fields are used to implement a linked list of
     // threads to show ordering by sequence number.
     private class ThreadPosition
     {
-        T              id;
+        int            id;
         long           seqno;
         long           time;
+        D              datum;
         ThreadPosition before;
         ThreadPosition after;
 
         public String toString()
         {
-            return this.getClass().getSimpleName() + " id=" + id
-                    + " seqno=" + seqno + " time=" + time;
+            return this.getClass().getSimpleName() + " id=" + id + " seqno="
+                    + seqno + " time=" + time;
         }
     }
 
     // Map to hold information on each thread.
-    private Map<T, ThreadPosition> array = new HashMap<T, ThreadPosition>();
-    private ThreadPosition         head;
-    private ThreadPosition         tail;
-    private int                    size;
+    private Map<Integer, ThreadPosition> array = new HashMap<Integer, ThreadPosition>();
+    private ThreadPosition               head;
+    private ThreadPosition               tail;
+    private int                          size;
 
     /**
      * Allocates a thread interval array.
@@ -73,14 +78,25 @@ public class AtomicIntervalGuard<T>
     }
 
     /**
+     * Report position for an individual task without added datum.
+     */
+    public synchronized void report(int id, long seqno, long time)
+    {
+        report(id, seqno, time, null);
+    }
+
+    /**
      * Report position for an individual task. This call makes an important
      * assumption that sequence numbers never move backward, which simplifies
      * maintenance of the array.
      * 
+     * @param id Thread ID
+     * @param seqno Sequence number reached by thread
+     * @param time Original timestamp of transaction
+     * @param datum An optional datum associated with the transaction
      * @throws ReplicatorException Thrown if there is an illegal update.
      */
-    public synchronized void report(T id, long seqno, long time)
-            throws ReplicatorException
+    public synchronized void report(int id, long seqno, long time, D datum)
     {
         ThreadPosition tp = array.get(id);
 
@@ -92,6 +108,7 @@ public class AtomicIntervalGuard<T>
             tp.id = id;
             tp.seqno = seqno;
             tp.time = time;
+            tp.datum = datum;
             array.put(id, tp);
 
             // Order within the linked list.
@@ -140,11 +157,11 @@ public class AtomicIntervalGuard<T>
             // The thread is already in the map. Ensure thread seqno does not
             // move backwards and update its information.
             if (tp.seqno > seqno)
-                bug("Thread reporting position moved backwards: task="
-                        + id.toString() + " previous seqno=" + tp.seqno
-                        + " new seqno=" + seqno);
+                bug("Thread reporting position moved backwards: task=" + id
+                        + " previous seqno=" + tp.seqno + " new seqno=" + seqno);
             tp.seqno = seqno;
             tp.time = time;
+            tp.datum = datum;
 
             // Since seqno values only increase, we may need to move back in the
             // list. See if we need to move back now.
@@ -202,6 +219,15 @@ public class AtomicIntervalGuard<T>
             return head.time;
     }
 
+    /** Return the datum of the lowest entry in the array. */
+    public synchronized D getLowDatum()
+    {
+        if (head == null)
+            return null;
+        else
+            return head.datum;
+    }
+
     /**
      * Get highest seqno in the array.
      */
@@ -220,6 +246,15 @@ public class AtomicIntervalGuard<T>
             return -1;
         else
             return tail.time;
+    }
+
+    /** Return the datum of the highest entry in the array. */
+    public synchronized D getHiDatum()
+    {
+        if (tail == null)
+            return null;
+        else
+            return tail.datum;
     }
 
     /** Return the interval between highest and lowest values. */

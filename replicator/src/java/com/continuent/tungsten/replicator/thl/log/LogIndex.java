@@ -46,12 +46,13 @@ import com.continuent.tungsten.replicator.ReplicatorException;
  */
 public class LogIndex
 {
-    static Logger                    logger = Logger.getLogger(LogIndex.class);
+    static Logger                    logger      = Logger.getLogger(LogIndex.class);
 
     private ArrayList<LogIndexEntry> index;
     private File                     logDir;
     private String                   filePrefix;
     private long                     retentionMillis;
+    private long                     activeSeqno = 0;
     private int                      bufferSize;
 
     /**
@@ -166,6 +167,24 @@ public class LogIndex
         }
         Collections.sort(index);
         logger.info("Constructed index; total log files added=" + index.size());
+    }
+
+    /**
+     * Returns the current active sequence number.
+     */
+    public synchronized long getActiveSeqno()
+    {
+        return activeSeqno;
+    }
+
+    /**
+     * Sets the active sequence number, which is the lowest sequence number
+     * known to be in use by clients of this log. Log files can only be deleted
+     * if they are before this sequence number.
+     */
+    public synchronized void setActiveSeqno(long activeSeqno)
+    {
+        this.activeSeqno = activeSeqno;
     }
 
     /**
@@ -362,11 +381,13 @@ public class LogIndex
         // If retentions are enabled, this is a good time to check for files
         // to purge. Note that we always retain the last two files in the
         // index to prevent unhappy accidents due to deleting a file that is
-        // currently active.
+        // currently active. Also we never delete a file that contains
+        // sequence numbers at or before the active sequence number.
         if (retentionMillis > 0)
         {
-            File[] purgeCandidates = FileCommands.filesOverRetention(logDir,
-                    filePrefix, 2);
+            String activeFile = getFile(activeSeqno);
+            File[] purgeCandidates = FileCommands.filesOverRetentionAndInactive(logDir,
+                    filePrefix, 2, activeFile);
             File[] filesToPurge = FileCommands.filesOverModDate(
                     purgeCandidates, new Interval(retentionMillis));
             if (filesToPurge.length > 0)
@@ -388,8 +409,8 @@ public class LogIndex
         {
             if (fileName.equals(entry.fileName))
             {
-                index.remove(entry);
-                logger.info("Removed file from disk log index: " + fileName);
+                    index.remove(entry);
+                    logger.info("Removed file from disk log index: " + fileName);
                 return;
             }
         }

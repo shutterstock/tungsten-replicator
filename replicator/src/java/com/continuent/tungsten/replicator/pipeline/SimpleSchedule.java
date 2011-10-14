@@ -30,7 +30,7 @@ import com.continuent.tungsten.replicator.event.ReplEvent;
 /**
  * Defines a basic schedule implementation that tracks watches on events and
  * task termination logic.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
@@ -41,7 +41,7 @@ public class SimpleSchedule implements Schedule
 
     /**
      * Creates a new schedule instance.
-     *
+     * 
      * @param stage Stage to which this applies.
      */
     public SimpleSchedule(Stage stage, SingleThreadStageTask task)
@@ -52,7 +52,7 @@ public class SimpleSchedule implements Schedule
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @throws InterruptedException
      * @see com.continuent.tungsten.replicator.pipeline.Schedule#advise(com.continuent.tungsten.replicator.event.ReplEvent)
      */
@@ -77,7 +77,7 @@ public class SimpleSchedule implements Schedule
                 ReplDBMSHeader syncEvent = controlEvent.getHeader();
                 stage.getProgressTracker().setLastProcessedEvent(
                         task.getTaskId(), syncEvent);
-                return CONTINUE_NEXT;
+                return CONTINUE_NEXT_COMMIT;
             }
             else
                 throw new RuntimeException("Unsupported control type: "
@@ -90,7 +90,7 @@ public class SimpleSchedule implements Schedule
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.pipeline.Schedule#isCancelled()
      */
     public synchronized boolean isCancelled()
@@ -100,7 +100,7 @@ public class SimpleSchedule implements Schedule
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.pipeline.Schedule#setLastProcessedEvent(com.continuent.tungsten.replicator.event.ReplDBMSEvent)
      */
     public synchronized void setLastProcessedEvent(ReplDBMSEvent event)
@@ -112,7 +112,17 @@ public class SimpleSchedule implements Schedule
 
     /**
      * {@inheritDoc}
-     *
+     * 
+     * @see com.continuent.tungsten.replicator.pipeline.Schedule#commit()
+     */
+    public void commit() throws InterruptedException
+    {
+        stage.getProgressTracker().commit(task.getTaskId());
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
      * @see com.continuent.tungsten.replicator.pipeline.Schedule#taskEnd()
      */
     public synchronized void taskEnd()
@@ -122,7 +132,7 @@ public class SimpleSchedule implements Schedule
 
     /**
      * Skips the given event
-     *
+     * 
      * @see StageProgressTracker#skip(ReplDBMSEvent)
      */
     public synchronized boolean skip(ReplDBMSEvent event)

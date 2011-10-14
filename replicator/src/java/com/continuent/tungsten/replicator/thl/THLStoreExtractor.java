@@ -46,6 +46,7 @@ public class THLStoreExtractor implements Extractor
     private String        storeName;
     private THL           thl;
     private LogConnection client;
+    private PluginContext context;
 
     // Pointers to track storage.
     private boolean       positioned = false;
@@ -86,6 +87,7 @@ public class THLStoreExtractor implements Extractor
      */
     public void prepare(PluginContext context) throws ReplicatorException
     {
+        this.context = context;
         try
         {
             thl = (THL) context.getStore(storeName);
@@ -123,15 +125,14 @@ public class THLStoreExtractor implements Extractor
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#extract()
      */
-    public ReplEvent extract() throws ReplicatorException,
-            InterruptedException
+    public ReplEvent extract() throws ReplicatorException, InterruptedException
     {
         // If we did not position for the first time yet, do so now.
         if (!positioned)
         {
             try
             {
-                if (! client.seek(seqno, fragno))
+                if (!client.seek(seqno, fragno))
                 {
                     throw new ExtractorException(
                             "Unable to find event; may not exist in log: seqno="
@@ -149,6 +150,7 @@ public class THLStoreExtractor implements Extractor
         }
 
         // Fetch next event and update sequence numbers.
+        ReplEvent replEvent = null;
         try
         {
             THLEvent thlEvent = client.next();
@@ -157,13 +159,14 @@ public class THLStoreExtractor implements Extractor
             {
                 throw new THLException("Event missing from storage");
             }
-            ReplEvent replEvent = thlEvent.getReplEvent();
+            replEvent = thlEvent.getReplEvent();
+
+            // Process event by type.
             if (replEvent instanceof ReplDBMSEvent)
             {
                 ReplDBMSEvent replDbmsEvent = (ReplDBMSEvent) replEvent;
                 seqno = replDbmsEvent.getSeqno();
                 fragno = replDbmsEvent.getFragno();
-                return replDbmsEvent;
             }
             else if (replEvent instanceof ReplControlEvent)
             {
@@ -171,20 +174,26 @@ public class THLStoreExtractor implements Extractor
                         .getHeader();
                 seqno = replDbmsHeader.getSeqno();
                 fragno = replDbmsHeader.getFragno();
-                return replEvent;
             }
             else
             {
                 logger.warn("No repl event found for seqno="
                         + thlEvent.getSeqno());
-                return null;
             }
+
+            // While we are at it check the end of the pipeline and update the
+            // log active sequence number to wherever we have committed.
+            long lastCommittedSeqno = context.getCommittedSeqno();
+            thl.updateActiveSeqno(lastCommittedSeqno);
         }
         catch (ReplicatorException e)
         {
             throw new ExtractorException("Unable to fetch after event: seqno="
                     + seqno + " fragno=" + fragno, e);
         }
+
+        // Return whatever we found.
+        return replEvent;
     }
 
     /**

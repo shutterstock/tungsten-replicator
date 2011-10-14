@@ -251,7 +251,7 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                         if (logger.isDebugEnabled())
                             logger.debug("Got an empty event");
                         sendEvent(protocol, revent,
-                                (seqno + i >= thl.getMaxCommittedSeqno()));
+                                (seqno + i >= thl.getMaxStoredSeqno()));
                         i++;
                         fragno = 0;
                     }
@@ -301,7 +301,7 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                             fragno = 0;
                         }
                         sendEvent(protocol, revent,
-                                (seqno + i >= thl.getMaxCommittedSeqno()));
+                                (seqno + i >= thl.getMaxStoredSeqno()));
                     }
                 }
             }

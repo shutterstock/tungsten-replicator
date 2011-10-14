@@ -65,7 +65,7 @@ public class THLParallelReadTask implements Runnable
 
     // Counters to coordinate queue operation.
     private AtomicCounter                  headSeqnoCounter;
-    private AtomicIntervalGuard<Integer>   intervalGuard;
+    private AtomicIntervalGuard<?>         intervalGuard;
     private AtomicLong                     lowWaterMark         = new AtomicLong(
                                                                         0);
     private AtomicLong                     acceptCount          = new AtomicLong(
@@ -108,7 +108,7 @@ public class THLParallelReadTask implements Runnable
      */
     public THLParallelReadTask(int taskId, THL thl, Partitioner partitioner,
             AtomicCounter headSeqnoCounter,
-            AtomicIntervalGuard<Integer> intervalGuard, int maxSize,
+            AtomicIntervalGuard<?> intervalGuard, int maxSize,
             int maxControlEvents, int syncInterval)
     {
         this.taskId = taskId;
