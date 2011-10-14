@@ -127,6 +127,27 @@ module ModifyServiceCheck
   end
 end
 
+class RemoteReplicationServiceCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  
+  def set_vars
+    @title = "Remote replication service checks"
+  end
+  
+  def validate    
+    unless @config.getProperty(get_member_key(REPL_SVC_SERVICE_TYPE)) == "remote"
+      error("The replication service type must be remote because the service name and local service name are different")
+    end
+    if @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_M
+      error("The replication service type must be remote because the service name and local service name are different")
+    end
+  end
+  
+  def enabled?
+    super() && (@config.getProperty(get_member_key(DEPLOYMENT_SERVICE)) != @config.getProperty(get_member_key(DSNAME)))
+  end
+end
+
 class BackupScriptAvailableCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   
