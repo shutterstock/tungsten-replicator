@@ -11,6 +11,7 @@ REPL_MYSQL_ENABLE_NOONLYKEYWORDS = "repl_mysql_enable_noonlykeywords"
 REPL_MYSQL_XTRABACKUP_DIR = "repl_mysql_xtrabackup_dir"
 REPL_MYSQL_XTRABACKUP_FILE = "repl_mysql_xtrabackup_file"
 REPL_MYSQL_USE_BYTES_FOR_STRING = "repl_mysql_use_bytes_for_string"
+REPL_MYSQL_CONF = "repl_datasource_mysql_conf"
 
 class MySQLDatabasePlatform < ConfigureDatabasePlatform
   def get_uri_scheme
@@ -180,6 +181,23 @@ class MySQLDataDirectory < MySQLConfigurePrompt
   def update_deprecated_keys()
     replace_deprecated_key(get_member_key('repl_mysql_data_dir'))
     super()
+  end
+end
+
+class MySQLConfFile < ConfigurePrompt
+  include DatasourcePrompt
+  
+  def initialize
+    super(REPL_MYSQL_CONF, "MySQL config file", 
+      PV_FILENAME, "/etc/my.cnf")
+  end
+  
+  def enabled?
+    super() && (get_datasource().is_a?(MySQLDatabasePlatform))
+  end
+  
+  def enabled_for_config?
+    super() && (get_datasource().is_a?(MySQLDatabasePlatform))
   end
 end
 
@@ -444,6 +462,62 @@ class MySQLReadableLogsCheck < ConfigureValidationCheck
   end
 end
 
+class MySQLConfigFileCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  include MySQLApplierCheck
+  
+  def set_vars
+    @title = "MySQL config file is available"
+  end
+  
+  def validate
+    conf_file = @config.getProperty(get_applier_key(REPL_MYSQL_CONF))
+    
+    if Configurator.instance.is_localhost?(@config.getProperty(get_applier_key(REPL_DBHOST)))
+      unless File.exists?(conf_file)
+        error("The MySQL config file '#{conf_file}' does not exist")
+      else
+        unless File.readable?(conf_file)
+          error("The MySQL config file '#{conf_file}' is not readable")
+        end
+      end
+    else
+      warning("Unable to check the MySQL config file '#{conf_file}'")
+    end
+  end
+end
+
+class MySQLExtractorServerIDCheck < ConfigureValidationCheck
+  include ReplicationServiceValidationCheck
+  include MySQLExtractorCheck
+  
+  def set_vars
+    @title = "MySQL Direct Replication Server ID"
+  end
+  
+  def validate
+    conf_file = @config.getProperty(get_extractor_key(REPL_MYSQL_CONF))
+    if Configurator.instance.is_localhost?(@config.getProperty(get_extractor_key(REPL_DBHOST)))
+      if File.exists?(conf_file) && File.readable?(conf_file)
+        begin
+          conf_file_results = cmd_result("grep ^server-id #{conf_file}").split("=")
+        rescue
+          error("The MySQL config file '#{conf_file}' does not include a value for server-id")
+          help("Check the file to ensure a value is given and that it is not commented out")
+        end
+      else
+        error("The MySQL config file '#{conf_file}' is not readable")
+      end
+    else
+      warning("Unable to check for a configured server-id in '#{conf_file}' on #{get_extractor_datasource.get_connection_summary}")
+    end
+  end
+  
+  def enabled?
+    super() && @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_DI
+  end
+end
+
 class MySQLApplierServerIDCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   include MySQLApplierCheck
@@ -463,6 +537,29 @@ class MySQLApplierServerIDCheck < ConfigureValidationCheck
     retrieved_server_id = get_applier_datasource.get_value("SHOW VARIABLES LIKE 'server_id'", "Value")
     if server_id.to_i != retrieved_server_id.to_i
       error("The server-id '#{server_id}' does not match the the server-id from #{get_applier_datasource.get_connection_summary()} '#{retrieved_server_id}'")
+    end
+    
+    conf_file = @config.getProperty(get_applier_key(REPL_MYSQL_CONF))
+    if Configurator.instance.is_localhost?(@config.getProperty(get_applier_key(REPL_DBHOST)))
+      if File.exists?(conf_file) && File.readable?(conf_file)
+        begin
+          conf_file_results = cmd_result("grep ^server-id #{conf_file}").split("=")
+          if conf_file_results.length <= 1
+            error("Unable to read the server-id value in the MySQL config file '#{conf_file_results.join('=')}'")
+          else
+            unless server_id.to_i == conf_file_results[1].to_i
+              error("The MySQL config file has a server-id of '#{conf_file_results[1].to_i}' that is different from the configured server-id")
+            end
+          end
+        rescue
+          error("The MySQL config file '#{conf_file}' does not include a value for server-id")
+          help("Check the file to ensure a value is given and that it is not commented out")
+        end
+      else
+        error("The MySQL config file '#{conf_file}' is not readable")
+      end
+    else
+      warning("Unable to compare the configured server-id to the one in '#{conf_file}'")
     end
   end
 end
