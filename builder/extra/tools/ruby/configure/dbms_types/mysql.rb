@@ -27,7 +27,11 @@ class MySQLDatabasePlatform < ConfigureDatabasePlatform
   
   # Execute mysql command and return result to client. 
   def run(command)
-    cmd_result("mysql -u#{@username} --password=\"#{@password}\" -h#{@host} --port=#{@port} -e \"#{command}\"")
+    begin
+      return cmd_result("mysql -u#{@username} --password=\"#{@password}\" -h#{@host} --port=#{@port} -e \"#{command}\"")
+    rescue CommandError
+      return nil
+    end
   end
   
   def get_value(command, column = nil)
