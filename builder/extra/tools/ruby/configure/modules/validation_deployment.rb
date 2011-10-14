@@ -466,7 +466,15 @@ class HostReplicatorPortAvailableCheck < ConfigureValidationCheck
       info("The replicator RMI port is available")
     else
       error("The replicator RMI port '#{@config.getProperty(REPL_RMI_PORT)}' is already in use for #{@config.getProperty(HOST)}")
-      
+    end
+    
+    additional_port = @config.getProperty(REPL_RMI_PORT).to_i + 1
+    unless is_port_available?(@config.getProperty(HOST), additional_port)
+      error("The replicator RMI port '#{additional_port}' is already in use for #{@config.getProperty(HOST)}")
+    end
+    
+    unless is_valid?
+      help("The replicator requires both #{@config.getProperty(REPL_RMI_PORT)} and #{additional_port} to run")
       begin
         cmd_result("#{@config.getProperty(SVC_PATH_REPLICATOR)} status")
         help("The replicator in this path is running and may be the process using port '#{@config.getProperty(REPL_RMI_PORT)}'")
