@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Writes CSV format output with appropriate conversions from Java data types.
+ * Writes CSV output.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
@@ -39,14 +39,17 @@ import java.util.Map;
 public class CsvWriter
 {
     // Properties.
-    private char                 separator = ',';
+    private char                 separator    = ',';
+    private boolean              writeHeaders = true;
+    private boolean              quoted       = false;
+    private char                 quoteChar    = '"';
 
     // State.
-    private Map<String, Integer> names     = new HashMap<String, Integer>();
+    private Map<String, Integer> names        = new HashMap<String, Integer>();
     private List<String>         row;
     private BufferedWriter       writer;
-    private int                  rowCount  = 0;
-    private int                  colCount  = 0;
+    private int                  rowCount     = 0;
+    private int                  colCount     = 0;
 
     /**
      * Instantiate a new instance with output to provided writer.
@@ -62,7 +65,7 @@ public class CsvWriter
      */
     public CsvWriter(BufferedWriter writer)
     {
-        this.writer = new BufferedWriter(writer);
+        this.writer = writer;
     }
 
     /**
@@ -81,12 +84,56 @@ public class CsvWriter
         return separator;
     }
 
+    /** Returns true if values will be enclosed by a quote character. */
+    public synchronized boolean isQuoted()
+    {
+        return quoted;
+    }
+
+    /** Set to true to enable quoting. */
+    public synchronized void setQuoted(boolean quoted)
+    {
+        this.quoted = quoted;
+    }
+
+    /** Returns the quote character. */
+    public synchronized char getQuoteChar()
+    {
+        return quoteChar;
+    }
+
+    /** Sets the quote character. */
+    public synchronized void setQuoteChar(char quoteChar)
+    {
+        this.quoteChar = quoteChar;
+    }
+
     /**
      * Returns the current count of rows written.
      */
     public int getRowCount()
     {
         return rowCount;
+    }
+
+    /**
+     * Get the underlying writer.
+     */
+    public Writer getWriter()
+    {
+        return writer;
+    }
+
+    /** If true, write headers. */
+    public synchronized boolean isWriteHeaders()
+    {
+        return writeHeaders;
+    }
+
+    /** Set to true to write headers. */
+    public synchronized void setWriteHeaders(boolean writeHeaders)
+    {
+        this.writeHeaders = writeHeaders;
     }
 
     /**
@@ -141,8 +188,9 @@ public class CsvWriter
      */
     public void write() throws IOException
     {
-        // Write headers if we are at top of file.
-        if (rowCount == 0)
+        // Write headers if we are at top of file and header write
+        // is enabled.
+        if (rowCount == 0 && writeHeaders)
         {
             writeRow(getNames());
             rowCount++;
@@ -209,6 +257,10 @@ public class CsvWriter
         }
 
         // Set the column value.
+        if (quoted)
+        {
+            value = addQuotes(value);
+        }
         row.set(arrayIndex, value);
         colCount++;
     }
@@ -220,6 +272,26 @@ public class CsvWriter
     {
         int index = names.get(key);
         put(index, value);
+    }
+
+    // Utility routine to escape string contents and enclose in 
+    // quotes. 
+    private String addQuotes(String base)
+    {
+        StringBuffer sb = new StringBuffer();
+        sb.append(quoteChar);
+        for (int i = 0; i < base.length(); i++)
+        {
+            char next = base.charAt(i);
+            if (next == quoteChar)
+                sb.append('\\').append(quoteChar);
+            else if (next == '\\')
+                sb.append('\\').append('\\');
+            else
+                sb.append(next);
+        }
+        sb.append(quoteChar);
+        return sb.toString();
     }
 
     /**
