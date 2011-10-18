@@ -721,7 +721,10 @@ public abstract class AbstractDatabase implements Database
         if (replace)
             dropTable(t);
 
-        String SQL = "CREATE TABLE " + t.getSchema() + "." + t.getName() + " (";
+        String temporary = t.isTemporary() ? "TEMPORARY " : "";
+
+        String SQL = "CREATE " + temporary + "TABLE " + t.getSchema() + "."
+                + t.getName() + " (";
 
         Iterator<Column> i = t.getAllColumns().iterator();
         while (i.hasNext())

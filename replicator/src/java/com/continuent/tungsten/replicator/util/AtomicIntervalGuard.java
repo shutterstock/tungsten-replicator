@@ -51,6 +51,7 @@ public class AtomicIntervalGuard<D>
         long           seqno;
         long           time;
         D              datum;
+        long           reportTime;
         ThreadPosition before;
         ThreadPosition after;
 
@@ -108,6 +109,7 @@ public class AtomicIntervalGuard<D>
             tp.id = id;
             tp.seqno = seqno;
             tp.time = time;
+            tp.reportTime = System.currentTimeMillis();
             tp.datum = datum;
             array.put(id, tp);
 
@@ -161,6 +163,7 @@ public class AtomicIntervalGuard<D>
                         + " previous seqno=" + tp.seqno + " new seqno=" + seqno);
             tp.seqno = seqno;
             tp.time = time;
+            tp.reportTime = System.currentTimeMillis();
             tp.datum = datum;
 
             // Since seqno values only increase, we may need to move back in the
@@ -219,6 +222,24 @@ public class AtomicIntervalGuard<D>
             return head.time;
     }
 
+    /**
+     * Return lowest latency in milliseconds between the commit time and the
+     * automatically generated commit time in the array.
+     */
+    public synchronized long getLowLatency()
+    {
+        if (head == null)
+            return 0;
+        else
+        {
+            long latency = head.reportTime - head.time;
+            if (latency >= 0)
+                return latency;
+            else
+                return 0;
+        }
+    }
+
     /** Return the datum of the lowest entry in the array. */
     public synchronized D getLowDatum()
     {
@@ -246,6 +267,24 @@ public class AtomicIntervalGuard<D>
             return -1;
         else
             return tail.time;
+    }
+
+    /**
+     * Return the latency in seconds between the commit time and the
+     * automatically generated commit time.
+     */
+    public synchronized long getHiLatency()
+    {
+        if (tail == null)
+            return 0;
+        else
+        {
+            long latency = head.reportTime - head.time;
+            if (latency >= 0)
+                return latency;
+            else
+                return 0;
+        }
     }
 
     /** Return the datum of the highest entry in the array. */

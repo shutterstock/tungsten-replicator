@@ -216,16 +216,7 @@ public class StageProgressTracker
      */
     public synchronized long getCommittedApplyLatency()
     {
-        long timestamp = committedSeqno.getLowTime();
-        if (timestamp <= 0)
-            return 0;
-
-        // Latency may be sub-zero due to clock differences.
-        long applyMillis = System.currentTimeMillis() - timestamp;
-        if (applyMillis < 0)
-            return 0;
-        else
-            return applyMillis;
+        return committedSeqno.getLowLatency();
     }
 
     /**

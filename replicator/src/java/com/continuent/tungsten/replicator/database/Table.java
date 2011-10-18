@@ -34,9 +34,9 @@ import java.sql.PreparedStatement;
  */
 public class Table
 {
-
     String                  schema          = null;
     String                  name            = null;
+    boolean                 temporary       = false;
     ArrayList<Column>       allColumns      = null;
     ArrayList<Column>       nonKeyColumns   = null;
     ArrayList<Key>          keys            = null;
@@ -153,6 +153,21 @@ public class Table
     public String getName()
     {
         return name;
+    }
+
+    public String fullyQualifiedName()
+    {
+        return schema + "." + name;
+    }
+
+    public synchronized boolean isTemporary()
+    {
+        return temporary;
+    }
+
+    public synchronized void setTemporary(boolean temporary)
+    {
+        this.temporary = temporary;
     }
 
     public ArrayList<Column> getAllColumns()

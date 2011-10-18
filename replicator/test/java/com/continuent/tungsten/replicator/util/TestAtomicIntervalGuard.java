@@ -53,20 +53,24 @@ public class TestAtomicIntervalGuard extends TestCase
                 new Integer(3)};
 
         // Insert into an empty list.
-        ati.report(t[0], 2, 20);
+        ati.report(t[0], 2, 20, "2");
         assertEquals("Head #1", 2, ati.getLowSeqno());
         assertEquals("Tail #1", 2, ati.getHiSeqno());
         assertEquals("Head #1 -time", 20, ati.getLowTime());
         assertEquals("Tail #1 -time", 20, ati.getHiTime());
+        assertEquals("Head #1 -datum", "2", ati.getLowDatum());
+        assertEquals("Tail #1 -datum", "2", ati.getHiDatum());
         ati.validate();
         assertEquals("Interval #1", 0, ati.getInterval());
 
         // Insert at the front of the list.
-        ati.report(t[1], 1, 10);
+        ati.report(t[1], 1, 10, "1");
         assertEquals("Head #2", 1, ati.getLowSeqno());
         assertEquals("Tail #2", 2, ati.getHiSeqno());
         assertEquals("Head #2 -time", 10, ati.getLowTime());
         assertEquals("Tail #2 -time", 20, ati.getHiTime());
+        assertEquals("Head #2 -datum", "1", ati.getLowDatum());
+        assertEquals("Tail #2 -datum", "2", ati.getHiDatum());
         assertEquals("Interval #2", 10, ati.getInterval());
         ati.validate();
 
@@ -76,15 +80,19 @@ public class TestAtomicIntervalGuard extends TestCase
         assertEquals("Tail #3", 4, ati.getHiSeqno());
         assertEquals("Head #3 -time", 10, ati.getLowTime());
         assertEquals("Tail #3 -time", 40, ati.getHiTime());
+        assertEquals("Head #3 -datum", "1", ati.getLowDatum());
+        assertNull("Tail #3 -datum", ati.getHiDatum());
         assertEquals("Interval #3", 30, ati.getInterval());
         ati.validate();
 
         // Insert in the middle of the list.
-        ati.report(t[3], 3, 30);
+        ati.report(t[3], 3, 30, "3");
         assertEquals("Head #4", 1, ati.getLowSeqno());
         assertEquals("Tail #4", 4, ati.getHiSeqno());
         assertEquals("Head #4 -time", 10, ati.getLowTime());
         assertEquals("Tail #4 -time", 40, ati.getHiTime());
+        assertEquals("Head #4 -datum", "1", ati.getLowDatum());
+        assertNull("Tail #4 -datum", ati.getHiDatum());
         assertEquals("Interval #4", 30, ati.getInterval());
         ati.validate();
     }

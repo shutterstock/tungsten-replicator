@@ -446,8 +446,9 @@ public class MySQLDatabase extends AbstractDatabase
         {
             this.dropTable(t);
         }
+        String temporary = t.isTemporary() ? "TEMPORARY " : "";
 
-        SQL = "CREATE TABLE ";
+        SQL = "CREATE " + temporary + "TABLE ";
         SQL += (replace ? "" : "IF NOT EXISTS ");
         SQL += t.getSchema() + "." + t.getName();
         SQL += " (";
