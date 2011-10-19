@@ -48,6 +48,7 @@ import com.continuent.tungsten.replicator.database.Column;
 import com.continuent.tungsten.replicator.database.Database;
 import com.continuent.tungsten.replicator.database.DatabaseFactory;
 import com.continuent.tungsten.replicator.database.Key;
+import com.continuent.tungsten.replicator.database.PostgreSQLDatabase;
 import com.continuent.tungsten.replicator.database.Table;
 import com.continuent.tungsten.replicator.database.TableMetadataCache;
 import com.continuent.tungsten.replicator.dbms.DBMSData;
@@ -580,6 +581,7 @@ public class BatchApplier implements RawApplier
                 CsvWriter writer = new CsvWriter(output);
                 writer.setQuoteChar('"');
                 writer.setQuoted(true);
+                writer.setQuoteNULL(!(conn instanceof PostgreSQLDatabase));
                 writer.setWriteHeaders(false);
                 if (loadType == LoadType.INSERT)
                 {
@@ -707,7 +709,8 @@ public class BatchApplier implements RawApplier
         }
 
         // Generate and submit SQL command.
-        String loadCommand = getLoadCommand(info.schema, info.table, info.file);
+        String loadCommand = getLoadCommand(info.schema, info.table, false,
+                info.file);
         if (logger.isDebugEnabled())
         {
             logger.debug("Executing load command: " + loadCommand);
@@ -769,7 +772,7 @@ public class BatchApplier implements RawApplier
 
         // Load data into temp table.
         String loadCommand = getLoadCommand(info.schema, deleteTable.getName(),
-                info.file);
+                true, info.file);
         try
         {
             int rows = statement.executeUpdate(loadCommand);
@@ -791,7 +794,7 @@ public class BatchApplier implements RawApplier
         Table base = info.metadata;
         String baseFqn = base.fullyQualifiedName();
         StringBuffer sb = new StringBuffer();
-        sb.append("DELETE ").append(baseFqn);
+        sb.append("DELETE ")/* .append(baseFqn) */; // "DELETE tablename(!) FROM"?
         sb.append(" FROM ").append(baseFqn).append(" WHERE ");
         List<Column> keyCols = deleteTable.getPrimaryKey().getColumns();
         for (int i = 0; i < keyCols.size(); i++)
@@ -800,8 +803,10 @@ public class BatchApplier implements RawApplier
             if (i > 0)
                 sb.append(" AND ");
             sb.append(keyName).append(" IN (SELECT ").append(keyName);
-            sb.append(" FROM ").append(deleteTable.fullyQualifiedName())
-                    .append(")");
+            // Temporary tables cannot specify a schema name under PG.
+            sb.append(" FROM ").append(deleteTable.getSchema())
+                    .append(conn instanceof PostgreSQLDatabase ? "_" : ".")
+                    .append(deleteTable.getName()).append(")");
         }
         String delete = sb.toString();
 
@@ -824,11 +829,19 @@ public class BatchApplier implements RawApplier
         }
     }
 
-    // Returns an open CSV file corresponding to a given schema and table name.
-    private String getLoadCommand(String schema, String table, File csvFile)
-            throws ReplicatorException
+    /**
+     * Returns an open CSV file corresponding to a given schema and table name.
+     * 
+     * @param temp Is this a temporary table? Temporary tables are treated
+     *            differently under PostgreSQL.
+     */
+    private String getLoadCommand(String schema, String table, boolean temp,
+            File csvFile) throws ReplicatorException
     {
-        String qualifiedTable = schema + "." + table;
+        // Temporary tables cannot specify a schema name under PG.
+        String qualifiedTable = schema
+                + (temp && conn instanceof PostgreSQLDatabase ? "_" : ".")
+                + table;
         String loadCommand = this.loadCommands.get(qualifiedTable);
         if (loadCommand == null)
         {
@@ -959,7 +972,13 @@ public class BatchApplier implements RawApplier
     {
         Object value = columnVal.getValue();
         if (value == null)
-            return "";
+            if (conn instanceof PostgreSQLDatabase)
+            {
+                // PG needs to distinguish between NULL and an empty string.
+                return null;
+            }
+            else
+                return "";
         else
             return value.toString();
     }

@@ -204,8 +204,15 @@ public class PostgreSQLDatabase extends AbstractDatabase
      */
     private boolean tableExists(Table t) throws SQLException
     {
-        String sql = "SELECT * FROM pg_tables WHERE schemaname='"
-                + t.getSchema() + "' and tablename='" + t.getName() + "'";
+    	// TODO: use current session's schema name for temp tables.
+        // Temporary tables cannot specify a schema name:
+        String sql = "SELECT * FROM pg_tables WHERE "
+                + (t.isTemporary()
+                        ? ""
+                        : ("schemaname='" + t.getSchema() + "' AND "))
+                + "tablename='"
+                + (t.isTemporary() ? (t.getSchema() + "_") : "") + t.getName()
+                + "'";
         Statement stmt = dbConn.createStatement();
         ResultSet res = stmt.executeQuery(sql);
         if (res.next())
@@ -214,6 +221,29 @@ public class PostgreSQLDatabase extends AbstractDatabase
             return false;
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#dropTable(com.continuent.tungsten.replicator.database.Table)
+     */
+    @Override
+    public void dropTable(Table table)
+    {
+        // Temporary tables cannot specify a schema name:
+        String SQL = "DROP TABLE IF EXISTS " + table.getSchema()
+                + (table.isTemporary() ? "_" : ".") + table.getName() + " ";
+
+        try
+        {
+            execute(SQL);
+        }
+        catch (SQLException e)
+        {
+            if (logger.isDebugEnabled())
+                logger.debug("Unable to drop table; this may be expected", e);
+        }
+    }
+    
     /**
      * {@inheritDoc}
      * 
@@ -238,8 +268,9 @@ public class PostgreSQLDatabase extends AbstractDatabase
         }
 
         String temporary = t.isTemporary() ? "TEMPORARY " : "";
-        String SQL = "CREATE " + temporary + "TABLE " + t.getSchema() + "."
-                + t.getName() + " (";
+        // Temporary tables cannot specify a schema name:
+        String SQL = "CREATE " + temporary + "TABLE " + t.getSchema()
+                + (t.isTemporary() ? "_" : ".") + t.getName() + " (";
 
         Iterator<Column> i = t.getAllColumns().iterator();
         while (i.hasNext())
