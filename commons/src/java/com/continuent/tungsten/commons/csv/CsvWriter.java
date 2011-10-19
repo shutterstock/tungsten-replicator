@@ -42,6 +42,7 @@ public class CsvWriter
     private char                 separator    = ',';
     private boolean              writeHeaders = true;
     private boolean              quoted       = false;
+    private boolean              quoteNULL    = true;
     private char                 quoteChar    = '"';
 
     // State.
@@ -94,6 +95,18 @@ public class CsvWriter
     public synchronized void setQuoted(boolean quoted)
     {
         this.quoted = quoted;
+    }
+    
+    /** Returns true if NULL values are also quoted. */
+    public synchronized boolean isQuoteNULL()
+    {
+        return quoteNULL;
+    }
+    
+    /** Set to false to not quote NULL values. */
+    public synchronized void setQuoteNULL(boolean quoteNULL)
+    {
+        this.quoteNULL = quoteNULL;
     }
 
     /** Returns the quote character. */
@@ -266,7 +279,11 @@ public class CsvWriter
         }
 
         // Set the column value.
-        if (quoted)
+        if (value == null && !quoteNULL)
+        {
+            value = "";
+        }
+        else if (quoted)
         {
             value = addQuotes(value);
         }
