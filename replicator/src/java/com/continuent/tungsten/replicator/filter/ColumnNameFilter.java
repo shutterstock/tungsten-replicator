@@ -146,16 +146,9 @@ public class ColumnNameFilter implements Filter
             {
                 RowChangeData rdata = (RowChangeData) dataElem;
                 for (OneRowChange orc : rdata.getRowChanges())
-                    try
-                    {
-                        getColumnInformation(orc);
-                    }
-                    catch (SQLException e)
-                    {
-                        throw new ReplicatorException(
-                                "Filter failed retrieving column information",
-                                e);
-                    }
+                {
+                    getColumnInformation(orc);
+                }
             }
             else if (dataElem instanceof StatementData)
             {
@@ -230,7 +223,9 @@ public class ColumnNameFilter implements Filter
         }
     }
 
-    private void getColumnInformation(OneRowChange orc) throws SQLException
+    // Fetch information about schema.
+    private void getColumnInformation(OneRowChange orc)
+            throws ReplicatorException
     {
         String tableName = orc.getTableName();
 
@@ -253,8 +248,26 @@ public class ColumnNameFilter implements Filter
                 logger.debug("Detected a schema change for table "
                         + orc.getSchemaName() + "." + tableName
                         + " - Removing table metadata from cache");
-            Table newTable = conn.findTable(orc.getSchemaName(),
-                    orc.getTableName());
+            Table newTable = null;
+            try
+            {
+                newTable = conn.findTable(orc.getSchemaName(),
+                        orc.getTableName());
+            }
+            catch (SQLException e)
+            {
+                throw new ReplicatorException(
+                        "Unable to retrieve column metadata: schema="
+                                + orc.getSchemaName() + " table="
+                                + orc.getTableName());
+            }
+            if (newTable == null)
+            {
+                throw new ReplicatorException(
+                        "Unable to find column metadata; table may be missing: schema="
+                                + orc.getSchemaName() + " table="
+                                + orc.getTableName());
+            }
             newTable.setTableId(orc.getTableId());
             dbCache.put(tableName, newTable);
         }
@@ -270,7 +283,7 @@ public class ColumnNameFilter implements Filter
             type.setName(columns.get(index).getName());
             index++;
         }
-        
+
         index = 0;
         for (Iterator<ColumnSpec> iterator = orc.getKeySpec().iterator(); iterator
                 .hasNext();)

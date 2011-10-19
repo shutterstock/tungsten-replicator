@@ -38,6 +38,7 @@ import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.csv.CsvException;
 import com.continuent.tungsten.commons.csv.CsvWriter;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.applier.RawApplier;
@@ -536,10 +537,12 @@ public class BatchApplier implements RawApplier
             InterruptedException
     {
         // Release staging directory.
-        purgeDirIfExists(stageDir, true);
+        if (stageDir != null)
+            purgeDirIfExists(stageDir, true);
 
         // Release table cache.
-        tableMetadataCache.invalidateAll();
+        if (tableMetadataCache != null)
+            tableMetadataCache.invalidateAll();
     }
 
     // Returns an insert CSV file for a given schema and table name.
@@ -606,6 +609,11 @@ public class BatchApplier implements RawApplier
                 info.writer = writer;
                 openCsvFiles.put(key, info);
             }
+            catch (CsvException e)
+            {
+                throw new ReplicatorException("Unable to intialize CSV file: "
+                        + e.getMessage(), e);
+            }
             catch (IOException e)
             {
                 throw new ReplicatorException("Unable to intialize CSV file: "
@@ -659,6 +667,11 @@ public class BatchApplier implements RawApplier
                 }
                 csv.write();
             }
+            catch (CsvException e)
+            {
+                throw new ReplicatorException("Invalid write to CSV file: "
+                        + info.file.getAbsolutePath(), e);
+            }
             catch (IOException e)
             {
                 throw new ReplicatorException(
@@ -681,6 +694,11 @@ public class BatchApplier implements RawApplier
         {
             info.writer.flush();
             info.writer.getWriter().close();
+        }
+        catch (CsvException e)
+        {
+            throw new ReplicatorException("Unable to close CSV file: "
+                    + info.file.getAbsolutePath(), e);
         }
         catch (IOException e)
         {
@@ -724,6 +742,11 @@ public class BatchApplier implements RawApplier
         {
             info.writer.flush();
             info.writer.getWriter().close();
+        }
+        catch (CsvException e)
+        {
+            throw new ReplicatorException("Unable to close CSV file: "
+                    + info.file.getAbsolutePath(), e);
         }
         catch (IOException e)
         {
