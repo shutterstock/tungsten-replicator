@@ -153,7 +153,7 @@ public class CsvReader
     /**
      * Positions to next row and returns true if there are data to be read.
      * 
-     * @throws IOException
+     * @throws IOException Thrown if there is an IO error.
      */
     public boolean next() throws IOException
     {
@@ -188,20 +188,19 @@ public class CsvReader
      * 
      * @param index Column index where indexes are numbered 1,2,3,...,N with N
      *            being the width of the row in columns
-     * @throws IOException Thrown if client attempts to write same column value
-     *             twice
+     * @throws CsvException Thrown if read is invalid
      */
-    public String getString(int index) throws IOException
+    public String getString(int index) throws CsvException
     {
         // Ensure we have a row.
         if (row == null)
         {
-            throw new IOException("Attempt to read when no row is available");
+            throw new CsvException("Attempt to read when no row is available");
         }
 
         // Ensure the index is within bounds.
         if (index > names.size() || index < 1)
-            throw new IOException("Attempt to read non-existent index: row="
+            throw new CsvException("Attempt to read non-existent index: row="
                     + rowCount + " index=" + index + " columns=" + names.size());
 
         return row.get(index - 1);
@@ -210,11 +209,11 @@ public class CsvReader
     /**
      * Gets a string from the current row.
      */
-    public String getString(String key) throws IOException
+    public String getString(String key) throws CsvException
     {
         Integer index = names.get(key);
         if (index == null)
-            throw new IOException("Attempt to read non-existent key: row="
+            throw new CsvException("Attempt to read non-existent key: row="
                     + rowCount + " key=" + key);
         return getString(index);
     }

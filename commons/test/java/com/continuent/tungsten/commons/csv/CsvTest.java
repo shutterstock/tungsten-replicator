@@ -98,7 +98,7 @@ public class CsvTest
     }
 
     /**
-     * Verify that an IOException results if the client tries to add a new
+     * Verify that a CsvException results if the client tries to add a new
      * column name after writing the first row.
      */
     @Test
@@ -116,14 +116,14 @@ public class CsvTest
             csvWriter.addColumnName("bb");
             throw new Exception("Can add column after writing!");
         }
-        catch (IOException e)
+        catch (CsvException e)
         {
             // Expected.
         }
     }
 
     /**
-     * Verify that an IOException results if the client issues a write while we
+     * Verify that a CsvException results if the client issues a write while we
      * have an incomplete row.
      */
     @Test
@@ -140,7 +140,7 @@ public class CsvTest
             csvWriter.write();
             throw new Exception("Can write partial row!");
         }
-        catch (IOException e)
+        catch (CsvException e)
         {
             // Expected.
         }
@@ -149,7 +149,7 @@ public class CsvTest
             csvWriter.write();
             throw new Exception("Can flush partial row!");
         }
-        catch (IOException e)
+        catch (CsvException e)
         {
             // Expected.
         }
@@ -158,6 +158,29 @@ public class CsvTest
         csvWriter.put("bb", "r1b");
         csvWriter.write();
         csvWriter.flush();
+    }
+
+    /**
+     * Verify that a CsvException results if the client issues a write past the
+     * end of the row.
+     */
+    @Test
+    public void testWriteExtraColumn() throws Exception
+    {
+        StringWriter sw = new StringWriter();
+        CsvWriter csvWriter = new CsvWriter(sw);
+
+        csvWriter.addColumnName("a");
+        csvWriter.put(1, "good value");
+        try
+        {
+            csvWriter.put(2, "bad value");
+            throw new Exception("Can write extra column!");
+        }
+        catch (CsvException e)
+        {
+            // Expected.
+        }
     }
 
     /**
@@ -186,7 +209,7 @@ public class CsvTest
             csvReader.getString("d");
             throw new Exception("Able to read invalid column name");
         }
-        catch (IOException e)
+        catch (CsvException e)
         {
             // Expected.
         }
@@ -197,7 +220,7 @@ public class CsvTest
             csvReader.getString(4);
             throw new Exception("Able to read invalid column index");
         }
-        catch (IOException e)
+        catch (CsvException e)
         {
             // Expected.
         }

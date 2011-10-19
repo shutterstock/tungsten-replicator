@@ -141,13 +141,13 @@ public class CsvWriter
      * You must add all names before writing the first row.
      * 
      * @param name Column name
-     * @throws IOException Thrown
+     * @throws CsvException Thrown
      */
-    public void addColumnName(String name) throws IOException
+    public void addColumnName(String name) throws CsvException
     {
         if (rowCount > 0)
         {
-            throw new IOException(
+            throw new CsvException(
                     "Attempt to add column after writing one or more rows");
         }
         int index = names.size() + 1;
@@ -184,9 +184,11 @@ public class CsvWriter
     /**
      * Writes current row, including headers if we are on the first row.
      * 
-     * @throws IOException
+     * @throws CsvException Thrown if there is an inconsistency like too many
+     *             columns
+     * @throws IOException Thrown due to a write error
      */
-    public void write() throws IOException
+    public void write() throws CsvException, IOException
     {
         // Write headers if we are at top of file and header write
         // is enabled.
@@ -202,7 +204,7 @@ public class CsvWriter
             // Check for writing too few columns.
             if (colCount < names.size())
             {
-                throw new IOException("Attempt to write partial row: row="
+                throw new CsvException("Attempt to write partial row: row="
                         + (rowCount + 1) + " columns required=" + names.size()
                         + " columns written=" + colCount);
             }
@@ -217,9 +219,9 @@ public class CsvWriter
     /**
      * Forces a write of any pending row(s) and flushes data on writer.
      * 
-     * @throws IOException Thrown on an I/O failure
+     * @throws CsvException Thrown on an I/O failure
      */
-    public void flush() throws IOException
+    public void flush() throws IOException, CsvException
     {
         write();
         writer.flush();
@@ -231,10 +233,10 @@ public class CsvWriter
      * @param index Column index where indexes are numbered 1,2,3,...,N with N
      *            being the width of the row in columns
      * @param value String value to write, already escaped if necessary
-     * @throws IOException Thrown if client attempts to write same column value
-     *             twice
+     * @throws CsvException Thrown if client attempts to write same column value
+     *             twice or the row is not wide enough
      */
-    public void put(int index, String value) throws IOException
+    public void put(int index, String value) throws CsvException
     {
         // Start a new row if required and fill columns with null values.
         if (row == null)
@@ -246,11 +248,18 @@ public class CsvWriter
             colCount = 0;
         }
 
+        // Check for invalid index.
+        if (index < 1 || index > row.size())
+        {
+            throw new CsvException("Attempt to to invalid column index: index="
+                    + index + " value=" + value + " row size=" + row.size());
+        }
+
         // Check for a double write to same column. This is a safety violation.
         int arrayIndex = index - 1;
         if (row.get(arrayIndex) != null)
         {
-            throw new IOException(
+            throw new CsvException(
                     "Attempt to write value twice to same row: index=" + index
                             + " old value=" + row.get(arrayIndex)
                             + " new value=" + value);
@@ -268,14 +277,14 @@ public class CsvWriter
     /**
      * Writes value to key in current row.
      */
-    public void put(String key, String value) throws IOException
+    public void put(String key, String value) throws CsvException
     {
         int index = names.get(key);
         put(index, value);
     }
 
-    // Utility routine to escape string contents and enclose in 
-    // quotes. 
+    // Utility routine to escape string contents and enclose in
+    // quotes.
     private String addQuotes(String base)
     {
         StringBuffer sb = new StringBuffer();
