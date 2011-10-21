@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s): 
+ * Contributor(s): Linas Virbalas
  */
 
 package com.continuent.tungsten.commons.csv;
@@ -39,18 +39,20 @@ import java.util.Map;
 public class CsvWriter
 {
     // Properties.
-    private char                 separator    = ',';
-    private boolean              writeHeaders = true;
-    private boolean              quoted       = false;
-    private boolean              quoteNULL    = true;
-    private char                 quoteChar    = '"';
+    private char                 separator       = ',';
+    private boolean              writeHeaders    = true;
+    private boolean              quoted          = false;
+    private boolean              quoteNULL       = true;
+    private char                 quoteChar       = '"';
+    private char                 quoteEscapeChar = '\\';
+    private boolean              escapeBackslash = true;
 
     // State.
-    private Map<String, Integer> names        = new HashMap<String, Integer>();
+    private Map<String, Integer> names           = new HashMap<String, Integer>();
     private List<String>         row;
     private BufferedWriter       writer;
-    private int                  rowCount     = 0;
-    private int                  colCount     = 0;
+    private int                  rowCount        = 0;
+    private int                  colCount        = 0;
 
     /**
      * Instantiate a new instance with output to provided writer.
@@ -120,7 +122,35 @@ public class CsvWriter
     {
         this.quoteChar = quoteChar;
     }
+    
+    /** Sets whether to escape backslash symbol in values. */
+    public synchronized void setEscapeBackslash(boolean escapeBackslash)
+    {
+        this.escapeBackslash = escapeBackslash;
+    }
 
+    /** Returns true if backslash symbols are escaped. */
+    public synchronized boolean isEscapeBackslash()
+    {
+        return escapeBackslash;
+    }
+
+    /**
+     * Sets character that precedes quote characters.
+     * 
+     * @see #setQuoteChar(char)
+     */
+    public synchronized void setQuoteEscapeChar(char quoteEscapeChar)
+    {
+        this.quoteEscapeChar = quoteEscapeChar;
+    }
+
+    /** Sets the character used to escape quote characters. */
+    public synchronized char getQuoteEscapeChar()
+    {
+        return quoteEscapeChar;
+    }
+    
     /**
      * Returns the current count of rows written.
      */
@@ -310,8 +340,8 @@ public class CsvWriter
         {
             char next = base.charAt(i);
             if (next == quoteChar)
-                sb.append('\\').append(quoteChar);
-            else if (next == '\\')
+                sb.append(quoteEscapeChar).append(quoteChar);
+            else if (escapeBackslash && next == '\\')
                 sb.append('\\').append('\\');
             else
                 sb.append(next);
