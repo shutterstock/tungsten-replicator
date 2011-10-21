@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s): 
+ * Contributor(s): Linas Virbalas
  */
 
 package com.continuent.tungsten.replicator.applier.batch;
@@ -581,7 +581,12 @@ public class BatchApplier implements RawApplier
                 CsvWriter writer = new CsvWriter(output);
                 writer.setQuoteChar('"');
                 writer.setQuoted(true);
-                writer.setQuoteNULL(!(conn instanceof PostgreSQLDatabase));
+                if (conn instanceof PostgreSQLDatabase)
+                {
+                    writer.setQuoteNULL(false);
+                    writer.setEscapeBackslash(false);
+                    writer.setQuoteEscapeChar('"');
+                }
                 writer.setWriteHeaders(false);
                 if (loadType == LoadType.INSERT)
                 {
