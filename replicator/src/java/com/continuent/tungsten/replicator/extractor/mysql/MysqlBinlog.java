@@ -794,7 +794,7 @@ public class MysqlBinlog
 
         if (unsignedByteToInt(buffer[position]) < 251)
         {
-            len = buffer[position];
+            len = unsignedByteToInt(buffer[position]);
             position++;
             ret[0] = len;
             ret[1] = position;
