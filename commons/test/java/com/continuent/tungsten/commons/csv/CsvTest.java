@@ -226,6 +226,45 @@ public class CsvTest
         }
     }
 
+    /**
+     * Verify that enabling a row ID allows us to output and read back
+     * automatically generated row values.
+     */
+    @Test
+    public void testRowIds() throws Exception
+    {
+        // Create a file with row IDs enabled.
+        StringWriter sw = new StringWriter();
+        CsvWriter csvWriter = new CsvWriter(sw);
+        csvWriter.addColumnName("a");
+        csvWriter.addRowIdName("my_row_id");
+        csvWriter.setWriteHeaders(true);
+
+        // Write values and flush to a string we can read again.
+        for (int i = 1; i <= 10; i++)
+        {
+            csvWriter.put("a", new Integer(i).toString());
+            csvWriter.write();
+        }
+        csvWriter.flush();
+        String csv = sw.toString();
+
+        // Read CSV data back in and check that row ID is correct.
+        StringReader sr = new StringReader(csv);
+        CsvReader csvReader = new CsvReader(sr);
+        csvReader.setUseHeaders(true);
+
+        for (int i = 1; i <= 10; i++)
+        {
+            // Row ID is i + 1 because we have a header row.
+            csvReader.next();
+            Assert.assertEquals(new Integer(i).toString(),
+                    csvReader.getString("a"));
+            Assert.assertEquals(new Integer(i + 1).toString(),
+                    csvReader.getString("my_row_id"));
+        }
+    }
+
     // Create a CSV file with no extra separators.
     private String createCsvFile(String[] colNames, int rows)
             throws IOException

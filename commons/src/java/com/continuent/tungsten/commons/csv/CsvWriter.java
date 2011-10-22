@@ -46,6 +46,7 @@ public class CsvWriter
     private char                 quoteChar       = '"';
     private char                 quoteEscapeChar = '\\';
     private boolean              escapeBackslash = true;
+    private String               rowId           = null;
 
     // State.
     private Map<String, Integer> names           = new HashMap<String, Integer>();
@@ -98,13 +99,13 @@ public class CsvWriter
     {
         this.quoted = quoted;
     }
-    
+
     /** Returns true if NULL values are also quoted. */
     public synchronized boolean isQuoteNULL()
     {
         return quoteNULL;
     }
-    
+
     /** Set to false to not quote NULL values. */
     public synchronized void setQuoteNULL(boolean quoteNULL)
     {
@@ -122,7 +123,7 @@ public class CsvWriter
     {
         this.quoteChar = quoteChar;
     }
-    
+
     /** Sets whether to escape backslash symbol in values. */
     public synchronized void setEscapeBackslash(boolean escapeBackslash)
     {
@@ -150,7 +151,7 @@ public class CsvWriter
     {
         return quoteEscapeChar;
     }
-    
+
     /**
      * Returns the current count of rows written.
      */
@@ -198,13 +199,37 @@ public class CsvWriter
     }
 
     /**
+     * Add a row id name. Row IDs are a numeric counter at the end of the rows
+     * to make loading processes easier for data warehouses. They automatically
+     * join the index as the last column.
+     * 
+     * @param name Row ID name
+     * @throws CsvException Thrown if the row ID has already been set.
+     */
+    public void addRowIdName(String name) throws CsvException
+    {
+        if (rowCount > 0)
+        {
+            throw new CsvException(
+                    "Attempt to add row ID after writing one or more rows");
+        }
+        else if (rowId != null)
+        {
+            throw new CsvException("Attempt to add row ID twice");
+        }
+        this.rowId = name;
+    }
+
+    /**
      * Return names in column order.
      */
     public List<String> getNames()
     {
-        // Create null-filled array.
-        List<String> nameList = new ArrayList<String>(names.size());
-        for (int i = 0; i < names.size(); i++)
+        // Create null-filled array.  The array differs by one according
+        // to whether we use row IDs or not. 
+        int size = (rowId == null) ? names.size() : names.size() + 1;
+        List<String> nameList = new ArrayList<String>(size);
+        for (int i = 0; i < size; i++)
             nameList.add(null);
 
         // Add names to correct positions in array.
@@ -213,6 +238,11 @@ public class CsvWriter
             int index = names.get(name);
             nameList.set(index - 1, name);
         }
+        
+        // Add rowId if we are using it. 
+        if (rowId != null)
+            nameList.set(names.size(), rowId);
+
         return nameList;
     }
 
@@ -221,7 +251,11 @@ public class CsvWriter
      */
     public int getWidth()
     {
-        return names.size();
+        int base = names.size();
+        if (rowId == null)
+            return base;
+        else
+            return base + 1;
     }
 
     /**
@@ -233,17 +267,26 @@ public class CsvWriter
      */
     public void write() throws CsvException, IOException
     {
-        // Write headers if we are at top of file and header write
-        // is enabled.
+        // At the top of the file optionally write headers and set the row
+        // ID name.
         if (rowCount == 0 && writeHeaders)
         {
-            writeRow(getNames());
-            rowCount++;
+            if (writeHeaders)
+            {
+                writeRow(getNames());
+                rowCount++;
+            }
         }
 
         // If we have a pending row, write it now.
         if (row != null)
         {
+            // Add the row count value to last column if row IDs are enabled.
+            if (rowId != null)
+            {
+                put(row.size(), new Integer(rowCount + 1).toString());
+            }
+
             // Check for writing too few columns.
             if (colCount < names.size())
             {
@@ -294,8 +337,9 @@ public class CsvWriter
         // Check for invalid index.
         if (index < 1 || index > row.size())
         {
-            throw new CsvException("Attempt to to invalid column index: index="
-                    + index + " value=" + value + " row size=" + row.size());
+            throw new CsvException(
+                    "Attempt to write to invalid column index: index=" + index
+                            + " value=" + value + " row size=" + row.size());
         }
 
         // Check for a double write to same column. This is a safety violation.
