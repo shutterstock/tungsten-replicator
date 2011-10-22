@@ -22,6 +22,7 @@
 
 package com.continuent.tungsten.replicator.database;
 
+import java.io.BufferedWriter;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -33,6 +34,7 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.csv.CsvWriter;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 
@@ -619,4 +621,15 @@ public class OracleDatabase extends AbstractDatabase
         return retval;
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#getCsvWriter(java.io.BufferedWriter)
+     */
+    public CsvWriter getCsvWriter(BufferedWriter writer)
+    {
+        // Need to implement in order to support CSV.
+        throw new UnsupportedOperationException(
+                "CSV output is not supported for this database type");
+    }
 }

@@ -22,6 +22,7 @@
 
 package com.continuent.tungsten.replicator.database;
 
+import java.io.BufferedWriter;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -32,6 +33,7 @@ import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.csv.CsvWriter;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 
@@ -518,5 +520,19 @@ public class MySQLDatabase extends AbstractDatabase
     public SqlOperationMatcher getSqlNameMatcher() throws ReplicatorException
     {
         return new MySQLOperationMatcher();
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#getCsvWriter(java.io.BufferedWriter)
+     */
+    public CsvWriter getCsvWriter(BufferedWriter writer)
+    {
+        CsvWriter csv = new CsvWriter(writer);
+        csv.setQuoteChar('"');
+        csv.setQuoted(true);
+        csv.setWriteHeaders(false);
+        return csv;
     }
 }

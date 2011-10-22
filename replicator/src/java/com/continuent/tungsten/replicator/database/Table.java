@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Scott Martin
- * Contributor(s): Stephane Giron
+ * Contributor(s): Stephane Giron, Robert Hodges
  */
 
 package com.continuent.tungsten.replicator.database;
@@ -150,9 +150,19 @@ public class Table
         return schema;
     }
 
+    public void setSchema(String schema)
+    {
+        this.schema = schema;
+    }
+
     public String getName()
     {
         return name;
+    }
+
+    public void setTable(String name)
+    {
+        this.name = name;
     }
 
     public String fullyQualifiedName()
@@ -249,9 +259,36 @@ public class Table
         return tableId;
     }
 
-    @Override
+    /**
+     * {@inheritDoc}
+     * 
+     * @see java.lang.Object#toString()
+     */
     public String toString()
     {
         return this.schema + "." + this.name;
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see java.lang.Object#clone()
+     */
+    public Table clone()
+    {
+        // Data structures are copied but individual columns and keys
+        // are shared with the original.
+        Table newTable = new Table(schema, name);
+        newTable.setTemporary(this.temporary);
+        newTable.setTableId(this.tableId);
+        for (Column col : allColumns)
+        {
+            newTable.AddColumn(col);
+        }
+        for (Key key : keys)
+        {
+            newTable.AddKey(key);
+        }
+        return newTable;
     }
 }

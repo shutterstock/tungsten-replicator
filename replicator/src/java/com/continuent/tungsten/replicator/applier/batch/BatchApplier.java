@@ -28,6 +28,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -76,6 +77,17 @@ public class BatchApplier implements RawApplier
 {
     private static Logger logger          = Logger.getLogger(BatchApplier.class);
 
+    /**
+     * Option for direct loading of inserts using COPY/LOAD DATA command and
+     * temp tables for deletes.
+     */
+    public static String  DIRECT          = "direct";
+
+    /**
+     * Option for indirect loading of inserts and deletes via staging tables.
+     */
+    public static String  STAGED          = "staged";
+
     // Task management information.
     private int           taskId;
 
@@ -84,28 +96,47 @@ public class BatchApplier implements RawApplier
     protected String      url;
     protected String      user;
     protected String      password;
-    protected String      template;
-    protected String      stagingDirectory;
-    protected boolean     supportsReplace = true;
+    protected String      stageDirectory;
+    protected String      loadMethod;
+    protected String      loadBatchTemplate;
+    protected String      stageTablePrefix;
+    protected String      stageDeleteFromTemplate;
+    protected String      stageInsertFromTemplate;
+    protected String      stagePkeyColumn;
+    protected String      stageRowIdColumn;
+    protected boolean     supportsReplace = false;
 
     // Load file directory for this task.
     private File          stageDir;
 
-    // Currently open CSV files.
-    enum LoadType
+    // Enum describing the different load methods.
+    enum LoadMethod
     {
-        INSERT, DELETE
+        direct, staged
     };
+
+    private LoadMethod method;
+
+    // Enum to distinguish batches of deletes vs inserts.
+    enum BatchType
+    {
+        insert, delete
+    };
+
+    // Batch CSV file information. When using staging the
+    // stage table metadata field is filled in. Otherwise it is null.
     class CsvInfo
     {
-        LoadType  type;
+        BatchType type;
         String    schema;
         String    table;
-        Table     metadata;
+        Table     baseTableMetadata;
+        Table     stageTableMetadata;
         File      file;
         CsvWriter writer;
     }
 
+    // Open CVS files in current transaction.
     private Map<String, CsvInfo> openCsvFiles         = new TreeMap<String, CsvInfo>();
 
     // Cached load commands.
@@ -148,9 +179,41 @@ public class BatchApplier implements RawApplier
         this.password = password;
     }
 
-    public synchronized void setTemplate(String template)
+    public synchronized void setLoadBatchTemplate(String loadBatchTemplate)
     {
-        this.template = template;
+        this.loadBatchTemplate = loadBatchTemplate;
+    }
+
+    public synchronized void setLoadMethod(String loadMethod)
+    {
+        this.loadMethod = loadMethod;
+    }
+
+    public synchronized void setStageTablePrefix(String stageTablePrefix)
+    {
+        this.stageTablePrefix = stageTablePrefix;
+    }
+
+    public synchronized void setStageDeleteFromTemplate(
+            String stageDeleteFromTemplate)
+    {
+        this.stageDeleteFromTemplate = stageDeleteFromTemplate;
+    }
+
+    public synchronized void setStageInsertFromTemplate(
+            String stageInsertFromTemplate)
+    {
+        this.stageInsertFromTemplate = stageInsertFromTemplate;
+    }
+
+    public synchronized void setStagePkeyColumn(String stagePkeyColumn)
+    {
+        this.stagePkeyColumn = stagePkeyColumn;
+    }
+
+    public synchronized void setStageRowIdColumn(String rowId)
+    {
+        this.stageRowIdColumn = rowId;
     }
 
     public synchronized void setSupportsReplace(boolean supportsReplace)
@@ -158,9 +221,9 @@ public class BatchApplier implements RawApplier
         this.supportsReplace = supportsReplace;
     }
 
-    public synchronized void setStagingDirectory(String stagingDirectory)
+    public synchronized void setStageDirectory(String stageDirectory)
     {
-        this.stagingDirectory = stagingDirectory;
+        this.stageDirectory = stageDirectory;
     }
 
     /**
@@ -235,10 +298,9 @@ public class BatchApplier implements RawApplier
                                 table, colSpecs, keySpecs);
 
                         // Write keys for deletion and columns for insert.
-                        if (!supportsReplace)
+                        if (method == LoadMethod.staged || !supportsReplace)
                         {
-                            // We only need delete if there is no support
-                            // for replace on load.
+                            // Direct loads that support replace can skip this.
                             this.writeDeleteValues(tableMetadata, keySpecs,
                                     keyValues);
                         }
@@ -249,13 +311,13 @@ public class BatchApplier implements RawApplier
                     {
                         // Fetch column names and values.
                         List<ColumnSpec> keySpecs = orc.getKeySpec();
-                        List<ColumnSpec> colSpecs = orc.getColumnSpec();
+                        // List<ColumnSpec> colSpecs = orc.getColumnSpec();
                         ArrayList<ArrayList<ColumnVal>> keyValues = orc
                                 .getKeyValues();
 
-                        // Get information the table definition.
+                        // Get information about the table definition.
                         Table tableMetadata = this.getTableMetadata(schema,
-                                table, colSpecs, keySpecs);
+                                table, keySpecs, keySpecs);
 
                         // Insert each column into the CSV file.
                         this.writeDeleteValues(tableMetadata, keySpecs,
@@ -311,9 +373,21 @@ public class BatchApplier implements RawApplier
         int loadCount = 0;
         for (CsvInfo info : openCsvFiles.values())
         {
-            if (info.type == LoadType.DELETE)
+            if (info.type == BatchType.delete)
             {
-                loadAndDelete(info);
+                if (method == LoadMethod.staged)
+                {
+                    clearStageTable(info);
+                    load(info);
+                    mergeStageTableDeletes(info);
+                }
+                else
+                {
+                    // Create a temporary staging table on the fly.
+                    info.stageTableMetadata = createTempDeleteTable(info);
+                    load(info);
+                    mergeStageTableDeletes(info);
+                }
                 loadCount++;
             }
         }
@@ -321,9 +395,18 @@ public class BatchApplier implements RawApplier
         // Load each open insert CSV file.
         for (CsvInfo info : openCsvFiles.values())
         {
-            if (info.type == LoadType.INSERT)
+            if (info.type == BatchType.insert)
             {
-                load(info);
+                if (method == LoadMethod.staged)
+                {
+                    clearStageTable(info);
+                    load(info);
+                    mergeStageTableInserts(info);
+                }
+                else
+                {
+                    load(info);
+                }
                 loadCount++;
             }
         }
@@ -433,18 +516,38 @@ public class BatchApplier implements RawApplier
     public void configure(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
-        // Ensure required properties are not null.
+        // Ensure basic properties are not null.
         assertNotNull(driver, "driver");
         assertNotNull(url, "url");
         assertNotNull(user, "user");
         assertNotNull(password, "password");
-        assertNotNull(template, "template");
-        assertNotNull(stagingDirectory, "stagingDirectory");
+        assertNotNull(loadBatchTemplate, "loadBatchTemplate");
+        assertNotNull(stageDirectory, "stageDirectory");
 
         // Get metadata schema.
         metadataSchema = context.getReplicatorSchemaName();
         consistencyTable = metadataSchema + "." + ConsistencyTable.TABLE_NAME;
         consistencySelect = "SELECT * FROM " + consistencyTable + " ";
+
+        // Check properties associated with staged versus direct loading.
+        if (DIRECT.equals(loadMethod))
+        {
+            method = LoadMethod.direct;
+        }
+        else if (STAGED.equals(loadMethod))
+        {
+            assertNotNull(stageTablePrefix, "stageTablePrefix");
+            assertNotNull(stageDeleteFromTemplate, "stageDeleteFromTemplate");
+            assertNotNull(stageInsertFromTemplate, "stageInsertFromTemplate");
+            assertNotNull(stagePkeyColumn, "stagePkeyColumn");
+            assertNotNull(stageRowIdColumn, "stageRowIdColumn");
+            method = LoadMethod.staged;
+        }
+        else
+        {
+            throw new ReplicatorException(
+                    "The loadMethod property must be set to direct or staged");
+        }
     }
 
     // Ensure value is not null.
@@ -468,7 +571,7 @@ public class BatchApplier implements RawApplier
             InterruptedException
     {
         // Set up the staging directory.
-        File staging = new File(stagingDirectory);
+        File staging = new File(stageDirectory);
         createDirIfNotExist(staging);
 
         // Define and create the load sub-directory.
@@ -550,20 +653,69 @@ public class BatchApplier implements RawApplier
     private CsvInfo getInsertCsvWriter(Table tableMetadata)
             throws ReplicatorException
     {
-        return getCsvWriter(tableMetadata, LoadType.INSERT, "insert");
+        if (method == LoadMethod.direct)
+        {
+            // For direct loading we go straight into the base table.
+            return getCsvWriter(tableMetadata, null, BatchType.insert, "insert");
+        }
+        else
+        {
+            // Create stage table definition for insert by prefixing the base
+            // name and adding a stageRowIdColumn column.
+            Table stageTableMetadata = tableMetadata.clone();
+            String stageName = stageTablePrefix + "_insert_"
+                    + tableMetadata.getName();
+            stageTableMetadata.setTable(stageName);
+            Column rowIdCol = new Column(stageRowIdColumn, Types.INTEGER);
+            stageTableMetadata.AddColumn(rowIdCol);
+
+            // Get a CVS writer for same.
+            return getCsvWriter(tableMetadata, stageTableMetadata,
+                    BatchType.insert, "insert");
+        }
     }
 
     // Returns a delete CSV file for a given schema and table name.
-    private CsvInfo getDeleteCsvWriter(Table tableMetadata)
+    private CsvInfo getDeleteCsvWriter(Table baseTableMetadata)
             throws ReplicatorException
     {
-        return getCsvWriter(tableMetadata, LoadType.DELETE, "delete");
+        if (method == LoadMethod.direct)
+        {
+            return getCsvWriter(baseTableMetadata, null, BatchType.delete,
+                    "delete");
+        }
+        else
+        {
+            // Create stage table definition for delete by prefixing the base
+            // name and adding the primary key and row_id as columns.
+            String stageName = stageTablePrefix + "_delete_"
+                    + baseTableMetadata.getName();
+            Table stageTableMetadata = new Table(baseTableMetadata.getSchema(),
+                    stageName);
+            stageTableMetadata.setTable(stageName);
+
+            // Column pkeyCol;
+            // List<Key> keys = baseTableMetadata.getKeys();
+            // if (keys == null || keys.size() == 0)
+            // pkeyCol = new Column(this.stagePkeyColumn, Types.INTEGER);
+            // else
+            // pkeyCol = keys.get(0).getColumns().get(0);
+            Column pkeyCol = new Column(this.stagePkeyColumn, Types.INTEGER);
+            stageTableMetadata.AddColumn(pkeyCol);
+
+            Column rowIdCol = new Column(stageRowIdColumn, Types.INTEGER);
+            stageTableMetadata.AddColumn(rowIdCol);
+
+            // Get a CVS writer for same.
+            return getCsvWriter(baseTableMetadata, stageTableMetadata,
+                    BatchType.delete, "delete");
+        }
     }
 
     // Returns an open CSV file corresponding to a given schema, table name, and
     // load type.
-    private CsvInfo getCsvWriter(Table tableMetadata, LoadType loadType,
-            String prefix) throws ReplicatorException
+    private CsvInfo getCsvWriter(Table tableMetadata, Table stageTableMetadata,
+            BatchType loadType, String prefix) throws ReplicatorException
     {
         // Create a key.
         String key = prefix + "." + tableMetadata.getSchema() + "."
@@ -574,33 +726,35 @@ public class BatchApplier implements RawApplier
             // Generate file name.
             File file = new File(this.stageDir, key + ".csv");
 
+            // Pick the right table to use. For staging tables, we
+            // need to use the stage metadata instead of going direct
+            Table csvMetadata;
+            if (stageTableMetadata == null)
+                csvMetadata = tableMetadata;
+            else
+                csvMetadata = stageTableMetadata;
+
+            // Now generate the CSV writer.
             try
             {
-                // Generate a CSV writer and populate the file names.
+                // Generate a CSV writer on the file.
                 BufferedWriter output = new BufferedWriter(new FileWriter(file));
-                CsvWriter writer = new CsvWriter(output);
-                writer.setQuoteChar('"');
-                writer.setQuoted(true);
-                if (conn instanceof PostgreSQLDatabase)
+                CsvWriter writer = conn.getCsvWriter(output);
+
+                // Add the row ID if we are going via staging tables.
+                boolean useRowId = false;
+                if (method == LoadMethod.staged
+                        && this.stageRowIdColumn != null)
                 {
-                    writer.setQuoteNULL(false);
-                    writer.setEscapeBackslash(false);
-                    writer.setQuoteEscapeChar('"');
+                    useRowId = true;
+                    writer.addRowIdName(stageRowIdColumn);
                 }
-                writer.setWriteHeaders(false);
-                if (loadType == LoadType.INSERT)
+
+                // Populate columns.
+                for (Column col : csvMetadata.getAllColumns())
                 {
-                    // Insert files write all column values.
-                    for (Column col : tableMetadata.getAllColumns())
-                    {
-                        writer.addColumnName(col.getName());
-                    }
-                }
-                else
-                {
-                    // Delete files write only key columns.
-                    for (Column col : tableMetadata.getPrimaryKey()
-                            .getColumns())
+                    String colName = col.getName();
+                    if (!useRowId || !stageRowIdColumn.equals(colName))
                     {
                         writer.addColumnName(col.getName());
                     }
@@ -611,7 +765,8 @@ public class BatchApplier implements RawApplier
                 info.type = loadType;
                 info.schema = tableMetadata.getSchema();
                 info.table = tableMetadata.getName();
-                info.metadata = tableMetadata;
+                info.baseTableMetadata = tableMetadata;
+                info.stageTableMetadata = stageTableMetadata;
                 info.file = file;
                 info.writer = writer;
                 openCsvFiles.put(key, info);
@@ -713,9 +868,22 @@ public class BatchApplier implements RawApplier
                     + info.file.getAbsolutePath());
         }
 
-        // Generate and submit SQL command.
-        String loadCommand = getLoadCommand(info.schema, info.table, false,
-                info.file);
+        // Decide whether to use the base table or a staging table.
+        String schema;
+        String tableName;
+        if (info.stageTableMetadata == null)
+        {
+            schema = info.baseTableMetadata.getSchema();
+            tableName = info.baseTableMetadata.getName();
+        }
+        else
+        {
+            schema = info.stageTableMetadata.getSchema();
+            tableName = info.stageTableMetadata.getName();
+        }
+
+        // Generate the load command and execute.
+        String loadCommand = getLoadCommand(schema, tableName, false, info.file);
         if (logger.isDebugEnabled())
         {
             logger.debug("Executing load command: " + loadCommand);
@@ -738,31 +906,97 @@ public class BatchApplier implements RawApplier
     }
 
     // Load an open CSV file.
-    private void loadAndDelete(CsvInfo info) throws ReplicatorException
+    private void clearStageTable(CsvInfo info) throws ReplicatorException
     {
+        Table table = info.stageTableMetadata;
         if (logger.isDebugEnabled())
         {
-            logger.debug("Loading CSV file: " + info.file.getAbsolutePath());
+            logger.debug("Clearing stage table: " + table.fullyQualifiedName());
         }
 
-        // Flush and close the file.
+        // Generate and submit SQL command.
+        String delete = "DELETE FROM " + table.fullyQualifiedName();
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Executing delete command: " + delete);
+        }
         try
         {
-            info.writer.flush();
-            info.writer.getWriter().close();
+            int rows = statement.executeUpdate(delete);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Rows deleted: " + rows);
+            }
         }
-        catch (CsvException e)
+        catch (SQLException e)
         {
-            throw new ReplicatorException("Unable to close CSV file: "
-                    + info.file.getAbsolutePath(), e);
+            ReplicatorException re = new ReplicatorException(
+                    "Unable to delete data from stage table: "
+                            + table.fullyQualifiedName(), e);
+            re.setExtraData(delete);
+            throw re;
         }
-        catch (IOException e)
+    }
+
+    // Load an open CSV file.
+    private void mergeStageTableInserts(CsvInfo info)
+            throws ReplicatorException
+    {
+        Table base = info.baseTableMetadata;
+        Table stage = info.stageTableMetadata;
+        if (logger.isDebugEnabled())
         {
-            throw new ReplicatorException("Unable to close CSV file: "
-                    + info.file.getAbsolutePath());
+            logger.debug("Merging inserts from stage table: "
+                    + stage.fullyQualifiedName());
         }
 
-        // Create temporary load table.
+        // Generate fields required for insert merges.
+        String pkey = stagePkeyColumn;
+        String basePkey = base.getName() + "." + pkey;
+        String stagePkey = stage.getName() + "." + pkey;
+        StringBuffer colNames = new StringBuffer();
+        for (Column col : base.getAllColumns())
+        {
+            if (colNames.length() > 0)
+                colNames.append(",");
+            colNames.append(col.getName());
+        }
+
+        // Insert values into SQL template.
+        String insert = stageInsertFromTemplate;
+        insert = insert.replace("%%BASE_TABLE%%", base.fullyQualifiedName());
+        insert = insert.replace("%%BASE_COLUMNS%%", colNames.toString());
+        insert = insert.replace("%%STAGE_TABLE%%", stage.fullyQualifiedName());
+        insert = insert.replace("%%BASE_PKEY%%", basePkey);
+        insert = insert.replace("%%STAGE_PKEY%%", stagePkey);
+
+        // Execute the merge command.
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Executing insert merge command: " + insert);
+        }
+        try
+        {
+            int rows = statement.executeUpdate(insert);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Rows inserted: " + rows);
+            }
+        }
+        catch (SQLException e)
+        {
+            ReplicatorException re = new ReplicatorException(
+                    "Unable to merge data from stage table: "
+                            + stage.fullyQualifiedName(), e);
+            re.setExtraData(insert);
+            throw re;
+        }
+    }
+
+    // Create a temp table for deletes.
+    private Table createTempDeleteTable(CsvInfo info)
+            throws ReplicatorException
+    {
         Table deleteTable = getDeleteTableMetadata(info.schema, info.table);
         try
         {
@@ -774,10 +1008,16 @@ public class BatchApplier implements RawApplier
                     "Unable to create load table: " + deleteTable.getName(), e);
             throw re;
         }
+        return deleteTable;
+    }
 
+    // Load an open CSV file.
+    private void mergeStageTableDeletes(CsvInfo info)
+            throws ReplicatorException
+    {
         // Load data into temp table.
-        String loadCommand = getLoadCommand(info.schema, deleteTable.getName(),
-                true, info.file);
+        String loadCommand = getLoadCommand(info.schema,
+                info.baseTableMetadata.getName(), true, info.file);
         try
         {
             int rows = statement.executeUpdate(loadCommand);
@@ -795,41 +1035,54 @@ public class BatchApplier implements RawApplier
             throw re;
         }
 
-        // Delete data from the base table.
-        Table base = info.metadata;
-        String baseFqn = base.fullyQualifiedName();
-        StringBuffer sb = new StringBuffer();
-        sb.append("DELETE ")/* .append(baseFqn) */; // "DELETE tablename(!) FROM"?
-        sb.append(" FROM ").append(baseFqn).append(" WHERE ");
-        List<Column> keyCols = deleteTable.getPrimaryKey().getColumns();
-        for (int i = 0; i < keyCols.size(); i++)
+        // Get our tables.
+        Table base = info.baseTableMetadata;
+        Table stage = info.stageTableMetadata;
+        if (logger.isDebugEnabled())
         {
-            String keyName = keyCols.get(i).getName();
-            if (i > 0)
-                sb.append(" AND ");
-            sb.append(keyName).append(" IN (SELECT ").append(keyName);
-            // Temporary tables cannot specify a schema name under PG.
-            sb.append(" FROM ").append(deleteTable.getSchema())
-                    .append(conn instanceof PostgreSQLDatabase ? "_" : ".")
-                    .append(deleteTable.getName()).append(")");
+            logger.debug("Merging deletes from stage table: "
+                    + stage.fullyQualifiedName());
         }
-        String delete = sb.toString();
 
+        // Generate fields required for delete merges.
+        String pkey = stagePkeyColumn;
+        String basePkey = base.getName() + "." + pkey;
+        String stagePkey = stage.getName() + "." + pkey;
+        StringBuffer colNames = new StringBuffer();
+        for (Column col : base.getAllColumns())
+        {
+            if (colNames.length() > 0)
+                colNames.append(",");
+            colNames.append(col.getName());
+        }
+
+        // Insert values into SQL template.
+        String insert = stageDeleteFromTemplate;
+        insert = insert.replace("%%BASE_TABLE%%", base.fullyQualifiedName());
+        insert = insert.replace("%%BASE_COLUMNS%%", colNames.toString());
+        insert = insert.replace("%%STAGE_TABLE%%", stage.fullyQualifiedName());
+        insert = insert.replace("%%BASE_PKEY%%", basePkey);
+        insert = insert.replace("%%STAGE_PKEY%%", stagePkey);
+
+        // Execute the merge command.
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Executing insert merge command: " + insert);
+        }
         try
         {
-            int rows = statement.executeUpdate(delete);
+            int rows = statement.executeUpdate(insert);
             if (logger.isDebugEnabled())
             {
-                logger.debug("Executed delete: delete=" + delete + " rows="
-                        + rows);
+                logger.debug("Rows inserted: " + rows);
             }
-            conn.dropTable(deleteTable);
         }
         catch (SQLException e)
         {
             ReplicatorException re = new ReplicatorException(
-                    "Unable to delete rows", e);
-            re.setExtraData(delete);
+                    "Unable to merge data from stage table: "
+                            + stage.fullyQualifiedName(), e);
+            re.setExtraData(insert);
             throw re;
         }
     }
@@ -852,7 +1105,8 @@ public class BatchApplier implements RawApplier
         {
             // Generate load command with file and qualified table name
             // substituted into template. "
-            loadCommand = this.template.replace("%%TABLE%%", qualifiedTable);
+            loadCommand = this.loadBatchTemplate.replace("%%TABLE%%",
+                    qualifiedTable);
             loadCommand = loadCommand.replace("%%FILE%%",
                     csvFile.getAbsolutePath());
             loadCommands.put(qualifiedTable, loadCommand);

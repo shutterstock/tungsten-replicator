@@ -19,19 +19,21 @@
  * Initial developer(s): Robert Hodges
  * Contributor(s):
  */
+
 package com.continuent.tungsten.replicator.database;
 
+import java.io.BufferedWriter;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 
+import com.continuent.tungsten.commons.csv.CsvWriter;
 import com.continuent.tungsten.replicator.ReplicatorException;
 
-
 /**
- * Implements DBMS-specific operations for the Derby database. 
+ * Implements DBMS-specific operations for the Derby database.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
@@ -57,20 +59,19 @@ public class DerbyDatabase extends AbstractDatabase
     }
 
     /**
-     * Provide column specifications that work in Derby, which hews very 
-     * closely to the SQL-92 standard. 
+     * Provide column specifications that work in Derby, which hews very closely
+     * to the SQL-92 standard. {@inheritDoc}
      * 
-     * {@inheritDoc}
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#columnToTypeString(com.continuent.tungsten.replicator.database.Column)
      */
     protected String columnToTypeString(Column c)
     {
         switch (c.getType())
         {
-            case Types.INTEGER: 
+            case Types.INTEGER :
                 return "INTEGER";
 
-            case Types.BIGINT:
+            case Types.BIGINT :
                 return "BIGINT";
 
             case Types.CHAR :
@@ -78,16 +79,16 @@ public class DerbyDatabase extends AbstractDatabase
 
             case Types.VARCHAR :
                 return "VARCHAR(" + c.getLength() + ")";
-                
+
             case Types.DATE :
-                return "DATE"; 
+                return "DATE";
 
             case Types.TIMESTAMP :
-                return "TIMESTAMP"; 
+                return "TIMESTAMP";
 
             case Types.CLOB :
                 return "CLOB";
-                
+
             case Types.BLOB :
                 return "BLOB";
 
@@ -97,8 +98,8 @@ public class DerbyDatabase extends AbstractDatabase
     }
 
     /**
-     * Derby does not support REPLACE. 
-     * {@inheritDoc}
+     * Derby does not support REPLACE. {@inheritDoc}
+     * 
      * @see com.continuent.tungsten.replicator.database.AbstractDatabase#supportsReplace()
      */
     public boolean supportsReplace()
@@ -108,50 +109,66 @@ public class DerbyDatabase extends AbstractDatabase
 
     public ArrayList<String> getSchemas() throws SQLException
     {
-        throw new UnsupportedOperationException ("Not implemented."); 
+        throw new UnsupportedOperationException("Not implemented.");
     }
 
     public ResultSet getColumnsResultSet(DatabaseMetaData md,
             String schemaName, String tableName) throws SQLException
     {
-        throw new UnsupportedOperationException ("Not implemented."); 
+        throw new UnsupportedOperationException("Not implemented.");
     }
 
     protected ResultSet getPrimaryKeyResultSet(DatabaseMetaData md,
             String schemaName, String tableName) throws SQLException
     {
-        throw new UnsupportedOperationException ("Not implemented."); 
+        throw new UnsupportedOperationException("Not implemented.");
     }
 
     protected ResultSet getTablesResultSet(DatabaseMetaData md,
             String schemaName, boolean baseTablesOnly) throws SQLException
     {
-        throw new UnsupportedOperationException ("Not implemented."); 
+        throw new UnsupportedOperationException("Not implemented.");
     }
 
     public String getNowFunction()
     {
         return "CURRENT_TIMESTAMP";
     }
-    
+
     /**
-     * getTimeDiff returns the database-specific way of subtracting two "dates" and
-     * return the result in seconds complete with space for the two bind variables.
-     * I, Scott, am not sure how to express the differences between two dates in derby in seconds.
-     * This function is currently only called by the time based "thl purge" command.
-     * For now, simply subtract the two dates.
+     * getTimeDiff returns the database-specific way of subtracting two "dates"
+     * and return the result in seconds complete with space for the two bind
+     * variables. I, Scott, am not sure how to express the differences between
+     * two dates in derby in seconds. This function is currently only called by
+     * the time based "thl purge" command. For now, simply subtract the two
+     * dates.
      */
     public String getTimeDiff(String string1, String string2)
     {
         String retval = "";
-        if (string1 == null) retval += "?";
-        else retval += string1;
+        if (string1 == null)
+            retval += "?";
+        else
+            retval += string1;
         retval += " - ";
-        if (string2 == null) retval += "?";
-        else retval += string2;
+        if (string2 == null)
+            retval += "?";
+        else
+            retval += string2;
         retval += "";
 
         return retval;
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#getCsvWriter(java.io.BufferedWriter)
+     */
+    public CsvWriter getCsvWriter(BufferedWriter writer)
+    {
+        // Need to implement in order to support CSV.
+        throw new UnsupportedOperationException(
+                "CSV output is not supported for this database type");
+    }
 }

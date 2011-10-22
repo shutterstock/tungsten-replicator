@@ -22,14 +22,16 @@
 
 package com.continuent.tungsten.replicator.database;
 
+import java.io.BufferedWriter;
+import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Connection;
 import java.sql.Statement;
 import java.util.ArrayList;
 
+import com.continuent.tungsten.commons.csv.CsvWriter;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.consistency.ConsistencyCheck;
 import com.continuent.tungsten.replicator.consistency.ConsistencyException;
@@ -493,4 +495,13 @@ public interface Database
      * @return eventually quoted database object name
      */
     public String getDatabaseObjectName(String name);
+    
+    /**
+     * Returns a properly configured CsvWriter to generate CSV according to the 
+     * preferred conventions of this DBMS type. 
+     * 
+     * @param writer A buffered writer to receive CSV output
+     * @return A property configured CsvWriter instance
+     */
+    public CsvWriter getCsvWriter(BufferedWriter writer);
 }
