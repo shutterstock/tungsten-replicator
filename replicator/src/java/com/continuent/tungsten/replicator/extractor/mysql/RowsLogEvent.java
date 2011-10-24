@@ -603,7 +603,7 @@ public abstract class RowsLogEvent extends LogEvent
                 // Let's check for zero date
                 if (i64 == 0)
                 {
-                    value.setValueNull();
+                    value.setValue(Integer.valueOf(0));
                     if (spec != null)
                         spec.setType(java.sql.Types.TIMESTAMP);
                     return 8;
@@ -657,7 +657,7 @@ public abstract class RowsLogEvent extends LogEvent
                 // Let's check if the date is 0000-00-00
                 if (i32 == 0)
                 {
-                    value.setValueNull();
+                    value.setValue(Integer.valueOf(0));
                     if (spec != null)
                         spec.setType(java.sql.Types.DATE);
                     return 3;

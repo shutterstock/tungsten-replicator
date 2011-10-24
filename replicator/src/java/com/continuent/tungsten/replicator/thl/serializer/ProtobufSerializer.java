@@ -647,17 +647,24 @@ public class ProtobufSerializer implements Serializer
                 valueBuilder.setType(Type.BIT);
                 break;
             case Types.TIMESTAMP :
-                long time = ((Timestamp) value).getTime();
-                if (logger.isDebugEnabled())
+                if (value instanceof Integer)
                 {
-                    trace.append(" / ");
-                    trace.append(time);
+                    valueBuilder.setIntValue(0);
                 }
-                valueBuilder.setLongValue(time);
+                else
+                {
+                    long time = ((Timestamp) value).getTime();
+                    if (logger.isDebugEnabled())
+                    {
+                        trace.append(" / ");
+                        trace.append(time);
+                    }
+                    valueBuilder.setLongValue(time);
+                }
                 valueBuilder.setType(Type.TIMESTAMP);
                 break;
             case Types.TIME :
-                time = ((Time) value).getTime();
+                long time = ((Time) value).getTime();
                 if (logger.isDebugEnabled())
                 {
                     trace.append(" / ");
@@ -667,13 +674,18 @@ public class ProtobufSerializer implements Serializer
                 valueBuilder.setType(Type.TIME);
                 break;
             case Types.DATE :
-                time = ((Date) value).getTime();
-                if (logger.isDebugEnabled())
+                if (value instanceof Integer)
+                    valueBuilder.setIntValue(0);
+                else
                 {
-                    trace.append(" / ");
-                    trace.append(time);
+                    time = ((Date) value).getTime();
+                    if (logger.isDebugEnabled())
+                    {
+                        trace.append(" / ");
+                        trace.append(time);
+                    }
+                    valueBuilder.setLongValue(time);
                 }
-                valueBuilder.setLongValue(time);
                 valueBuilder.setType(Type.DATE);
                 break;
             case Types.OTHER :
@@ -837,9 +849,17 @@ public class ProtobufSerializer implements Serializer
             case STRING :
                 return columnVal.getStringValue();
             case TIMESTAMP :
-                return new Timestamp(columnVal.getLongValue());
+                if (columnVal.hasLongValue())
+                    return new Timestamp(columnVal.getLongValue());
+                else if (columnVal.hasIntValue())
+                    return Integer.valueOf(0);
+                break;
             case DATE :
-                return new Date(columnVal.getLongValue());
+                if (columnVal.hasLongValue())
+                    return new Date(columnVal.getLongValue());
+                else if (columnVal.hasIntValue())
+                    return Integer.valueOf(0);
+                break;
             case BLOB :
                 byte[] blob = columnVal.getBytesValue().toByteArray();
                 try

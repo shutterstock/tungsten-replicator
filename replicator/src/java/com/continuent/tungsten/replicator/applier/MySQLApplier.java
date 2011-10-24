@@ -205,11 +205,11 @@ public class MySQLApplier extends JdbcApplier
 
         int type = columnSpec.getType();
         
-        if (type == Types.TIMESTAMP && value.getValue() == null)
+        if (type == Types.TIMESTAMP && value.getValue() instanceof Integer)
         {
             prepStatement.setInt(bindLoc, 0);
         }
-        else if (type == Types.DATE && value.getValue() == null)
+        else if (type == Types.DATE && value.getValue() instanceof Integer)
         {
             prepStatement.setInt(bindLoc, 0);
         }
