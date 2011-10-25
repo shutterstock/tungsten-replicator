@@ -70,7 +70,7 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class OptimizeUpdatesFilter implements Filter
 {
-    private static Logger                               logger               = Logger.getLogger(OptimizeUpdatesFilter.class);
+    private static Logger logger = Logger.getLogger(OptimizeUpdatesFilter.class);
 
     /**
      * {@inheritDoc}
@@ -133,7 +133,7 @@ public class OptimizeUpdatesFilter implements Filter
         }
         return event;
     }
-    
+
     /**
      * Find out which columns' values didn't change by comparing them to the key
      * values. Remove columns, that didn't change, from the UPDATE.<br/>
@@ -158,7 +158,7 @@ public class OptimizeUpdatesFilter implements Filter
 
         // Holds the list of columns that didn't change their values.
         ArrayList<ColumnSpec> columnsToRemove = new ArrayList<ColumnSpec>();
-        
+
         if (columns.size() != keys.size() && keys.size() != 1)
             throw new Exception(
                     "Column and key count is different in this event! Cannot filter");
@@ -168,7 +168,7 @@ public class OptimizeUpdatesFilter implements Filter
         {
             ColumnSpec keySpec = keys.get(k);
             ColumnSpec colSpec = columns.get(k); // The candidate.
-            
+
             // Iterate through multiple rows being updated.
             boolean columnStatic = true;
             for (int row = 0; row < columnValues.size()
@@ -181,8 +181,9 @@ public class OptimizeUpdatesFilter implements Filter
                 ColumnVal colValue = columnValues.get(row).get(k);
                 if (!(keySpec.getType() == colSpec.getType()
                         && keySpec.getIndex() == colSpec.getIndex() && ((keyValue
-                        .getValue() == null && colValue.getValue() == null) || keyValue
-                        .getValue().equals(colValue.getValue()))))
+                        .getValue() == null && colValue.getValue() == null) || (keyValue
+                        .getValue() != null && keyValue.getValue().equals(
+                        colValue.getValue())))))
                 {
                     // Value is different, keep this column for update
                     // statement.
@@ -190,9 +191,9 @@ public class OptimizeUpdatesFilter implements Filter
                 }
                 else
                 {
-                    logger.debug("Col " + colSpec.getIndex() + " @ Row "
-                            + row + " is static: " + keyValue.getValue()
-                            + " = " + colValue.getValue());
+                    logger.debug("Col " + colSpec.getIndex() + " @ Row " + row
+                            + " is static: " + keyValue.getValue() + " = "
+                            + colValue.getValue());
                 }
             }
 
@@ -206,7 +207,7 @@ public class OptimizeUpdatesFilter implements Filter
                 .hasNext();)
         {
             ColumnSpec columnToRemoveSpec = iterator.next();
-            
+
             // Remove this static column, so we don't try to
             // update it later. First remove the values.
             int idx = columns.indexOf(columnToRemoveSpec);
@@ -219,7 +220,7 @@ public class OptimizeUpdatesFilter implements Filter
             }
             // Then remove the column specs.
             columns.remove(idx);
-            
+
             // Now we actually changed the event.
             logger.debug("Col " + columnToRemoveSpec.getIndex() + " removed");
             transformed = true;
