@@ -1015,25 +1015,31 @@ public class BatchApplier implements RawApplier
     private void mergeStageTableDeletes(CsvInfo info)
             throws ReplicatorException
     {
-        // Load data into temp table.
-        String loadCommand = getLoadCommand(info.schema,
-                info.baseTableMetadata.getName(), true, info.file);
-        try
+        // Temp tables are not used with staging method.
+        if (method == LoadMethod.direct)
         {
-            int rows = statement.executeUpdate(loadCommand);
-            if (logger.isDebugEnabled())
+            // Load data into temp table.
+            String loadCommand = getLoadCommand(info.schema,
+                    info.baseTableMetadata.getName(),
+                    method == LoadMethod.direct, info.file);
+            try
             {
-                logger.debug("Executed load: loadCommand=" + loadCommand
-                        + " rows=" + rows);
+                int rows = statement.executeUpdate(loadCommand);
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Executed load: loadCommand=" + loadCommand
+                            + " rows=" + rows);
+                }
             }
-        }
-        catch (SQLException e)
-        {
-            ReplicatorException re = new ReplicatorException(
-                    "Unable to execute load command", e);
-            re.setExtraData(loadCommand);
-            throw re;
-        }
+            catch (SQLException e)
+            {
+                ReplicatorException re = new ReplicatorException(
+                        "Unable to execute load command", e);
+                re.setExtraData(loadCommand);
+                throw re;
+            }
+        } // TODO: is the code below needed for direct? Should it be in "else"
+          // clause?
 
         // Get our tables.
         Table base = info.baseTableMetadata;
