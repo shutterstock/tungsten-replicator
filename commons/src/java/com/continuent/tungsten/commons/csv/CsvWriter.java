@@ -349,7 +349,8 @@ public class CsvWriter
             throw new CsvException(
                     "Attempt to write value twice to same row: index=" + index
                             + " old value=" + row.get(arrayIndex)
-                            + " new value=" + value);
+                            + " new value=" + value
+                            + " (does table have a PK and is it single-column?)");
         }
 
         // Set the column value.
