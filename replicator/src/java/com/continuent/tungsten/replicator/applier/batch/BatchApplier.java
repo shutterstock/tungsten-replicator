@@ -608,11 +608,15 @@ public class BatchApplier implements RawApplier
             heartbeatTable = new HeartbeatTable(
                     context.getReplicatorSchemaName(), "");
             heartbeatTable.initializeHeartbeatTable(conn);
+            if (method == LoadMethod.staged)
+                createStageTables(heartbeatTable.getTable(), false);
 
             // Create consistency table
             Table consistency = ConsistencyTable
                     .getConsistencyTableDefinition(metadataSchema);
             conn.createTable(consistency, false);
+            if (method == LoadMethod.staged)
+                createStageTables(consistency, false);
 
             // Set up commit seqno table and fetch the last processed event.
             commitSeqnoTable = new CommitSeqnoTable(conn,
@@ -649,6 +653,101 @@ public class BatchApplier implements RawApplier
             tableMetadataCache.invalidateAll();
     }
 
+    /**
+     * Creates staging tables for the base table. Staging tables are used by
+     * Replicator's BatchLoader if using staged load method.
+     * 
+     * @param baseTable Base table for which to create the corresponding staging
+     *            tables.
+     */
+    private void createStageTables(Table baseTable, boolean dropExisting)
+            throws SQLException
+    {
+        // Create INSERT table.
+        Table stageInsertTable = getInsertStageTable(baseTable, true);
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Creating test staging table: "
+                    + stageInsertTable.getName());
+            logger.debug("Table details: " + stageInsertTable);
+        }
+
+        conn.createTable(stageInsertTable, dropExisting);
+
+        // Create DELETE table.
+        Table stageDeleteTable = getDeleteStageTable(baseTable);
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Creating test staging table: "
+                    + stageDeleteTable.getName());
+            logger.debug("Table details: " + stageDeleteTable);
+        }
+
+        conn.createTable(stageDeleteTable, dropExisting);
+    }
+
+    /**
+     * Create stage table definition for insert by prefixing the base name,
+     * removing PK constraint (if requested) and adding a stageRowIdColumn
+     * column.
+     * 
+     * @param baseTable Table to create corresponding stage table to.
+     * @param removePrimaryKey Remove PK constraint from the PK column?
+     * @return Prepared staging table object. DBMS table is *not* created.
+     */
+    private Table getInsertStageTable(Table baseTable, boolean removePrimaryKey)
+    {
+        String stageInsertName = stageTablePrefix + "_insert_"
+                + baseTable.getName();
+
+        Table stageInsertTable = baseTable.clone();
+        stageInsertTable.setTable(stageInsertName);
+        if (removePrimaryKey)
+        {
+            Key primaryKey = stageInsertTable.getPrimaryKey();
+            if (primaryKey != null)
+            {
+                stageInsertTable.getKeys().remove(primaryKey);
+            }
+        }
+        Column rowIdColI = new Column(stageRowIdColumn, Types.INTEGER);
+        stageInsertTable.AddColumn(rowIdColI);
+
+        return stageInsertTable;
+    }
+    
+    /**
+     * Create stage table definition for delete by prefixing the base name and
+     * adding the primary key and row_id as columns.
+     * 
+     * @param baseTable Table to create corresponding stage table to.
+     * @return Prepared staging table object. DBMS table is *not* created.
+     */
+    private Table getDeleteStageTable(Table baseTable)
+    {
+        String stageDeleteName = stageTablePrefix + "_delete_"
+                + baseTable.getName();
+
+        Table stageDeleteTable = new Table(baseTable.getSchema(),
+                stageDeleteName);
+        
+        // Column pkeyCol;
+        // List<Key> keys = baseTableMetadata.getKeys();
+        // if (keys == null || keys.size() == 0)
+        // pkeyCol = new Column(this.stagePkeyColumn, Types.INTEGER);
+        // else
+        // pkeyCol = keys.get(0).getColumns().get(0);
+        Column pkeyCol = new Column(stagePkeyColumn, Types.INTEGER);
+        stageDeleteTable.AddColumn(pkeyCol);
+
+        Column rowIdColD = new Column(stageRowIdColumn, Types.INTEGER);
+        stageDeleteTable.AddColumn(rowIdColD);
+
+        return stageDeleteTable;
+    }
+
     // Returns an insert CSV file for a given schema and table name.
     private CsvInfo getInsertCsvWriter(Table tableMetadata)
             throws ReplicatorException
@@ -660,14 +759,7 @@ public class BatchApplier implements RawApplier
         }
         else
         {
-            // Create stage table definition for insert by prefixing the base
-            // name and adding a stageRowIdColumn column.
-            Table stageTableMetadata = tableMetadata.clone();
-            String stageName = stageTablePrefix + "_insert_"
-                    + tableMetadata.getName();
-            stageTableMetadata.setTable(stageName);
-            Column rowIdCol = new Column(stageRowIdColumn, Types.INTEGER);
-            stageTableMetadata.AddColumn(rowIdCol);
+            Table stageTableMetadata = getInsertStageTable(tableMetadata, false);
 
             // Get a CVS writer for same.
             return getCsvWriter(tableMetadata, stageTableMetadata,
@@ -686,25 +778,7 @@ public class BatchApplier implements RawApplier
         }
         else
         {
-            // Create stage table definition for delete by prefixing the base
-            // name and adding the primary key and row_id as columns.
-            String stageName = stageTablePrefix + "_delete_"
-                    + baseTableMetadata.getName();
-            Table stageTableMetadata = new Table(baseTableMetadata.getSchema(),
-                    stageName);
-            stageTableMetadata.setTable(stageName);
-
-            // Column pkeyCol;
-            // List<Key> keys = baseTableMetadata.getKeys();
-            // if (keys == null || keys.size() == 0)
-            // pkeyCol = new Column(this.stagePkeyColumn, Types.INTEGER);
-            // else
-            // pkeyCol = keys.get(0).getColumns().get(0);
-            Column pkeyCol = new Column(this.stagePkeyColumn, Types.INTEGER);
-            stageTableMetadata.AddColumn(pkeyCol);
-
-            Column rowIdCol = new Column(stageRowIdColumn, Types.INTEGER);
-            stageTableMetadata.AddColumn(rowIdCol);
+            Table stageTableMetadata = getDeleteStageTable(baseTableMetadata);
 
             // Get a CVS writer for same.
             return getCsvWriter(baseTableMetadata, stageTableMetadata,

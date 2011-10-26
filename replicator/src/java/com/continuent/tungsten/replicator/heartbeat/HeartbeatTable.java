@@ -106,6 +106,14 @@ public class HeartbeatTable
         sourceTsQuery = "SELECT source_tstamp from " + schema + "."
                 + TABLE_NAME + " where id=" + KEY;
     }
+    
+    /**
+     * Returns metadata used to create the underlying heartbeat table.
+     */
+    public Table getTable()
+    {
+        return hbTable;
+    }
 
     /**
      * Set up the heartbeat table on the master.
