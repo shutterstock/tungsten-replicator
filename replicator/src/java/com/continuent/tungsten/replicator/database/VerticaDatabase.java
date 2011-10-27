@@ -1,6 +1,6 @@
 /**
  * Tungsten: An Application Server for uni/cluster.
- * Copyright (C) 2007-2008 Continuent Inc.
+ * Copyright (C) 2007-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -16,19 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
- * Initial developer(s): Alex Yurchenko
- * Contributor(s): Marcus Eriksson, Linas Virbalas
- * DRIZZLE CODE DONATED UNDER TUNGSTEN CODE CONTRIBUTION AGREEMENT
+ * Initial developer(s): Linas Virbalas
+ * Contributor(s): 
  */
+
 package com.continuent.tungsten.replicator.database;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+import org.apache.log4j.Logger;
+
 /**
- * This enumeration defines a DBMS flavors
+ * Implements DBMS-specific operations for Vertica.
  * 
- * @author <a href="mailto:alexey.yurchenko@continuent.com">Alex Yurchenko</a>
- * @version 1.0
+ * @author <a href="mailto:linas.virbalas@continuent.com">Linas Virbalas</a>
  */
-public enum DBMS
+public class VerticaDatabase extends PostgreSQLDatabase
 {
-    MYSQL, ORACLE, DERBY, DRIZZLE, POSTGRESQL, GREENPLUM, VERTICA
+    private static Logger logger = Logger.getLogger(VerticaDatabase.class);
+
+    public VerticaDatabase() throws SQLException
+    {
+        dbms = DBMS.VERTICA;
+        // Hard code the driver so it gets loaded correctly.
+        dbDriver = "com.vertica.Driver";
+    }
+
 }
