@@ -161,6 +161,7 @@ replicator.pipeline.slave.syncTHLWithExtractor=false
 replicator.stage.remote-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.remote-to-thl.extractor=thl-remote
 replicator.stage.remote-to-thl.applier=thl-applier
+replicator.stage.remote-to-thl.filters=
 
 replicator.stage.thl-to-q=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.thl-to-q.extractor=thl-extractor
