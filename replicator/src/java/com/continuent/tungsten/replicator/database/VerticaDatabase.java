@@ -22,9 +22,7 @@
 
 package com.continuent.tungsten.replicator.database;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import org.apache.log4j.Logger;
 
@@ -35,6 +33,7 @@ import org.apache.log4j.Logger;
  */
 public class VerticaDatabase extends PostgreSQLDatabase
 {
+    @SuppressWarnings("unused")
     private static Logger logger = Logger.getLogger(VerticaDatabase.class);
 
     public VerticaDatabase() throws SQLException
