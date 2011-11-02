@@ -28,12 +28,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -105,6 +108,8 @@ public class BatchApplier implements RawApplier
     protected String      stagePkeyColumn;
     protected String      stageRowIdColumn;
     protected boolean     supportsReplace = false;
+    protected String      startUpCommand;
+    protected boolean     cleanUpFiles    = true;
 
     // Load file directory for this task.
     private File          stageDir;
@@ -156,8 +161,12 @@ public class BatchApplier implements RawApplier
     protected Statement          statement            = null;
     protected Pattern            ignoreSessionPattern = null;
 
+    // Catalog tables.
     protected CommitSeqnoTable   commitSeqnoTable     = null;
     protected HeartbeatTable     heartbeatTable       = null;
+
+    // Data formatter.
+    SimpleDateFormat             dateFormatter;
 
     public synchronized void setDriver(String driver)
     {
@@ -224,6 +233,16 @@ public class BatchApplier implements RawApplier
     public synchronized void setStageDirectory(String stageDirectory)
     {
         this.stageDirectory = stageDirectory;
+    }
+
+    public synchronized void setStartUpCommand(String startUpCommand)
+    {
+        this.startUpCommand = startUpCommand;
+    }
+
+    public synchronized void setCleanUpFiles(boolean cleanUpFiles)
+    {
+        this.cleanUpFiles = cleanUpFiles;
     }
 
     /**
@@ -445,7 +464,8 @@ public class BatchApplier implements RawApplier
         openCsvFiles.clear();
 
         // Clear the load directories.
-        purgeDirIfExists(stageDir, false);
+        if (this.cleanUpFiles)
+            purgeDirIfExists(stageDir, false);
     }
 
     /**
@@ -570,6 +590,12 @@ public class BatchApplier implements RawApplier
     public void prepare(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
+        // Create a formatter for printing dates.
+        TimeZone tz = TimeZone.getTimeZone("GMT-0:00");
+        dateFormatter = new SimpleDateFormat();
+        dateFormatter.setTimeZone(tz);
+        dateFormatter.applyPattern("yyyy-MM-dd HH:mm:ss.SSS");
+
         // Set up the staging directory.
         File staging = new File(stageDirectory);
         createDirIfNotExist(staging);
@@ -626,6 +652,16 @@ public class BatchApplier implements RawApplier
 
             // Ensure we are not in auto-commit mode.
             conn.setAutoCommit(false);
+
+            // If a start-up command is present, execute that now.
+            if (startUpCommand != null)
+            {
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Executing startup command: " + startUpCommand);
+                }
+                conn.execute(startUpCommand);
+            }
         }
         catch (SQLException e)
         {
@@ -644,8 +680,8 @@ public class BatchApplier implements RawApplier
     public void release(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
-        // Release staging directory.
-        if (stageDir != null)
+        // Release staging directory if cleanup is requested.
+        if (stageDir != null && cleanUpFiles)
             purgeDirIfExists(stageDir, true);
 
         // Release table cache.
@@ -717,7 +753,7 @@ public class BatchApplier implements RawApplier
 
         return stageInsertTable;
     }
-    
+
     /**
      * Create stage table definition for delete by prefixing the base name and
      * adding the primary key and row_id as columns.
@@ -732,7 +768,7 @@ public class BatchApplier implements RawApplier
 
         Table stageDeleteTable = new Table(baseTable.getSchema(),
                 stageDeleteName);
-        
+
         // Column pkeyCol;
         // List<Key> keys = baseTableMetadata.getKeys();
         // if (keys == null || keys.size() == 0)
@@ -926,10 +962,12 @@ public class BatchApplier implements RawApplier
         }
 
         // Flush and close the file.
+        int rowsToLoad = -1;
         try
         {
             info.writer.flush();
             info.writer.getWriter().close();
+            rowsToLoad = info.writer.getRowCount();
         }
         catch (CsvException e)
         {
@@ -964,10 +1002,18 @@ public class BatchApplier implements RawApplier
         }
         try
         {
-            int rows = statement.executeUpdate(loadCommand);
+            int rowsLoaded = statement.executeUpdate(loadCommand);
+            if (rowsLoaded != rowsToLoad)
+            {
+                ReplicatorException re = new ReplicatorException(
+                        "Difference between CSV file size and rows loaded: rowsInFile="
+                                + rowsToLoad + " rowsLoaded=" + rowsLoaded);
+                re.setExtraData(loadCommand);
+                throw re;
+            }
             if (logger.isDebugEnabled())
             {
-                logger.debug("Rows loaded: " + rows);
+                logger.debug("Rows loaded: " + rowsLoaded);
             }
         }
         catch (SQLException e)
@@ -976,6 +1022,13 @@ public class BatchApplier implements RawApplier
                     "Unable to execute load command", e);
             re.setExtraData(loadCommand);
             throw re;
+        }
+
+        // Delete the load file if we are done with it.
+        if (cleanUpFiles && !info.file.delete())
+        {
+            logger.warn("Unable to delete load file: "
+                    + info.file.getAbsolutePath());
         }
     }
 
@@ -996,10 +1049,10 @@ public class BatchApplier implements RawApplier
         }
         try
         {
-            int rows = statement.executeUpdate(delete);
+            int rowsLoaded = statement.executeUpdate(delete);
             if (logger.isDebugEnabled())
             {
-                logger.debug("Rows deleted: " + rows);
+                logger.debug("Rows deleted: " + rowsLoaded);
             }
         }
         catch (SQLException e)
@@ -1311,6 +1364,7 @@ public class BatchApplier implements RawApplier
     {
         Object value = columnVal.getValue();
         if (value == null)
+        {
             if (conn instanceof PostgreSQLDatabase)
             {
                 // PG needs to distinguish between NULL and an empty string.
@@ -1318,6 +1372,15 @@ public class BatchApplier implements RawApplier
             }
             else
                 return "";
+        }
+        else if (value instanceof Timestamp)
+        {
+            return dateFormatter.format((Timestamp) value);
+        }
+        else if (value instanceof java.sql.Date)
+        {
+            return dateFormatter.format((java.sql.Date) value);
+        }
         else
             return value.toString();
     }

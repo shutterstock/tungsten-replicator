@@ -22,9 +22,14 @@
 
 package com.continuent.tungsten.replicator.database;
 
+import java.io.BufferedWriter;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import org.apache.log4j.Logger;
+
+import com.continuent.tungsten.commons.csv.CsvWriter;
 
 /**
  * Implements DBMS-specific operations for Vertica.
@@ -43,4 +48,52 @@ public class VerticaDatabase extends PostgreSQLDatabase
         dbDriver = "com.vertica.Driver";
     }
 
+    /**
+     * Checks whether the given table exists in the currently connected database
+     * using Vertica-specific v_catalog.tables view.
+     * 
+     * @return true, if table exists, false, if not.
+     */
+    protected boolean tableExists(Table t) throws SQLException
+    {
+        String sql = String
+                .format("SELECT * FROM v_catalog.tables WHERE table_schema='%s' AND table_name='%s'",
+                        t.getSchema(), t.getName());
+        Statement stmt = dbConn.createStatement();
+        try
+        {
+            ResultSet rs = stmt.executeQuery(sql);
+            return rs.next();
+        }
+        finally
+        {
+            if (stmt != null)
+            {
+                try
+                {
+                    stmt.close();
+                }
+                catch (SQLException e)
+                {
+                }
+            }
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#getCsvWriter(java.io.BufferedWriter)
+     */
+    public CsvWriter getCsvWriter(BufferedWriter writer)
+    {
+        CsvWriter csv = new CsvWriter(writer);
+        csv.setQuoteChar('"');
+        csv.setQuoted(true);
+        csv.setQuoteNULL(false);
+        csv.setEscapeBackslash(true);
+        csv.setQuoteEscapeChar('\\');
+        csv.setWriteHeaders(false);
+        return csv;
+    }
 }

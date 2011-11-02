@@ -200,11 +200,11 @@ public class PostgreSQLDatabase extends AbstractDatabase
 
     /**
      * Checks whether the given table exists in the currently connected
-     * database. Check is made against "schema.table".
+     * database. Check is made against "pg_tables".
      * 
      * @return true, if table exists, false, if not.
      */
-    private boolean tableExists(Table t) throws SQLException
+    protected boolean tableExists(Table t) throws SQLException
     {
         // TODO: use current session's schema name for temp tables.
         // Temporary tables cannot specify a schema name:
@@ -216,11 +216,24 @@ public class PostgreSQLDatabase extends AbstractDatabase
                 + (t.isTemporary() ? (t.getSchema() + "_") : "") + t.getName()
                 + "'";
         Statement stmt = dbConn.createStatement();
-        ResultSet res = stmt.executeQuery(sql);
-        if (res.next())
-            return true;
-        else
-            return false;
+        try
+        {
+            ResultSet rs = stmt.executeQuery(sql);
+            return rs.next();
+        }
+        finally
+        {
+            if (stmt != null)
+            {
+                try
+                {
+                    stmt.close();
+                }
+                catch (SQLException e)
+                {
+                }
+            }
+        }
     }
 
     /**
@@ -498,7 +511,7 @@ public class PostgreSQLDatabase extends AbstractDatabase
         csv.setQuoteChar('"');
         csv.setQuoted(true);
         csv.setQuoteNULL(false);
-        csv.setEscapeBackslash(false);
+        csv.setEscapeBackslash(true);
         csv.setQuoteEscapeChar('"');
         csv.setWriteHeaders(false);
         return csv;
