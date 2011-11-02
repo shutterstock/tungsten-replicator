@@ -225,8 +225,8 @@ public class CsvWriter
      */
     public List<String> getNames()
     {
-        // Create null-filled array.  The array differs by one according
-        // to whether we use row IDs or not. 
+        // Create null-filled array. The array differs by one according
+        // to whether we use row IDs or not.
         int size = (rowId == null) ? names.size() : names.size() + 1;
         List<String> nameList = new ArrayList<String>(size);
         for (int i = 0; i < size; i++)
@@ -238,8 +238,8 @@ public class CsvWriter
             int index = names.get(name);
             nameList.set(index - 1, name);
         }
-        
-        // Add rowId if we are using it. 
+
+        // Add rowId if we are using it.
         if (rowId != null)
             nameList.set(names.size(), rowId);
 
@@ -347,9 +347,12 @@ public class CsvWriter
         if (row.get(arrayIndex) != null)
         {
             throw new CsvException(
-                    "Attempt to write value twice to same row: index=" + index
-                            + " old value=" + row.get(arrayIndex)
-                            + " new value=" + value
+                    "Attempt to write value twice to same row: index="
+                            + index
+                            + " old value="
+                            + row.get(arrayIndex)
+                            + " new value="
+                            + value
                             + " (does table have a PK and is it single-column?)");
         }
 
