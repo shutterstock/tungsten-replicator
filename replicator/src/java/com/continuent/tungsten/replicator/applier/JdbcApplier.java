@@ -1629,8 +1629,7 @@ public class JdbcApplier implements RawApplier
             // Enable binlogs at session level if this is supported and we are
             // either a remote service or slave logging is turned on. This
             // repeats logic in the connect() call but gives a clear log
-            // message,
-            // which is important for diagnostic purposes.
+            // message, which is important for diagnostic purposes.
             if (conn.supportsControlSessionLevelLogging())
             {
                 if (runtime.logReplicatorUpdates() || runtime.isRemoteService())
