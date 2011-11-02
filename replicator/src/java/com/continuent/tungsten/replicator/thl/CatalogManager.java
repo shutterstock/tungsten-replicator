@@ -115,15 +115,17 @@ public class CatalogManager
             }
 
             // Create tables, allowing schema changes to be logged if requested.
-            if (conn.supportsControlSessionLevelLogging()
-                    && runtime.logReplicatorUpdates())
-            {
-                logger.info("Logging schema creation");
-                conn.controlSessionLevelLogging(false);
-            }
             if (conn.supportsControlSessionLevelLogging())
-                conn.controlSessionLevelLogging(true);
-
+            {
+                if (runtime.logReplicatorUpdates() || runtime.isRemoteService())
+                {
+                    logger.info("Logging schema creation");
+                    conn.controlSessionLevelLogging(false);
+                }
+                else
+                    conn.controlSessionLevelLogging(true);
+            }
+            
             // Create commit seqno table.
             commitSeqnoTable = new CommitSeqnoTable(conn, metadataSchema,
                     runtime.getTungstenTableType(),
