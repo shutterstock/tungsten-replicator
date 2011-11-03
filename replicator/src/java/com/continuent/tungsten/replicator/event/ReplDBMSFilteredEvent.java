@@ -64,6 +64,8 @@ public class ReplDBMSFilteredEvent extends ReplDBMSEvent
         this.fragnoEnd = lastFilteredEvent.getFragno();
         this.lastFrag = lastFilteredEvent.getLastFrag();
         this.sourceId = firstFilteredEvent.getSourceId();
+        this.epochNumber = firstFilteredEvent.getEpochNumber();
+        this.shardId = firstFilteredEvent.getShardId();
     }
 
     /**
