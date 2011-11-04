@@ -391,6 +391,10 @@ public class CsvWriter
                 sb.append(quoteEscapeChar).append(quoteChar);
             else if (escapeBackslash && next == '\\')
                 sb.append('\\').append('\\');
+            else if (next == '\t')
+                sb.append('\\').append('t');
+            else if (next == '\n')
+                sb.append('\\').append('n');
             else
                 sb.append(next);
         }
