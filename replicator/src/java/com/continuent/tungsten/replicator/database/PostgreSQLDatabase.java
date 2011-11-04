@@ -511,7 +511,7 @@ public class PostgreSQLDatabase extends AbstractDatabase
         csv.setQuoteChar('"');
         csv.setQuoted(true);
         csv.setQuoteNULL(false);
-        csv.setEscapeBackslash(true);
+        csv.setEscapeBackslash(false);
         csv.setQuoteEscapeChar('"');
         csv.setWriteHeaders(false);
         return csv;
