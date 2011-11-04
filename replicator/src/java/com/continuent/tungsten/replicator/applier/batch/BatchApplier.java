@@ -24,8 +24,10 @@ package com.continuent.tungsten.replicator.applier.batch;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -110,9 +112,13 @@ public class BatchApplier implements RawApplier
     protected boolean     supportsReplace = false;
     protected String      startUpCommand;
     protected boolean     cleanUpFiles    = true;
+    protected String      charset;
 
     // Load file directory for this task.
     private File          stageDir;
+
+    // Character set for writing CSV files.
+    private Charset       outputCharset;
 
     // Enum describing the different load methods.
     enum LoadMethod
@@ -243,6 +249,11 @@ public class BatchApplier implements RawApplier
     public synchronized void setCleanUpFiles(boolean cleanUpFiles)
     {
         this.cleanUpFiles = cleanUpFiles;
+    }
+
+    public synchronized void setCharset(String charset)
+    {
+        this.charset = charset;
     }
 
     /**
@@ -596,6 +607,27 @@ public class BatchApplier implements RawApplier
         dateFormatter.setTimeZone(tz);
         dateFormatter.applyPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
+        // Look up the output character set.
+        if (charset == null)
+            outputCharset = Charset.defaultCharset();
+        else
+        {
+            try
+            {
+                outputCharset = Charset.forName(charset);
+            }
+            catch (Exception e)
+            {
+                throw new ReplicatorException("Unable to load character set: "
+                        + charset, e);
+            }
+        }
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Using output character set:"
+                    + outputCharset.toString());
+        }
+
         // Set up the staging directory.
         File staging = new File(stageDirectory);
         createDirIfNotExist(staging);
@@ -848,7 +880,10 @@ public class BatchApplier implements RawApplier
             try
             {
                 // Generate a CSV writer on the file.
-                BufferedWriter output = new BufferedWriter(new FileWriter(file));
+                FileOutputStream outputStream = new FileOutputStream(file);
+                OutputStreamWriter streamWriter = new OutputStreamWriter(
+                        outputStream, outputCharset);
+                BufferedWriter output = new BufferedWriter(streamWriter);
                 CsvWriter writer = conn.getCsvWriter(output);
 
                 // Add the row ID if we are going via staging tables.
