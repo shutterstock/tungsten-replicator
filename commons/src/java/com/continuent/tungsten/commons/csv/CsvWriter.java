@@ -31,7 +31,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Writes CSV output.
+ * Writes CSV output.  This class implements CSV formatting roughly as described
+ * in RFC4180 (http://tools.ietf.org/html/rfc4180) with practical alterations to 
+ * match specify DBMS implementations. 
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
@@ -42,7 +44,8 @@ public class CsvWriter
     private char                 separator       = ',';
     private boolean              writeHeaders    = true;
     private boolean              quoted          = false;
-    private boolean              quoteNULL       = true;
+    private NullPolicy           nullPolicy      = NullPolicy.skip;
+    private String               nullValue       = null;
     private char                 quoteChar       = '"';
     private char                 quoteEscapeChar = '\\';
     private boolean              escapeBackslash = true;
@@ -100,16 +103,31 @@ public class CsvWriter
         this.quoted = quoted;
     }
 
-    /** Returns true if NULL values are also quoted. */
-    public synchronized boolean isQuoteNULL()
+    /** Returns the policy for handling null values. */
+    public synchronized NullPolicy getNullPolicy()
     {
-        return quoteNULL;
+        return nullPolicy;
     }
 
-    /** Set to false to not quote NULL values. */
-    public synchronized void setQuoteNULL(boolean quoteNULL)
+    /** Sets the policy for handling null values. */
+    public synchronized void setNullPolicy(NullPolicy nullPolicy)
     {
-        this.quoteNULL = quoteNULL;
+        this.nullPolicy = nullPolicy;
+    }
+
+    /** Gets the null value identifier string. */
+    public synchronized String getNullValue()
+    {
+        return nullValue;
+    }
+
+    /**
+     * Sets the null value identifier string. This applies only when null policy
+     * is NullPolicy.nullValue.
+     */
+    public synchronized void setNullValue(String nullValue)
+    {
+        this.nullValue = nullValue;
     }
 
     /** Returns the quote character. */
@@ -357,9 +375,15 @@ public class CsvWriter
         }
 
         // Set the column value.
-        if (value == null && !quoteNULL)
+        if (value == null)
         {
-            value = "";
+            // Nulls are handled according to the null value policy.
+            if (this.nullPolicy == NullPolicy.emptyString)
+                value = addQuotes("");
+            else if (nullPolicy == NullPolicy.skip)
+                value = null;
+            else
+                value = nullValue;
         }
         else if (quoted)
         {
@@ -391,10 +415,12 @@ public class CsvWriter
                 sb.append(quoteEscapeChar).append(quoteChar);
             else if (escapeBackslash && next == '\\')
                 sb.append('\\').append('\\');
+            /*
             else if (next == '\t')
                 sb.append('\\').append('t');
             else if (next == '\n')
                 sb.append('\\').append('n');
+            */
             else
                 sb.append(next);
         }
@@ -414,7 +440,9 @@ public class CsvWriter
         {
             if (i > 0)
                 writer.append(separator);
-            writer.append(row.get(i));
+            String value = row.get(i);
+            if (value != null)
+                writer.append(row.get(i));
         }
         writer.newLine();
     }
