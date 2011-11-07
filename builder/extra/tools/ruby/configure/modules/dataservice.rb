@@ -543,7 +543,7 @@ class ReplicationServiceBufferSize < ConfigurePrompt
   
   def initialize
     super(REPL_BUFFER_SIZE, "Replicator block commit size (min 1, max 100)",
-      PV_REPL_BUFFER_SIZE, 10)
+      PV_INTEGER, 10)
   end
 end
 
