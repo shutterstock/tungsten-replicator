@@ -30,6 +30,7 @@ import java.sql.Statement;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.csv.CsvWriter;
+import com.continuent.tungsten.commons.csv.NullPolicy;
 
 /**
  * Implements DBMS-specific operations for Vertica.
@@ -90,7 +91,7 @@ public class VerticaDatabase extends PostgreSQLDatabase
         CsvWriter csv = new CsvWriter(writer);
         csv.setQuoteChar('"');
         csv.setQuoted(true);
-        csv.setQuoteNULL(false);
+        csv.setNullPolicy(NullPolicy.skip);
         csv.setEscapeBackslash(true);
         csv.setQuoteEscapeChar('\\');
         csv.setWriteHeaders(false);

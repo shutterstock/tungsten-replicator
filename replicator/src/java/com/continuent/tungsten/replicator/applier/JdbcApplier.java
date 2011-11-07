@@ -1069,7 +1069,7 @@ public class JdbcApplier implements RawApplier
                         OneRowChange.ColumnVal value = values.get(c);
                         log += "\n"
                                 + THLManagerCtrl.formatColumn(colSpec, value,
-                                        "COL", null);
+                                        "COL", null, false);
                     }
                 }
                 // Print key values.
@@ -1083,7 +1083,7 @@ public class JdbcApplier implements RawApplier
                         OneRowChange.ColumnVal value = values.get(k);
                         log += "\n"
                                 + THLManagerCtrl.formatColumn(colSpec, value,
-                                        "KEY", null);
+                                        "KEY", null, false);
                     }
                 }
             }

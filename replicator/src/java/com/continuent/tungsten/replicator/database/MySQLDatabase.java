@@ -34,6 +34,7 @@ import java.util.Iterator;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.commons.csv.CsvWriter;
+import com.continuent.tungsten.commons.csv.NullPolicy;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 
@@ -532,6 +533,8 @@ public class MySQLDatabase extends AbstractDatabase
         CsvWriter csv = new CsvWriter(writer);
         csv.setQuoteChar('"');
         csv.setQuoted(true);
+        csv.setNullPolicy(NullPolicy.nullValue);
+        csv.setNullValue("\\N");
         csv.setWriteHeaders(false);
         return csv;
     }

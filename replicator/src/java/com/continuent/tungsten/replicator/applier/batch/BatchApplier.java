@@ -80,45 +80,47 @@ import com.continuent.tungsten.replicator.thl.CommitSeqnoTable;
  */
 public class BatchApplier implements RawApplier
 {
-    private static Logger logger          = Logger.getLogger(BatchApplier.class);
+    private static Logger  logger          = Logger.getLogger(BatchApplier.class);
 
     /**
      * Option for direct loading of inserts using COPY/LOAD DATA command and
      * temp tables for deletes.
      */
-    public static String  DIRECT          = "direct";
+    public static String   DIRECT          = "direct";
 
     /**
      * Option for indirect loading of inserts and deletes via staging tables.
      */
-    public static String  STAGED          = "staged";
+    public static String   STAGED          = "staged";
 
     // Task management information.
-    private int           taskId;
+    private int            taskId;
 
     // Properties.
-    protected String      driver;
-    protected String      url;
-    protected String      user;
-    protected String      password;
-    protected String      stageDirectory;
-    protected String      loadMethod;
-    protected String      loadBatchTemplate;
-    protected String      stageTablePrefix;
-    protected String      stageDeleteFromTemplate;
-    protected String      stageInsertFromTemplate;
-    protected String      stagePkeyColumn;
-    protected String      stageRowIdColumn;
-    protected boolean     supportsReplace = false;
-    protected String      startUpCommand;
-    protected boolean     cleanUpFiles    = true;
-    protected String      charset;
+    protected String       driver;
+    protected String       url;
+    protected String       user;
+    protected String       password;
+    protected String       stageDirectory;
+    protected String       loadMethod;
+    protected String       loadBatchTemplate;
+    protected String       stageTablePrefix;
+    protected String       stageDeleteFromTemplate;
+    protected String       stageInsertFromTemplate;
+    protected String       stagePkeyColumn;
+    protected String       stageRowIdColumn;
+    protected boolean      supportsReplace = false;
+    protected String       startUpCommand;
+    protected boolean      cleanUpFiles    = true;
+    protected String       charset;
+    protected String       timezone        = "GMT-0:00";
+    protected LoadMismatch onLoadMismatch  = LoadMismatch.fail;
 
     // Load file directory for this task.
-    private File          stageDir;
+    private File           stageDir;
 
     // Character set for writing CSV files.
-    private Charset       outputCharset;
+    private Charset        outputCharset;
 
     // Enum describing the different load methods.
     enum LoadMethod
@@ -132,6 +134,12 @@ public class BatchApplier implements RawApplier
     enum BatchType
     {
         insert, delete
+    };
+
+    // Enum to set load mismatch policy.
+    enum LoadMismatch
+    {
+        fail, warn, ignore
     };
 
     // Batch CSV file information. When using staging the
@@ -254,6 +262,16 @@ public class BatchApplier implements RawApplier
     public synchronized void setCharset(String charset)
     {
         this.charset = charset;
+    }
+
+    public synchronized void setTimezone(String timezone)
+    {
+        this.timezone = timezone;
+    }
+
+    public synchronized void setOnLoadMismatch(String onLoadMismatchString)
+    {
+        this.onLoadMismatch = LoadMismatch.valueOf(onLoadMismatchString);
     }
 
     /**
@@ -602,7 +620,7 @@ public class BatchApplier implements RawApplier
             InterruptedException
     {
         // Create a formatter for printing dates.
-        TimeZone tz = TimeZone.getTimeZone("GMT-0:00");
+        TimeZone tz = TimeZone.getTimeZone(timezone);
         dateFormatter = new SimpleDateFormat();
         dateFormatter.setTimeZone(tz);
         dateFormatter.applyPattern("yyyy-MM-dd HH:mm:ss.SSS");
@@ -719,6 +737,9 @@ public class BatchApplier implements RawApplier
         // Release table cache.
         if (tableMetadataCache != null)
             tableMetadataCache.invalidateAll();
+
+        // Release our connection. This prevents all manner of trouble.
+        conn.close();
     }
 
     /**
@@ -1040,11 +1061,33 @@ public class BatchApplier implements RawApplier
             int rowsLoaded = statement.executeUpdate(loadCommand);
             if (rowsLoaded != rowsToLoad)
             {
-                ReplicatorException re = new ReplicatorException(
-                        "Difference between CSV file size and rows loaded: rowsInFile="
-                                + rowsToLoad + " rowsLoaded=" + rowsLoaded);
-                re.setExtraData(loadCommand);
-                throw re;
+                // Load mismatches can occur naturally, so we have a number of
+                // options.
+                if (onLoadMismatch == LoadMismatch.warn)
+                {
+                    logger.warn("Difference between CSV file size and rows loaded: rowsInFile="
+                            + rowsToLoad
+                            + " rowsLoaded="
+                            + rowsLoaded
+                            + " loadCommand=" + loadCommand);
+                }
+                else if (onLoadMismatch == LoadMismatch.fail)
+                {
+                    ReplicatorException re = new ReplicatorException(
+                            "Difference between CSV file size and rows loaded: rowsInFile="
+                                    + rowsToLoad + " rowsLoaded=" + rowsLoaded);
+                    re.setExtraData(loadCommand);
+                    throw re;
+                }
+                else
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Ignoring CSV load mismatch: rowsInFile="
+                                + rowsToLoad + " rowsLoaded=" + rowsLoaded
+                                + " loadCommand=" + loadCommand);
+                    }
+                }
             }
             if (logger.isDebugEnabled())
             {
@@ -1400,13 +1443,7 @@ public class BatchApplier implements RawApplier
         Object value = columnVal.getValue();
         if (value == null)
         {
-            if (conn instanceof PostgreSQLDatabase)
-            {
-                // PG needs to distinguish between NULL and an empty string.
-                return null;
-            }
-            else
-                return "";
+            return null;
         }
         else if (value instanceof Timestamp)
         {

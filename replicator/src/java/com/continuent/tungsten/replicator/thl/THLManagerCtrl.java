@@ -192,7 +192,8 @@ public class THLManagerCtrl
      *            replication
      */
     public static String formatColumn(OneRowChange.ColumnSpec colSpec,
-            OneRowChange.ColumnVal value, String prefix, String charset)
+            OneRowChange.ColumnVal value, String prefix, String charset,
+            boolean hex)
     {
         String log = "  - " + prefix + "(";
         if (colSpec != null)
@@ -221,7 +222,19 @@ public class THLManagerCtrl
                 {
                     try
                     {
-                        log += new String((byte[]) value.getValue(), charset);
+                        byte[] byteValue = (byte[]) value.getValue();
+                        log += new String(byteValue, charset);
+                        if (hex)
+                        {
+                            StringBuffer hexValue = new StringBuffer();
+                            hexValue.append(" (x");
+                            for (byte b : byteValue)
+                            {
+                                hexValue.append(String.format("%2.2x", b));
+                            }
+                            hexValue.append(")");
+                            log += hexValue.toString();
+                        }
                     }
                     catch (UnsupportedEncodingException e)
                     {
@@ -275,11 +288,13 @@ public class THLManagerCtrl
      *            otherwise.
      * @param charset character set name to be used to decode byte arrays in row
      *            replication
+     * @param hex If true print hex representation of strings
      * @throws ReplicatorException
      * @throws InterruptedException
      */
     public void listEvents(Long low, Long high, Long by, boolean pureSQL,
-            String charset) throws ReplicatorException, InterruptedException
+            String charset, boolean hex) throws ReplicatorException,
+            InterruptedException
     {
         // Make sure range is OK.
         if (low != null && high != null && low > high)
@@ -344,7 +359,7 @@ public class THLManagerCtrl
             {
                 ReplDBMSEvent event = (ReplDBMSEvent) replEvent;
                 StringBuilder sb = new StringBuilder();
-                printReplDBMSEvent(sb, event, pureSQL, charset);
+                printReplDBMSEvent(sb, event, pureSQL, charset, hex);
                 print(sb.toString());
             }
             else
@@ -428,9 +443,10 @@ public class THLManagerCtrl
      * @param pureSQL If true, use pure SQL output. Formatted form otherwise.
      * @param charset character set name to be used to decode byte arrays in row
      *            replication
+     * @param hex If true print hex representation of strings
      */
     public static void printReplDBMSEvent(StringBuilder stringBuilder,
-            ReplDBMSEvent event, boolean pureSQL, String charset)
+            ReplDBMSEvent event, boolean pureSQL, String charset, boolean hex)
     {
         if (event == null)
         {
@@ -482,7 +498,7 @@ public class THLManagerCtrl
             {
                 RowChangeData rowChange = (RowChangeData) dataElem;
                 lastSchema = printRowChangeData(stringBuilder, rowChange,
-                        lastSchema, pureSQL, i, charset);
+                        lastSchema, pureSQL, i, charset, hex);
             }
             else if (dataElem instanceof StatementData)
             {
@@ -603,7 +619,7 @@ public class THLManagerCtrl
      */
     private static String printRowChangeData(StringBuilder stringBuilder,
             RowChangeData rowChange, String lastSchema, boolean pureSQL,
-            int sqlIndex, String charset)
+            int sqlIndex, String charset, boolean hex)
     {
         if (!pureSQL)
             println(stringBuilder, "- SQL(" + sqlIndex + ") =");
@@ -644,7 +660,8 @@ public class THLManagerCtrl
                                     .get(row);
                             OneRowChange.ColumnVal value = values.get(c);
                             println(stringBuilder,
-                                    formatColumn(colSpec, value, "COL", charset));
+                                    formatColumn(colSpec, value, "COL",
+                                            charset, hex));
                         }
                     }
                     // Print key values.
@@ -657,7 +674,8 @@ public class THLManagerCtrl
                                     .get(row);
                             OneRowChange.ColumnVal value = values.get(k);
                             println(stringBuilder,
-                                    formatColumn(colSpec, value, "KEY", charset));
+                                    formatColumn(colSpec, value, "KEY",
+                                            charset, hex));
                         }
                     }
                 }
@@ -725,6 +743,7 @@ public class THLManagerCtrl
             Boolean yesToQuestions = null;
             String fileName = null;
             String charsetName = null;
+            boolean hex = false;
 
             // Parse command line arguments.
             argvIterator = new ArgvIterator(argv);
@@ -757,6 +776,10 @@ public class THLManagerCtrl
                                 + ". Using default.");
                         charsetName = null;
                     }
+                }
+                else if ("-hex".equals(curArg))
+                {
+                    hex = true;
                 }
                 else if ("-file".equals(curArg))
                 {
@@ -822,14 +845,14 @@ public class THLManagerCtrl
                 if (fileName != null)
                 {
                     thlManager.listEvents(fileName, getBoolOrFalse(pureSQL),
-                            charsetName);
+                            charsetName, hex);
                 }
                 else if (seqno == null)
                     thlManager.listEvents(low, high, by,
-                            getBoolOrFalse(pureSQL), charsetName);
+                            getBoolOrFalse(pureSQL), charsetName, hex);
                 else
                     thlManager.listEvents(seqno, seqno, by,
-                            getBoolOrFalse(pureSQL), charsetName);
+                            getBoolOrFalse(pureSQL), charsetName, hex);
             }
             else if (THLCommands.PURGE.equals(command))
             {
@@ -938,9 +961,11 @@ public class THLManagerCtrl
      * @param fileName Simple name of the file
      * @param pureSQL Whether to print SQL
      * @param charset Charset for translation, e.g., utf8
+     * @param hex If true print hex representation of strings
      */
-    private void listEvents(String fileName, boolean pureSQL, String charset)
-            throws ReplicatorException, IOException, InterruptedException
+    private void listEvents(String fileName, boolean pureSQL, String charset,
+            boolean hex) throws ReplicatorException, IOException,
+            InterruptedException
     {
         // Ensure we have a simple file name. Log APIs will not accept an
         // absolute path.
@@ -972,7 +997,7 @@ public class THLManagerCtrl
             {
                 ReplDBMSEvent event = (ReplDBMSEvent) replEvent;
                 StringBuilder sb = new StringBuilder();
-                printReplDBMSEvent(sb, event, pureSQL, charset);
+                printReplDBMSEvent(sb, event, pureSQL, charset, hex);
                 print(sb.toString());
             }
             else
@@ -1001,11 +1026,11 @@ public class THLManagerCtrl
         println("Commands and corresponding options:");
         println("  list [-low #] [-high #] [-by #] - Dump THL events from low to high #");
         println("       [-sql]                       Specify -sql to use pure SQL output only");
-        println("       [-charset <charset_name>]    Character set used for decoding row data");
+        println("       [-charset <charset>] [-hex]  Character set used for decoding row data");
         println("  list [-seqno #] [-sql]          - Dump the exact event by a given #");
-        println("       [-charset <charset_name>]    Character set used for decoding row data");
+        println("       [-charset <charset>] [-hex]  Character set used for decoding row data");
         println("  list [-file <file_name>] [-sql] - Dump the content of the given log file");
-        println("       [-charset <charset_name>]  - Character set used for decoding row data");
+        println("       [-charset <charset>] [-hex]  Character set used for decoding row data");
         println("  index                           - Display index of log files");
         println("  purge [-low #] [-high #] [-y]   - Delete events within the given range");
         println("  purge [-seqno #] [-y]           - Delete the exact event");
