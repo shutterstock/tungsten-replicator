@@ -105,6 +105,7 @@ public class BatchApplier implements RawApplier
     protected String       loadMethod;
     protected String       loadBatchTemplate;
     protected String       stageTablePrefix;
+    protected String       stageSchemaPrefix;
     protected String       stageDeleteFromTemplate;
     protected String       stageInsertFromTemplate;
     protected String       stagePkeyColumn;
@@ -210,6 +211,11 @@ public class BatchApplier implements RawApplier
     public synchronized void setLoadMethod(String loadMethod)
     {
         this.loadMethod = loadMethod;
+    }
+
+    public synchronized void setStageSchemaPrefix(String stageSchemaPrefix)
+    {
+        this.stageSchemaPrefix = stageSchemaPrefix;
     }
 
     public synchronized void setStageTablePrefix(String stageTablePrefix)
@@ -732,14 +738,24 @@ public class BatchApplier implements RawApplier
     {
         // Release staging directory if cleanup is requested.
         if (stageDir != null && cleanUpFiles)
+        {
             purgeDirIfExists(stageDir, true);
+            stageDir = null;
+        }
 
         // Release table cache.
         if (tableMetadataCache != null)
+        {
             tableMetadataCache.invalidateAll();
+            tableMetadataCache = null;
+        }
 
         // Release our connection. This prevents all manner of trouble.
-        conn.close();
+        if (conn != null)
+        {
+            conn.close();
+            conn = null;
+        }
     }
 
     /**
@@ -788,11 +804,18 @@ public class BatchApplier implements RawApplier
      */
     private Table getInsertStageTable(Table baseTable, boolean removePrimaryKey)
     {
+        // Generate schema and table names.
+        String stageSchema = baseTable.getSchema();
+        if (stageSchemaPrefix != null)
+            stageSchema = stageSchemaPrefix + baseTable.getSchema();
         String stageInsertName = stageTablePrefix + "_insert_"
                 + baseTable.getName();
 
+        // Create table definition.
         Table stageInsertTable = baseTable.clone();
         stageInsertTable.setTable(stageInsertName);
+        stageInsertTable.setSchema(stageSchema);
+
         if (removePrimaryKey)
         {
             Key primaryKey = stageInsertTable.getPrimaryKey();
@@ -816,11 +839,15 @@ public class BatchApplier implements RawApplier
      */
     private Table getDeleteStageTable(Table baseTable)
     {
+        // Generate schema and table names.
+        String stageSchema = baseTable.getSchema();
+        if (stageSchemaPrefix != null)
+            stageSchema = stageSchemaPrefix + baseTable.getSchema();
         String stageDeleteName = stageTablePrefix + "_delete_"
                 + baseTable.getName();
 
-        Table stageDeleteTable = new Table(baseTable.getSchema(),
-                stageDeleteName);
+        // Create table definition.
+        Table stageDeleteTable = new Table(stageSchema, stageDeleteName);
 
         // Column pkeyCol;
         // List<Key> keys = baseTableMetadata.getKeys();

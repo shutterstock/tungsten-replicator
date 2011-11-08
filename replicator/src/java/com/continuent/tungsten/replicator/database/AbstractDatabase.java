@@ -57,19 +57,19 @@ import com.continuent.tungsten.replicator.dbms.OneRowChange;
  */
 public abstract class AbstractDatabase implements Database
 {
-    private static Logger    logger        = Logger.getLogger(AbstractDatabase.class);
+    private static Logger           logger        = Logger.getLogger(AbstractDatabase.class);
 
-    protected DBMS           dbms;
-    protected String         dbDriver      = null;
-    protected String         dbUri         = null;
-    protected String         dbUser        = null;
-    protected String         dbPassword    = null;
-    protected Connection     dbConn        = null;
-    protected boolean        autoCommit    = false;
-    protected String         defaultSchema = null;
+    protected DBMS                  dbms;
+    protected String                dbDriver      = null;
+    protected String                dbUri         = null;
+    protected String                dbUser        = null;
+    protected String                dbPassword    = null;
+    protected Connection            dbConn        = null;
+    protected boolean               autoCommit    = false;
+    protected String                defaultSchema = null;
 
-    protected static boolean driverLoaded  = false;
-    protected boolean        connected     = false;
+    protected Map<String, Class<?>> drivers       = new HashMap<String, Class<?>>();
+    protected boolean               connected     = false;
 
     /**
      * Create a new database instance. To use the database instance you must at
@@ -151,13 +151,13 @@ public abstract class AbstractDatabase implements Database
     {
         if (dbConn == null)
         {
-            if (!driverLoaded && dbDriver != null)
+            if (dbDriver != null && drivers.get(dbDriver) == null)
             {
                 try
                 {
                     logger.info("Loading database driver: " + dbDriver);
-                    Class.forName(dbDriver);
-                    driverLoaded = true;
+                    Class<?> driverClass = Class.forName(dbDriver);
+                    drivers.put(dbDriver, driverClass);
                 }
                 catch (Exception e)
                 {
