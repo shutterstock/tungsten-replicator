@@ -116,6 +116,8 @@ public class THL implements Store
     // Storage connectivity.
     private Server             server               = null;
 
+    private boolean            readOnly             = false;
+
     /** Creates a store instance. */
     public THL()
     {
@@ -266,6 +268,11 @@ public class THL implements Store
         this.fsyncOnFlush = fsyncOnFlush;
     }
 
+    public void setReadOnly(String ro)
+    {
+        readOnly = (ro.equals("true"));
+    }
+
     // STORE API STARTS HERE.
 
     /**
@@ -285,8 +292,8 @@ public class THL implements Store
     }
 
     /**
-     * Updates the active sequence number on the log.  Log files can only be 
-     * deleted if their last sequence number is below this value. 
+     * Updates the active sequence number on the log. Log files can only be
+     * deleted if their last sequence number is below this value.
      */
     public void updateActiveSeqno(long activeSeqno)
     {
@@ -337,7 +344,7 @@ public class THL implements Store
         diskLog.setBufferSize(bufferSize);
         diskLog.setFlushIntervalMillis(flushIntervalMillis);
         diskLog.setFsyncOnFlush(fsyncOnFlush);
-        diskLog.setReadOnly(false);
+        diskLog.setReadOnly(readOnly);
         diskLog.prepare();
         logger.info("Log preparation is complete");
 
