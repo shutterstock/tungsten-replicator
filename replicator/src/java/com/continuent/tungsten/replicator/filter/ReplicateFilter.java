@@ -290,13 +290,17 @@ public class ReplicateFilter implements Filter
 
     }
 
-    private void extractFilters(String doOrIgnorefilter, boolean ignore)
+    private void extractFilters(String doOrIgnoreFilter, boolean ignore)
     {
+        // If null, we do nothing. 
+        if (doOrIgnoreFilter == null)
+            return;
+
         StringBuffer db = new StringBuffer("");
         StringBuffer table = new StringBuffer("");
         StringBuffer wildTable = new StringBuffer("");
 
-        String[] filterArr = doOrIgnorefilter.split(",");
+        String[] filterArr = doOrIgnoreFilter.split(",");
 
         for (int i = 0; i < filterArr.length; i++)
         {
