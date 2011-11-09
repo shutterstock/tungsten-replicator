@@ -194,7 +194,8 @@ public class JdbcPrefetcher implements RawApplier
     }
 
     /**
-     * Sets the aheadMaxTime value. This is the maximum time that event should be from the last applied event (based on master times
+     * Sets the aheadMaxTime value. This is the maximum time that event should
+     * be from the last applied event (based on master times
      * 
      * @param aheadMaxTime The aheadMaxTime to set.
      */
@@ -883,7 +884,7 @@ public class JdbcPrefetcher implements RawApplier
                         OneRowChange.ColumnVal value = values.get(c);
                         log += "\n"
                                 + THLManagerCtrl.formatColumn(colSpec, value,
-                                        "COL", null);
+                                        "COL", null, false);
                     }
                 }
                 // Print key values.
@@ -897,7 +898,7 @@ public class JdbcPrefetcher implements RawApplier
                         OneRowChange.ColumnVal value = values.get(k);
                         log += "\n"
                                 + THLManagerCtrl.formatColumn(colSpec, value,
-                                        "KEY", null);
+                                        "KEY", null, false);
                     }
                 }
             }
