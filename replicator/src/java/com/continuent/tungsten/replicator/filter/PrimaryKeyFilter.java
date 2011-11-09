@@ -76,6 +76,7 @@ public class PrimaryKeyFilter implements Filter
     private List<String>                                tables               = null;
     private List<String>                                schemas              = null;
     private String                                      processTablesSchemas = null;
+    private boolean                                     addPkeyToInserts     = false;
 
     // SQL parser.
     SqlOperationMatcher                                 sqlMatcher           = new MySQLOperationMatcher();
@@ -257,7 +258,7 @@ public class PrimaryKeyFilter implements Filter
 
     private void checkForPK(OneRowChange orc) throws SQLException
     {
-        if (orc.getAction() == ActionType.INSERT)
+        if (orc.getAction() == ActionType.INSERT && !addPkeyToInserts)
             return;
 
         String tableName = orc.getTableName();
@@ -375,6 +376,34 @@ public class PrimaryKeyFilter implements Filter
                 iterator.remove();
             }
         }
+
+        // Add the PK information to the INSERTs.
+        if (orc.getAction() == ActionType.INSERT)
+        {
+            if (keySpecs.size() == 0 && keyValues.size() == 0)
+            {
+                // Add the key columns.
+                for (int k = 0; k < keys.size(); k++)
+                {
+                    Column column = keys.get(k);
+                    OneRowChange.ColumnSpec colSpec = orc.new ColumnSpec();
+                    colSpec.setIndex(column.getPosition());
+                    colSpec.setName(column.getName());
+                    colSpec.setType(column.getType());
+                    colSpec.setTypeDescription(column.getTypeDescription());
+                    keySpecs.add(colSpec);
+
+                    // Add empty dummy column values to the key column.
+                    // Without this ProtobufSerializer will fail.
+                    ArrayList<ColumnVal> columnValues = new ArrayList<ColumnVal>();
+                    keyValues.add(columnValues);
+                }
+            }
+            else
+            {
+                logger.debug("INSERT already contain keys: " + keySpecs.size());
+            }
+        }
     }
 
     public void setUser(String user)
@@ -397,4 +426,12 @@ public class PrimaryKeyFilter implements Filter
         this.processTablesSchemas = processTablesSchemas;
     }
 
+    /**
+     * If set, primary key ColumnSpec objects will be added to row change events
+     * of INSERTs.
+     */
+    public void setAddPkeyToInserts(boolean addPkeyToInserts)
+    {
+        this.addPkeyToInserts = addPkeyToInserts;
+    }
 }

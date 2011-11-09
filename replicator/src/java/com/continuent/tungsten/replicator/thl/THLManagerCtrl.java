@@ -670,9 +670,12 @@ public class THLManagerCtrl
                         if (keyValues.size() > 0)
                         {
                             OneRowChange.ColumnSpec colSpec = keys.get(k);
-                            ArrayList<OneRowChange.ColumnVal> values = keyValues
-                                    .get(row);
-                            OneRowChange.ColumnVal value = values.get(k);
+                            ArrayList<OneRowChange.ColumnVal> values = null;
+                            if (row < keyValues.size())
+                                values = keyValues.get(row);
+                            OneRowChange.ColumnVal value = null;
+                            if (values != null && k < values.size())
+                                value = values.get(k);
                             println(stringBuilder,
                                     formatColumn(colSpec, value, "KEY",
                                             charset, hex));

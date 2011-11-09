@@ -328,10 +328,12 @@ public class BatchApplier implements RawApplier
                         List<ColumnSpec> colSpecs = orc.getColumnSpec();
                         ArrayList<ArrayList<ColumnVal>> colValues = orc
                                 .getColumnValues();
+                        // PK should be put in here by the PrimaryKeyFilter.
+                        List<ColumnSpec> keySpecs = orc.getKeySpec();
 
                         // Get information the table definition.
                         Table tableMetadata = this.getTableMetadata(schema,
-                                table, colSpecs, null);
+                                table, colSpecs, keySpecs);
 
                         // Insert each column into the CSV file.
                         this.writeInsertValues(tableMetadata, colSpecs,
@@ -1170,6 +1172,34 @@ public class BatchApplier implements RawApplier
         }
     }
 
+    /**
+     * Determines primary key name for the given CsvInfo object. If underlying
+     * meta data table contains a primary key, it is used. If not, user's
+     * configured default one is taken.<br/>
+     * Currently, only single-column primary keys are supported.
+     * 
+     * @return Primary key column name.
+     */
+    private String getPKColumn(CsvInfo info)
+    {
+        String pkey = stagePkeyColumn;
+        
+        // If THL event contains PK, use it.
+        if (info.baseTableMetadata.getPrimaryKey() != null
+                && info.baseTableMetadata.getPrimaryKey().getColumns() != null
+                && info.baseTableMetadata.getPrimaryKey().getColumns().size() > 0
+                && info.baseTableMetadata.getPrimaryKey().getColumns().get(0)
+                        .getName() != null
+                && !info.baseTableMetadata.getPrimaryKey().getColumns().get(0)
+                        .getName().equals(""))
+        {
+            pkey = info.baseTableMetadata.getPrimaryKey().getColumns().get(0)
+                    .getName();
+        }
+        
+        return pkey;
+    }
+
     // Load an open CSV file.
     private void mergeStageTableInserts(CsvInfo info)
             throws ReplicatorException
@@ -1183,7 +1213,7 @@ public class BatchApplier implements RawApplier
         }
 
         // Generate fields required for insert merges.
-        String pkey = stagePkeyColumn;
+        String pkey = getPKColumn(info);
         String basePkey = base.getName() + "." + pkey;
         String stagePkey = stage.getName() + "." + pkey;
         StringBuffer colNames = new StringBuffer();
@@ -1199,6 +1229,7 @@ public class BatchApplier implements RawApplier
         insert = insert.replace("%%BASE_TABLE%%", base.fullyQualifiedName());
         insert = insert.replace("%%BASE_COLUMNS%%", colNames.toString());
         insert = insert.replace("%%STAGE_TABLE%%", stage.fullyQualifiedName());
+        insert = insert.replace("%%PKEY%%", pkey);
         insert = insert.replace("%%BASE_PKEY%%", basePkey);
         insert = insert.replace("%%STAGE_PKEY%%", stagePkey);
 
@@ -1283,7 +1314,7 @@ public class BatchApplier implements RawApplier
         }
 
         // Generate fields required for delete merges.
-        String pkey = stagePkeyColumn;
+        String pkey = getPKColumn(info);
         String basePkey = base.getName() + "." + pkey;
         String stagePkey = stage.getName() + "." + pkey;
         StringBuffer colNames = new StringBuffer();
@@ -1299,6 +1330,7 @@ public class BatchApplier implements RawApplier
         insert = insert.replace("%%BASE_TABLE%%", base.fullyQualifiedName());
         insert = insert.replace("%%BASE_COLUMNS%%", colNames.toString());
         insert = insert.replace("%%STAGE_TABLE%%", stage.fullyQualifiedName());
+        insert = insert.replace("%%PKEY%%", pkey);
         insert = insert.replace("%%BASE_PKEY%%", basePkey);
         insert = insert.replace("%%STAGE_PKEY%%", stagePkey);
 
