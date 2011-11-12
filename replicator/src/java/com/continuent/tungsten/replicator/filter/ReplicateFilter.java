@@ -221,17 +221,7 @@ public class ReplicateFilter implements Filter
         if (schema.equals(tungstenSchema))
             return false;
 
-        // Check to see if we explicitly accept this schema/table.
-        if (doMatcher != null)
-        {
-            if (logger.isDebugEnabled())
-                logger.debug("Checking if we should replicate: schema="
-                        + schema + " table=" + table);
-            if (doMatcher.match(schema, table))
-                return false;
-        }
-
-        // Now check to see if we explicitly ignore this schema/table.
+        // Check to see if we explicitly ignore this schema/table.
         if (ignoreMatcher != null)
         {
             if (logger.isDebugEnabled())
@@ -241,10 +231,21 @@ public class ReplicateFilter implements Filter
                 return true;
         }
 
-        // At this point check whether the do filters were used or not : if they
-        // were, then it means that the table/schema that was looked for did not
-        // match any of the filters => drop the event. 
-        return doMatcher != null;
+        // Now to see if we accept this schema/table...
+        if (doMatcher == null)
+        {
+            // If there is no explicit 'do' matcher, we do not filter anything.
+            return false;
+        }
+        else
+        {
+            // If there is an explicit filter we filter only if we *do not*
+            // match.
+            if (logger.isDebugEnabled())
+                logger.debug("Checking if we should replicate: schema="
+                        + schema + " table=" + table);
+            return !doMatcher.match(schema, table);
+        }
     }
 
     // Returns the fully qualified schema and/or table name, which can be used
