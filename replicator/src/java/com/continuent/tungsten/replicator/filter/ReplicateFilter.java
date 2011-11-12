@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2011 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,21 +17,21 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Stephane Giron
- * Contributor(s):
+ * Contributor(s): Robert Hodges
  */
 
 package com.continuent.tungsten.replicator.filter;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.cache.IndexedLRUCache;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.database.SqlOperation;
+import com.continuent.tungsten.replicator.database.TableMatcher;
 import com.continuent.tungsten.replicator.dbms.DBMSData;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
 import com.continuent.tungsten.replicator.dbms.RowChangeData;
@@ -40,49 +40,77 @@ import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
+ * Implements a filter to either apply or ignore operations on particular
+ * schemas and/or tables. Patterns are comma separated lists, where each entry
+ * may have the following form:
+ * <ul>
+ * <li>A schema name, for example "test"</li>
+ * <li>A fully qualified table name, for example "test.foo"</li>
+ * </ul>
+ * Schema and table names may contain * and ? characters, which substitute for a
+ * series of characters or a single character, respectively. For example,
+ * "test.*" matches all tables in database test, and "test?.foo" matches tables
+ * "test1.foo" and "test2.foo" but not "test.foo".
+ * 
  * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
  * @version 1.0
  */
 public class ReplicateFilter implements Filter
 {
+    private static Logger            logger = Logger.getLogger(ReplicateFilter.class);
 
-    private static Logger logger = Logger.getLogger(ReplicateFilter.class);
+    private TableMatcher             doMatcher;
+    private TableMatcher             ignoreMatcher;
 
-    private Pattern       doDbPattern;
-    private Matcher       doDbMatcher;
+    private String                   doFilter;
+    private String                   ignoreFilter;
 
-    private Pattern       ignoreDbPattern;
-    private Matcher       ignoreDbMatcher;
+    private String                   tungstenSchema;
 
-    private Pattern       doTablePattern;
-    private Matcher       doTableMatcher;
+    // Cache to look up filtered tables.
+    private IndexedLRUCache<Boolean> filterCache;
 
-    private Pattern       ignoreTablePattern;
-    private Matcher       ignoreTableMatcher;
-
-    private Matcher       ignoreWildTableMatcher;
-    private Matcher       doWildTableMatcher;
-
-    private String        doFilter;
-    private String        ignoreFilter;
-    private Pattern       doWildTablePattern;
-    private Pattern       ignoreWildTablePattern;
-
-    private String        tungstenSchema;
-
+    /**
+     * Define a comma-separated list of schemas with optional table names (e.g.,
+     * schema1,schema2.table1,etc.) to replicate. If set, only operations that
+     * match the list will be forwarded.
+     */
     public void setDoFilter(String doFilter)
+    {
+        this.setDo(doFilter);
+    }
+
+    public void setDo(String doFilter)
     {
         this.doFilter = doFilter;
     }
 
+    /**
+     * Define a comma-separated list of schemas with optional table names (e.g.,
+     * schema1,schema2.table1,etc.) to ignore. If set, all operations that match
+     * the list will be ignored.
+     * 
+     * @param ignoreFilter
+     */
     public void setIgnoreFilter(String ignoreFilter)
     {
-        this.ignoreFilter = ignoreFilter;
+        setIgnore(ignoreFilter);
+    }
 
+    public void setIgnore(String ignore)
+    {
+        this.ignoreFilter = ignore;
     }
 
     /**
-     * {@inheritDoc}
+     * Filters transactions using do and ignore rules. The logic is as follows.
+     * <ol>
+     * <li>If the operation matches a schema or table to ignore, drop it.</li>
+     * <li>If the operation matches a schema or table to do, forward it.</li>
+     * <li>If the do list is enabled and the operation does not match, drop it.</li>
+     * </ol>
+     * Individual operations that match the filtering rules are removed. If the
+     * entire transaction becomes empty as a result, it will be removed.
      * 
      * @see com.continuent.tungsten.replicator.filter.Filter#filter(com.continuent.tungsten.replicator.event.ReplDBMSEvent)
      */
@@ -164,104 +192,70 @@ public class ReplicateFilter implements Filter
         return event;
     }
 
+    // Returns true if the schema and table should be filtered using either a
+    // cache look-up or a full scan based on filtering rules.
     private boolean filterEvent(String schema, String table)
     {
         // if schema not provided, cannot filter
         if (schema.length() == 0)
             return false;
 
+        // Find out if we need to filter.
+        String key = fullyQualifiedName(schema, table);
+        Boolean filter = filterCache.get(key);
+        if (filter == null)
+        {
+            filter = filterEventRaw(schema, table);
+            filterCache.put(key, filter);
+        }
+
+        // Return a value.
+        return filter;
+    }
+
+    // Performs a scan of all rules to see if we need to filter this event.
+    private boolean filterEventRaw(String schema, String table)
+    {
+        // Tungsten schema is always passed through as dropping this can
+        // confuse the replicator.
         if (schema.equals(tungstenSchema))
             return false;
 
-        if (doDbPattern != null)
+        // Check to see if we explicitly accept this schema/table.
+        if (doMatcher != null)
         {
             if (logger.isDebugEnabled())
-                logger.debug("Checking if database should be replicated : "
-                        + schema);
-            if (doDbMatcher == null)
-                doDbMatcher = doDbPattern.matcher(schema);
-            else
-                doDbMatcher.reset(schema);
-
-            if (doDbMatcher.matches())
-            {
-                if (logger.isDebugEnabled())
-                    logger.debug("Match do filter - keeping event");
-                return false;
-            }
-        }
-
-        if (ignoreDbPattern != null)
-        {
-            if (ignoreDbMatcher == null)
-                ignoreDbMatcher = ignoreDbPattern.matcher(schema);
-            else
-                ignoreDbMatcher.reset(schema);
-
-            if (ignoreDbMatcher.matches())
-                return true;
-        }
-
-        // From this point, if table not provided, cannot filter
-        if (table != null && table.length() == 0)
-            return false;
-
-        String searchedTable = schema + "." + table;
-
-        if (doTablePattern != null)
-        {
-            if (doTableMatcher == null)
-                doTableMatcher = doTablePattern.matcher(searchedTable);
-            else
-                doTableMatcher.reset(searchedTable);
-
-            if (doTableMatcher.matches())
+                logger.debug("Checking if we should replicate: schema="
+                        + schema + " table=" + table);
+            if (doMatcher.match(schema, table))
                 return false;
         }
 
-        if (ignoreTablePattern != null)
+        // Now check to see if we explicitly ignore this schema/table.
+        if (ignoreMatcher != null)
         {
-            if (ignoreTableMatcher == null)
-                ignoreTableMatcher = ignoreTablePattern.matcher(searchedTable);
-            else
-                ignoreTableMatcher.reset(searchedTable);
-
-            if (ignoreTableMatcher.matches())
+            if (logger.isDebugEnabled())
+                logger.debug("Checking if we should ignore: schema=" + schema
+                        + " table=" + table);
+            if (ignoreMatcher.match(schema, table))
                 return true;
         }
 
-        if (doWildTablePattern != null)
-        {
-            if (doWildTableMatcher == null)
-                doWildTableMatcher = doWildTablePattern.matcher(searchedTable);
-            else
-                doWildTableMatcher.reset(searchedTable);
+        // At this point check whether the do filters were used or not : if they
+        // were, then it means that the table/schema that was looked for did not
+        // match any of the filters => drop the event. 
+        return doMatcher != null;
+    }
 
-            if (doWildTableMatcher.matches())
-                return false;
-        }
-
-        if (ignoreWildTablePattern != null)
-        {
-            if (ignoreWildTableMatcher == null)
-                ignoreWildTableMatcher = ignoreWildTablePattern
-                        .matcher(searchedTable);
-            else
-                ignoreWildTableMatcher.reset(searchedTable);
-
-            if (ignoreWildTableMatcher.matches())
-                return true;
-        }
-
-        /*
-         * At this point check whether the do filters were used or not : if they
-         * were, then it means that the table/schema that was looked for did not
-         * match any of the filters => drop the event. If they were not used
-         * (ignore instead) then at this point, event should have been dropped
-         * elsewhere if needed.
-         */
-        return doDbPattern != null || doTablePattern != null
-                || doWildTablePattern != null;
+    // Returns the fully qualified schema and/or table name, which can be used
+    // as a key.
+    public String fullyQualifiedName(String schema, String table)
+    {
+        StringBuffer fqn = new StringBuffer();
+        fqn.append(schema);
+        if (table != null)
+            fqn.append(".").append(table);
+        return fqn.toString();
     }
 
     /**
@@ -284,74 +278,27 @@ public class ReplicateFilter implements Filter
     public void prepare(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
-        logger.warn("Preparing Replicate Filter");
-        extractFilters(doFilter, false);
-        extractFilters(ignoreFilter, true);
+        if (logger.isDebugEnabled())
+            logger.debug("Preparing Replicate Filter");
 
+        // Implement filter rules.
+        this.doMatcher = extractFilter(doFilter);
+        this.ignoreMatcher = extractFilter(ignoreFilter);
+
+        // Initialize LRU cache.
+        this.filterCache = new IndexedLRUCache<Boolean>(1000, null);
     }
 
-    private void extractFilters(String doOrIgnoreFilter, boolean ignore)
+    // Prepares table matcher.
+    private TableMatcher extractFilter(String filter)
     {
-        // If null, we do nothing. 
-        if (doOrIgnoreFilter == null)
-            return;
+        // If empty, we do nothing.
+        if (filter == null || filter.length() == 0)
+            return null;
 
-        StringBuffer db = new StringBuffer("");
-        StringBuffer table = new StringBuffer("");
-        StringBuffer wildTable = new StringBuffer("");
-
-        String[] filterArr = doOrIgnoreFilter.split(",");
-
-        for (int i = 0; i < filterArr.length; i++)
-        {
-            String filter = filterArr[i].trim();
-            if (filter.length() == 0)
-                continue;
-
-            if (!filter.contains("."))
-            {
-                // This is a schema
-                if (db.length() > 0)
-                    db.append("|");
-                db.append(filter);
-            }
-            else
-            {
-                filter = filter.replace(".", "\\.");
-                if (filter.contains("%") || filter.contains("_"))
-                {
-                    if (wildTable.length() > 0)
-                        wildTable.append("|");
-                    wildTable.append(filter.replaceAll("%", ".*").replaceAll(
-                            "_", "."));
-                }
-                else
-                {
-                    if (table.length() > 0)
-                        table.append("|");
-                    table.append(filter);
-                }
-            }
-            final String tablePattern = table.toString();
-            final String wildTablePattern = wildTable.toString();
-            final String dbPattern = db.toString();
-            if (ignore)
-            {
-                ignoreDbPattern = Pattern.compile(dbPattern);
-                ignoreTablePattern = Pattern.compile(tablePattern);
-                ignoreWildTablePattern = Pattern.compile(wildTablePattern);
-            }
-            else
-            {
-                if (dbPattern.length() > 0)
-                    doDbPattern = Pattern.compile(dbPattern);
-                if (tablePattern.length() > 0)
-                    doTablePattern = Pattern.compile(tablePattern);
-                if (wildTablePattern.length() > 0)
-                    doWildTablePattern = Pattern.compile(wildTablePattern);
-
-            }
-        }
+        TableMatcher tableMatcher = new TableMatcher();
+        tableMatcher.prepare(filter);
+        return tableMatcher;
     }
 
     /**
@@ -362,7 +309,6 @@ public class ReplicateFilter implements Filter
     public void release(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
-
+        this.filterCache.invalidateAll();
     }
-
 }
