@@ -22,13 +22,13 @@
 
 package com.continuent.tungsten.commons.io;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ClosedByInterruptException;
+import java.nio.channels.FileChannel;
 
 import org.apache.log4j.Logger;
 
@@ -48,11 +48,10 @@ public class BufferedFileDataInput
 
     // Variables to control reading.
     private FileInputStream     fileInput;
-    private BufferedInputStream bufferedInput;
-    private DataInputStream     dataInput;
     private long                offset;
     private long                markOffset;
-    private int                 available;
+    private long                available;
+    private FileChannel         fileChannel;
 
     /**
      * Creates instance positioned on start of file.
@@ -60,8 +59,8 @@ public class BufferedFileDataInput
      * @param file File from which to read
      * @param size Size of buffer for buffered I/O
      */
-    public BufferedFileDataInput(File file, int size)
-            throws FileNotFoundException, IOException, InterruptedException
+    public BufferedFileDataInput(File file, int size) throws FileNotFoundException,
+            IOException, InterruptedException
     {
         this.file = file;
         this.size = size;
@@ -93,9 +92,9 @@ public class BufferedFileDataInput
      * 
      * @return Number of bytes available for non-blocking read
      */
-    public int available() throws IOException
+    public long available() throws IOException
     {
-        available = bufferedInput.available();
+        available = fileChannel.size() - offset;
         return available;
     }
 
@@ -110,8 +109,8 @@ public class BufferedFileDataInput
      *             bytes
      * @throws InterruptedException Thrown if we are interrupted while waiting
      */
-    public int waitAvailable(int requested, int waitMillis) throws IOException,
-            InterruptedException
+    public long waitAvailable(int requested, int waitMillis)
+            throws IOException, InterruptedException
     {
         // If we know there is already enough data to read, return immediately.
         if (available >= requested)
@@ -140,7 +139,6 @@ public class BufferedFileDataInput
     public void mark(int readLimit)
     {
         markOffset = offset;
-        bufferedInput.mark(readLimit);
     }
 
     /**
@@ -153,7 +151,8 @@ public class BufferedFileDataInput
     {
         try
         {
-            bufferedInput.reset();
+            if (markOffset >= 0)
+                fileChannel.position(markOffset);
             offset = markOffset;
         }
         catch (IOException e)
@@ -173,10 +172,10 @@ public class BufferedFileDataInput
      */
     public long skip(long bytes) throws IOException
     {
-        long bytesSkipped = bufferedInput.skip(bytes);
-        offset += bytesSkipped;
-        available -= bytesSkipped;
-        return bytesSkipped;
+        offset += bytes;
+        fileChannel.position(offset);
+        available -= bytes;
+        return bytes;
     }
 
     /**
@@ -190,10 +189,18 @@ public class BufferedFileDataInput
     public void seek(long seekBytes) throws FileNotFoundException, IOException,
             InterruptedException
     {
+        if (fileChannel != null)
+            fileChannel.close();
+
+        if (fileInput != null)
+            fileInput.close();
+
         fileInput = new FileInputStream(file);
+        fileChannel = fileInput.getChannel();
+
         try
         {
-            fileInput.getChannel().position(seekBytes);
+            fileChannel.position(seekBytes);
         }
         catch (ClosedByInterruptException e)
         {
@@ -202,8 +209,6 @@ public class BufferedFileDataInput
             // InterruptException.
             throw new InterruptedException();
         }
-        bufferedInput = new BufferedInputStream(fileInput, size);
-        dataInput = new DataInputStream(bufferedInput);
         offset = seekBytes;
         markOffset = -1;
         available = 0;
@@ -214,16 +219,23 @@ public class BufferedFileDataInput
      */
     public byte readByte() throws IOException
     {
-        byte v = dataInput.readByte();
+        ByteBuffer bbuf = ByteBuffer.allocate(1);
+        fileChannel.read(bbuf);
+        bbuf.flip();
+
         offset += 1;
         available -= 1;
-        return v;
+        return bbuf.get();
     }
 
     /** Reads a single short. */
     public short readShort() throws IOException
     {
-        short v = dataInput.readShort();
+        ByteBuffer bbuf = ByteBuffer.allocate(2);
+        fileChannel.read(bbuf);
+        bbuf.flip();
+
+        short v = bbuf.getShort();
         offset += 2;
         available -= 2;
         return v;
@@ -232,16 +244,23 @@ public class BufferedFileDataInput
     /** Read a single integer. */
     public int readInt() throws IOException
     {
-        int v = dataInput.readInt();
+        ByteBuffer bbuf = ByteBuffer.allocate(4);
+        fileChannel.read(bbuf);
+        bbuf.flip();
+
         offset += 4;
         available -= 4;
-        return v;
+        return bbuf.getInt();
     }
 
     /** Reads a single long. */
     public long readLong() throws IOException
     {
-        long v = dataInput.readLong();
+        ByteBuffer bbuf = ByteBuffer.allocate(8);
+        fileChannel.read(bbuf);
+        bbuf.flip();
+
+        long v = bbuf.getLong();
         offset += 8;
         available -= 8;
         return v;
@@ -267,9 +286,13 @@ public class BufferedFileDataInput
      */
     public void readFully(byte[] bytes, int start, int len) throws IOException
     {
-        dataInput.readFully(bytes, start, len);
-        offset += len;
-        available -= len;
+        ByteBuffer bbuf = ByteBuffer.wrap(bytes, start, len);
+        int length = fileChannel.read(bbuf);
+        if (length > 0)
+        {
+            offset += length;
+            available -= length;
+        }
     }
 
     /** Close and release all resources. */
@@ -277,7 +300,9 @@ public class BufferedFileDataInput
     {
         try
         {
-            dataInput.close();
+            if (fileChannel != null)
+                fileChannel.close();
+            fileInput.close();
         }
         catch (IOException e)
         {
@@ -285,8 +310,6 @@ public class BufferedFileDataInput
                     + file.getName() + " exception=" + e.getMessage());
         }
         fileInput = null;
-        bufferedInput = null;
-        dataInput = null;
         offset = -1;
         available = 0;
     }
