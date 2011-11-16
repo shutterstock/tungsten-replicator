@@ -216,8 +216,8 @@ public class LogConnection
         cursor.setRotateNext(true);
         if (logger.isDebugEnabled())
         {
-            logger.debug("Using log file for read: "
-                    + logFile.getFile().getName());
+            logger.debug("Using log file " + logFile.getFile().getName()
+                    + " - seeking event " + seqno + "/" + fragno);
         }
 
         // If we are looking for the first sequence number, we can stop now that
@@ -282,6 +282,9 @@ public class LogConnection
                     if (eventReader.getSeqno() == seqno
                             && eventReader.getFragno() == fragno)
                     {
+                        if (logger.isDebugEnabled())
+                            logger.debug("Found requested event (" + seqno
+                                    + "/" + fragno + ")");
                         // We found the event we are looking for.
                         pendingEvent = deserialize(logRecord);
                         break;
@@ -290,11 +293,24 @@ public class LogConnection
                             || (eventReader.getSeqno() == seqno && eventReader
                                     .getFragno() > fragno))
                     {
+                        if (logger.isDebugEnabled())
+                            logger.debug("Requested event (" + seqno + "/"
+                                    + fragno + ") not found. Found event "
+                                    + eventReader.getSeqno() + "/"
+                                    + eventReader.getFragno() + " instead");
+
                         // Our event is simply not in the log.
                         break;
                     }
                     else
                     {
+                        if (logger.isDebugEnabled())
+                            logger.debug("Requested event (" + seqno + "/"
+                                    + fragno
+                                    + ") not reached. Current position "
+                                    + eventReader.getSeqno() + "/"
+                                    + eventReader.getFragno());
+
                         // Remember which seqno we saw and keep going.
                         lastSeqno = eventReader.getSeqno();
                     }
@@ -454,7 +470,8 @@ public class LogConnection
         LogFile data = cursor.getLogFile();
         if (logger.isDebugEnabled())
         {
-            logger.debug("Using log file for read: " + data.getFile().getName());
+            logger.debug("Using log file " + data.getFile().getName()
+                    + " - reading event");
         }
 
         // Set the timeout value.

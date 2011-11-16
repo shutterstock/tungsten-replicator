@@ -442,13 +442,15 @@ public abstract class LogEvent
         int spentTime = 0;
         int timeoutInMs = timeout * 1000;
 
-        while (length > binlog.available())
+        long available;
+        while ((available = binlog.available()) < (long) length)
         {
             if (!alreadyLogged)
             {
-                logger.warn("Trying to read more bytes ("
-                        + length
-                        + ") than available in the file... waiting for data to be available");
+                logger.warn("Trying to read more bytes (" + length
+                        + ") than available in the file (" + available + " in "
+                        + binlog.getFileName()
+                        + ")... waiting for data to be available");
                 alreadyLogged = true;
             }
 

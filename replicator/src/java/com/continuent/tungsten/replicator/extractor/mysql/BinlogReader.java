@@ -309,7 +309,7 @@ public class BinlogReader implements FilenameFilter, Cloneable
      * @throws IOException Thrown if call fails
      * @see waitAvailable()
      */
-    public int available() throws IOException
+    public long available() throws IOException
     {
         return bfdi.available();
     }
@@ -323,8 +323,8 @@ public class BinlogReader implements FilenameFilter, Cloneable
      * @throws IOException Thrown if wait fails
      * @throws InterruptedException Thrown if interrupted during wait
      */
-    public int waitAvailable(int requested, int waitMillis) throws IOException,
-            InterruptedException
+    public long waitAvailable(int requested, int waitMillis)
+            throws IOException, InterruptedException
     {
         return bfdi.waitAvailable(requested, waitMillis);
     }
