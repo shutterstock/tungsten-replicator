@@ -22,9 +22,17 @@
 
 package com.continuent.tungsten.replicator.pipeline;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
+
 import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.replicator.applier.DummyApplier;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
+import com.continuent.tungsten.replicator.dbms.DBMSData;
+import com.continuent.tungsten.replicator.dbms.StatementData;
+import com.continuent.tungsten.replicator.event.DBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
+import com.continuent.tungsten.replicator.event.ReplOptionParams;
 import com.continuent.tungsten.replicator.extractor.DummyExtractor;
 import com.continuent.tungsten.replicator.storage.InMemoryQueueAdapter;
 import com.continuent.tungsten.replicator.storage.InMemoryQueueStore;
@@ -81,14 +89,17 @@ public class PipelineHelper
      * @return
      * @throws Exception
      */
-    public TungstenProperties createDoubleQueueRuntime(int size)
+    public TungstenProperties createDoubleQueueRuntime(int queueSize, int blockSize)
             throws Exception
     {
+        // Overall pipeline including one stage with block size. 
         PipelineConfigBuilder builder = new PipelineConfigBuilder();
         builder.setProperty(ReplicatorConf.SERVICE_NAME, "test");
         builder.setRole("master");
-        builder.addPipeline("master", "master", "q1,q2");
-        builder.addStage("extract", "q-extract", "q-apply", null);
+        builder.addPipeline("master", "stage", "q1,q2");
+        builder.addStage("stage", "q-extract", "q-apply", null);
+        builder.addProperty("stage", "stage", "blockCommitRowCount", new Integer(
+                blockSize).toString());
 
         // Stage components.
         builder.addComponent("extractor", "q-extract",
@@ -100,10 +111,10 @@ public class PipelineHelper
         // Storage definition.
         builder.addComponent("store", "q1", InMemoryQueueStore.class);
         builder.addProperty("store", "q1", "maxSize",
-                new Integer(size).toString());
+                new Integer(queueSize).toString());
         builder.addComponent("store", "q2", InMemoryQueueStore.class);
         builder.addProperty("store", "q2", "maxSize",
-                new Integer(size).toString());
+                new Integer(queueSize).toString());
 
         return builder.getConfig();
     }
@@ -141,4 +152,23 @@ public class PipelineHelper
 
         return builder.getConfig();
     }
+
+    /**
+     * Returns a well-formed ReplDBMSEvent with a specified shard ID.
+     * 
+     * @param seqno Sequence number to use
+     * @param shardId Shard ID to use
+     */
+    public ReplDBMSEvent createEvent(long seqno, String shardId)
+    {
+        ArrayList<DBMSData> t = new ArrayList<DBMSData>();
+        t.add(new StatementData("SELECT 1"));
+        DBMSEvent dbmsEvent = new DBMSEvent(new Long(seqno).toString(), null,
+                t, true, new Timestamp(System.currentTimeMillis()));
+        ReplDBMSEvent replDbmsEvent = new ReplDBMSEvent(seqno, dbmsEvent);
+        replDbmsEvent.getDBMSEvent().addMetadataOption(
+                ReplOptionParams.SHARD_ID, shardId);
+        return replDbmsEvent;
+    }
+
 }

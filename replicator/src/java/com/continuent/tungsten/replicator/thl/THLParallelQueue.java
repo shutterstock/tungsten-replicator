@@ -568,7 +568,8 @@ public class THLParallelQueue implements ParallelStore
         {
             THLParallelReadTask readTask = new THLParallelReadTask(i, thl,
                     partitioner, headSeqnoCounter, intervalGuard, maxSize,
-                    maxControlEvents, syncInterval);
+                    maxControlEvents, syncInterval,
+                    context.getEventDispatcher());
             readTasks.add(readTask);
             readTask.prepare(context);
         }

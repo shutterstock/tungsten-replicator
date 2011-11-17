@@ -29,6 +29,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
+import com.continuent.tungsten.replicator.ErrorNotification;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.event.DBMSEmptyEvent;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
@@ -75,6 +77,9 @@ public class THLParallelReadTask implements Runnable
     private AtomicLong                     readCount            = new AtomicLong(
                                                                         0);
 
+    // Dispatcher to report errors.
+    EventDispatcher                        dispatcher;
+
     // Ordered queue of events for clients.
     private final BlockingQueue<ReplEvent> eventQueue;
 
@@ -109,7 +114,7 @@ public class THLParallelReadTask implements Runnable
     public THLParallelReadTask(int taskId, THL thl, Partitioner partitioner,
             AtomicCounter headSeqnoCounter,
             AtomicIntervalGuard<?> intervalGuard, int maxSize,
-            int maxControlEvents, int syncInterval)
+            int maxControlEvents, int syncInterval, EventDispatcher dispatcher)
     {
         this.taskId = taskId;
         this.thl = thl;
@@ -119,6 +124,7 @@ public class THLParallelReadTask implements Runnable
         this.maxControlEvents = maxControlEvents;
         this.eventQueue = new LinkedBlockingQueue<ReplEvent>(maxSize);
         this.syncInterval = syncInterval;
+        this.dispatcher = dispatcher;
     }
 
     /**
@@ -126,7 +132,7 @@ public class THLParallelReadTask implements Runnable
      */
     public synchronized void setRestartHeader(ReplDBMSHeader header)
     {
-        this.restartSeqno = header.getSeqno();
+        this.restartSeqno = header.getSeqno() + 1;
         this.restartExtractMillis = header.getExtractedTstamp().getTime();
     }
 
@@ -326,8 +332,18 @@ public class THLParallelReadTask implements Runnable
         }
         catch (Throwable e)
         {
-            logger.error("Read failed on transaction log: seqno=" + readSeqno
-                    + " taskId=" + taskId, e);
+            String msg = "Read failed on transaction log: seqno=" + readSeqno
+                    + " taskId=" + taskId;
+            try
+            {
+                dispatcher.put(new ErrorNotification(msg, e));
+            }
+            catch (InterruptedException e1)
+            {
+                logger.warn("Task cancelled while posting error notification",
+                        null);
+            }
+
             throwable = e;
         }
 

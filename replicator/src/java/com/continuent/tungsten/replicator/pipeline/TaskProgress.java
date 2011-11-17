@@ -123,9 +123,10 @@ public class TaskProgress
 
     public void setLastCommittedEvent(ReplDBMSHeader lastCommittedEvent)
     {
-        this.lastCommittedEvent = lastCommittedEvent;
         if (lastCommittedEvent == null)
-            throw new RuntimeException();
+            throw new RuntimeException("BUG: Attempt to commit a null event!");
+        this.lastCommittedEvent = lastCommittedEvent;
+        this.blockCount++;
     }
 
     public boolean isCancelled()
@@ -163,9 +164,12 @@ public class TaskProgress
         this.blockCount = blockCount;
     }
 
-    public void incrementBlockCount()
+    public double getAverageBlockSize()
     {
-        this.blockCount++;
+        if (blockCount > 0)
+            return (double) getEventCount() / blockCount;
+        else
+            return 0.0;
     }
 
     /** Return apply latency in milliseconds. Sub-zero values are rounded to 0. */

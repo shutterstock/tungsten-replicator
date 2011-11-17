@@ -359,7 +359,9 @@ public class TestTHL2 extends TestCase
         ReplDBMSHeader lastEvent2 = wait2.get(5, TimeUnit.SECONDS);
         assertEquals("Expected 20 events", 19, lastEvent2.getSeqno());
 
-        // Ensure THL contains expected number of events.
+        // Ensure THL contains expected number of events.  We must sleep 
+        // very briefly to allow the THL to commit. 
+        Thread.sleep(50);
         Store thl = pipeline2.getStore("thl");
         assertEquals("Expected 0 as first event", 0, thl.getMinStoredSeqno());
         assertEquals("Expected 19 as last event", 19, thl.getMaxStoredSeqno());

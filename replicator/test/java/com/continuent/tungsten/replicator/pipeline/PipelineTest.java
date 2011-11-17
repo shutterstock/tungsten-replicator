@@ -40,11 +40,13 @@ import com.continuent.tungsten.replicator.applier.RawApplier;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.dbms.StatementData;
+import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.extractor.DummyExtractor;
 import com.continuent.tungsten.replicator.extractor.ExtractorWrapper;
 import com.continuent.tungsten.replicator.management.MockEventDispatcher;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
+import com.continuent.tungsten.replicator.storage.InMemoryQueueStore;
 
 /**
  * This class implements a test of the Pipeline class.
@@ -282,7 +284,7 @@ public class PipelineTest extends TestCase
         Pipeline pipeline = runtime.getPipeline();
         pipeline.start(new MockEventDispatcher());
 
-        // Set dummy extractor to do 1M transactions, but don't store anything.
+        // Set dummy extractor to do 5M transactions, but don't store anything.
         Stage stage0 = pipeline.getStages().get(0);
         stage0.setLoggingInterval(100000);
         ExtractorWrapper ew = (ExtractorWrapper) stage0.getExtractor0();
@@ -455,6 +457,65 @@ public class PipelineTest extends TestCase
     }
 
     /**
+     * Verify that we properly support differing levels of block commit. We put
+     * a queue on both ends but have the input queue full at the start. We then
+     * test different levels of group commit and confirm the number of blocks
+     * and group commit size recorded.
+     */
+    public void testBlockCommit() throws Exception
+    {
+        // Define transaction count and different block sizes to use.
+        int xacts = 40;
+        int[] blockSizes = {1, 2, 4};
+
+        // Try test for each block size.
+        for (int blockSize : blockSizes)
+        {
+            logger.info("Testing block commit: transactions=" + xacts
+                    + " blockSize=" + blockSize);
+
+            // Create config with pipeline with input and output queues.
+            TungstenProperties config = helper.createDoubleQueueRuntime(40, blockSize);
+            ReplicatorRuntime runtime = new ReplicatorRuntime(config,
+                    new MockOpenReplicatorContext(),
+                    ReplicatorMonitor.getInstance());
+            runtime.configure();
+            runtime.prepare();
+            Pipeline pipeline = runtime.getPipeline();
+
+            // Load data into the queue and start the pipeline.
+            InMemoryQueueStore input = (InMemoryQueueStore) pipeline
+                    .getStore("q1");
+            for (int i = 0; i < 40; i++)
+            {
+                ReplDBMSEvent event = helper.createEvent(i, "db0");
+                input.put(event);
+            }
+            pipeline.start(new MockEventDispatcher());
+
+            // Test for successfully applied and extracted sequence numbers.
+            Future<ReplDBMSHeader> future = pipeline
+                    .watchForAppliedSequenceNumber(39);
+            ReplDBMSHeader matchingEvent = future.get(2, TimeUnit.SECONDS);
+            assertEquals("Applied sequence number matches", xacts - 1,
+                    matchingEvent.getSeqno());
+
+            // Check the number of commits and block size from the single task
+            // in our single stage.
+            Stage stage = pipeline.getStages().get(0);
+            TaskProgress progress = stage.getProgressTracker().getTaskProgress(
+                    0);
+            assertEquals("Number of block commits", xacts / blockSize, progress.getBlockCount());
+            double blockDifference = Math.abs(progress.getAverageBlockSize() - blockSize);
+            assertTrue("Average block size", blockDifference < 0.1);
+
+            // Shut it down.
+            pipeline.shutdown(false);
+            pipeline.release(runtime);
+        }
+    }
+
+    /**
      * Verify that we can handle 10M events without problems.
      */
     public void testManyEvents() throws Exception
@@ -467,7 +528,6 @@ public class PipelineTest extends TestCase
         runtime.configure();
         runtime.prepare();
         Pipeline pipeline = runtime.getPipeline();
-        pipeline.start(new MockEventDispatcher());
 
         // Set dummy extractor to do 1M transactions, but don't store anything.
         Stage stage0 = pipeline.getStages().get(0);
@@ -479,6 +539,9 @@ public class PipelineTest extends TestCase
         DummyApplier da = (DummyApplier) aw.getApplier();
         da.setStoreAppliedEvents(false);
 
+        // Start the pipeline. 
+        pipeline.start(new MockEventDispatcher());
+        
         // Test for successfully applied and extracted sequence numbers.
         Future<ReplDBMSHeader> future = pipeline
                 .watchForAppliedSequenceNumber(maxEvents - 1);

@@ -33,6 +33,7 @@ import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.applier.Applier;
 import com.continuent.tungsten.replicator.applier.ApplierException;
 import com.continuent.tungsten.replicator.conf.FailurePolicy;
+import com.continuent.tungsten.replicator.consistency.ConsistencyException;
 import com.continuent.tungsten.replicator.event.ReplControlEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSFilteredEvent;
@@ -45,10 +46,13 @@ import com.continuent.tungsten.replicator.filter.Filter;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
- * Implements thread logic for single-threaded, i.e., non-parallel stage
- * execution.
+ * Implements thread logic for single-threaded stage execution. If your name is
+ * not one of the two people listed below you probably should not change this
+ * code without deep reflection and a lot of regression tests. *Every* line in
+ * the task run loop is here for a reason.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
+ * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
  */
 public class SingleThreadStageTask implements Runnable
 {
@@ -66,6 +70,7 @@ public class SingleThreadStageTask implements Runnable
 
     private long             blockEventCount = 0;
     private TaskProgress     taskProgress;
+    private PluginContext    context;
 
     private volatile boolean cancelled       = false;
 
@@ -151,6 +156,7 @@ public class SingleThreadStageTask implements Runnable
     {
         logInfo("Starting stage task thread", null);
         taskProgress.begin();
+        context = stage.getPluginContext();
 
         runTask();
 
@@ -176,9 +182,6 @@ public class SingleThreadStageTask implements Runnable
      */
     public void runTask()
     {
-        PluginContext context = stage.getPluginContext();
-
-        ReplDBMSEvent currentEvent = null;
         ReplDBMSEvent firstFilteredEvent = null;
         ReplDBMSEvent lastFilteredEvent = null;
 
@@ -200,18 +203,6 @@ public class SingleThreadStageTask implements Runnable
 
             while (!cancelled)
             {
-                // If we have a pending currentEvent from the last iteration,
-                // we should log it now, then test to see whether the task has
-                // been cancelled.
-                if (currentEvent != null && firstFilteredEvent == null)
-                {
-                    schedule.setLastProcessedEvent(currentEvent);
-                    // If the block is empty, we have committed. 
-                    if (blockEventCount == 0)
-                        schedule.commit();
-                    currentEvent = null;
-                }
-
                 // Check for cancellation and exit loop if it has occurred.
                 if (schedule.isCancelled())
                 {
@@ -252,7 +243,6 @@ public class SingleThreadStageTask implements Runnable
                 {
                     if (logger.isDebugEnabled())
                         logger.debug("No event extracted, retrying...");
-                    currentEvent = null;
                     continue;
                 }
 
@@ -280,9 +270,7 @@ public class SingleThreadStageTask implements Runnable
                                                 newService);
                                 logger.debug(msg);
                             }
-                            applier.commit();
-                            blockEventCount = 0;
-                            taskProgress.incrementBlockCount();
+                            commit();
                         }
                         else
                         {
@@ -304,19 +292,16 @@ public class SingleThreadStageTask implements Runnable
                 }
                 else if (disposition == Schedule.CONTINUE_NEXT)
                 {
-                    // Update processed event position but do not commit. 
+                    // Update processed event position but do not commit.
                     updatePosition(genericEvent, false);
-                    currentEvent = null;
                     continue;
                 }
                 else if (disposition == Schedule.CONTINUE_NEXT_COMMIT)
                 {
-                    // Update position and commit.  We must currently tell
-                    // the schedule explicitly about the commit so that 
-                    // progress tracking correctly marks it as committed. 
+                    // Update position and commit. We must currently tell
+                    // the schedule explicitly about the commit so that
+                    // progress tracking correctly marks it as committed.
                     updatePosition(genericEvent, true);
-                    schedule.commit();
-                    currentEvent = null;
                     continue;
                 }
                 else if (disposition == Schedule.QUIT)
@@ -342,34 +327,40 @@ public class SingleThreadStageTask implements Runnable
                     logger.debug("Extracted event: seqno=" + event.getSeqno()
                             + " fragno=" + event.getFragno());
                 }
-                currentEvent = event;
 
                 // Run filters.
                 taskProgress.beginFilterInterval();
-                for (Filter f : filters)
+
+                try
                 {
-                    if ((event = f.filter(event)) == null)
+                    for (Filter f : filters)
                     {
-                        if (logger.isDebugEnabled())
+                        if ((event = f.filter(event)) == null)
                         {
-                            logger.debug("Event discarded by filter: name="
-                                    + f.getClass().toString());
+                            if (logger.isDebugEnabled())
+                            {
+                                logger.debug("Event discarded by filter: name="
+                                        + f.getClass().toString());
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
-                taskProgress.endFilterInterval();
+                finally
+                {
+                    taskProgress.endFilterInterval();
+                }
 
                 // Event was filtered... Get next event.
                 if (event == null)
                 {
                     if (firstFilteredEvent == null)
                     {
-                        firstFilteredEvent = currentEvent;
-                        lastFilteredEvent = currentEvent;
+                        firstFilteredEvent = event;
+                        lastFilteredEvent = event;
                     }
                     else
-                        lastFilteredEvent = currentEvent;
+                        lastFilteredEvent = event;
                     continue;
                 }
                 else
@@ -378,43 +369,15 @@ public class SingleThreadStageTask implements Runnable
                     // filtered events that should be stored.
                     if (firstFilteredEvent != null)
                     {
-                        try
+                        if (logger.isDebugEnabled())
                         {
-                            if (logger.isDebugEnabled())
-                            {
-                                logger.debug("Applying filtered event");
-                            }
-                            taskProgress.beginApplyInterval();
-                            applier.apply(new ReplDBMSFilteredEvent(
-                                    firstFilteredEvent, lastFilteredEvent),
-                                    true, false, syncTHLWithExtractor);
-                            blockEventCount = 0;
-                            taskProgress.incrementBlockCount();
-                            firstFilteredEvent = null;
-                            lastFilteredEvent = null;
+                            logger.debug("Applying filtered event");
                         }
-                        catch (ApplierException e)
-                        {
-                            if (context.getApplierFailurePolicy() == FailurePolicy.STOP)
-                            {
-                                throw e;
-                            }
-                            else
-                            {
-                                String message = "Event application failed: seqno="
-                                        + event.getSeqno()
-                                        + " fragno="
-                                        + event.getFragno()
-                                        + " message="
-                                        + e.getMessage();
-                                logError(message, e);
-                                continue;
-                            }
-                        }
-                        finally
-                        {
-                            taskProgress.endApplyInterval();
-                        }
+                        apply(new ReplDBMSFilteredEvent(firstFilteredEvent,
+                                lastFilteredEvent), true, false,
+                                syncTHLWithExtractor);
+                        firstFilteredEvent = null;
+                        lastFilteredEvent = null;
                     }
                 }
 
@@ -424,14 +387,11 @@ public class SingleThreadStageTask implements Runnable
                                 ReplOptionParams.UNSAFE_FOR_BLOCK_COMMIT) != null;
 
                 // Handle implicit commit, if next transaction is fragmented, if
-                // next transaction is a DDL or if next transaction rollbacks
+                // next transaction is a DDL or if next transaction rollbacks.
                 if (event.getFragno() == 0 && !event.getLastFrag())
                 {
                     // Starting a new fragmented transaction
-                    applier.commit();
-                    schedule.commit();
-                    blockEventCount = 0;
-                    taskProgress.incrementBlockCount();
+                    commit();
                 }
                 else
                 {
@@ -445,18 +405,14 @@ public class SingleThreadStageTask implements Runnable
                         // transaction, previous work was already committed
                         // and the whole current transaction should be rolled
                         // back
-                        applier.commit();
-                        blockEventCount = 0;
-                        taskProgress.incrementBlockCount();
+                        commit();
                         doRollback = true;
                     }
                     else if (unsafeForBlockCommit)
                     {
                         // Commit previous work and force transaction to commit
                         // afterwards.
-                        applier.commit();
-                        blockEventCount = 0;
-                        taskProgress.incrementBlockCount();
+                        commit();
                     }
 
                 }
@@ -489,51 +445,19 @@ public class SingleThreadStageTask implements Runnable
                 }
 
                 // Apply the event with optional commit.
-                try
+                if (logger.isDebugEnabled())
                 {
-                    if (logger.isDebugEnabled())
-                    {
-                        logger.debug("Applying event: seqno="
-                                + event.getSeqno() + " fragno="
-                                + event.getFragno() + " doCommit=" + doCommit);
-                    }
-                    taskProgress.beginApplyInterval();
-                    // doCommit should be false if doRollback is true, but
-                    // anyway, enforcing this here by testing both values
-                    applier.apply(event, doCommit, doRollback,
-                            syncTHLWithExtractor);
-                    if (doCommit)
-                    {
-                        blockEventCount = 0;
-                        taskProgress.incrementBlockCount();
-                    }
+                    logger.debug("Applying event: seqno=" + event.getSeqno()
+                            + " fragno=" + event.getFragno() + " doCommit="
+                            + doCommit);
                 }
-                catch (ApplierException e)
-                {
-                    if (context.getApplierFailurePolicy() == FailurePolicy.STOP)
-                    {
-                        throw e;
-                    }
-                    else
-                    {
-                        String message = "Event application failed: seqno="
-                                + event.getSeqno() + " fragno="
-                                + event.getFragno() + " message="
-                                + e.getMessage();
-                        logError(message, e);
-                        continue;
-                    }
-                }
-                finally
-                {
-                    taskProgress.endApplyInterval();
-                }
+                // doCommit should be false if doRollback is true.
+                apply(event, doCommit, doRollback, syncTHLWithExtractor);
             }
 
             // At the end of the loop, issue commit to ensure partial block
-            // becomes persistent and tell the schedule we are committing. 
-            applier.commit();
-            schedule.commit();
+            // becomes persistent.
+            commit();
         }
         catch (InterruptedException e)
         {
@@ -636,9 +560,73 @@ public class SingleThreadStageTask implements Runnable
         taskProgress.endApplyInterval();
         if (doCommit)
         {
+            schedule.commit();
             blockEventCount = 0;
-            taskProgress.incrementBlockCount();
         }
+    }
+
+    /**
+     * Utility routine to wrap apply operation with standard exception handling
+     * and event accounting.
+     * 
+     * @param event Event to be applied
+     * @param doCommit Boolean flag indicating whether this is the last part of
+     *            multipart event
+     * @param doRollback Boolean flag indicating whether this transaction should
+     *            rollback
+     * @param syncTHL Should this applier synchronize the trep_commit_seqno
+     *            table? This should be false for slave.
+     * @throws ReplicatorException Thrown if applier processing fails
+     * @throws ConsistencyException Thrown if the applier detects that a
+     *             consistency check has failed
+     * @throws InterruptedException Thrown if the applier is interrupted
+     */
+    private void apply(ReplDBMSEvent event, boolean doCommit,
+            boolean doRollback, boolean syncTHL) throws ReplicatorException,
+            ConsistencyException, InterruptedException
+    {
+        try
+        {
+            taskProgress.beginApplyInterval();
+            applier.apply(event, doCommit, doRollback, syncTHL);
+            if (doCommit)
+            {
+                schedule.commit();
+                blockEventCount = 0;
+            }
+        }
+        catch (ApplierException e)
+        {
+            if (context.getApplierFailurePolicy() == FailurePolicy.STOP)
+            {
+                throw e;
+            }
+            else
+            {
+                String message = "Event application failed: seqno="
+                        + event.getSeqno() + " fragno=" + event.getFragno()
+                        + " message=" + e.getMessage();
+                logError(message, e);
+            }
+        }
+        finally
+        {
+            taskProgress.endApplyInterval();
+        }
+
+    }
+
+    /**
+     * Utility routine to issue commit with appropriate transaction accounting.
+     * 
+     * @throws ReplicatorException Thrown if applier processing fails
+     * @throws InterruptedException Thrown if the applier is interrupted
+     */
+    private void commit() throws InterruptedException, ReplicatorException
+    {
+        applier.commit();
+        schedule.commit();
+        blockEventCount = 0;
     }
 
     // Utility routine to log error event with exception handling.

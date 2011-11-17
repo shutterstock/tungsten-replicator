@@ -58,10 +58,12 @@ public class SimpleSchedule implements Schedule
      */
     public int advise(ReplEvent replEvent) throws InterruptedException
     {
-        // Fix up cancellation logic.
+        // Process events by type.
         if (replEvent instanceof ReplDBMSEvent)
         {
+            // For normal transactions just record and decide whether to skip.
             ReplDBMSEvent event = (ReplDBMSEvent) replEvent;
+            setLastProcessedEvent(event);
             if (stage.getProgressTracker().skip(event))
                 return CONTINUE_NEXT_COMMIT;
             else
@@ -69,6 +71,7 @@ public class SimpleSchedule implements Schedule
         }
         else if (replEvent instanceof ReplControlEvent)
         {
+            // For control events decide whether to sync or stop. 
             ReplControlEvent controlEvent = (ReplControlEvent) replEvent;
             if (controlEvent.getEventType() == ReplControlEvent.STOP)
                 return QUIT;
