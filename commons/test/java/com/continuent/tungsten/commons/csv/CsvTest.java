@@ -265,6 +265,56 @@ public class CsvTest
         }
     }
 
+    /**
+     * Verify that quoting, character escaping and suppression within strings
+     * works properly.
+     */
+    @Test
+    public void testEscapingAndSuppression() throws Exception
+    {
+        StringWriter sw = new StringWriter();
+        CsvWriter csvWriter = new CsvWriter(sw);
+        csvWriter.setEscapeChar('X');
+        csvWriter.setEscapedChars("ABC");
+        csvWriter.setSuppressedChars("abc");
+        csvWriter.setQuoteChar('Q');
+        csvWriter.setQuoted(true);
+
+        // Write values.
+        csvWriter.addColumnName("data");
+        csvWriter.put("data", "abc").write();
+        csvWriter.put("data", "ABC").write();
+        csvWriter.put("data", "aAbBcC").write();
+        csvWriter.put("data", "Q").write();
+        csvWriter.flush();
+        String csv = sw.toString();
+
+        // Read values back in again.
+        StringReader sr = new StringReader(csv);
+        CsvReader csvReader = new CsvReader(sr);
+
+        // Characters in first row should be empty string surrounded by quotes.
+        Assert.assertTrue("First read", csvReader.next());
+        Assert.assertEquals("suppressed characters", "QQ",
+                csvReader.getString(1));
+
+        // Characters in second row should be escaped with quotes.
+        Assert.assertTrue("Second read", csvReader.next());
+        Assert.assertEquals("escaped characters", "QXAXBXCQ",
+                csvReader.getString(1));
+
+        // Characters in third row should be escaped with quotes with suppressed
+        // characters omitted.
+        Assert.assertTrue("Second read", csvReader.next());
+        Assert.assertEquals("escaped characters", "QXAXBXCQ",
+                csvReader.getString(1));
+
+        // Characters in fourth row be an escaped quote character.
+        Assert.assertTrue("Second read", csvReader.next());
+        Assert.assertEquals("escaped characters", "QXQQ",
+                csvReader.getString(1));
+    }
+
     // Create a CSV file with no extra separators.
     private String createCsvFile(String[] colNames, int rows)
             throws IOException

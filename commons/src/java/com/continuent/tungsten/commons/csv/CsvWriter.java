@@ -31,9 +31,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Writes CSV output.  This class implements CSV formatting roughly as described
- * in RFC4180 (http://tools.ietf.org/html/rfc4180) with practical alterations to 
- * match specify DBMS implementations. 
+ * Writes CSV output. This class implements CSV formatting roughly as described
+ * in RFC4180 (http://tools.ietf.org/html/rfc4180) with practical alterations to
+ * match specify DBMS implementations.
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
@@ -47,8 +47,9 @@ public class CsvWriter
     private NullPolicy           nullPolicy      = NullPolicy.skip;
     private String               nullValue       = null;
     private char                 quoteChar       = '"';
-    private char                 quoteEscapeChar = '\\';
-    private boolean              escapeBackslash = true;
+    private char                 escapeChar      = '\\';
+    private String               escapedChars    = "";
+    private String               suppressedChars = "";
     private String               rowId           = null;
 
     // State.
@@ -57,6 +58,14 @@ public class CsvWriter
     private BufferedWriter       writer;
     private int                  rowCount        = 0;
     private int                  colCount        = 0;
+
+    // Enum and table to describe disposition of specific characters.
+    enum Disposition
+    {
+        escape, suppress
+    }
+
+    private Map<Character, Disposition> disposition;
 
     /**
      * Instantiate a new instance with output to provided writer.
@@ -142,32 +151,59 @@ public class CsvWriter
         this.quoteChar = quoteChar;
     }
 
-    /** Sets whether to escape backslash symbol in values. */
-    public synchronized void setEscapeBackslash(boolean escapeBackslash)
-    {
-        this.escapeBackslash = escapeBackslash;
-    }
-
-    /** Returns true if backslash symbols are escaped. */
-    public synchronized boolean isEscapeBackslash()
-    {
-        return escapeBackslash;
-    }
-
     /**
-     * Sets character that precedes quote characters.
+     * Sets character used to escape quotes and other escaped characters.
      * 
      * @see #setQuoteChar(char)
      */
-    public synchronized void setQuoteEscapeChar(char quoteEscapeChar)
+    public synchronized void setEscapeChar(char quoteEscapeChar)
     {
-        this.quoteEscapeChar = quoteEscapeChar;
+        this.escapeChar = quoteEscapeChar;
     }
 
-    /** Sets the character used to escape quote characters. */
-    public synchronized char getQuoteEscapeChar()
+    /** Returns the escape character. */
+    public synchronized char getEscapeChar()
     {
-        return quoteEscapeChar;
+        return escapeChar;
+    }
+
+    /**
+     * Returns a string of characters that must be preceded by escape character.
+     */
+    public synchronized String getEscapedChars()
+    {
+        return escapedChars;
+    }
+
+    /**
+     * Defines zero or more characters that must be preceded by escape
+     * character.
+     */
+    public synchronized void setEscapedChars(String escapedChars)
+    {
+        if (escapedChars == null)
+            this.escapedChars = "";
+        else
+            this.escapedChars = escapedChars;
+    }
+
+    /**
+     * Returns a string of characters that are suppressed in CSV output.
+     */
+    public synchronized String getSuppressedChars()
+    {
+        return suppressedChars;
+    }
+
+    /**
+     * Sets characters to be suppressed in CSV output.
+     */
+    public synchronized void setSuppressedChars(String suppressedChars)
+    {
+        if (suppressedChars == null)
+            this.suppressedChars = "";
+        else
+            this.suppressedChars = suppressedChars;
     }
 
     /**
@@ -283,7 +319,7 @@ public class CsvWriter
      *             columns
      * @throws IOException Thrown due to a write error
      */
-    public void write() throws CsvException, IOException
+    public CsvWriter write() throws CsvException, IOException
     {
         // At the top of the file optionally write headers and set the row
         // ID name.
@@ -313,11 +349,14 @@ public class CsvWriter
                         + " columns written=" + colCount);
             }
 
+            // Write the row.
             writeRow(row);
             row = null;
             colCount = 0;
             rowCount++;
         }
+
+        return this;
     }
 
     /**
@@ -325,10 +364,11 @@ public class CsvWriter
      * 
      * @throws CsvException Thrown on an I/O failure
      */
-    public void flush() throws IOException, CsvException
+    public CsvWriter flush() throws IOException, CsvException
     {
         write();
         writer.flush();
+        return this;
     }
 
     /**
@@ -340,8 +380,22 @@ public class CsvWriter
      * @throws CsvException Thrown if client attempts to write same column value
      *             twice or the row is not wide enough
      */
-    public void put(int index, String value) throws CsvException
+    public CsvWriter put(int index, String value) throws CsvException
     {
+        // Initialize the character disposition table if necessary.
+        if (disposition == null)
+        {
+            disposition = new HashMap<Character, Disposition>(256);
+            for (char c : escapedChars.toCharArray())
+            {
+                disposition.put(c, Disposition.escape);
+            }
+            for (char c : suppressedChars.toCharArray())
+            {
+                disposition.put(c, Disposition.suppress);
+            }
+        }
+
         // Start a new row if required and fill columns with null values.
         if (row == null)
         {
@@ -391,15 +445,17 @@ public class CsvWriter
         }
         row.set(arrayIndex, value);
         colCount++;
+
+        return this;
     }
 
     /**
      * Writes value to key in current row.
      */
-    public void put(String key, String value) throws CsvException
+    public CsvWriter put(String key, String value) throws CsvException
     {
         int index = names.get(key);
-        put(index, value);
+        return put(index, value);
     }
 
     // Utility routine to escape string contents and enclose in
@@ -410,19 +466,31 @@ public class CsvWriter
         sb.append(quoteChar);
         for (int i = 0; i < base.length(); i++)
         {
+            // Fetch character and look up its disposition.
             char next = base.charAt(i);
+            Disposition disp = disposition.get(next);
+
+            // Emit the character according to CSV formatting rules.
             if (next == quoteChar)
-                sb.append(quoteEscapeChar).append(quoteChar);
-            else if (escapeBackslash && next == '\\')
-                sb.append('\\').append('\\');
-            /*
-            else if (next == '\t')
-                sb.append('\\').append('t');
-            else if (next == '\n')
-                sb.append('\\').append('n');
-            */
+            {
+                // Escape any quote character.
+                sb.append(escapeChar).append(quoteChar);
+            }
+            else if (disp == Disposition.escape)
+            {
+                // Prefix an escape character.
+                sb.append(escapeChar).append(next);
+            }
+            else if (disp == Disposition.suppress)
+            {
+                // Drop the character.
+                continue;
+            }
             else
+            {
+                // If all else fails, emit the character as is.
                 sb.append(next);
+            }
         }
         sb.append(quoteChar);
         return sb.toString();
