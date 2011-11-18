@@ -1065,9 +1065,9 @@ public class JdbcPrefetcher implements RawApplier
                         + header.getSeqno() + " fragno=" + header.getFragno());
                 return;
             }
-            // if (logger.isDebugEnabled())
-            logger.warn("Prefetch for event: seqno=" + header.getSeqno()
-                    + " fragno=" + header.getFragno());
+            if (logger.isDebugEnabled())
+                logger.debug("Prefetch for event: seqno=" + header.getSeqno()
+                        + " fragno=" + header.getFragno());
 
             try
             {
