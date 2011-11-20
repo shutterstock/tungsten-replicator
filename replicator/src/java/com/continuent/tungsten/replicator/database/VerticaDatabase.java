@@ -92,8 +92,9 @@ public class VerticaDatabase extends PostgreSQLDatabase
         csv.setQuoteChar('"');
         csv.setQuoted(true);
         csv.setNullPolicy(NullPolicy.skip);
-        csv.setEscapeBackslash(true);
-        csv.setQuoteEscapeChar('\\');
+        csv.setEscapedChars("\\");
+        csv.setSuppressedChars("\n");
+        csv.setEscapeChar('\\');
         csv.setWriteHeaders(false);
         return csv;
     }
