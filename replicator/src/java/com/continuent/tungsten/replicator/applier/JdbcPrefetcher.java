@@ -978,7 +978,7 @@ public class JdbcPrefetcher implements RawApplier
                 initTime = sourceTstamp.getTime();
             }
 
-            // // Check if this is worth prefetching
+            // Check if this is worth prefetching
             ResultSet rs = null;
             try
             {
@@ -1042,8 +1042,8 @@ public class JdbcPrefetcher implements RawApplier
                             + event.getSourceTstamp().getTime()
                             + " "
                             + initTime);
-                // this event is too far ahead of the CommitSeqnoTable position
-                // : sleep some time and continue
+                // this event is too far ahead of the CommitSeqnoTable position:
+                // sleep some time and continue
                 try
                 {
                     Thread.sleep(sleepTime);
@@ -1065,6 +1065,7 @@ public class JdbcPrefetcher implements RawApplier
                         + header.getSeqno() + " fragno=" + header.getFragno());
                 return;
             }
+            
             if (logger.isDebugEnabled())
                 logger.debug("Prefetch for event: seqno=" + header.getSeqno()
                         + " fragno=" + header.getFragno());
@@ -1134,7 +1135,7 @@ public class JdbcPrefetcher implements RawApplier
                         }
                         else if (dataElem instanceof RowIdData)
                         {
-                            applyRowIdData((RowIdData) dataElem);
+                            // Don't do anything with prefetch
                         }
                     }
                 }
