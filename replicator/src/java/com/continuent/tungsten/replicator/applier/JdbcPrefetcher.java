@@ -29,16 +29,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -139,17 +134,17 @@ public class JdbcPrefetcher implements RawApplier
     // SQL parser.
     SqlOperationMatcher               sqlMatcher           = new MySQLOperationMatcher();
 
-    private Long                      initTime             = 0L;
-
-    private Map<Long, Timestamp>      appliedTimes;
-
-    private long                      minSeqno             = -1;
-
-    private int                       aheadMaxTime         = 3000;
-
-    private int                       sleepTime            = 500;
-
-    private int                       warmUpEventCount     = 100;
+    // private Long initTime = 0L;
+    //
+    // private Map<Long, Timestamp> appliedTimes;
+    //
+    // private long minSeqno = -1;
+    //
+    // private int aheadMaxTime = 3000;
+    //
+    // private int sleepTime = 500;
+    //
+    // private int warmUpEventCount = 100;
 
     /**
      * {@inheritDoc}
@@ -191,37 +186,6 @@ public class JdbcPrefetcher implements RawApplier
     public void setIgnoreSessionVars(String ignoreSessionVars)
     {
         this.ignoreSessionVars = ignoreSessionVars;
-    }
-
-    /**
-     * Sets the aheadMaxTime value. This is the maximum time that event should
-     * be from the last applied event (based on master times
-     * 
-     * @param aheadMaxTime The aheadMaxTime to set.
-     */
-    public void setAheadMaxTime(int aheadMaxTime)
-    {
-        this.aheadMaxTime = aheadMaxTime;
-    }
-
-    /**
-     * Sets the sleepTime value.
-     * 
-     * @param sleepTime The sleepTime to set.
-     */
-    public void setSleepTime(int sleepTime)
-    {
-        this.sleepTime = sleepTime;
-    }
-
-    /**
-     * Sets the warmUpEventCount value.
-     * 
-     * @param warmUpEventCount The warmUpEventCount to set.
-     */
-    public void setWarmUpEventCount(int warmUpEventCount)
-    {
-        this.warmUpEventCount = warmUpEventCount;
     }
 
     enum PrintMode
@@ -955,208 +919,103 @@ public class JdbcPrefetcher implements RawApplier
     public void apply(DBMSEvent event, ReplDBMSHeader header, boolean doCommit,
             boolean doRollback)
     {
-        long seqno = -1;
-
-        if (appliedTimes == null)
-            appliedTimes = new TreeMap<Long, Timestamp>();
-
-        Timestamp sourceTstamp = event.getSourceTstamp();
-        appliedTimes.put(header.getSeqno(), sourceTstamp);
-
-        if (header.getSeqno() <= minSeqno + warmUpEventCount)
+        // Ensure we are not trying to apply a previously applied event.
+        // This case can arise during restart.
+        if (lastProcessedEvent != null && lastProcessedEvent.getLastFrag()
+                && lastProcessedEvent.getSeqno() >= header.getSeqno()
+                && !(event instanceof DBMSEmptyEvent))
         {
-            if (logger.isDebugEnabled())
-                logger.debug("Discarding already applied event "
-                        + header.getSeqno());
+            logger.info("Skipping over previously applied event: seqno="
+                    + header.getSeqno() + " fragno=" + header.getFragno());
             return;
         }
 
-        while (true)
+        if (logger.isDebugEnabled())
+            logger.debug("Prefetch for event: seqno=" + header.getSeqno()
+                    + " fragno=" + header.getFragno());
+
+        try
         {
-            if (initTime == 0)
+            if (event instanceof DBMSEmptyEvent)
             {
-                initTime = sourceTstamp.getTime();
-            }
-
-            // Check if this is worth prefetching
-            ResultSet rs = null;
-            try
-            {
-                rs = seqnoStatement.executeQuery();
-                if (rs.next())
-                {
-                    seqno = rs.getLong("seqno");
-                    minSeqno = seqno;
-                }
-            }
-            catch (SQLException e)
-            {
-                logger.warn(e);
-            }
-            finally
-            {
-                if (rs != null)
-                    try
-                    {
-                        rs.close();
-                    }
-                    catch (SQLException e)
-                    {
-                    }
-            }
-
-            for (Iterator<Entry<Long, Timestamp>> iterator = appliedTimes
-                    .entrySet().iterator(); iterator.hasNext();)
-            {
-                Entry<Long, Timestamp> next = iterator.next();
-                if (next.getKey() > seqno)
-                {
-                    break;
-                }
-
-                long time = next.getValue().getTime();
-                initTime = time;
-
-                if (next.getKey() < seqno)
-                {
-                    iterator.remove();
-                }
-                else
-                    break;
-            }
-
-            if (header.getSeqno() <= seqno + warmUpEventCount)
-            {
-                if (logger.isDebugEnabled())
-                    logger.debug("Discarding event "
-                            + header.getSeqno()
-                            + " as it is either already applied or to close to slave position");
                 return;
             }
-
-            if (initTime > 0
-                    && event.getSourceTstamp().getTime() - initTime > aheadMaxTime)
+            else if (header instanceof ReplDBMSFilteredEvent)
             {
-                if (logger.isDebugEnabled())
-                    logger.debug("Event is too far ahead of current slave position... sleeping "
-                            + event.getSourceTstamp().getTime()
-                            + " "
-                            + initTime);
-                // this event is too far ahead of the CommitSeqnoTable position:
-                // sleep some time and continue
-                try
-                {
-                    Thread.sleep(sleepTime);
-                }
-                catch (InterruptedException e)
-                {
-                    return;
-                }
-                continue;
-            }
-
-            // Ensure we are not trying to apply a previously applied event.
-            // This case can arise during restart.
-            if (lastProcessedEvent != null && lastProcessedEvent.getLastFrag()
-                    && lastProcessedEvent.getSeqno() >= header.getSeqno()
-                    && !(event instanceof DBMSEmptyEvent))
-            {
-                logger.info("Skipping over previously applied event: seqno="
-                        + header.getSeqno() + " fragno=" + header.getFragno());
                 return;
             }
-            
-            if (logger.isDebugEnabled())
-                logger.debug("Prefetch for event: seqno=" + header.getSeqno()
-                        + " fragno=" + header.getFragno());
-
-            try
+            else
             {
-                if (event instanceof DBMSEmptyEvent)
+                ArrayList<DBMSData> data = event.getData();
+                for (DBMSData dataElem : data)
                 {
-                    return;
-                }
-                else if (header instanceof ReplDBMSFilteredEvent)
-                {
-                    return;
-                }
-                else
-                {
-                    ArrayList<DBMSData> data = event.getData();
-                    for (DBMSData dataElem : data)
+                    if (dataElem instanceof RowChangeData)
                     {
-                        if (dataElem instanceof RowChangeData)
-                        {
-                            applyRowChangeData((RowChangeData) dataElem,
-                                    event.getOptions());
-                        }
-                        else if (dataElem instanceof LoadDataFileFragment)
-                        {
-                            // Don't do anything with prefetch
-                        }
-                        else if (dataElem instanceof LoadDataFileQuery)
-                        {
-                            // Don't do anything with prefetch
-                        }
-                        else if (dataElem instanceof LoadDataFileDelete)
-                        {
-                            // Don't do anything with prefetch
-                        }
-                        else if (dataElem instanceof StatementData)
-                        {
-                            StatementData sdata = (StatementData) dataElem;
+                        applyRowChangeData((RowChangeData) dataElem,
+                                event.getOptions());
+                    }
+                    else if (dataElem instanceof LoadDataFileFragment)
+                    {
+                        // Don't do anything with prefetch
+                    }
+                    else if (dataElem instanceof LoadDataFileQuery)
+                    {
+                        // Don't do anything with prefetch
+                    }
+                    else if (dataElem instanceof LoadDataFileDelete)
+                    {
+                        // Don't do anything with prefetch
+                    }
+                    else if (dataElem instanceof StatementData)
+                    {
+                        StatementData sdata = (StatementData) dataElem;
 
-                            // Check for table metadata cache invalidation.
-                            SqlOperation sqlOperation = (SqlOperation) sdata
-                                    .getParsingMetadata();
+                        // Check for table metadata cache invalidation.
+                        SqlOperation sqlOperation = (SqlOperation) sdata
+                                .getParsingMetadata();
 
-                            String query = sdata.getQuery();
-                            if (sqlOperation == null)
-                            {
-                                if (query == null)
-                                    query = new String(sdata.getQueryAsBytes());
-                                sqlOperation = sqlMatcher.match(query);
-                                sdata.setParsingMetadata(sqlOperation);
-                            }
-
-                            prefetchStatementData(sdata);
-
-                            int invalidated = tableMetadataCache.invalidate(
-                                    sqlOperation, sdata.getDefaultSchema());
-                            if (invalidated > 0)
-                            {
-                                if (logger.isDebugEnabled())
-                                    logger.debug("Table metadata invalidation: stmt="
-                                            + query
-                                            + " invalidated="
-                                            + invalidated);
-                            }
-
-                        }
-                        else if (dataElem instanceof RowIdData)
+                        String query = sdata.getQuery();
+                        if (sqlOperation == null)
                         {
-                            // Don't do anything with prefetch
+                            if (query == null)
+                                query = new String(sdata.getQueryAsBytes());
+                            sqlOperation = sqlMatcher.match(query);
+                            sdata.setParsingMetadata(sqlOperation);
                         }
+
+                        prefetchStatementData(sdata);
+
+                        int invalidated = tableMetadataCache.invalidate(
+                                sqlOperation, sdata.getDefaultSchema());
+                        if (invalidated > 0)
+                        {
+                            if (logger.isDebugEnabled())
+                                logger.debug("Table metadata invalidation: stmt="
+                                        + query + " invalidated=" + invalidated);
+                        }
+
+                    }
+                    else if (dataElem instanceof RowIdData)
+                    {
+                        // Don't do anything with prefetch
                     }
                 }
             }
-            catch (ReplicatorException e)
-            {
-                logger.warn("Failed to prefetch event " + header.getSeqno()
-                        + "... Skipping", e);
-            }
-
-            // Update the last processed
-            lastProcessedEvent = header;
-
-            // Update statistics.
-            this.eventCount++;
-            if (logger.isDebugEnabled() && eventCount % 20000 == 0)
-                logger.debug("Apply statistics: events=" + eventCount
-                        + " commits=" + commitCount);
-
-            return;
         }
+        catch (ReplicatorException e)
+        {
+            logger.warn("Failed to prefetch event " + header.getSeqno()
+                    + "... Skipping", e);
+        }
+
+        // Update the last processed
+        lastProcessedEvent = header;
+
+        // Update statistics.
+        this.eventCount++;
+
+        return;
+
     }
 
     /**
@@ -1186,7 +1045,6 @@ public class JdbcPrefetcher implements RawApplier
      */
     public ReplDBMSHeader getLastEvent() throws ReplicatorException
     {
-        logger.warn("Getting last event");
         if (seqnoStatement != null)
         {
             ResultSet rs = null;
