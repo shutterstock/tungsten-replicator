@@ -134,18 +134,6 @@ public class JdbcPrefetcher implements RawApplier
     // SQL parser.
     SqlOperationMatcher               sqlMatcher           = new MySQLOperationMatcher();
 
-    // private Long initTime = 0L;
-    //
-    // private Map<Long, Timestamp> appliedTimes;
-    //
-    // private long minSeqno = -1;
-    //
-    // private int aheadMaxTime = 3000;
-    //
-    // private int sleepTime = 500;
-    //
-    // private int warmUpEventCount = 100;
-
     /**
      * {@inheritDoc}
      * 
