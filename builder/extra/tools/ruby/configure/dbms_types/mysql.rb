@@ -2,7 +2,6 @@ DBMS_MYSQL = "mysql"
 
 # MySQL-specific parameters
 REPL_MYSQL_DATADIR = "repl_datasource_mysql_data_directory"
-REPL_MYSQL_MYCNF = "repl_datasource_mysql_mycnf"
 REPL_MYSQL_RO_SLAVE = "repl_mysql_ro_slave"
 REPL_MYSQL_SERVER_ID = "repl_mysql_server_id"
 REPL_MYSQL_ENABLE_ENUMTOSTRING = "repl_mysql_enable_enumtostring"
