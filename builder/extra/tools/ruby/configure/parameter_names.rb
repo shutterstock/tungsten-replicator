@@ -69,6 +69,7 @@ REPL_RELAY_LOG_DIR = "repl_relay_directory"
 REPL_THL_DO_CHECKSUM = "repl_thl_do_checksum"
 REPL_THL_LOG_CONNECTION_TIMEOUT = "repl_thl_log_connection_timeout"
 REPL_THL_LOG_FILE_SIZE = "repl_thl_log_file_size"
+REPL_THL_LOG_FSYNC = "repl_thl_log_fsync"
 
 REPL_DBTYPE = "repl_datasource_type"
 REPL_DBHOST = "repl_datasource_host"
