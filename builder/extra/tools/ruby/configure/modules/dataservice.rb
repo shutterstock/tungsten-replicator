@@ -542,7 +542,7 @@ class ReplicationServiceBufferSize < ConfigurePrompt
   include ReplicationServicePrompt
   
   def initialize
-    super(REPL_BUFFER_SIZE, "Replicator block commit size (min 1, max 100)",
+    super(REPL_BUFFER_SIZE, "Replicator block commit size (min 1)",
       PV_INTEGER, 10)
   end
 end
@@ -752,6 +752,15 @@ class THLStorageConsistency < ConfigurePrompt
   
   def enabled?
     super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+  end
+end
+
+class THLStorageFsync < ConfigurePrompt
+  include ReplicationServicePrompt
+
+  def initialize
+    super(REPL_THL_LOG_FSYNC, "Fsync THL records on commit.  More reliable operation but adds latency to replication when using low-performance storage",
+      PV_BOOLEAN, "false")
   end
 end
 
