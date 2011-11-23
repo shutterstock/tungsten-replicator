@@ -269,6 +269,14 @@ public class DiskLog
     }
 
     /**
+     * Return flush interval in milliseconds.
+     */
+    public long getFlushIntervalMillis()
+    {
+        return flushIntervalMillis;
+    }
+
+    /**
      * If set to true, perform an fsync with every flush. Warning: fsync is very
      * slow, so you want a long flush interval in this case.
      */
