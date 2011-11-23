@@ -342,8 +342,12 @@ public class THL implements Store
         diskLog.setLogFileRetainMillis(logFileRetainMillis);
         diskLog.setLogConnectionTimeoutMillis(logConnectionTimeout * 1000);
         diskLog.setBufferSize(bufferSize);
-        diskLog.setFlushIntervalMillis(flushIntervalMillis);
         diskLog.setFsyncOnFlush(fsyncOnFlush);
+        if (fsyncOnFlush)
+        {
+            // Only used with fsync.
+            diskLog.setFlushIntervalMillis(flushIntervalMillis);
+        }
         diskLog.setReadOnly(readOnly);
         diskLog.prepare();
         logger.info("Log preparation is complete");
@@ -545,6 +549,12 @@ public class THL implements Store
         props.setLong("logFileRetainMillis", logFileRetainMillis);
         props.setLong("logFileSize", diskLog.getLogFileSize());
         props.setLong("timeoutMillis", diskLog.getTimeoutMillis());
+        props.setBoolean("fsyncOnFlush", fsyncOnFlush);
+        props.setLong("flushIntervalMillis", diskLog.getFlushIntervalMillis());
+        props.setLong("timeoutMillis", diskLog.getTimeoutMillis());
+        props.setLong("logConnectionTimeout", logConnectionTimeout);
+        props.setBoolean("readOnly", readOnly);
+
         return props;
     }
 }

@@ -173,15 +173,16 @@ replicator.store.thl.bufferSize=131072
 # The flush interval is the number of milliseconds that log writes may delay
 # before being forced to storage.  0 means that every flush call flushes 
 # immediately.  Larger values can help buffer writes but add latency to 
-# pipelines. 
-replicator.store.thl.flushIntervalMillis=0
+# pipelines.  This value only takes effect when fsyncOnFlush=true. 
+replicator.store.thl.flushIntervalMillis=500
 
-# Flush operations normally release writes to the OS but do 
-# not force them to storage.  You may request a full fsync on each flush by 
-# setting the following property to true.  This makes log updates more 
+# Flush operations normally release writes to the OS but do
+# not force them to storage.  You may request a full fsync on each flush by
+# setting the following property to true.  This makes log updates more
 # durable.  If you do this the flush interval should be relatively large to
-# to avoid impacting overall throughput. 
-replicator.store.thl.fsyncOnFlush=false
+# avoid impacting overall throughput or you should put the log on  
+# high-performance storage to reduce fsync overhead.
+replicator.store.thl.fsyncOnFlush=@{REPL_THL_LOG_FSYNC}
 
 # To drop log files after a certain period, set the retention to an interval
 # which is <number>{d|h|m|s}, where the letters stand for days, hours, minutes,
