@@ -174,12 +174,15 @@ public class LogConnection
     }
 
     /**
-     * Finds a specific THLEvent and position client cursor on the event.
+     * Finds a specific THLEvent and position client cursor on the event. The
+     * event in question may be past the end of the current log, in which case
+     * we position at the end. It is not possible to seek on an event that is
+     * before the beginning of the log.
      * 
      * @param seqno Desired sequence number
      * @param fragno Desired fragment
      * @return True if seek is successful and next() may be called; false if
-     *         event does not exist
+     *         event does not exist, i.e., is before the beginning of the log
      * @throws ReplicatorException thrown if log cannot be read
      */
     public synchronized boolean seek(long seqno, short fragno)
@@ -257,7 +260,7 @@ public class LogConnection
                         pendingSeqno = seqno;
                         return true;
                     }
-                    else if (seqno == (lastSeqno + 1))
+                    else if (seqno > lastSeqno)
                     {
                         if (logger.isDebugEnabled())
                         {
@@ -440,7 +443,10 @@ public class LogConnection
     /**
      * Returns the next event in the log. If blocking is enabled, this will wait
      * for a new event to arrive. If disabled, this call returns immediately if
-     * there is no next event.
+     * there is no next event. This method never returns an event with a seqno
+     * earlier than the client requested. If clients call next() after seeking
+     * past the end of the log, we therefore return the event corresponding to
+     * the seek() call or nothing.
      * 
      * @param block If true, read blocks until next event is available
      * @return A THLEvent or null if we are non-blocking
@@ -499,7 +505,17 @@ public class LogConnection
                 if (recordType == LogRecord.EVENT_REPL)
                 {
                     event = deserialize(logRecord);
-                    break;
+                    if (event.getSeqno() < this.pendingSeqno)
+                    {
+                        // If we are seeking a future event, keep trying.  
+                        event = null;
+                        continue;
+                    }
+                    else
+                    {
+                        // Otherwise return what we found.
+                        break;
+                    }
                 }
                 else if (recordType == LogRecord.EVENT_ROTATE)
                 {

@@ -295,7 +295,8 @@ public class DiskLogTest extends TestCase
         // Confirm that seek does not find events with higher sequence numbers.
         for (int i = 4; i < 10; i++)
         {
-            assertFalse("cannot seek past end", conn.seek(i));
+            assertTrue("seek past end", conn.seek(i));
+            assertNull("find non-existing event", conn.next(false));
         }
 
         conn.release();
@@ -502,6 +503,52 @@ public class DiskLogTest extends TestCase
                 log.getMinSeqno());
         assertEquals("Log max should be same as written event", 10,
                 log.getMaxSeqno());
+
+        // Close up.
+        conn.release();
+        log.release();
+    }
+
+    /**
+     * Confirm that we can seek a non-zero entry that has yet to arrive in the
+     * log.
+     */
+    public void testSeekNotArrivedEvent() throws Exception
+    {
+        // Create a log with a short timeout.
+        File logDir = prepareLogDir("testSeekNotArrivedEvent");
+        DiskLog log = openLog(logDir, false);
+        log.setTimeoutMillis(1000);
+
+        // Put 10 events into the log.
+        writeEventsToLog(log, 0, 10);
+
+        // Confirm that seek to future non-zero position returns true even
+        // though no such position exists.
+        LogConnection conn = log.connect(true);
+        assertTrue("Seeking future event that will exist", conn.seek(19));
+
+        // Confirm that a seek to that position waits (using a timeout).
+        try
+        {
+            THLEvent e = conn.next();
+            throw new Exception(
+                    "Able to seek and read non-existent position in empty log: "
+                            + e);
+        }
+        catch (LogTimeoutException e)
+        {
+            logger.info("Returned expected timeout exception");
+        }
+
+        // Write more data to the log.
+        writeEventsToLog(log, 10, 10);
+
+        // Fetch from the log and confirm we get the expected event without
+        // seeing intervening events.
+        THLEvent e = conn.next();
+        assertNotNull("Found an event", e);
+        assertEquals("Has expected seqno", 19, e.getSeqno());
 
         // Close up.
         conn.release();
@@ -909,8 +956,9 @@ public class DiskLogTest extends TestCase
         long[] seqno2 = {51, 52, 100000};
         for (long seqno : seqno2)
         {
-            assertFalse("Cannot find non-existent value",
+            assertTrue("Can seek non-existent seqno",
                     conn.seek(seqno, (short) 0));
+            assertNull("Cannot find non-existing event", conn.next(false));
         }
         logR.release();
     }
