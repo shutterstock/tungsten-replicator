@@ -70,16 +70,14 @@ import com.continuent.tungsten.replicator.thl.CommitSeqnoTable;
 import com.continuent.tungsten.replicator.thl.THLManagerCtrl;
 
 /**
- * Implements a DBMS implementation-independent applier. DBMS-specific features
- * must be subclassed. This applier can be used directly by specifying the DBMS
- * driver and full JDBC URL.
+ * Implements a JDBC prefetcher.
  * 
- * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
+ * @author <a href="mailto:stephane.giron@continuent.com">Stephane Giron</a>
  * @version 1.0
  */
 public class JdbcPrefetcher implements RawApplier
 {
-    static Logger                     logger               = Logger.getLogger(JdbcPrefetcher.class);
+    private static Logger             logger               = Logger.getLogger(JdbcPrefetcher.class);
 
     // DELETE [LOW_PRIORITY] [QUICK] [IGNORE] FROM tbl_name
     private Pattern                   delete               = Pattern
@@ -91,6 +89,14 @@ public class JdbcPrefetcher implements RawApplier
     private Pattern                   update               = Pattern
                                                                    .compile(
                                                                            "^\\s*update\\s*(?:low_priority\\s*)?(?:ignore\\s*)?((?:[`\"]*(?:[a-zA-Z0-9_]+)[`\"]*\\.){0,1}[`\"]*(?:[a-zA-Z0-9_]+)[`\"]*(?:\\s*,\\s*(?:[`\"]*(?:[a-zA-Z0-9_]+)[`\"]*\\.){0,1}[`\"]*(?:[a-zA-Z0-9_]+)[`\"]*)*)\\s+SET\\s+(?:.*)?\\s+(WHERE\\s+.*)",
+                                                                           Pattern.CASE_INSENSITIVE);
+
+    // INSERT [LOW_PRIORITY | HIGH_PRIORITY] [IGNORE] [INTO] tbl_name
+    // [(col_name,...)] SELECT ...[ ON DUPLICATE KEY UPDATE col_name=expr
+    // [,col_name=expr] ... ]
+    private Pattern                   insert               = Pattern
+                                                                   .compile(
+                                                                           "^\\s*insert\\s*(?:(?:low_priority|high_priority)\\s*)?(?:ignore\\s*)?(?:into\\s*)?(?:(?:[`\\\"]*(?:[a-zA-Z0-9_]+)[`\\\"]*\\.){0,1}[`\\\"]*(?:[a-zA-Z0-9_]+)[`\\\"]*)\\s+(?:\\((?:.*)?\\)\\s*)?(?:(?:(SELECT.*?)(?:ON\\s+DUPLICATE\\s+KEY\\s+UPDATE\\s+.*))|(SELECT.*))",
                                                                            Pattern.CASE_INSENSITIVE);
 
     protected int                     taskId               = 0;
@@ -116,7 +122,6 @@ public class JdbcPrefetcher implements RawApplier
 
     // Statistics.
     protected long                    eventCount           = 0;
-    protected long                    commitCount          = 0;
 
     /**
      * Maximum length of SQL string to log in case of an error. This is needed
@@ -133,6 +138,8 @@ public class JdbcPrefetcher implements RawApplier
 
     // SQL parser.
     SqlOperationMatcher               sqlMatcher           = new MySQLOperationMatcher();
+
+    private long                      transformed;
 
     /**
      * {@inheritDoc}
@@ -403,7 +410,24 @@ public class JdbcPrefetcher implements RawApplier
 
             SqlOperation parsing = (SqlOperation) data.getParsingMetadata();
 
-            if (parsing.getOperation() == SqlOperation.DELETE)
+            if (parsing.getOperation() == SqlOperation.INSERT)
+            {
+                Matcher m = insert.matcher(sqlQuery);
+                if (m.matches())
+                {
+                    String sqlQueryOld = sqlQuery;
+                    if (m.group(1) != null)
+                        sqlQuery = m.group(1);
+                    else
+                        sqlQuery = m.group(2);
+
+                    if (logger.isDebugEnabled())
+                        logger.debug("Transformed " + sqlQueryOld + " into "
+                                + sqlQuery);
+                    transformed++;
+                }
+            }
+            else if (parsing.getOperation() == SqlOperation.DELETE)
             {
                 Matcher m = delete.matcher(sqlQuery);
                 if (m.matches())
@@ -413,6 +437,7 @@ public class JdbcPrefetcher implements RawApplier
                     if (logger.isDebugEnabled())
                         logger.debug("Transformed " + sqlQueryOld + " into "
                                 + sqlQuery);
+                    transformed++;
                 }
             }
             else if (parsing.getOperation() == SqlOperation.UPDATE)
@@ -425,6 +450,7 @@ public class JdbcPrefetcher implements RawApplier
                     if (logger.isDebugEnabled())
                         logger.debug("Transformed " + sqlQueryOld + " into "
                                 + sqlQuery);
+                    transformed++;
                 }
             }
             // else do nothing
@@ -678,7 +704,7 @@ public class JdbcPrefetcher implements RawApplier
         return false;
     }
 
-    protected void applyOneRowChangePrepared(OneRowChange oneRowChange)
+    protected void prefetchOneRowChangePrepared(OneRowChange oneRowChange)
             throws ReplicatorException
     {
         PreparedStatement prepStatement = null;
@@ -772,6 +798,7 @@ public class JdbcPrefetcher implements RawApplier
                 {
                     logger.debug("Prefetched event " + " : " + stmt.toString());
                 }
+                transformed++;
             }
             catch (SQLException e)
             {
@@ -869,7 +896,7 @@ public class JdbcPrefetcher implements RawApplier
         return null;
     }
 
-    protected void applyRowChangeData(RowChangeData data,
+    protected void prefetchRowChangeData(RowChangeData data,
             List<ReplOption> options) throws ReplicatorException
     {
         if (options != null)
@@ -893,7 +920,7 @@ public class JdbcPrefetcher implements RawApplier
 
         for (OneRowChange row : data.getRowChanges())
         {
-            applyOneRowChangePrepared(row);
+            prefetchOneRowChangePrepared(row);
         }
     }
 
@@ -939,7 +966,7 @@ public class JdbcPrefetcher implements RawApplier
                 {
                     if (dataElem instanceof RowChangeData)
                     {
-                        applyRowChangeData((RowChangeData) dataElem,
+                        prefetchRowChangeData((RowChangeData) dataElem,
                                 event.getOptions());
                     }
                     else if (dataElem instanceof LoadDataFileFragment)
@@ -1127,6 +1154,8 @@ public class JdbcPrefetcher implements RawApplier
 
             tableMetadataCache = new TableMetadataCache(5000);
 
+            transformed = 0;
+            eventCount = 0;
         }
         catch (SQLException e)
         {
