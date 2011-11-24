@@ -61,6 +61,9 @@ public class ReplicatorRuntime implements PluginContext
     /** Replicator properties. */
     private TungstenProperties                properties;
 
+    /** Online options. */
+    private TungstenProperties                onlineOptions   = new TungstenProperties();
+
     // Replicator monitoring data.
     private ReplicatorMonitor                 replicatorMonitor;
 
@@ -667,6 +670,29 @@ public class ReplicatorRuntime implements PluginContext
     public TungstenProperties getReplicatorProperties()
     {
         return properties;
+    }
+
+    /**
+     * Returns current online options or null if the replication service has not
+     * gone online. These options are ephemeral and reset each time the
+     * replication service goes online.
+     * 
+     * @see com.continuent.tungsten.replicator.plugin.PluginContext#getOnlineOptions()
+     */
+    public synchronized TungstenProperties getOnlineOptions()
+    {
+        return onlineOptions;
+    }
+
+    /**
+     * Sets online options.
+     * 
+     * @param onlineOptions Tungsten properties containing options from the
+     *            online command
+     */
+    public synchronized void setOnlineOptions(TungstenProperties onlineOptions)
+    {
+        this.onlineOptions = onlineOptions;
     }
 
     /**

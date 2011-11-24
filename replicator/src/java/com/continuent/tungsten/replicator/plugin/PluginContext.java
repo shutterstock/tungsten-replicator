@@ -41,9 +41,15 @@ import com.continuent.tungsten.replicator.storage.Store;
 public interface PluginContext
 {
     /**
-     * Returns the current replicator properties.
+     * Returns the current replicator configuration properties.
      */
     public TungstenProperties getReplicatorProperties();
+
+    /**
+     * Returns current runtime options set when the replicator went online or
+     * null if replicator has not gone online yet.
+     */
+    public TungstenProperties getOnlineOptions();
 
     /** Returns a JDBC URL suitable for login to local data source. */
     public String getJdbcUrl(String database);
@@ -136,7 +142,7 @@ public interface PluginContext
     /**
      * Returns the minimum safely committed sequence number from the end of the
      * pipeline. This sequence number can be used to free resources such as log
-     * files used in upstream stages.  
+     * files used in upstream stages.
      */
     public long getCommittedSeqno();
 }

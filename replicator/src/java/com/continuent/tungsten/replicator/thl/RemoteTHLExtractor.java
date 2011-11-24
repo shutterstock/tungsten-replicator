@@ -26,6 +26,7 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.cluster.resource.OpenReplicatorParams;
 import com.continuent.tungsten.replicator.InSequenceNotification;
 import com.continuent.tungsten.replicator.OutOfSequenceNotification;
 import com.continuent.tungsten.replicator.ReplicatorException;
@@ -47,8 +48,7 @@ import com.continuent.tungsten.replicator.plugin.PluginLoader;
  */
 public class RemoteTHLExtractor implements Extractor
 {
-    private static Logger  logger             = Logger
-                                                      .getLogger(RemoteTHLExtractor.class);
+    private static Logger  logger             = Logger.getLogger(RemoteTHLExtractor.class);
 
     // Properties.
     private String         connectUri;
@@ -118,9 +118,9 @@ public class RemoteTHLExtractor implements Extractor
         return heartbeatMillis;
     }
 
-    /** 
-     * Sets the interval for sending heartbeat events from server to avoid TCP/IP 
-     * timeout on server connection. 
+    /**
+     * Sets the interval for sending heartbeat events from server to avoid
+     * TCP/IP timeout on server connection.
      */
     public void setHeartbeatInterval(int heartbeatMillis)
     {
@@ -236,6 +236,18 @@ public class RemoteTHLExtractor implements Extractor
             connectUri = context.getReplicatorProperties().get(
                     ReplicatorConf.MASTER_CONNECT_URI);
         }
+
+        // See if we have an online option that overrides serialization
+        // checking.
+        if (pluginContext.getOnlineOptions().getBoolean(
+                OpenReplicatorParams.FORCE))
+        {
+            if (checkSerialization)
+            {
+                logger.info("Force option enabled; log serialization checking is disabled");
+                checkSerialization = false;
+            }
+        }
     }
 
     /**
@@ -272,13 +284,13 @@ public class RemoteTHLExtractor implements Extractor
     {
         // Reconnect after lost connection.
         logger.info("Connection to remote thl lost; reconnecting");
-        pluginContext.getEventDispatcher().put(
-                new OutOfSequenceNotification());
+        pluginContext.getEventDispatcher().put(new OutOfSequenceNotification());
         openConnector();
     }
 
     // Open up the connector here.
-    private void openConnector() throws ReplicatorException, InterruptedException
+    private void openConnector() throws ReplicatorException,
+            InterruptedException
     {
         // Connect to remote THL.
         logger.info("Opening connection to master: " + connectUri);
@@ -317,7 +329,8 @@ public class RemoteTHLExtractor implements Extractor
                 }
                 catch (ReplicatorException e)
                 {
-                    throw new THLException("Error while initializing plug-in ", e);
+                    throw new THLException("Error while initializing plug-in ",
+                            e);
                 }
 
                 conn.connect();
@@ -343,7 +356,6 @@ public class RemoteTHLExtractor implements Extractor
 
         // Announce the happy event.
         logger.info("Connected to master after " + retryCount + " retries");
-        pluginContext.getEventDispatcher().put(
-                new InSequenceNotification());
+        pluginContext.getEventDispatcher().put(new InSequenceNotification());
     }
 }

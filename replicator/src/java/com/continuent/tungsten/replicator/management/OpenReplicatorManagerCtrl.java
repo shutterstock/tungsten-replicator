@@ -105,11 +105,11 @@ public class OpenReplicatorManagerCtrl
                 + " \\");
         println("             [global-options] command [command-options]");
         println("Global Options:");
-        println("  -host name       - Host name of replicator [default: localhost]");
-        println("  -port number     - Port number of replicator [default: 10000]");
-        println("  -service name    - Name of replicator service [default: none]");
-        println("  -verbose         - Print verbose messages");
-        println("  -retry N         - Retry connections up to N times [default: 10]");
+        println("  -host name        - Host name of replicator [default: localhost]");
+        println("  -port number      - Port number of replicator [default: 10000]");
+        println("  -service name     - Name of replicator service [default: none]");
+        println("  -verbose          - Print verbose messages");
+        println("  -retry N          - Retry connections up to N times [default: 10]");
         println("Replicator-Wide Commands:");
         println("  version           - Show replicator version and build");
         println("  services          - List replication services");
@@ -118,21 +118,21 @@ public class OpenReplicatorManagerCtrl
         println("  kill [-y]         - Exit immediately without shutting down services");
         println("Service-Specific Commands (Require -service option)");
         println("  backup [-backup agent] [-storage agent] [-limit s]  - Backup database");
-        println("  clear            - Clear one or all dynamic variables");
-        println("  configure [file] - Reload replicator properties file");
+        println("  clear             - Clear one or all dynamic variables");
+        println("  configure [file]  - Reload replicator properties file");
         println("  flush [-limit s]  - Synchronize transaction history log to database");
         println("  heartbeat [-name name] - Insert a heartbeat event with optional name");
-        println("  offline          - Set replicator to OFFLINE state");
-        println("  offline-deferred [-seqno seqno] [-event event] [-heartbeat [name]] [-time YYYY-MM-DD_hh:mm:ss]");
-        println("                   - Set replicator OFFLINE at future point");
-        println("  online [-from-event event] [-skip-seqno x,y,z] [-seqno seqno] [-event event] [-heartbeat [name]] [-time YYYY-MM-DD_hh:mm:ss]");
-        println("                   - Set Replicator to ONLINE with start and stop points");
-        println("  reset [-y]       - Deletes the replicator service");
+        println("  offline [-immediate]   - Set replicator to OFFLINE state");
+        println("  offline-deferred [-at-seqno seqno] [-at-event event] [-at-heartbeat [name]] [-at-time YYYY-MM-DD_hh:mm:ss]");
+        println("                    - Set replicator OFFLINE at future point");
+        println("  online [-from-event event] [-force] [-skip-seqno x,y,z] [-to-seqno seqno] [-to-event event] [-to-heartbeat [name]] [-to-time YYYY-MM-DD_hh:mm:ss]");
+        println("                    - Set Replicator to ONLINE with start and stop points");
+        println("  reset [-y]        - Deletes the replicator service");
         println("  restore [-uri uri] [-limit s]  - Restore database");
         println("  setrole -role role [-uri uri]  - Set replicator role");
-        println("  start            - Start start replication service");
+        println("  start             - Start start replication service");
         println("  status [-name {tasks|shards}] - Print replicator status information");
-        println("  stop [-y]        - Stop replication service");
+        println("  stop [-y]         - Stop replication service");
         println("  wait -state s [-limit s] - Wait up to s seconds for replicator state s");
         println("  wait -applied n [-limit s] - Wait up to s seconds for seqno to be applied");
         println("  check <table> [-limit offset,limit] [-method m] - generate consistency check for the given table");
@@ -630,6 +630,7 @@ public class OpenReplicatorManagerCtrl
         long toTime = -1;
         long skip = 0;
         String seqnos = null;
+        boolean force = false;
 
         while (argvIterator.hasNext())
         {
@@ -645,11 +646,12 @@ public class OpenReplicatorManagerCtrl
                     fatal("The -skip flag is no longer supported; use -skip-seqno instead",
                             null);
                 }
-                else if ("-event".equals(curArg))
+                else if ("-event".equals(curArg) || "-to-event".equals(curArg))
                     toEvent = argvIterator.next();
-                else if ("-seqno".equals(curArg))
+                else if ("-seqno".equals(curArg) || "-to-seqno".equals(curArg))
                     toSeqno = Long.parseLong(argvIterator.next());
-                else if ("-heartbeat".equals(curArg))
+                else if ("-heartbeat".equals(curArg)
+                        || "-to-heartbeat".equals(curArg))
                 {
                     // Take the next non-option argument as the heartbeat name.
                     heartbeat = argvIterator.peek();
@@ -658,10 +660,12 @@ public class OpenReplicatorManagerCtrl
                     else
                         argvIterator.next();
                 }
-                else if ("-time".equals(curArg))
+                else if ("-time".equals(curArg) || "-to-time".equals(curArg))
                     toTime = getDatetimeMillis(argvIterator.next());
                 else if ("-skip-seqno".equals(curArg))
                     seqnos = argvIterator.next();
+                else if ("-force".equals(curArg))
+                    force = true;
                 else
                     fatal("Unrecognized option: " + curArg, null);
             }
@@ -695,6 +699,9 @@ public class OpenReplicatorManagerCtrl
         if (seqnos != null)
             paramProps
                     .setString(OpenReplicatorParams.SKIP_APPLY_SEQNOS, seqnos);
+        if (force)
+            paramProps.setBoolean(OpenReplicatorParams.FORCE, true);
+
         // Put replicator online.
         getOpenReplicator().online2(paramProps.map());
     }
@@ -759,11 +766,12 @@ public class OpenReplicatorManagerCtrl
             String curArg = argvIterator.next();
             try
             {
-                if ("-event".equals(curArg))
+                if ("-event".equals(curArg) || "-at-event".equals(curArg))
                     atEvent = argvIterator.next();
-                else if ("-seqno".equals(curArg))
+                else if ("-seqno".equals(curArg) || "-at-seqno".equals(curArg))
                     atSeqno = Long.parseLong(argvIterator.next());
-                else if ("-heartbeat".equals(curArg))
+                else if ("-heartbeat".equals(curArg)
+                        || "-at-heartbeat".equals(curArg))
                 {
                     // Take the next non-option argument as the heartbeat name.
                     heartbeat = argvIterator.peek();
@@ -772,7 +780,7 @@ public class OpenReplicatorManagerCtrl
                     else
                         argvIterator.next();
                 }
-                else if ("-time".equals(curArg))
+                else if ("-time".equals(curArg) || "-at-time".equals(curArg))
                     atTime = getDatetimeMillis(argvIterator.next());
                 else
                     fatal("Unrecognized option: " + curArg, null);

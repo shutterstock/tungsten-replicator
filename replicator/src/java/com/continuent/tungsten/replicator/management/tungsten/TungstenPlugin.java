@@ -289,7 +289,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
         this.properties = properties;
 
         // Release existing runtime, if any, and generate a new one.
-        doCreateRuntime();
+        doCreateRuntime(null);
 
         // Start the shard manager if it is not already started. We must
         // have a valid runtime at this point so it is safe to use it.
@@ -321,7 +321,7 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
     public void online(TungstenProperties params) throws Exception
     {
         // Release existing runtime, if any, and generate a new one.
-        doCreateRuntime();
+        doCreateRuntime(params);
 
         // Start replication pipeline.
         try
@@ -1003,8 +1003,10 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
         }
     }
 
-    // Release existing runtime, if any, and generate a new one.
-    private void doCreateRuntime() throws ReplicatorException
+    // Release existing runtime, if any, and generate a new one with optional
+    // runtime options.
+    private void doCreateRuntime(TungstenProperties onlineOptions)
+            throws ReplicatorException
     {
         if (runtime != null)
         {
@@ -1012,6 +1014,10 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
         }
         runtime = new ReplicatorRuntime(properties, context,
                 ReplicatorMonitor.getInstance());
+        if (onlineOptions != null)
+        {
+            runtime.setOnlineOptions(onlineOptions);
+        }
         runtime.configure();
     }
 
