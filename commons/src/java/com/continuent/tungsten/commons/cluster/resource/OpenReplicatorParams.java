@@ -48,7 +48,11 @@ public class OpenReplicatorParams
     /** Stay online until next heartbeat has been processed. */
     public static final String ONLINE_TO_HEARTBEAT   = "toHeartbeat";
 
+    /** Skip events from a list. */
     public static final String SKIP_APPLY_SEQNOS     = "skipApplySeqnos";
+
+    /** Whether to skip consistency checks when going online. */
+    public static final String FORCE                 = "force";
 
     // Parameters for offlineDeferred() JMX call.
 
