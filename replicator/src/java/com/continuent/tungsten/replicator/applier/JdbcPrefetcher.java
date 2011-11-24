@@ -373,7 +373,47 @@ public class JdbcPrefetcher implements RawApplier
 
     protected void applyRowIdData(RowIdData data) throws ReplicatorException
     {
-        logger.warn("No applier for rowid data specified");
+        String query = "SET ";
+
+        switch (data.getType())
+        {
+            case RowIdData.LAST_INSERT_ID :
+                query += "LAST_INSERT_ID";
+                break;
+            case RowIdData.INSERT_ID :
+                query += "INSERT_ID";
+                break;
+            default :
+                // Old behavior
+                query += "INSERT_ID";
+                break;
+        }
+        query += " = " + data.getRowId();
+
+        try
+        {
+            try
+            {
+                statement.execute(query);
+            }
+            catch (SQLWarning e)
+            {
+                String msg = "While applying SQL event:\n" + data.toString()
+                        + "\nWarning: " + e.getMessage();
+                logger.warn(msg);
+            }
+            statement.clearBatch();
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Applied event: " + query);
+            }
+        }
+        catch (SQLException e)
+        {
+            logFailedStatementSQL(query, e);
+            throw new ApplierException(e);
+        }
     }
 
     protected void prefetchStatementData(StatementData data)
@@ -426,6 +466,12 @@ public class JdbcPrefetcher implements RawApplier
                                 + sqlQuery);
                     transformed++;
                 }
+                // else do nothing
+                else
+                {
+                    statement.clearBatch();
+                    return;
+                }
             }
             else if (parsing.getOperation() == SqlOperation.DELETE)
             {
@@ -452,6 +498,10 @@ public class JdbcPrefetcher implements RawApplier
                                 + sqlQuery);
                     transformed++;
                 }
+            }
+            else if (parsing.getOperation() == SqlOperation.SET)
+            {
+                // Let it run
             }
             // else do nothing
             else
@@ -1012,7 +1062,8 @@ public class JdbcPrefetcher implements RawApplier
                     }
                     else if (dataElem instanceof RowIdData)
                     {
-                        // Don't do anything with prefetch
+                        logger.debug("RowIdData");
+                        applyRowIdData((RowIdData) dataElem);
                     }
                 }
             }
