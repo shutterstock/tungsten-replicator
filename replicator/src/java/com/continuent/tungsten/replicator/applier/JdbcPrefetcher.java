@@ -113,15 +113,15 @@ public class JdbcPrefetcher implements RawApplier
     private PreparedStatement         seqnoStatement       = null;
     protected Pattern                 ignoreSessionPattern = null;
 
-    protected String                  lastSessionId        = "";
-
-    // Values of schema and timestamp which are buffered to avoid
-    // unnecessary commands on the SQL connection.
+    // Values of schema, timestamp and session variables which are buffered to
+    // avoid unnecessary commands on the SQL connection.
     protected String                  currentSchema        = null;
     protected long                    currentTimestamp     = -1;
+    protected HashMap<String, String> currentOptions;
 
     // Statistics.
     protected long                    eventCount           = 0;
+    private long                      transformed;
 
     /**
      * Maximum length of SQL string to log in case of an error. This is needed
@@ -134,12 +134,8 @@ public class JdbcPrefetcher implements RawApplier
 
     private ReplDBMSHeader            lastProcessedEvent   = null;
 
-    protected HashMap<String, String> currentOptions;
-
     // SQL parser.
-    SqlOperationMatcher               sqlMatcher           = new MySQLOperationMatcher();
-
-    private long                      transformed;
+    private SqlOperationMatcher       sqlMatcher           = new MySQLOperationMatcher();
 
     /**
      * {@inheritDoc}
@@ -340,10 +336,8 @@ public class JdbcPrefetcher implements RawApplier
             ArrayList<OneRowChange.ColumnSpec> specs, boolean skipNulls)
             throws SQLException
     {
-        int bindLoc = startBindLoc; /*
-                                     * prepared stmt variable index starts from
-                                     * 1
-                                     */
+        int bindLoc = startBindLoc;
+        // prepared statement variable index starts from 1
 
         for (int idx = 0; idx < values.size(); idx++)
         {
@@ -421,22 +415,14 @@ public class JdbcPrefetcher implements RawApplier
     {
         try
         {
-            String schema = data.getDefaultSchema();
-            Long timestamp = data.getTimestamp();
-            List<ReplOption> options = data.getOptions();
-
-            applyUseSchema(schema);
-
-            applySetTimestamp(timestamp);
-
-            applySessionVariables(options);
-
+            // Parse query first in order to avoid changing cached session
+            // variables, schema and timestamps to values that are not going to
+            // be applied, if for instance the statement is skipped.
             String sqlQuery = null;
             if (data.getQuery() != null)
                 sqlQuery = data.getQuery();
             else
             {
-
                 try
                 {
                     sqlQuery = new String(data.getQueryAsBytes(),
@@ -509,6 +495,16 @@ public class JdbcPrefetcher implements RawApplier
                 statement.clearBatch();
                 return;
             }
+
+            String schema = data.getDefaultSchema();
+            Long timestamp = data.getTimestamp();
+            List<ReplOption> options = data.getOptions();
+
+            applyUseSchema(schema);
+
+            applySetTimestamp(timestamp);
+
+            applySessionVariables(options);
 
             int[] updateCount;
             statement.addBatch(sqlQuery);
