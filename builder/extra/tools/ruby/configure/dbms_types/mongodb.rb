@@ -26,6 +26,10 @@ class MongoDBDatabasePlatform < ConfigureDatabasePlatform
     nil
   end
 
+  def getBasicJdbcUrl()
+    nil
+  end
+  
   def getJdbcUrl()
     nil
   end

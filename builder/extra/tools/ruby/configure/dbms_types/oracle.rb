@@ -33,6 +33,10 @@ class OracleDatabasePlatform < ConfigureDatabasePlatform
     nil
   end
   
+  def getBasicJdbcUrl()
+    "jdbc:oracle:thin:@${replicator.global.db.host}:${replicator.global.db.port}"
+  end
+  
   def getJdbcUrl()
     "jdbc:oracle:thin:@${replicator.global.db.host}:${replicator.global.db.port}:${DBNAME}"
   end

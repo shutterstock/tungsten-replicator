@@ -234,6 +234,9 @@ replicator.store.thl.storageListenerUri=thl://0.0.0.0:@{REPL_SVC_THL_PORT}
 # on the master side.
 replicator.store.thl.resetPeriod=1
 
+# Do not allow this replication service to make any changes to the THL files
+replicator.store.thl.readOnly=@{REPL_SVC_THL_READ_ONLY}
+
 #################################
 # IN-MEMORY QUEUE STORE         #
 #################################
@@ -344,6 +347,8 @@ replicator.event.checksum=none
 replicator.applier.consistency_policy=@{REPL_CONSISTENCY_POLICY}
 
 # Should consistency check be sensitive to column names and/or types? Settings
-# on a slave must be identical to master's. Values are 'true' or 'false'. 
+# on a slave must be identical to master's. Values are 'true' or 'false'.
 replicator.applier.consistency_column_names=true
-replicator.applier.consistency_column_types=true
+# TUC-20:  Must disable column type checking when going from
+# Connector/J on master to drizzle on slave.
+replicator.applier.consistency_column_types=false

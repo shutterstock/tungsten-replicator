@@ -280,6 +280,19 @@ class DatasourceTHLURL < ConfigurePrompt
   end
 end
 
+class DatasourceBasicJDBCURL < ConfigurePrompt
+  include DatasourcePrompt
+  include ConstantValueModule
+  
+  def initialize
+    super(REPL_DBBASICJDBCURL, "Datasource Basic JDBC URL")
+  end
+  
+  def get_template_value(transform_values_method)
+    get_datasource().getBasicJdbcUrl()
+  end
+end
+
 class DatasourceJDBCURL < ConfigurePrompt
   include DatasourcePrompt
   include ConstantValueModule

@@ -72,21 +72,13 @@ module ConfigureDeploymentStepReplicationDataservice
 	end
 	
 	def get_replication_dataservice_template()
-    if @config.getProperty(REPL_ROLE) == REPL_ROLE_DI
-      "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.direct"
+	  pipelines = @config.getProperty(REPL_PIPELINES).tr_s(',', '')
+	  template = "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.#{pipelines}"
+	  if File.exist?(template)
+	    return template
 	  else
-	    begin
-	      extractor_template = get_extractor_datasource().get_extractor_template()
-	    rescue
-	      if @config.getProperty(REPL_ROLE) == REPL_ROLE_S
-	        return "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.slave"
-	      else
-	        raise "Unable to extract from #{get_extractor_datasource.get_connection_summary}"
-	      end
-	    end
-	  
-	    "#{get_deployment_basedir()}/tungsten-replicator/samples/conf/replicator.properties.masterslave"
-	  end
+      raise "Unable to determine the replication service template file"
+    end
 	end
 	
 	def get_applier_datasource()

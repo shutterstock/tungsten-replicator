@@ -248,6 +248,9 @@ replicator.store.thl.storageListenerUri=thl://0.0.0.0:@{REPL_SVC_THL_PORT}
 # on the master side.
 replicator.store.thl.resetPeriod=1
 
+# Do not allow this replication service to make any changes to the THL files
+replicator.store.thl.readOnly=@{REPL_SVC_THL_READ_ONLY}
+
 #################################
 # IN-MEMORY QUEUE STORE         #
 #################################

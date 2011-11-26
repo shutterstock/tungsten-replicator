@@ -69,6 +69,10 @@ class ConfigureDatabasePlatform
     raise "Currently unable to check for the THL schema in #{get_uri_scheme}"
   end
   
+  def getBasicJdbcUrl()
+    raise "Undefined function: #{self.class.name}.getBasicJdbcUrl"
+  end
+  
   def getJdbcUrl()
     raise "Undefined function: #{self.class.name}.getJdbcUrl"
   end

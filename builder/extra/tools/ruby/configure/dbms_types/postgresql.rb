@@ -57,6 +57,10 @@ class PostgreSQLDatabasePlatform < ConfigureDatabasePlatform
     nil
   end
   
+  def getBasicJdbcUrl()
+    "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/"
+  end
+  
   def getJdbcUrl()
     "jdbc:postgresql://${replicator.global.db.host}:${replicator.global.db.port}/${replicator.extractor.dbms.database}"
   end

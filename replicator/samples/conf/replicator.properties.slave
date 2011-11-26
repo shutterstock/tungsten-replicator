@@ -139,7 +139,7 @@ replicator.stage.thl-to-q.blockCommitRowCount=${replicator.global.buffer.size}
 replicator.stage.q-to-dbms=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.q-to-dbms.extractor=parallel-q-extractor
 replicator.stage.q-to-dbms.applier=dbms
-replicator.stage.q-to-dbms.filters=${replicator.global.filters.applier}
+replicator.stage.q-to-dbms.filters=@{REPL_SVC_APPLIER_FILTERS}
 replicator.stage.q-to-dbms.taskCount=${replicator.global.apply.channels}
 replicator.stage.q-to-dbms.blockCommitRowCount=${replicator.global.buffer.size}
 
@@ -216,6 +216,9 @@ replicator.store.thl.storageListenerUri=thl://0.0.0.0:@{REPL_SVC_THL_PORT}
 # on the master side.
 replicator.store.thl.resetPeriod=1
 
+# Do not allow this replication service to make any changes to the THL files
+replicator.store.thl.readOnly=@{REPL_SVC_THL_READ_ONLY}
+
 #################################
 # IN-MEMORY QUEUE STORE         #
 #################################
@@ -277,8 +280,6 @@ replicator.applier.parallel-q-applier.storeName=parallel-queue
 # FILTERS # 
 ###########
 
-replicator.global.filters.applier=@{REPL_SVC_APPLIER_FILTERS}
-
 @{REPL_SVC_FILTER_CONFIG}
 
 ################################
@@ -294,7 +295,7 @@ replicator.backup.default=@{APPLIER.REPL_DBDEFAULTBACKUPAGENT}
 @{REPL_SVC_BACKUP_CONFIG}
 
 # List of configured storage agents.  Uncomment appropriately for your site. 
-#replicator.storage.agents=fs
+replicator.storage.agents=fs
 
 # Default storage agent.
 replicator.storage.default=fs
@@ -326,6 +327,8 @@ replicator.event.checksum=none
 replicator.applier.consistency_policy=@{REPL_CONSISTENCY_POLICY}
 
 # Should consistency check be sensitive to column names and/or types? Settings
-# on a slave must be identical to master's. Values are 'true' or 'false'. 
+# on a slave must be identical to master's. Values are 'true' or 'false'.
 replicator.applier.consistency_column_names=true
-replicator.applier.consistency_column_types=true
+# TUC-20:  Must disable column type checking when going from
+# Connector/J on master to drizzle on slave.
+replicator.applier.consistency_column_types=false

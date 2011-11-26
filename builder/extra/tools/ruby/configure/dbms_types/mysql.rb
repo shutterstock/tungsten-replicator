@@ -93,8 +93,12 @@ class MySQLDatabasePlatform < ConfigureDatabasePlatform
     "/etc/init.d/mysql"
   end
   
+  def getBasicJdbcUrl()
+    "jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/"
+  end
+  
   def getJdbcUrl()
-    "jdbc:mysql://${replicator.global.db.host}:${replicator.global.db.port}/${DBNAME}?jdbcCompliantTruncation=false&zeroDateTimeBehavior=convertToNull&tinyInt1isBit=false&allowMultiQueries=true&yearIsDateType=false"
+    "jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/${DBNAME}?jdbcCompliantTruncation=false&zeroDateTimeBehavior=convertToNull&tinyInt1isBit=false&allowMultiQueries=true&yearIsDateType=false"
   end
   
   def getJdbcDriver()

@@ -241,6 +241,29 @@ class ReplicationServiceRole < ConfigurePrompt
       PropertyValidator.new("#{REPL_ROLE_M}|#{REPL_ROLE_S}|#{REPL_ROLE_DI}",
       "Value must be #{REPL_ROLE_M}, #{REPL_ROLE_S} or #{REPL_ROLE_DI}"), REPL_ROLE_S)
   end
+  
+  def get_template_value(transform_values_method)
+    case super(transform_values_method)
+    when REPL_ROLE_M
+      return REPL_ROLE_M
+    when REPL_ROLE_S
+      if @config.getProperty(get_member_key(PREFETCH_ENABLED)) == "true"
+        if @config.getProperty(get_member_key(DSNAME)) != @config.getProperty(get_member_key(DEPLOYMENT_SERVICE))
+          return REPL_ROLE_LOCAL_PRE
+        else
+          return REPL_ROLE_S_PRE
+        end
+      else
+        return REPL_ROLE_S
+      end
+    when REPL_ROLE_DI
+      if @config.getProperty(get_member_key(PREFETCH_ENABLED)) == "true"
+        return REPL_ROLE_DI_PRE
+      else
+        return REPL_ROLE_DI
+      end
+    end
+  end
 end
 
 class ReplicationServiceLogDirectory < ConfigurePrompt
@@ -257,7 +280,11 @@ class ReplicationServiceLogDirectory < ConfigurePrompt
       return nil
     end
     
-    get_directory(@config.getProperty(get_member_key(DEPLOYMENT_SERVICE)))
+    if @config.getProperty(get_member_key(PREFETCH_ENABLED))
+      get_directory(@config.getProperty(get_member_key(DSNAME)))
+    else
+      get_directory(@config.getProperty(get_member_key(DEPLOYMENT_SERVICE)))
+    end
   end
   
   def output_usage
@@ -413,6 +440,23 @@ class ReplicationServiceTHLPort < ConfigurePrompt
   def update_deprecated_keys()
     replace_deprecated_key(get_member_key('repl_svc_thl_port'))
     super()
+  end
+end
+
+class ReplciationServiceTHLReadOnly < ConfigurePrompt
+  include ReplicationServicePrompt
+  include ConstantValueModule
+  
+  def initialize
+    super(REPL_SVC_THL_READ_ONLY, "Should the THL files be opened as read-only", PV_BOOLEAN)
+  end
+  
+  def get_default_value
+    if @config.getTemplateValue(get_member_key(REPL_ROLE)) == REPL_ROLE_LOCAL_PRE
+      "true"
+    else
+      "false"
+    end
   end
 end
 
@@ -695,7 +739,7 @@ class THLStorageChecksum < ConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+    super() && @config.getProperty(get_host_key(REPL_LOG_TYPE)) == "disk"
   end
 end
 
@@ -709,7 +753,7 @@ class THLStorageConnectionTimeout < ConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+    super() && @config.getProperty(get_host_key(REPL_LOG_TYPE)) == "disk"
   end
 end
 
@@ -723,7 +767,7 @@ class THLStorageFileSize < ConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+    super() && @config.getProperty(get_host_key(REPL_LOG_TYPE)) == "disk"
   end
 end
 
@@ -737,7 +781,7 @@ class THLStorageRetention < ConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+    super() && @config.getProperty(get_host_key(REPL_LOG_TYPE)) == "disk"
   end
 end
 
@@ -751,7 +795,7 @@ class THLStorageConsistency < ConfigurePrompt
   end
   
   def enabled?
-    super() && @config.getProperty(get_member_key(REPL_LOG_TYPE)) == "disk"
+    super() && @config.getProperty(get_host_key(REPL_LOG_TYPE)) == "disk"
   end
 end
 
@@ -761,6 +805,59 @@ class THLStorageFsync < ConfigurePrompt
   def initialize
     super(REPL_THL_LOG_FSYNC, "Fsync THL records on commit.  More reliable operation but adds latency to replication when using low-performance storage",
       PV_BOOLEAN, "false")
+  end
+
+  def enabled?
+    super() && @config.getProperty(get_host_key(REPL_LOG_TYPE)) == "disk"
+  end
+end
+
+class PrefetchEnabled < ConfigurePrompt
+  include ReplicationServicePrompt
+  
+  def initialize
+    super(PREFETCH_ENABLED, "Should the replicator service be setup as a prefetch applier", 
+      PV_BOOLEAN, "false")
+  end
+end
+
+module PrefetchModule
+  def enabled?
+    super() && @config.getProperty(get_member_key(PREFETCH_ENABLED)) == "true"
+  end
+  
+  def enabled_for_config?
+    super() && @config.getProperty(get_member_key(PREFETCH_ENABLED)) == "true"
+  end
+end
+
+class PrefetchTimeAhead < ConfigurePrompt
+  include ReplicationServicePrompt
+  include PrefetchModule
+  
+  def initialize
+    super(PREFETCH_TIME_AHEAD, "Maximum number of seconds that the prefetch applier can get in front of the standard applier", 
+      PV_INTEGER, 5000)
+  end
+end
+
+class PrefetchSleepTime < ConfigurePrompt
+  include ReplicationServicePrompt
+  include PrefetchModule
+  
+  def initialize
+    super(PREFETCH_SLEEP_TIME, "How long to wait when the prefetch applier gets too far ahead", 
+      PV_INTEGER, 200)
+  end
+end
+
+class PrefetchWarmupEventCount < ConfigurePrompt
+  include ReplicationServicePrompt
+  include PrefetchModule
+  
+  def initialize
+    super(PREFETCH_WARMUP_EVENT_COUNT, "How many events to skip when the prefetch applier goes ONLINE", 
+      PV_INTEGER, 200)
   end
 end
 
@@ -778,6 +875,45 @@ class ReplicationServiceConfigFile < ConfigurePrompt
   end
 end
 
+class ReplicationServicePipelines < ConfigurePrompt
+  include ReplicationServicePrompt
+  include ConstantValueModule
+  
+  def initialize
+    super(REPL_PIPELINES, "Replication service allowed pipelines")
+  end
+  
+  def get_default_value
+    if @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_DI
+      if @config.getProperty(get_member_key(PREFETCH_ENABLED)) == "true"
+        return REPL_ROLE_DI_PRE
+      else
+        return REPL_ROLE_DI
+      end
+	  else
+	    if @config.getProperty(get_member_key(PREFETCH_ENABLED)) == "true"
+	      if @config.getProperty(get_member_key(DSNAME)) != @config.getProperty(get_member_key(DEPLOYMENT_SERVICE))
+          return REPL_ROLE_LOCAL_PRE
+        else
+          return REPL_ROLE_S_PRE
+        end
+	    end
+	    
+	    begin
+	      extractor_template = get_extractor_datasource().get_extractor_template()
+	    rescue
+	      if @config.getProperty(get_member_key(REPL_ROLE)) == REPL_ROLE_S
+	        return REPL_ROLE_S
+	      else
+	        raise "Unable to extract from #{get_extractor_datasource.get_connection_summary}"
+	      end
+	    end
+	  
+	    return "master,slave"
+	  end
+  end
+end
+
 class ReplicationServiceApplierConfig < ConfigurePrompt
   include ReplicationServicePrompt
   include ConstantValueModule
@@ -787,8 +923,15 @@ class ReplicationServiceApplierConfig < ConfigurePrompt
   end
   
   def get_template_value(transform_values_method)
-    transformer = Transformer.new(@config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
-      get_applier_datasource().get_applier_template())
+    if @config.getProperty(PREFETCH_ENABLED) == "true"
+      template = @config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
+        "tungsten-replicator/samples/conf/appliers/prefetch.tpl"
+    else
+      template = @config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
+        get_applier_datasource().get_applier_template()
+    end
+    
+    transformer = Transformer.new(template)
     transformer.set_fixed_properties(@config.getProperty(get_member_key(FIXED_PROPERTY_STRINGS)))
     transformer.transform_values(transform_values_method)
     
