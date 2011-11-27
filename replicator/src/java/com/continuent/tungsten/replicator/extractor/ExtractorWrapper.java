@@ -34,6 +34,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.commons.cluster.resource.OpenReplicatorParams;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.consistency.ConsistencyCheckFilter;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
@@ -54,8 +55,8 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
  */
 public class ExtractorWrapper implements Extractor
 {
-    private static Logger logger      = Logger
-                                              .getLogger(ExtractorWrapper.class);
+    private static Logger logger      = Logger.getLogger(ExtractorWrapper.class);
+    private PluginContext pluginContext;
     private RawExtractor  extractor;
     private String        sourceId;
     private long          seqno       = 0;
@@ -94,11 +95,11 @@ public class ExtractorWrapper implements Extractor
     {
         DBMSEvent dbmsEvent = extractor.extract();
 
-        // Generate the event. 
+        // Generate the event.
         Timestamp extractTimestamp = dbmsEvent.getSourceTstamp();
-        ReplDBMSEvent replEvent = new ReplDBMSEvent(seqno, fragno, dbmsEvent
-                .isLastFrag(), sourceId, epochNumber, extractTimestamp,
-                dbmsEvent);
+        ReplDBMSEvent replEvent = new ReplDBMSEvent(seqno, fragno,
+                dbmsEvent.isLastFrag(), sourceId, epochNumber,
+                extractTimestamp, dbmsEvent);
         if (logger.isDebugEnabled())
             logger.debug("Source timestamp = " + dbmsEvent.getSourceTstamp()
                     + " - Extracted timestamp = " + extractTimestamp);
@@ -119,7 +120,7 @@ public class ExtractorWrapper implements Extractor
             }
         }
 
-        // See if this is the last fragment. 
+        // See if this is the last fragment.
         if (dbmsEvent.isLastFrag())
         {
             seqno++;
@@ -182,18 +183,38 @@ public class ExtractorWrapper implements Extractor
         {
             // Master source ID has shifted; remember seqno but start local
             // extraction from scratch.
-            logger
-                    .info("Local source ID differs from last stored source ID: local="
-                            + sourceId + " stored=" + header.getSourceId());
+            logger.info("Local source ID differs from last stored source ID: local="
+                    + sourceId + " stored=" + header.getSourceId());
             logger.info("Restarting replication from scratch");
 
             seqno = header.getSeqno() + 1;
             eventId = null;
         }
 
+        // See if we have an override on the seqno. That takes priority over
+        // any previous value.
+        if (pluginContext.getOnlineOptions().get(
+                OpenReplicatorParams.BASE_SEQNO) != null)
+        {
+            overrideBaseSeqno();
+        }
+
         // Tell the extractor.
         setLastEventId(eventId);
         epochNumber = seqno;
+    }
+    
+    // Override base sequence number if different from current base. 
+    private void overrideBaseSeqno()
+    {
+        long newBaseSeqno = pluginContext.getOnlineOptions().getLong(
+                OpenReplicatorParams.BASE_SEQNO) + 1;
+        if (newBaseSeqno != seqno)
+        {
+            seqno = newBaseSeqno;
+            logger.info("Overriding base sequence number; next seqno will be: "
+                    + seqno);
+        }
     }
 
     /**
@@ -215,10 +236,11 @@ public class ExtractorWrapper implements Extractor
             InterruptedException
     {
         logger.info("Configuring raw extractor and heartbeat filter");
+        this.pluginContext = context;
         sourceId = context.getSourceId();
-        extractor.configure(context);
+        extractor.configure(pluginContext);
         for (Filter filter : autoFilters)
-            filter.configure(context);
+            filter.configure(pluginContext);
     }
 
     /**
@@ -229,10 +251,18 @@ public class ExtractorWrapper implements Extractor
     public void prepare(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
+        // Prepare sub-components.
         logger.info("Preparing raw extractor and heartbeat filter");
         extractor.prepare(context);
         for (Filter filter : autoFilters)
             filter.prepare(context);
+
+        // See if we have an online option that overrides the initial seqno.
+        if (pluginContext.getOnlineOptions().get(
+                OpenReplicatorParams.BASE_SEQNO) != null)
+        {
+            overrideBaseSeqno();
+        }
     }
 
     /**

@@ -101,9 +101,7 @@ public class OpenReplicatorManagerCtrl
     private void printHelp()
     {
         println("Replicator Manager Control Utility");
-        println("Syntax:  [java " + OpenReplicatorManagerCtrl.class.getName()
-                + " \\");
-        println("             [global-options] command [command-options]");
+        println("Syntax:  trepctl [global-options] command [command-options]");
         println("Global Options:");
         println("  -host name        - Host name of replicator [default: localhost]");
         println("  -port number      - Port number of replicator [default: 10000]");
@@ -125,7 +123,7 @@ public class OpenReplicatorManagerCtrl
         println("  offline [-immediate]   - Set replicator to OFFLINE state");
         println("  offline-deferred [-at-seqno seqno] [-at-event event] [-at-heartbeat [name]] [-at-time YYYY-MM-DD_hh:mm:ss]");
         println("                    - Set replicator OFFLINE at future point");
-        println("  online [-from-event event] [-force] [-skip-seqno x,y,z] [-to-seqno seqno] [-to-event event] [-to-heartbeat [name]] [-to-time YYYY-MM-DD_hh:mm:ss]");
+        println("  online [-force] [-from-event event] [-base-seqno x] [-skip-seqno x,y,z] [-to-seqno seqno] [-to-event event] [-to-heartbeat [name]] [-to-time YYYY-MM-DD_hh:mm:ss]");
         println("                    - Set Replicator to ONLINE with start and stop points");
         println("  reset [-y]        - Deletes the replicator service");
         println("  restore [-uri uri] [-limit s]  - Restore database");
@@ -624,6 +622,7 @@ public class OpenReplicatorManagerCtrl
         // Checks for params option.
         String params = null;
         String fromEvent = null;
+        long baseSeqno = -1;
         String toEvent = null;
         long toSeqno = -1;
         String heartbeat = null;
@@ -637,21 +636,42 @@ public class OpenReplicatorManagerCtrl
             String curArg = argvIterator.next();
             try
             {
-                if ("-params".equals(curArg))
-                    params = argvIterator.next();
-                else if ("-from-event".equals(curArg))
-                    fromEvent = argvIterator.next();
-                else if ("-skip".equals(curArg))
+                if ("-skip".equals(curArg))
                 {
                     fatal("The -skip flag is no longer supported; use -skip-seqno instead",
                             null);
                 }
-                else if ("-event".equals(curArg) || "-to-event".equals(curArg))
+                else if ("-event".equals(curArg))
+                {
+                    fatal("The -event flag is no longer supported; use -to-event instead",
+                            null);
+                }
+                else if ("-seqno".equals(curArg))
+                {
+                    fatal("The -seqno flag is no longer supported; use -to-seqno instead",
+                            null);
+                }
+                else if ("-heartbeat".equals(curArg))
+                {
+                    fatal("The -heartbeat flag is no longer supported; use -to-heartbeat instead",
+                            null);
+                }
+                else if ("-time".equals(curArg))
+                {
+                    fatal("The -time flag is no longer supported; use -to-time instead",
+                            null);
+                }
+                else if ("-params".equals(curArg))
+                    params = argvIterator.next();
+                else if ("-from-event".equals(curArg))
+                    fromEvent = argvIterator.next();
+                else if ("-base-seqno".equals(curArg))
+                    baseSeqno = Long.parseLong(argvIterator.next());
+                else if ("-to-event".equals(curArg))
                     toEvent = argvIterator.next();
-                else if ("-seqno".equals(curArg) || "-to-seqno".equals(curArg))
+                else if ("-to-seqno".equals(curArg))
                     toSeqno = Long.parseLong(argvIterator.next());
-                else if ("-heartbeat".equals(curArg)
-                        || "-to-heartbeat".equals(curArg))
+                else if ("-to-heartbeat".equals(curArg))
                 {
                     // Take the next non-option argument as the heartbeat name.
                     heartbeat = argvIterator.peek();
@@ -660,7 +680,7 @@ public class OpenReplicatorManagerCtrl
                     else
                         argvIterator.next();
                 }
-                else if ("-time".equals(curArg) || "-to-time".equals(curArg))
+                else if ("-to-time".equals(curArg))
                     toTime = getDatetimeMillis(argvIterator.next());
                 else if ("-skip-seqno".equals(curArg))
                     seqnos = argvIterator.next();
@@ -685,6 +705,8 @@ public class OpenReplicatorManagerCtrl
             paramProps.setLong(OpenReplicatorParams.SKIP_APPLY_EVENTS, skip);
         if (fromEvent != null)
             paramProps.setString(OpenReplicatorParams.INIT_EVENT_ID, fromEvent);
+        if (baseSeqno > -1)
+            paramProps.setLong(OpenReplicatorParams.BASE_SEQNO, baseSeqno);
         if (toEvent != null)
             paramProps.setString(OpenReplicatorParams.ONLINE_TO_EVENT_ID,
                     toEvent);
@@ -718,7 +740,7 @@ public class OpenReplicatorManagerCtrl
         }
         catch (ParseException e)
         {
-            fatal("Date format must be YYYY-MM-DD hh:mm:ss: " + datetimeString,
+            fatal("Date format must be YYYY-MM-DD_hh:mm:ss: " + datetimeString,
                     null);
         }
         return dateMillis;
@@ -766,12 +788,31 @@ public class OpenReplicatorManagerCtrl
             String curArg = argvIterator.next();
             try
             {
-                if ("-event".equals(curArg) || "-at-event".equals(curArg))
+                if ("-event".equals(curArg))
+                {
+                    fatal("The -event flag is no longer supported; use -at-event instead",
+                            null);
+                }
+                else if ("-seqno".equals(curArg))
+                {
+                    fatal("The -seqno flag is no longer supported; use -at-seqno instead",
+                            null);
+                }
+                else if ("-heartbeat".equals(curArg))
+                {
+                    fatal("The -heartbeat flag is no longer supported; use -at-heartbeat instead",
+                            null);
+                }
+                else if ("-time".equals(curArg))
+                {
+                    fatal("The -time flag is no longer supported; use -at-time instead",
+                            null);
+                }
+                if ("-at-event".equals(curArg))
                     atEvent = argvIterator.next();
-                else if ("-seqno".equals(curArg) || "-at-seqno".equals(curArg))
+                else if ("-at-seqno".equals(curArg))
                     atSeqno = Long.parseLong(argvIterator.next());
-                else if ("-heartbeat".equals(curArg)
-                        || "-at-heartbeat".equals(curArg))
+                else if ("-at-heartbeat".equals(curArg))
                 {
                     // Take the next non-option argument as the heartbeat name.
                     heartbeat = argvIterator.peek();
@@ -780,7 +821,7 @@ public class OpenReplicatorManagerCtrl
                     else
                         argvIterator.next();
                 }
-                else if ("-time".equals(curArg) || "-at-time".equals(curArg))
+                else if ("-at-time".equals(curArg))
                     atTime = getDatetimeMillis(argvIterator.next());
                 else
                     fatal("Unrecognized option: " + curArg, null);
