@@ -33,6 +33,9 @@ public class OpenReplicatorParams
     /** Set initial event ID when going online. */
     public static final String INIT_EVENT_ID         = "extractFromId";
 
+    /** Set base sequence number of uninitialized log. */
+    public static final String BASE_SEQNO            = "baseSeqno";
+
     /** Skip applying first N events after going online. */
     public static final String SKIP_APPLY_EVENTS     = "skipApplyEvents";
 
