@@ -123,7 +123,7 @@ public class OpenReplicatorManagerCtrl
         println("  offline [-immediate]   - Set replicator to OFFLINE state");
         println("  offline-deferred [-at-seqno seqno] [-at-event event] [-at-heartbeat [name]] [-at-time YYYY-MM-DD_hh:mm:ss]");
         println("                    - Set replicator OFFLINE at future point");
-        println("  online [-force] [-from-event event] [-base-seqno x] [-skip-seqno x,y,z] [-to-seqno seqno] [-to-event event] [-to-heartbeat [name]] [-to-time YYYY-MM-DD_hh:mm:ss]");
+        println("  online [-force] [-from-event event] [-base-seqno x] [-skip-seqno x,y,z] [-until-seqno seqno] [-until-event event] [-until-heartbeat [name]] [-until-time YYYY-MM-DD_hh:mm:ss]");
         println("                    - Set Replicator to ONLINE with start and stop points");
         println("  reset [-y]        - Deletes the replicator service");
         println("  restore [-uri uri] [-limit s]  - Restore database");
@@ -643,22 +643,22 @@ public class OpenReplicatorManagerCtrl
                 }
                 else if ("-event".equals(curArg))
                 {
-                    fatal("The -event flag is no longer supported; use -to-event instead",
+                    fatal("The -event flag is no longer supported; use -until-event instead",
                             null);
                 }
                 else if ("-seqno".equals(curArg))
                 {
-                    fatal("The -seqno flag is no longer supported; use -to-seqno instead",
+                    fatal("The -seqno flag is no longer supported; use -until-seqno instead",
                             null);
                 }
                 else if ("-heartbeat".equals(curArg))
                 {
-                    fatal("The -heartbeat flag is no longer supported; use -to-heartbeat instead",
+                    fatal("The -heartbeat flag is no longer supported; use -until-heartbeat instead",
                             null);
                 }
                 else if ("-time".equals(curArg))
                 {
-                    fatal("The -time flag is no longer supported; use -to-time instead",
+                    fatal("The -time flag is no longer supported; use -until-time instead",
                             null);
                 }
                 else if ("-params".equals(curArg))
@@ -667,11 +667,11 @@ public class OpenReplicatorManagerCtrl
                     fromEvent = argvIterator.next();
                 else if ("-base-seqno".equals(curArg))
                     baseSeqno = Long.parseLong(argvIterator.next());
-                else if ("-to-event".equals(curArg))
+                else if ("-until-event".equals(curArg))
                     toEvent = argvIterator.next();
-                else if ("-to-seqno".equals(curArg))
+                else if ("-until-seqno".equals(curArg))
                     toSeqno = Long.parseLong(argvIterator.next());
-                else if ("-to-heartbeat".equals(curArg))
+                else if ("-until-heartbeat".equals(curArg))
                 {
                     // Take the next non-option argument as the heartbeat name.
                     heartbeat = argvIterator.peek();
@@ -680,7 +680,7 @@ public class OpenReplicatorManagerCtrl
                     else
                         argvIterator.next();
                 }
-                else if ("-to-time".equals(curArg))
+                else if ("-until-time".equals(curArg))
                     toTime = getDatetimeMillis(argvIterator.next());
                 else if ("-skip-seqno".equals(curArg))
                     seqnos = argvIterator.next();
