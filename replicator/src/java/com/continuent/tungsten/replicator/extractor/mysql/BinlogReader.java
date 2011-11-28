@@ -51,7 +51,7 @@ import com.continuent.tungsten.replicator.extractor.mysql.conversion.LittleEndia
  */
 public class BinlogReader implements FilenameFilter, Cloneable
 {
-    static Logger                 logger     = Logger.getLogger(MySQLExtractor.class);
+    static Logger                 logger                 = Logger.getLogger(MySQLExtractor.class);
 
     // Stream from which we are reading.
     private BufferedFileDataInput bfdi;
@@ -68,13 +68,16 @@ public class BinlogReader implements FilenameFilter, Cloneable
 
     // Binlog version. This must be set externally by clients after reading
     // the header.
-    private int                   version    = MysqlBinlog.VERSION_NONE;
+    private int                   version                = MysqlBinlog.VERSION_NONE;
 
     // Id of last event read.
     private int                   eventID;
 
     // Buffer size for reads.
-    private int                   bufferSize = 64000;
+    private int                   bufferSize             = 64000;
+
+    // Delay in milliseconds to wait for binlog writes to flush fully.
+    private int                   binlogFlushDelayMillis = 5000;
 
     /**
      * @brief defines only binlog directory and binlog files' base name
@@ -166,10 +169,11 @@ public class BinlogReader implements FilenameFilter, Cloneable
             byte magic[] = new byte[MysqlBinlog.BIN_LOG_HEADER_SIZE];
             try
             {
+                waitAvailable(magic.length, binlogFlushDelayMillis);
                 if (available() < magic.length)
                 {
                     throw new MySQLExtractException(
-                            "Failed reading header;  Probably an empty file: "
+                            "Failed reading header;  Probably an empty file or very slow file system: "
                                     + getBaseName());
                 }
                 read(magic);
@@ -207,6 +211,13 @@ public class BinlogReader implements FilenameFilter, Cloneable
 
             // Read first for fields, which are common to all events.
             byte[] header = new byte[MysqlBinlog.PROBE_HEADER_LEN];
+            waitAvailable(header.length, binlogFlushDelayMillis);
+            if (available() < header.length)
+            {
+                throw new MySQLExtractException(
+                        "Failed reading header;  You may have an incomplete log file or a very slow file system: "
+                                + getBaseName());
+            }
             bfdi.readFully(header);
             int typeCode = header[4];
             int eventLength = (int) LittleEndianConversion.convert4BytesToLong(
@@ -270,7 +281,7 @@ public class BinlogReader implements FilenameFilter, Cloneable
         }
         catch (FileNotFoundException e)
         {
-            throw new MySQLExtractException("Unable to open binlog file: ", e);
+            throw new MySQLExtractException("Unable to open binlog file", e);
         }
         catch (IOException e)
         {
