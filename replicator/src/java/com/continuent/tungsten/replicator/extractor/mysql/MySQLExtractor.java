@@ -31,6 +31,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
@@ -112,6 +113,7 @@ public class MySQLExtractor implements RawExtractor
     // Built-in task to manage relay logs.
     private RelayLogTask                    relayLogTask            = null;
     private Thread                          relayLogThread          = null;
+    private LinkedBlockingQueue<File>       relayLogQueue           = null;
 
     // Varchar type fields can be retrieved and stored in THL either using
     // String datatype or bytes arrays. By default, using string datatype.
@@ -1383,6 +1385,13 @@ public class MySQLExtractor implements RawExtractor
         // repositioning, stop it now.
         stopRelayLogs();
 
+        // Create a queue for relay logs. This provides flow control to ensure
+        // we do not exceed the number of files specified by the relay log
+        // retention.
+        relayLogRetention = Math.max(relayLogRetention, 2);
+        relayLogQueue = new LinkedBlockingQueue<File>(relayLogRetention);
+        logger.info("Contructing relay log queue: size=" + relayLogRetention);
+
         // Configure client and connect to the master server. Note that we
         // don't try to start from the requested offset or we would get a
         // partial binlog.
@@ -1394,6 +1403,7 @@ public class MySQLExtractor implements RawExtractor
         relayClient.setBinlog(fileName);
         relayClient.setBinlogPrefix(binlogFilePattern);
         relayClient.setServerId(serverId);
+        relayClient.setLogQueue(relayLogQueue);
         relayClient.connect();
 
         // Start the relay log task.
@@ -1467,8 +1477,32 @@ public class MySQLExtractor implements RawExtractor
             logger.info("Checking for old relay log files...");
             File logDir = new File(binlogDir);
             File[] filesToPurge = FileCommands.filesOverRetentionAndInactive(
-                    logDir, binlogFilePattern, relayLogRetention + 1,
+                    logDir, binlogFilePattern, relayLogRetention,
                     this.binlogPosition.getFileName());
+
+            // Ensure that any files to be purged are removed from the relay log
+            // queue. This allows the relay log task to advance to new files.
+            if (this.relayLogQueue != null)
+            {
+                for (File fileToPurge : filesToPurge)
+                {
+                    // If we can't remove the file from the queue it could
+                    // indicate a bug.
+                    if (logger.isInfoEnabled())
+                    {
+                        logger.debug("Removing relay log file from relay log queue: "
+                                + fileToPurge.getAbsolutePath());
+                    }
+
+                    if (!relayLogQueue.remove(fileToPurge))
+                    {
+                        logger.info("Unable to remove relay log file from relay log queue, probably old: "
+                                + fileToPurge);
+                    }
+                }
+            }
+
+            // Now that we have done our accounting, remove the files.
             FileCommands.deleteFiles(filesToPurge, wait);
         }
     }
@@ -1516,6 +1550,7 @@ public class MySQLExtractor implements RawExtractor
         {
             relayLogTask = null;
             relayLogThread = null;
+            relayLogQueue = null;
         }
         else
             logger.warn("Unable to cancel relay log thread");

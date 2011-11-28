@@ -33,6 +33,7 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
@@ -53,34 +54,36 @@ import com.continuent.tungsten.replicator.extractor.ExtractorException;
  */
 public class RelayLogClient
 {
-    private static Logger    logger       = Logger.getLogger(RelayLogClient.class);
+    private static Logger             logger       = Logger.getLogger(RelayLogClient.class);
 
     // Magic number for MySQL binlog files.
-    private static byte[]    magic        = {(byte) 0xfe, 0x62, 0x69, 0x6e};
+    private static byte[]             magic        = {(byte) 0xfe, 0x62, 0x69,
+            0x6e                                   };
 
     // Options.
-    private String           url          = "jdbc:mysql:thin://localhost:3306/";
-    private String           login        = "tungsten";
-    private String           password     = "secret";
-    private String           binlog       = null;
-    private String           binlogPrefix = "mysql-bin";
-    private long             offset       = 4;
-    private String           binlogDir    = ".";
-    private boolean          autoClean    = true;
-    private int              serverId     = 1;
+    private String                    url          = "jdbc:mysql:thin://localhost:3306/";
+    private String                    login        = "tungsten";
+    private String                    password     = "secret";
+    private String                    binlog       = null;
+    private String                    binlogPrefix = "mysql-bin";
+    private long                      offset       = 4;
+    private String                    binlogDir    = ".";
+    private boolean                   autoClean    = true;
+    private int                       serverId     = 1;
+    private LinkedBlockingQueue<File> logQueue     = null;
 
     // Relay storage and positioning information.
-    private File             relayLog;
-    private File             relayDir;
-    private File             binlogIndex;
-    private OutputStream     relayOutput;
-    private long             relayBytes;
-    private RelayLogPosition logPosition  = new RelayLogPosition();
+    private File                      relayLog;
+    private File                      relayDir;
+    private File                      binlogIndex;
+    private OutputStream              relayOutput;
+    private long                      relayBytes;
+    private RelayLogPosition          logPosition  = new RelayLogPosition();
 
     // Database connection information.
-    private Connection       conn;
-    private InputStream      input        = null;
-    private OutputStream     output       = null;
+    private Connection                conn;
+    private InputStream               input        = null;
+    private OutputStream              output       = null;
 
     /** Create new relay log client instance. */
     public RelayLogClient()
@@ -170,6 +173,16 @@ public class RelayLogClient
     public void setServerId(int serverId)
     {
         this.serverId = serverId;
+    }
+
+    public synchronized LinkedBlockingQueue<File> getLogQueue()
+    {
+        return logQueue;
+    }
+
+    public synchronized void setLogQueue(LinkedBlockingQueue<File> logQueue)
+    {
+        this.logQueue = logQueue;
     }
 
     /** Connect to MySQL and start pulling down data. */
@@ -466,8 +479,10 @@ public class RelayLogClient
      * 
      * @param packet
      * @throws IOException
+     * @throws InterruptedException
      */
-    private void processBinlogEvent(MySQLPacket packet) throws IOException
+    private void processBinlogEvent(MySQLPacket packet) throws IOException,
+            InterruptedException
     {
         // Read the header. Note we can only handle V4 headers (5.0+).
         long timestamp = packet.getUnsignedInt32();
@@ -520,7 +535,8 @@ public class RelayLogClient
     }
 
     // Write a packet to relay log.
-    private void writePacketToRelayLog(MySQLPacket packet) throws IOException
+    private void writePacketToRelayLog(MySQLPacket packet) throws IOException,
+            InterruptedException
     {
         if (relayOutput == null)
             openBinlog();
@@ -573,11 +589,27 @@ public class RelayLogClient
     }
 
     // Open a new binlog file.
-    private void openBinlog() throws IOException
+    private void openBinlog() throws IOException, InterruptedException
     {
-        // Compute file name and open.
+        // Compute file name.
         relayLog = new File(relayDir, binlog);
+        logger.info("Rotating to new relay log: name="
+                + relayLog.getAbsolutePath());
 
+        // Post the name to the log queue. This will block if the extractor
+        // is slow and opening another file would cause us to exceeded the relay
+        // log retention.
+        if (logQueue != null)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Adding relay log file name to log queue: "
+                        + relayLog.getAbsolutePath());
+            }
+            logQueue.put(relayLog);
+        }
+
+        // Open the file.
         logger.info("Opening relay log: name=" + relayLog.getAbsolutePath());
         try
         {
