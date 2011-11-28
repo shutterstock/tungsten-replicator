@@ -114,6 +114,12 @@ PREFETCH_ENABLED = "prefetch_enabled"
 PREFETCH_TIME_AHEAD = "prefetch_time_ahead"
 PREFETCH_SLEEP_TIME = "prefetch_sleep_time"
 PREFETCH_WARMUP_EVENT_COUNT = "prefetch_warmup_event_count"
+PREFETCH_SCHEMA = "prefetch_schema"
+
+BATCH_ENABLED = "batch_enabled"
+BATCH_LOAD_TEMPLATE = "batch_load_template"
+BATCH_INSERT_TEMPLATE = "batch_insert_template"
+BATCH_DELETE_TEMPLATE = "batch_delete_template"
 
 REPL_PIPELINES = "repl_pipelines"
 

@@ -137,6 +137,18 @@ class ConfigureDatabasePlatform
     end
   end
   
+  def get_batch_load_template
+    "LOAD DATA INFILE '%%FILE%%' REPLACE INTO TABLE %%TABLE%% CHARACTER SET utf8 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'"
+  end
+  
+  def get_batch_insert_template
+    "INSERT INTO %%BASE_TABLE%%(%%BASE_COLUMNS%%) SELECT %%BASE_COLUMNS%% FROM %%STAGE_TABLE%%"
+  end
+  
+  def get_batch_delete_template
+    "DELETE FROM %%BASE_TABLE%% WHERE %%BASE_PKEY%% IN (SELECT %%STAGE_PKEY%% FROM %%STAGE_TABLE%%)"
+  end
+  
   def self.build(scheme, host, port, username, password, config)
     klass = self.get_class(scheme)
     return klass.new(host, port, username, password, config)

@@ -102,7 +102,7 @@ class MySQLDatabasePlatform < ConfigureDatabasePlatform
   end
   
   def getJdbcDriver()
-    "com.mysql.jdbc.Driver"
+    "org.drizzle.jdbc.DrizzleDriver"
   end
   
   def getVendor()

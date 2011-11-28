@@ -861,6 +861,81 @@ class PrefetchWarmupEventCount < ConfigurePrompt
   end
 end
 
+class PrefetchWarmupEventCount < ConfigurePrompt
+  include ReplicationServicePrompt
+  include PrefetchModule
+  
+  def initialize
+    super(PREFETCH_SCHEMA, "Schema to watch for timing prefetch progress", 
+      PV_IDENTIFIER)
+  end
+  
+  def get_default_value
+    "tungsten_#{@config.getProperty(get_member_key(DSNAME))}"
+  end
+end
+
+class BatchEnabled < ConfigurePrompt
+  include ReplicationServicePrompt
+  
+  def initialize
+    super(BATCH_ENABLED, "Should the replicator service use a batch applier", 
+      PV_BOOLEAN, "false")
+  end
+end
+
+module BatchModule
+  def enabled?
+    super() && @config.getProperty(get_member_key(BATCH_ENABLED)) == "true"
+  end
+  
+  def enabled_for_config?
+    super() && @config.getProperty(get_member_key(BATCH_ENABLED)) == "true"
+  end
+end
+
+class BatchLoadTemplate < ConfigurePrompt
+  include ReplicationServicePrompt
+  include ConstantValueModule
+  include BatchModule
+  
+  def initialize
+    super(BATCH_LOAD_TEMPLATE, "Value for the loadBatchTemplate property")
+  end
+  
+  def get_template_value(transform_values_method = nil)
+    get_applier_datasource().get_batch_load_template()
+  end
+end
+
+class BatchInsertTemplate < ConfigurePrompt
+  include ReplicationServicePrompt
+  include ConstantValueModule
+  include BatchModule
+  
+  def initialize
+    super(BATCH_INSERT_TEMPLATE, "Value for the stageInsertFromTemplate property")
+  end
+  
+  def get_template_value(transform_values_method = nil)
+    get_applier_datasource().get_batch_insert_template()
+  end
+end
+
+class BatchDeleteTemplate < ConfigurePrompt
+  include ReplicationServicePrompt
+  include ConstantValueModule
+  include BatchModule
+  
+  def initialize
+    super(BATCH_DELETE_TEMPLATE, "Value for the stageDeleteFromTemplate property")
+  end
+  
+  def get_template_value(transform_values_method = nil)
+    get_applier_datasource().get_batch_delete_template()
+  end
+end
+
 class ReplicationServiceConfigFile < ConfigurePrompt
   include ReplicationServicePrompt
   include HiddenValueModule
@@ -926,6 +1001,9 @@ class ReplicationServiceApplierConfig < ConfigurePrompt
     if @config.getProperty(PREFETCH_ENABLED) == "true"
       template = @config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
         "tungsten-replicator/samples/conf/appliers/prefetch.tpl"
+    elsif @config.getProperty(BATCH_ENABLED) == "true"
+      template = @config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
+        "tungsten-replicator/samples/conf/appliers/batch.tpl"
     else
       template = @config.getProperty(CURRENT_RELEASE_DIRECTORY) + "/" + 
         get_applier_datasource().get_applier_template()
@@ -1072,7 +1150,13 @@ class ReplicationServiceApplierFilters < ConfigurePrompt
   end
   
   def get_template_value(transform_values_method)
-    (get_value().to_s().split(",") + get_applier_datasource().get_applier_filters()).join(",")
+    filters = []
+    
+    if @config.getProperty(get_member_key(BATCH_ENABLED)) == "true"
+      filters << "colnames"
+    end
+    
+    (get_value().to_s().split(",") + get_applier_datasource().get_applier_filters() + filters).join(",")
   end
   
   def required?

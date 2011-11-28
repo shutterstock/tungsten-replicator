@@ -152,13 +152,13 @@ replicator.stage.d-q-to-thl.filters=@{REPL_SVC_THL_FILTERS}
 replicator.stage.d-thl-to-pq=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.d-thl-to-pq.extractor=thl-extractor
 replicator.stage.d-thl-to-pq.applier=parallel-q-applier
+replicator.stage.d-thl-to-pq.filters=prefetch
 replicator.stage.d-thl-to-pq.blockCommitRowCount=${replicator.global.buffer.size}
 
 # Write from parallel queue to database. 
 replicator.stage.d-pq-to-dbms=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
 replicator.stage.d-pq-to-dbms.extractor=parallel-q-extractor
 replicator.stage.d-pq-to-dbms.applier=dbms
-replicator.stage.d-pq-to-dbms.filters=prefetch
 replicator.stage.d-pq-to-dbms.taskCount=${replicator.global.apply.channels}
 replicator.stage.d-pq-to-dbms.blockCommitRowCount=${replicator.global.buffer.size}
 
@@ -250,7 +250,7 @@ replicator.store.queue.maxSize=${replicator.global.buffer.size}
 replicator.store.parallel-queue=@{REPL_SVC_PARALLELIZATION_STORE_CLASS}
 replicator.store.parallel-queue.maxSize=${replicator.global.buffer.size}
 replicator.store.parallel-queue.partitions=${replicator.global.apply.channels}
-replicator.store.parallel-queue.partitionerClass=com.continuent.tungsten.replicator.storage.parallel.ShardListPartitioner
+replicator.store.parallel-queue.partitionerClass=com.continuent.tungsten.replicator.storage.parallel.RoundRobinPartitioner
 replicator.store.parallel-queue.maxOfflineInterval=5
 
 ##############
