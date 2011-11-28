@@ -861,7 +861,7 @@ class PrefetchWarmupEventCount < ConfigurePrompt
   end
 end
 
-class PrefetchWarmupEventCount < ConfigurePrompt
+class PrefetchFilterSchemaName < ConfigurePrompt
   include ReplicationServicePrompt
   include PrefetchModule
   
