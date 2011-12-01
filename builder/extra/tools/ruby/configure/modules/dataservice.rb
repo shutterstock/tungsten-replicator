@@ -280,7 +280,7 @@ class ReplicationServiceLogDirectory < ConfigurePrompt
       return nil
     end
     
-    if @config.getProperty(get_member_key(PREFETCH_ENABLED))
+    if @config.getProperty(get_member_key(PREFETCH_ENABLED)) == "true"
       get_directory(@config.getProperty(get_member_key(DSNAME)))
     else
       get_directory(@config.getProperty(get_member_key(DEPLOYMENT_SERVICE)))
