@@ -571,7 +571,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
         
         # The next argument does not have a dash so the OptionParser
         # ignores it, we will add it to the stack and continue
-        if arguments.size() > 0 && (arguments[0] =~ /-.*/) == nil
+        if arguments.size() > 0 && (arguments[0] =~ /-.*/) != 0
           remaining_arguments << arguments.shift()
         end
       rescue OptionParser::InvalidOption => io
@@ -581,7 +581,7 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
         
           # The next argument does not have a dash so the OptionParser
           # ignores it, we will add it to the stack and continue
-          if arguments.size() > 0 && (arguments[0] =~ /-.*/) == nil
+          if arguments.size() > 0 && (arguments[0] =~ /-.*/) != 0
             remaining_arguments << arguments.shift()
           end
         else
