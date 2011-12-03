@@ -188,8 +188,23 @@ public class ReplicatorRuntime implements PluginContext
         clusterName = assertPropertyDefault(ReplicatorConf.CLUSTER_NAME,
                 ReplicatorConf.CLUSTER_NAME_DEFAULT);
 
-        // Ensure service name is available.
+        // Ensure service name is available and consists only of legal
+        // characters for a SQL identifier.
         serviceName = assertPropertySet(ReplicatorConf.SERVICE_NAME);
+        for (char c : serviceName.toCharArray())
+        {
+            if (Character.isLetterOrDigit(c))
+                continue;
+            else if (c == '_')
+                continue;
+            else
+            {
+                throw new ReplicatorException(
+                        String.format(
+                                "Service name may only contain letters, digits, and underscore (_):  %s",
+                                serviceName));
+            }
+        }
         MDC.put("serviceName", serviceName);
 
         // Ensure we have a valid service type.

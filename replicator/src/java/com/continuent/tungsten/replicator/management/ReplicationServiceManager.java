@@ -94,7 +94,6 @@ public class ReplicationServiceManager
     public void go() throws ReplicatorException
     {
         // Find and load the service.properties file.
-
         File confDir = ReplicatorRuntimeConf.locateReplicatorConfDir();
         File propsFile = new File(confDir, "services.properties");
         serviceProps = PropertiesManager.loadProperties(propsFile);
@@ -107,10 +106,8 @@ public class ReplicationServiceManager
                 ReplicatorConf.RMI_DEFAULT_SERVICE_NAME);
         jmxManager.start();
 
-        // Make sure we have configurations for the replicators
-        // to work with.
+        // Make sure we have configurations for the replicators to work with.
         loadServiceConfigurations();
-
         Vector<TungstenProperties> remoteServices = new Vector<TungstenProperties>();
 
         // We will start the local services first, and only then will we start
@@ -564,13 +561,14 @@ public class ReplicationServiceManager
                 orm = createInternalService(serviceName);
             }
 
+            // Put the service in the list of replicators now, as the start
+            // might fail.
+            replicators.put(serviceName, orm);
             orm.start();
 
             int listenPort = orm.getMasterListenPort();
             if (listenPort > masterListenPortMax)
                 masterListenPortMax = listenPort;
-
-            replicators.put(serviceName, orm);
 
             logger.info(String.format(
                     "%s/%s replication service '%s' started successfully",

@@ -35,18 +35,18 @@ import com.continuent.tungsten.replicator.plugin.PluginContext;
 /**
  * Implements an in-memory event store. This queue has no memory beyond its
  * current contents.
- *
+ * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  * @version 1.0
  */
 public class InMemoryQueueStore implements Store
 {
-    private static Logger                      logger           = Logger.getLogger(InMemoryQueueStore.class);
-    private String                             name;
-    private LinkedBlockingQueue<ReplDBMSEvent> queue;
-    private int                                maxSize          = 1;
-    private ReplDBMSHeader                     lastHeader;
-    private long                               transactionCount = 0;
+    private static Logger                        logger           = Logger.getLogger(InMemoryQueueStore.class);
+    protected String                             name;
+    protected LinkedBlockingQueue<ReplDBMSEvent> queue;
+    protected int                                maxSize          = 1;
+    protected ReplDBMSHeader                     lastHeader;
+    protected long                               transactionCount = 0;
 
     public String getName()
     {
@@ -82,7 +82,7 @@ public class InMemoryQueueStore implements Store
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.storage.Store#getMaxStoredSeqno()
      */
     public long getMaxStoredSeqno()
@@ -92,7 +92,7 @@ public class InMemoryQueueStore implements Store
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.storage.Store#getMinStoredSeqno()
      */
     public long getMinStoredSeqno()
@@ -103,7 +103,7 @@ public class InMemoryQueueStore implements Store
     /**
      * As in-memory queue don't keep events, this function is no-op and just
      * returns null
-     *
+     * 
      * @return null
      */
     public ReplDBMSEvent fetchEvent(long seqno, short fragno,
@@ -115,8 +115,11 @@ public class InMemoryQueueStore implements Store
 
     /**
      * Puts an event in the queue, blocking if it is full.
+     * 
+     * @throws ReplicatorException
      */
-    public void put(ReplDBMSEvent event) throws InterruptedException
+    public void put(ReplDBMSEvent event) throws InterruptedException,
+            ReplicatorException
     {
         queue.put(event);
         transactionCount++;
@@ -155,7 +158,7 @@ public class InMemoryQueueStore implements Store
 
     /**
      * {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#configure(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void configure(PluginContext context) throws ReplicatorException
@@ -165,7 +168,7 @@ public class InMemoryQueueStore implements Store
 
     /**
      * Allocate an in-memory queue. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#prepare(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void prepare(PluginContext context) throws ReplicatorException
@@ -175,7 +178,7 @@ public class InMemoryQueueStore implements Store
 
     /**
      * Release queue. {@inheritDoc}
-     *
+     * 
      * @see com.continuent.tungsten.replicator.plugin.ReplicatorPlugin#release(com.continuent.tungsten.replicator.plugin.PluginContext)
      */
     public void release(PluginContext context) throws ReplicatorException

@@ -530,6 +530,7 @@ public class ParallelQueueStore implements ParallelStore
         props.setLong("serializationCount", serializationCount);
         props.setBoolean("stopRequested", stopRequested);
         props.setInt("criticalPartition", criticalPartition);
+        props.setString("partitionerClass", partitionerClass);
         for (int i = 0; i < queues.size(); i++)
         {
             props.setInt("store.queueSize." + i, queues.get(i).size());

@@ -120,29 +120,29 @@ replicator.plugin=tungsten
 # Generic pipelines.
 replicator.pipelines=slave-prefetch
 
-# SLAVE PIPELINE:  three stages:  extract from remote THL to local THL;
-# extract from local THL to queue; apply from queue to DBMS.
-replicator.pipeline.slave-prefetch=remote-to-thl,thl-to-q,q-to-dbms
-replicator.pipeline.slave-prefetch.stores=thl,parallel-queue
+# PREFETCH PIPELINE:  three stages:  extract from remote THL to prefetch 
+# queue store, then extract to parallel queue, then from parallel queue 
+# to DBMS extract from local THL to queue; apply from queue to DBMS.
+replicator.pipeline.slave-prefetch=remote-to-q,q-to-pq,pq-to-dbms
+replicator.pipeline.slave-prefetch.stores=prefetch-queue,parallel-queue
 replicator.pipeline.slave-prefetch.syncTHLWithExtractor=false
 replicator.pipeline.slave-prefetch.autoSync=true
 
-replicator.stage.remote-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
-replicator.stage.remote-to-thl.extractor=thl-remote
-replicator.stage.remote-to-thl.applier=thl-applier
-replicator.stage.remote-to-thl.filters=
+replicator.stage.remote-to-q=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
+replicator.stage.remote-to-q.extractor=thl-remote
+replicator.stage.remote-to-q.applier=prefetch-queue
+replicator.stage.remote-to-q.filters=
 
-replicator.stage.thl-to-q=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
-replicator.stage.thl-to-q.extractor=thl-extractor
-replicator.stage.thl-to-q.applier=parallel-q-applier
-replicator.stage.thl-to-q.filters=prefetch
-replicator.stage.thl-to-q.blockCommitRowCount=${replicator.global.buffer.size}
+replicator.stage.q-to-pq=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
+replicator.stage.q-to-pq.extractor=prefetch-queue
+replicator.stage.q-to-pq.applier=parallel-q-applier
+replicator.stage.q-to-pq.blockCommitRowCount=${replicator.global.buffer.size}
 
-replicator.stage.q-to-dbms=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
-replicator.stage.q-to-dbms.extractor=parallel-q-extractor
-replicator.stage.q-to-dbms.applier=dbms
-replicator.stage.q-to-dbms.taskCount=${replicator.global.apply.channels}
-replicator.stage.q-to-dbms.blockCommitRowCount=${replicator.global.buffer.size}
+replicator.stage.pq-to-dbms=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
+replicator.stage.pq-to-dbms.extractor=parallel-q-extractor
+replicator.stage.pq-to-dbms.applier=dbms
+replicator.stage.pq-to-dbms.taskCount=${replicator.global.apply.channels}
+replicator.stage.pq-to-dbms.blockCommitRowCount=${replicator.global.buffer.size}
 
 #################################
 # TRANSACTION HISTORY LOG (THL) #
@@ -223,6 +223,15 @@ replicator.store.thl.readOnly=@{REPL_SVC_THL_READ_ONLY}
 # IN-MEMORY QUEUE STORE         #
 #################################
 
+# Prefetch queue storage.  
+replicator.store.prefetch-queue=com.continuent.tungsten.replicator.storage.prefetch.PrefetchStore
+replicator.store.prefetch-queue.maxSize=${replicator.global.buffer.size}
+replicator.store.prefetch-queue.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_slave_prefetch
+replicator.store.prefetch-queue.slaveCatalogSchema=_put_correct_name_here_
+replicator.store.prefetch-queue.aheadMaxTime=60000
+replicator.store.prefetch-queue.sleepTime=200
+replicator.store.prefetch-queue.warmUpEventCount=200
+
 # In-memory storage to buffer events between stages.
 replicator.store.queue=com.continuent.tungsten.replicator.storage.InMemoryQueueStore
 replicator.store.queue.maxSize=${replicator.global.buffer.size}
@@ -258,6 +267,10 @@ replicator.extractor.queue.storeName=queue
 replicator.extractor.parallel-q-extractor=@{REPL_SVC_PARALLELIZATION_EXTRACTOR_CLASS}
 replicator.extractor.parallel-q-extractor.storeName=parallel-queue
 
+# Prefetch queue extractor.
+replicator.extractor.prefetch-queue=com.continuent.tungsten.replicator.storage.InMemoryQueueAdapter
+replicator.extractor.prefetch-queue.storeName=prefetch-queue
+
 ############
 # APPLIERS #
 ############
@@ -275,6 +288,10 @@ replicator.applier.queue.storeName=queue
 # Parallel queue applier. 
 replicator.applier.parallel-q-applier=@{REPL_SVC_PARALLELIZATION_APPLIER_CLASS}
 replicator.applier.parallel-q-applier.storeName=parallel-queue
+
+# Prefetch queue applier.
+replicator.applier.prefetch-queue=com.continuent.tungsten.replicator.storage.InMemoryQueueAdapter
+replicator.applier.prefetch-queue.storeName=prefetch-queue
 
 ###########
 # FILTERS # 

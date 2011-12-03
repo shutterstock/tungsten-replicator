@@ -207,16 +207,6 @@ public class CommitSeqnoTable
     }
 
     /**
-     * Reduces the trep_commit_seqno table to task 0 entry *provided* there is a
-     * task 0 row and provide all rows are at the same sequence number. This
-     * operation allows the table to convert to a different number of apply
-     * threads.
-     */
-    public void reduce()
-    {
-    }
-
-    /**
      * Releases the instance. This must occur after last use.
      */
     public void release()
@@ -255,8 +245,10 @@ public class CommitSeqnoTable
     }
 
     /**
-     * Returns a list containing all current sequence numbers in
-     * trep_commit_seqno.
+     * Reduces the trep_commit_seqno table to task 0 entry *provided* there is a
+     * task 0 row and provide all rows are at the same sequence number. This
+     * operation allows the table to convert to a different number of apply
+     * threads.
      */
     public void reduceTasks() throws SQLException
     {
