@@ -226,11 +226,11 @@ replicator.store.thl.readOnly=@{REPL_SVC_THL_READ_ONLY}
 # Prefetch queue storage.  
 replicator.store.prefetch-queue=com.continuent.tungsten.replicator.storage.prefetch.PrefetchStore
 replicator.store.prefetch-queue.maxSize=${replicator.global.buffer.size}
-replicator.store.prefetch-queue.url=jdbc:mysql:thin://${replicator.global.db.host}:${replicator.global.db.port}/tungsten_slave_prefetch
-replicator.store.prefetch-queue.slaveCatalogSchema=_put_correct_name_here_
-replicator.store.prefetch-queue.aheadMaxTime=60000
-replicator.store.prefetch-queue.sleepTime=200
-replicator.store.prefetch-queue.warmUpEventCount=200
+replicator.store.prefetch-queue.url=@{APPLIER.REPL_DBBASICJDBCURL}@{PREFETCH_SCHEMA}
+replicator.store.prefetch-queue.slaveCatalogSchema=@{PREFETCH_SCHEMA}
+replicator.store.prefetch-queue.aheadMaxTime=@{PREFETCH_TIME_AHEAD}
+replicator.store.prefetch-queue.sleepTime=@{PREFETCH_SLEEP_TIME}
+replicator.store.prefetch-queue.warmUpEventCount=@{PREFETCH_WARMUP_EVENT_COUNT}
 
 # In-memory storage to buffer events between stages.
 replicator.store.queue=com.continuent.tungsten.replicator.storage.InMemoryQueueStore
