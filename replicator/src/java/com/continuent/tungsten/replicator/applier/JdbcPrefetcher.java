@@ -62,11 +62,9 @@ import com.continuent.tungsten.replicator.event.DBMSEmptyEvent;
 import com.continuent.tungsten.replicator.event.DBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSFilteredEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
-import com.continuent.tungsten.replicator.event.ReplDBMSHeaderData;
 import com.continuent.tungsten.replicator.event.ReplOption;
 import com.continuent.tungsten.replicator.event.ReplOptionParams;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
-import com.continuent.tungsten.replicator.thl.CommitSeqnoTable;
 import com.continuent.tungsten.replicator.thl.THLManagerCtrl;
 
 /**
@@ -110,7 +108,6 @@ public class JdbcPrefetcher implements RawApplier
     protected String                  metadataSchema       = null;
     protected Database                conn                 = null;
     protected Statement               statement            = null;
-    private PreparedStatement         seqnoStatement       = null;
     protected Pattern                 ignoreSessionPattern = null;
 
     // Values of schema, timestamp and session variables which are buffered to
@@ -1107,33 +1104,6 @@ public class JdbcPrefetcher implements RawApplier
      */
     public ReplDBMSHeader getLastEvent() throws ReplicatorException
     {
-        if (seqnoStatement != null)
-        {
-            ResultSet rs = null;
-            try
-            {
-                rs = seqnoStatement.executeQuery();
-                if (rs.next())
-                    return new ReplDBMSHeaderData(rs.getLong(1),
-                            rs.getShort(2), rs.getBoolean(3), rs.getString(4),
-                            rs.getLong(5), rs.getString(6), null, null);
-            }
-            catch (SQLException e)
-            {
-                logger.warn(e);
-            }
-            finally
-            {
-                if (rs != null)
-                    try
-                    {
-                        rs.close();
-                    }
-                    catch (SQLException e)
-                    {
-                    }
-            }
-        }
         return null;
     }
 
@@ -1164,12 +1134,6 @@ public class JdbcPrefetcher implements RawApplier
             conn = DatabaseFactory.createDatabase(url, user, password);
             conn.connect(false);
             statement = conn.createStatement();
-
-            seqnoStatement = conn
-                    .prepareStatement("select seqno, fragno, last_Frag, source_id, epoch_number, eventid from "
-                            + context.getReplicatorSchemaName()
-                            + "."
-                            + CommitSeqnoTable.TABLE_NAME);
 
             // Enable binlogs at session level if this is supported and we are
             // either a remote service or slave logging is turned on. This
