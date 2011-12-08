@@ -837,7 +837,7 @@ class PrefetchTimeAhead < ConfigurePrompt
   
   def initialize
     super(PREFETCH_TIME_AHEAD, "Maximum number of seconds that the prefetch applier can get in front of the standard applier", 
-      PV_INTEGER, 60000)
+      PV_INTEGER, 60)
   end
 end
 
