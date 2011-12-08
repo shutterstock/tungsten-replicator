@@ -410,12 +410,12 @@ public class JdbcPrefetcher implements RawApplier
     protected void prefetchStatementData(StatementData data)
             throws ReplicatorException
     {
+        String sqlQuery = null;
         try
         {
             // Parse query first in order to avoid changing cached session
             // variables, schema and timestamps to values that are not going to
             // be applied, if for instance the statement is skipped.
-            String sqlQuery = null;
             if (data.getQuery() != null)
                 sqlQuery = data.getQuery();
             else
@@ -431,29 +431,39 @@ public class JdbcPrefetcher implements RawApplier
                 }
             }
 
-            SqlOperation parsing = (SqlOperation) data.getParsingMetadata();
+            // Clear the statement batch to ensure there is no left-over data.
+            statement.clearBatch();
 
+            // Step through looking for DML statements to transform.
+            boolean hasTransform = false;
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Seeking prefetch transformation query: "
+                        + sqlQuery);
+            }
+            SqlOperation parsing = (SqlOperation) data.getParsingMetadata();
             if (parsing.getOperation() == SqlOperation.INSERT)
             {
                 Matcher m = insert.matcher(sqlQuery);
                 if (m.matches())
                 {
-                    String sqlQueryOld = sqlQuery;
                     if (m.group(1) != null)
                         sqlQuery = m.group(1);
                     else
                         sqlQuery = m.group(2);
 
                     if (logger.isDebugEnabled())
-                        logger.debug("Transformed " + sqlQueryOld + " into "
+                        logger.debug("Transformed INSERT to prefetch query: "
                                 + sqlQuery);
                     transformed++;
+                    hasTransform = true;
                 }
                 // else do nothing
                 else
                 {
-                    statement.clearBatch();
-                    return;
+                    if (logger.isDebugEnabled())
+                        logger.debug("Unable to match INSERT for transformation: "
+                                + sqlQuery);
                 }
             }
             else if (parsing.getOperation() == SqlOperation.DELETE)
@@ -461,12 +471,18 @@ public class JdbcPrefetcher implements RawApplier
                 Matcher m = delete.matcher(sqlQuery);
                 if (m.matches())
                 {
-                    String sqlQueryOld = sqlQuery;
                     sqlQuery = "SELECT * FROM " + m.group(1);
                     if (logger.isDebugEnabled())
-                        logger.debug("Transformed " + sqlQueryOld + " into "
+                        logger.debug("Transformed DELETE to prefetch query: "
                                 + sqlQuery);
                     transformed++;
+                    hasTransform = true;
+                }
+                else
+                {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Unable to match DELETE for transformation: "
+                                + sqlQuery);
                 }
             }
             else if (parsing.getOperation() == SqlOperation.UPDATE)
@@ -474,37 +490,54 @@ public class JdbcPrefetcher implements RawApplier
                 Matcher m = update.matcher(sqlQuery);
                 if (m.matches())
                 {
-                    String sqlQueryOld = sqlQuery;
                     sqlQuery = "SELECT * FROM " + m.group(1) + " " + m.group(2);
                     if (logger.isDebugEnabled())
-                        logger.debug("Transformed " + sqlQueryOld + " into "
+                        logger.debug("Transformed UPDATE to prefetch query: "
                                 + sqlQuery);
                     transformed++;
+                    hasTransform = true;
+                }
+                else
+                {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Unable to match UPDATE for transformation: "
+                                + sqlQuery);
                 }
             }
             else if (parsing.getOperation() == SqlOperation.SET)
             {
-                // Let it run
+                if (logger.isDebugEnabled())
+                    logger.debug("Allowing SET operation to proceed: "
+                            + sqlQuery);
+                hasTransform = true;
             }
             // else do nothing
             else
             {
-                statement.clearBatch();
-                return;
+                if (logger.isDebugEnabled())
+                    logger.debug("Ignoring unmatched statement: " + sqlQuery);
             }
 
             String schema = data.getDefaultSchema();
             Long timestamp = data.getTimestamp();
             List<ReplOption> options = data.getOptions();
 
+            // Set the session context. This must happen even if there was no
+            // transform.
             applyUseSchema(schema);
-
             applySetTimestamp(timestamp);
-
             applySessionVariables(options);
 
             int[] updateCount;
-            statement.addBatch(sqlQuery);
+
+            // Only add the
+            if (hasTransform)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug("Adding transformed query to batch: "
+                            + sqlQuery);
+                statement.addBatch(sqlQuery);
+            }
             statement.setEscapeProcessing(false);
             try
             {
@@ -512,8 +545,9 @@ public class JdbcPrefetcher implements RawApplier
             }
             catch (SQLWarning e)
             {
-                String msg = "While applying SQL event:\n" + data.toString()
-                        + "\nWarning: " + e.getMessage();
+                String msg = "Warning generated by prefetch query: transform="
+                        + sqlQuery + " original=" + data.toString()
+                        + " warning=" + e.getMessage();
                 logger.warn(msg);
                 updateCount = new int[1];
                 updateCount[0] = statement.getUpdateCount();
@@ -522,11 +556,16 @@ public class JdbcPrefetcher implements RawApplier
             {
                 if (data.getErrorCode() == 0)
                 {
-                    SQLException sqlException = new SQLException(
-                            "Statement failed on slave but succeeded on master");
+                    String msg = "Error generated by prefetch query: transform="
+                            + sqlQuery + " original=" + data.toString();
+                    SQLException sqlException = new SQLException(msg);
                     sqlException.initCause(e);
                     throw sqlException;
                 }
+            }
+            finally
+            {
+                statement.clearBatch();
             }
         }
         catch (SQLException e)
@@ -566,12 +605,31 @@ public class JdbcPrefetcher implements RawApplier
      */
     protected void applyUseSchema(String schema) throws SQLException
     {
+        boolean schemaSet = false;
         if (schema != null && schema.length() > 0
                 && !schema.equals(this.currentSchema))
         {
             currentSchema = schema;
             if (conn.supportsUseDefaultSchema())
-                statement.addBatch(conn.getUseSchemaQuery(schema));
+            {
+                String useQuery = conn.getUseSchemaQuery(schema);
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Setting default schema: " + useQuery);
+                }
+                statement.addBatch(useQuery);
+                schemaSet = true;
+            }
+        }
+
+        if (!schemaSet)
+        {
+            // Post debug message if we do not set the schema.
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Schema was not set: schema=" + schema
+                        + " currentSchema=" + currentSchema);
+            }
         }
     }
 
@@ -1132,37 +1190,10 @@ public class JdbcPrefetcher implements RawApplier
 
             // Create the database.
             conn = DatabaseFactory.createDatabase(url, user, password);
-            conn.connect(false);
+            conn.connect(true);
             statement = conn.createStatement();
 
-            // Enable binlogs at session level if this is supported and we are
-            // either a remote service or slave logging is turned on. This
-            // repeats logic in the connect() call but gives a clear log
-            // message, which is important for diagnostic purposes.
-            if (conn.supportsControlSessionLevelLogging())
-            {
-                if (runtime.logReplicatorUpdates() || runtime.isRemoteService())
-                {
-                    if (logger.isDebugEnabled())
-                        logger.debug("Slave updates will be logged");
-                    conn.controlSessionLevelLogging(false);
-                }
-                else
-                {
-                    if (logger.isDebugEnabled())
-                        logger.debug("Slave updates will not be logged");
-                    conn.controlSessionLevelLogging(true);
-                }
-            }
-
-            // Set session variable to show we are a slave.
-            if (conn.supportsSessionVariables())
-            {
-                if (logger.isDebugEnabled())
-                    logger.debug("Setting TREPSLAVE session variable");
-                conn.setSessionVariable("TREPSLAVE", "YES");
-            }
-
+            // Create table metadata cache.
             tableMetadataCache = new TableMetadataCache(5000);
 
             transformed = 0;

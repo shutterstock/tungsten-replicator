@@ -61,7 +61,7 @@ public class PrefetchStore extends InMemoryQueueStore
     private String               slaveCatalogSchema;
 
     private long                 interval         = 1000;
-    private int                  aheadMaxTime     = 3000;
+    private int                  aheadMaxTime     = 60;
     private int                  sleepTime        = 500;
     private int                  warmUpEventCount = 100;
 
@@ -125,10 +125,10 @@ public class PrefetchStore extends InMemoryQueueStore
     }
 
     /**
-     * Sets the aheadMaxTime value. This is the maximum time that event should
-     * be from the last applied event (based on master times
+     * Sets the aheadMaxTime value. This is the maximum number of seconds that
+     * event should be from the last applied event (based on master times).
      * 
-     * @param aheadMaxTime The aheadMaxTime to set.
+     * @param aheadMaxTime Time in seconds
      */
     public void setAheadMaxTime(int aheadMaxTime)
     {
@@ -206,7 +206,7 @@ public class PrefetchStore extends InMemoryQueueStore
         try
         {
             conn = DatabaseFactory.createDatabase(url, user, password);
-            conn.connect();
+            conn.connect(true);
 
             seqnoStatement = conn
                     .prepareStatement("select seqno, fragno, last_Frag, source_id, epoch_number, eventid, applied_latency from "
@@ -321,7 +321,7 @@ public class PrefetchStore extends InMemoryQueueStore
             return null;
         }
         else
-            while (sourceTstamp.getTime() - initTime > aheadMaxTime)
+            while (sourceTstamp.getTime() - initTime > (aheadMaxTime * 1000))
             {
                 if (logger.isDebugEnabled())
                     logger.debug("Event is too far ahead of current slave position... sleeping");
