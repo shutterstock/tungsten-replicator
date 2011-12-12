@@ -65,7 +65,7 @@ sub secondsToTime($) {
 ########################################################
 
 sub usage() {
-  print "Usage: $0 [-h] [-q] [-v]\n";
+  print "Usage: mysqlbinlog binlog_file | $0 [-h] [-q] [-v]\n";
   print "Options:\n";
   print "  -h : Print help\n";
   print "  -q : Suppress excess output\n";
@@ -130,11 +130,15 @@ unless ($QUIET) {
 # SQL statement counts. 
 my %sql_counts;
 $sql_counts{"begin"} = 0;
+$sql_counts{"rollback"} = 0;
 $sql_counts{"insert into"} = 0;
 $sql_counts{"select into"} = 0;
 $sql_counts{"insert"} = 0;
 $sql_counts{"update"} = 0;
 $sql_counts{"delete"} = 0;
+$sql_counts{"alter table"} = 0;
+$sql_counts{"drop table"} = 0;
+$sql_counts{"create table"} = 0;
 $sql_counts{"create temp table"} = 0;
 
 # Statistical counters. 
@@ -287,6 +291,10 @@ while (<>) {
       $sql_counts{'begin'}++;
       $query_state = 'none';
     } 
+    if (/(rollback)/i) {
+      $sql_counts{'rollback'}++;
+      $query_state = 'none';
+    } 
     elsif (/(select\s+into)/i) {
       $sql_counts{'select into'}++;
       $query_state = 'none';
@@ -309,6 +317,18 @@ while (<>) {
     } 
     elsif (/(truncate)/i) {
       $sql_counts{'truncate'}++;
+      $query_state = 'none';
+    } 
+    elsif (/(drop\s+table)/i) {
+      $sql_counts{'drop table'}++;
+      $query_state = 'none';
+    } 
+    elsif (/(alter\s+table)/i) {
+      $sql_counts{'alter table'}++;
+      $query_state = 'none';
+    } 
+    elsif (/(create\s+table)/i) {
+      $sql_counts{'create table'}++;
       $query_state = 'none';
     } 
     elsif (/(create\s+temporary\s+table)/i) {
