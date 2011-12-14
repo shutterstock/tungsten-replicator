@@ -95,6 +95,9 @@ public class ExtractorWrapper implements Extractor
     {
         DBMSEvent dbmsEvent = extractor.extract();
 
+        if (dbmsEvent == null)
+            return null;
+        
         // Generate the event.
         Timestamp extractTimestamp = dbmsEvent.getSourceTstamp();
         ReplDBMSEvent replEvent = new ReplDBMSEvent(seqno, fragno,
