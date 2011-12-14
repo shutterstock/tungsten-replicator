@@ -604,6 +604,7 @@ public class ProtobufSerializer implements Serializer
                 }
                 break;
             case Types.DECIMAL :
+            case Types.NUMERIC :
                 BigDecimal bigDec = (BigDecimal) value;
                 if (logger.isDebugEnabled())
                 {
