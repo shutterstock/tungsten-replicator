@@ -386,6 +386,7 @@ end
 class MySQLPermissionsCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   include MySQLApplierCheck
+  include NotPrefetchCheck
 
   def set_vars
     @title = "Replication user permissions check"
@@ -468,6 +469,7 @@ end
 class MySQLConfigFileCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   include MySQLApplierCheck
+  include NotPrefetchCheck
   
   def set_vars
     @title = "MySQL config file is available"
@@ -493,6 +495,7 @@ end
 class MySQLExtractorServerIDCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   include MySQLExtractorCheck
+  include NotPrefetchCheck
   
   def set_vars
     @title = "MySQL Direct Replication Server ID"
@@ -524,6 +527,7 @@ end
 class MySQLApplierServerIDCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   include MySQLApplierCheck
+  include NotPrefetchCheck
   
   def set_vars
     @title = "MySQL Server ID"
@@ -602,6 +606,7 @@ end
 class MySQLNoMySQLReplicationCheck < ConfigureValidationCheck
   include ReplicationServiceValidationCheck
   include MySQLApplierCheck
+  include NotPrefetchCheck
   
   def set_vars
     @title = "No MySQL replication check"

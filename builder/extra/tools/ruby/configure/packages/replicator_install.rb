@@ -1,6 +1,7 @@
 class ReplicatorInstallPackage < ConfigurePackage
   METHOD_D = "direct"
   METHOD_MS = "master-slave"
+  METHOD_PRE = "prefetch"
   @method = nil
   
   def get_prompts
@@ -33,12 +34,15 @@ class ReplicatorInstallPackage < ConfigurePackage
                                   @display_direct_help = true }
     opts.on("--master-slave")   { @method = METHOD_MS
                                   @display_ms_help = true }
+    opts.on("--prefetch")       { @method = METHOD_PRE
+                                  @display_pre_help = true }
     opts.on("--help-direct")    { @display_direct_help = true
                                   Configurator.instance.display_help?(true) }
     opts.on("--help-master-slave")  { @display_ms_help = true
                                   Configurator.instance.display_help?(true)}
     opts.on("--help-all")       { @display_direct_help = true
                                   @display_ms_help = true
+                                  @display_pre_help = true
                                   Configurator.instance.display_help?(true) }
     
     remainder = Configurator.instance.run_option_parser(opts, arguments)
@@ -52,8 +56,10 @@ class ReplicatorInstallPackage < ConfigurePackage
       parse_direct_arguments(remainder)
     when METHOD_MS
       parse_master_slave_arguments(remainder)
+    when METHOD_PRE
+      parse_prefetch_arguments(remainder)
     else
-      error("You must specify either --direct or --master-slave")
+      error("You must specify either --direct, --master-slave, --prefetch")
     end
     
     if Configurator.instance.display_help?
@@ -338,6 +344,114 @@ class ReplicatorInstallPackage < ConfigurePackage
     end
   end
   
+  def parse_prefetch_arguments(arguments)
+    opts = OptionParser.new
+    
+    host_options = Properties.new()
+    host_options.setProperty(HOST, Configurator.instance.hostname())
+    host_options.setProperty(FIXED_PROPERTY_STRINGS, Configurator.instance.fixed_properties)
+    
+    service_options = Properties.new()
+    service_options.setProperty(DEPLOYMENT_HOST, DIRECT_DEPLOYMENT_HOST_ALIAS)
+    service_options.setProperty(FIXED_PROPERTY_STRINGS, Configurator.instance.fixed_properties)
+    
+    datasource_options = Properties.new()
+    datasource_options.setProperty([DATASOURCES, "ds"], {})
+    
+    cluster_hosts = [Configurator.instance.hostname()]
+    opts.on("--hosts String") {
+      |val|
+      cluster_hosts = val.split(',')
+    }
+    
+    each_host_prompt{
+      |prompt|
+      
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument()}") {
+          host_options.setProperty(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument()} String") {
+          |val|
+          host_options.setProperty(prompt.name, val)
+        }
+      end
+    }
+    
+    each_service_prompt{
+      |prompt|
+      if prompt.is_a?(MySQLServerID)
+        next
+      end
+      
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument()}") {
+          service_options.setProperty(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument()} String") {
+          |val|
+          service_options.setProperty(prompt.name, val)
+        }
+      end
+    }
+
+    each_datasource_prompt{
+      |prompt|
+      if prompt.is_a?(DatasourceDBHost)
+        next
+      end
+      
+      if (av = prompt.get_command_line_argument_value()) != nil
+        opts.on("--#{prompt.get_command_line_argument()}") {
+          datasource_options.setProperty(prompt.name, av)
+        }
+      else
+        opts.on("--#{prompt.get_command_line_argument()} String") {
+          |val|
+          datasource_options.setProperty([DATASOURCES, "ds", prompt.name], val)
+        }
+      end
+    }
+    
+    remainder = Configurator.instance.run_option_parser(opts, arguments, false, "Invalid option for tungsten-installer --prefetch")
+    
+    if service_options.getProperty(DEPLOYMENT_SERVICE) == nil
+      error("You must specify a value for --service-name")
+      if Configurator.instance.display_preview?
+        service_options.setProperty(DEPLOYMENT_SERVICE, 'service-name')
+      end
+    end
+    
+    unless is_valid? || Configurator.instance.display_preview?
+      return false
+    end
+    
+    cluster_hosts.each{
+      |host|
+      host_alias = host.tr('.', '_')
+      @config.setProperty([HOSTS, host_alias], host_options.props.dup)
+      @config.setProperty([HOSTS, host_alias, HOST], host)
+      
+      datasource_alias = host_alias
+      @config.setProperty([DATASOURCES, datasource_alias],
+        datasource_options.getProperty([DATASOURCES, "ds"]).dup)
+      @config.setProperty([DATASOURCES, datasource_alias, REPL_DBHOST], host)
+      
+      service_alias = service_options.getProperty(DEPLOYMENT_SERVICE) + "_" + host_alias
+      @config.setProperty([REPL_SERVICES, service_alias], service_options.props.dup)
+      @config.setProperty([REPL_SERVICES, service_alias, DEPLOYMENT_HOST],
+        host_alias)
+      @config.setProperty([REPL_SERVICES, service_alias, REPL_DATASOURCE],
+        datasource_alias)
+      
+      @config.setProperty([REPL_SERVICES, service_alias, PREFETCH_ENABLED], "true")
+      @config.setProperty([REPL_SERVICES, service_alias, REPL_ROLE], "slave")
+      @config.setProperty([REPL_SERVICES, service_alias, REPL_MASTERHOST], host)
+    }
+  end
+  
   def output_usage()
     ph = ConfigurePromptHandler.new(@config)
     puts "Usage: tungsten-installer [general-options] {--direct|--master-slave} [--help-direct|--help-master-slave|--help-all] [install-options]"
@@ -443,6 +557,53 @@ class ReplicatorInstallPackage < ConfigurePackage
         prompt.output_usage()
       }
     end
+    
+    if @display_pre_help
+      if Configurator.instance.display_preview? && @method == METHOD_PRE
+        host = @config.getProperty(HOSTS).keys.at(0)
+        svc = @config.getProperty(REPL_SERVICES).keys.at(0)
+        applier = @config.getProperty([REPL_SERVICES, svc, REPL_DATASOURCE])
+      end
+      
+      Configurator.instance.write_divider(Logger::ERROR)
+      puts "Install options: --prefetch"
+      output_usage_line("--hosts")
+      
+      each_host_prompt{
+        |prompt|
+        if Configurator.instance.display_preview? && @method == METHOD_PRE
+          prompt.set_member(host)
+        end
+
+        prompt.output_usage()
+      }
+      
+      each_datasource_prompt{
+        |prompt|
+        if prompt.is_a?(DatasourceDBHost)
+          next
+        end
+        
+        if Configurator.instance.display_preview? && @method == METHOD_PRE
+          prompt.set_member(applier)
+        end
+        
+        prompt.output_usage()
+      }
+      
+      each_service_prompt{
+        |prompt|
+        if prompt.is_a?(MySQLServerID)
+          next
+        end
+        
+        if Configurator.instance.display_preview? && @method == METHOD_PRE
+          prompt.set_member(svc)
+        end
+        
+        prompt.output_usage()
+      }
+    end
   end
 end
 
@@ -453,6 +614,12 @@ module NotTungstenInstallerPrompt
     else
       false
     end
+  end
+end
+
+module NotPrefetchCheck
+  def enabled?
+    super() && @config.getProperty(get_member_key(PREFETCH_ENABLED)) != "true"
   end
 end
 
