@@ -124,6 +124,7 @@ replicator.pipelines=slave
 # extract from local THL to queue; apply from queue to DBMS.
 replicator.pipeline.slave=remote-to-thl,thl-to-q,q-to-dbms
 replicator.pipeline.slave.stores=thl,parallel-queue
+replicator.pipeline.slave.services=channel-assignment
 replicator.pipeline.slave.syncTHLWithExtractor=false
 
 replicator.stage.remote-to-thl=com.continuent.tungsten.replicator.pipeline.SingleThreadStageTask
@@ -281,6 +282,18 @@ replicator.applier.parallel-q-applier.storeName=parallel-queue
 ###########
 
 @{REPL_SVC_FILTER_CONFIG}
+
+#####################
+# PIPELINE SERVICES #
+#####################
+
+# Channel service to manage shard-to-channel assignment in parallel
+# replication.  Must be enabled to use round-robin assignment in
+# shard.list.  The number of configured channels must be correctly configured
+# to avoid replication errors. 
+replicator.service.channel-assignment=com.continuent.tungsten.replicator.channel.ChannelAssignmentService
+replicator.service.channel-assignment.url=@{APPLIER.REPL_DBTHLURL}
+replicator.service.channel-assignment.channels=@{REPL_SVC_CHANNELS}
 
 ################################
 # BACKUP/RESTORE CONFIGURATION #

@@ -36,8 +36,7 @@ import com.continuent.tungsten.replicator.conf.ReplicatorConf;
  */
 public class PipelineConfigBuilder
 {
-    private static Logger      logger = Logger
-                                              .getLogger(PipelineConfigBuilder.class);
+    private static Logger      logger = Logger.getLogger(PipelineConfigBuilder.class);
     private TungstenProperties conf   = new TungstenProperties();
 
     public PipelineConfigBuilder()
@@ -49,21 +48,35 @@ public class PipelineConfigBuilder
     {
         conf.setString(ReplicatorConf.ROLE, role);
     }
-    
+
     /** Sets a generic config property. */
     public void setProperty(String name, String value)
     {
         conf.setString(name, value);
     }
 
-    /** Adds a pipeline with one or more stages. */
-    public void addPipeline(String name, String stages, String storeName)
+    /** Adds a pipeline with one or more stages and stores. */
+    public void addPipeline(String name, String stages, String storeNames)
     {
         conf.setString(ReplicatorConf.PIPELINES, name);
         conf.setString(ReplicatorConf.PIPELINE_ROOT + "." + name, stages);
-        if (storeName != null)
+        if (storeNames != null)
             conf.setString(ReplicatorConf.PIPELINE_ROOT + "." + name
-                    + ".stores", storeName);
+                    + ".stores", storeNames);
+    }
+
+    /** Adds a pipeline with one or more stages, stores, and services. */
+    public void addPipeline(String name, String stages, String storeNames,
+            String serviceNames)
+    {
+        conf.setString(ReplicatorConf.PIPELINES, name);
+        conf.setString(ReplicatorConf.PIPELINE_ROOT + "." + name, stages);
+        if (storeNames != null)
+            conf.setString(ReplicatorConf.PIPELINE_ROOT + "." + name
+                    + ".stores", storeNames);
+        if (serviceNames != null)
+            conf.setString(ReplicatorConf.PIPELINE_ROOT + "." + name
+                    + ".services", serviceNames);
     }
 
     /** Adds a stage with one or more filters. */
@@ -108,8 +121,8 @@ public class PipelineConfigBuilder
             Arrays.sort(keyArray);
             for (Object key : keyArray)
             {
-                sb.append("  ").append(key).append("=").append(conf.get((String) key))
-                        .append("\n");
+                sb.append("  ").append(key).append("=")
+                        .append(conf.get((String) key)).append("\n");
             }
             sb.append("}\n");
             logger.info("Properties: " + sb.toString());
@@ -124,7 +137,8 @@ public class PipelineConfigBuilder
                 || ReplicatorConf.EXTRACTOR.equals(type)
                 || ReplicatorConf.FILTER.equals(type)
                 || ReplicatorConf.STORE.equals(type)
-                || ReplicatorConf.STAGE.equals(type))
+                || ReplicatorConf.STAGE.equals(type)
+                || ReplicatorConf.SERVICE.equals(type))
             return;
         else
             throw new Exception("Unrecognized type: " + type);

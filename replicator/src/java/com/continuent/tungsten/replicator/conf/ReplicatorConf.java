@@ -41,7 +41,7 @@ public class ReplicatorConf
     /** Whether we are operating normally or in slave takeover mode. */
     static public final String   NATIVE_SLAVE_TAKEOVER                 = "replicator.nativeSlaveTakeover";
     static public final String   NATIVE_SLAVE_TAKEOVER_DEFAULT         = "false";
-    
+
     /** URI to which we connect. */
     static public final String   MASTER_CONNECT_URI                    = "replicator.master.connect.uri";
 
@@ -146,6 +146,10 @@ public class ReplicatorConf
     static public final String   FILTER                                = "filter";
     static public final String   FILTERS                               = "filters";
     static public final String   FILTER_ROOT                           = "replicator.filter";
+
+    /** Pipeline service parameter names. */
+    static public final String   SERVICE                               = "service";
+    static public final String   SERVICE_ROOT                          = "replicator.service";
 
     /** Store parameter names. */
     static public final String   STORE                                 = "store";

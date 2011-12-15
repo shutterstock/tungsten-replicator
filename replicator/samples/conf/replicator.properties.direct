@@ -132,6 +132,7 @@ replicator.pipelines=direct
 # over the network to the slave.
 replicator.pipeline.direct=d-binlog-to-q,d-q-to-thl,d-thl-to-pq,d-pq-to-dbms
 replicator.pipeline.direct.stores=queue,thl,parallel-queue
+replicator.pipeline.direct.services=channel-assignment
 replicator.pipeline.direct.autoSync=true
 replicator.pipeline.direct.syncTHLWithExtractor=false
 
@@ -301,6 +302,18 @@ replicator.applier.parallel-q-applier.storeName=parallel-queue
 ###########
 
 @{REPL_SVC_FILTER_CONFIG}
+
+#####################
+# PIPELINE SERVICES #
+#####################
+
+# Channel service to manage shard-to-channel assignment in parallel
+# replication.  Must be enabled to use round-robin assignment in
+# shard.list.  The number of configured channels must be correctly configured
+# to avoid replication errors. 
+replicator.service.channel-assignment=com.continuent.tungsten.replicator.channel.ChannelAssignmentService
+replicator.service.channel-assignment.url=@{APPLIER.REPL_DBTHLURL}
+replicator.service.channel-assignment.channels=@{REPL_SVC_CHANNELS}
 
 ################################
 # BACKUP/RESTORE CONFIGURATION #

@@ -46,6 +46,7 @@ import com.continuent.tungsten.replicator.extractor.Extractor;
 import com.continuent.tungsten.replicator.management.events.GoOfflineEvent;
 import com.continuent.tungsten.replicator.plugin.PluginContext;
 import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
+import com.continuent.tungsten.replicator.service.PipelineService;
 import com.continuent.tungsten.replicator.storage.Store;
 
 /**
@@ -62,17 +63,19 @@ import com.continuent.tungsten.replicator.storage.Store;
  */
 public class Pipeline implements ReplicatorPlugin
 {
-    private static Logger              logger               = Logger.getLogger(Pipeline.class);
-    private PluginContext              context;
-    private String                     name;
-    private LinkedList<Stage>          stages               = new LinkedList<Stage>();
-    private HashMap<String, Store>     stores               = new HashMap<String, Store>();
-    private List<String>               storeNames           = new ArrayList<String>();
-    private boolean                    autoSync             = false;
-    private boolean                    syncTHLWithExtractor = true;
-    private ExecutorService            shutdownTaskExec     = Executors
-                                                                    .newCachedThreadPool();
-    private TreeMap<String, Future<?>> offlineRequests      = new TreeMap<String, Future<?>>();
+    private static Logger                    logger               = Logger.getLogger(Pipeline.class);
+    private PluginContext                    context;
+    private String                           name;
+    private LinkedList<Stage>                stages               = new LinkedList<Stage>();
+    private HashMap<String, Store>           stores               = new HashMap<String, Store>();
+    private List<String>                     storeNames           = new ArrayList<String>();
+    private HashMap<String, PipelineService> services             = new HashMap<String, PipelineService>();
+    private List<String>                     serviceNames         = new ArrayList<String>();
+    private boolean                          autoSync             = false;
+    private boolean                          syncTHLWithExtractor = true;
+    private ExecutorService                  shutdownTaskExec     = Executors
+                                                                          .newCachedThreadPool();
+    private TreeMap<String, Future<?>>       offlineRequests      = new TreeMap<String, Future<?>>();
 
     public Pipeline()
     {
@@ -111,6 +114,12 @@ public class Pipeline implements ReplicatorPlugin
     {
         stores.put(name, store);
         storeNames.add(name);
+    }
+
+    public void addService(String name, PipelineService service)
+    {
+        services.put(name, service);
+        serviceNames.add(name);
     }
 
     public Stage getStage(String name)
@@ -163,6 +172,16 @@ public class Pipeline implements ReplicatorPlugin
         return storeNames;
     }
 
+    public PipelineService getService(String name)
+    {
+        return services.get(name);
+    }
+
+    public List<String> getServiceNames()
+    {
+        return serviceNames;
+    }
+
     /**
      * Configures pipeline data structures including stages and stores. All
      * pipeline information is accessible after this call.
@@ -182,6 +201,10 @@ public class Pipeline implements ReplicatorPlugin
         Stage first = stages.getFirst();
         first.setAutoSync(autoSync);
 
+        for (String name : getServiceNames())
+        {
+            ReplicatorRuntime.configurePlugin(services.get(name), context);
+        }
         for (String name : getStoreNames())
         {
             ReplicatorRuntime.configurePlugin(stores.get(name), context);
@@ -201,12 +224,21 @@ public class Pipeline implements ReplicatorPlugin
             InterruptedException
     {
         logger.info("Preparing pipeline: " + name);
+
+        // Services are prepared first.
+        for (String name : getServiceNames())
+        {
+            ReplicatorRuntime.preparePlugin(services.get(name), context);
+        }
+
+        // Next we load stores so that they can call on services.
         for (String name : getStoreNames())
         {
             ReplicatorRuntime.preparePlugin(stores.get(name), context);
         }
-        // Stages must be processed in reverse order so that they can propagate
-        // restart points backwards through the pipeline.
+
+        // Finally stages are processed last and in reverse order so that they
+        // can propagate restart points backwards through the pipeline.
         for (int i = stages.size() - 1; i >= 0; i--)
         {
             Stage stage = stages.get(i);
@@ -240,6 +272,10 @@ public class Pipeline implements ReplicatorPlugin
         for (String name : getStoreNames())
         {
             ReplicatorRuntime.releasePlugin(stores.get(name), context);
+        }
+        for (String name : getServiceNames())
+        {
+            ReplicatorRuntime.releasePlugin(services.get(name), context);
         }
     }
 

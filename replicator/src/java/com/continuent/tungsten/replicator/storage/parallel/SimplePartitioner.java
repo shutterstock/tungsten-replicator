@@ -24,6 +24,7 @@ package com.continuent.tungsten.replicator.storage.parallel;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
+import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
  * Implements the simplest possible partitioner, which just returns the task ID.
@@ -48,10 +49,19 @@ public class SimplePartitioner implements Partitioner
     /**
      * {@inheritDoc}
      * 
+     * @see com.continuent.tungsten.replicator.storage.parallel.Partitioner#setContext(com.continuent.tungsten.replicator.plugin.PluginContext)
+     */
+    public synchronized void setContext(PluginContext context)
+    {
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
      * @see com.continuent.tungsten.replicator.storage.parallel.Partitioner#partition(com.continuent.tungsten.replicator.event.ReplDBMSEvent,
      *      int, int)
      */
-    public PartitionerResponse partition(ReplDBMSHeader event, int taskId)
+    public synchronized PartitionerResponse partition(ReplDBMSHeader event, int taskId)
             throws ReplicatorException
     {
         if (taskId > availablePartitions)

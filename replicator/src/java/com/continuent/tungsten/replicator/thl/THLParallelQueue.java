@@ -512,6 +512,7 @@ public class THLParallelQueue implements ParallelStore
             {
                 partitioner = (Partitioner) Class.forName(partitionerClass)
                         .newInstance();
+                partitioner.setContext(context);
                 partitioner.setPartitions(partitions);
             }
             catch (Exception e)

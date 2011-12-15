@@ -21,3 +21,7 @@
 # A "critical section" means that these events are single-threaded to 
 # ensure that all dependencies are met. 
 #(critical)=common1,common2
+
+# Method for channel hash assignments.  Allowed values are round-robin and 
+# string-hash. 
+(hash-method)=string-hash

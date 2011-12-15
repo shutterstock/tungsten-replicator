@@ -43,6 +43,7 @@ import com.continuent.tungsten.replicator.plugin.PluginException;
 import com.continuent.tungsten.replicator.plugin.PluginLoader;
 import com.continuent.tungsten.replicator.plugin.PluginSpecification;
 import com.continuent.tungsten.replicator.plugin.ReplicatorPlugin;
+import com.continuent.tungsten.replicator.service.PipelineService;
 import com.continuent.tungsten.replicator.storage.Store;
 
 /**
@@ -435,6 +436,19 @@ public class ReplicatorRuntime implements PluginContext
             syncTHLWithExtractor = properties.getBoolean(syncTHLProperty);
 
         newPipeline.setSyncTHLWithExtractor(syncTHLWithExtractor);
+
+        // Add pipeline services, if any.
+        String servicesProperty = ReplicatorConf.PIPELINE_ROOT + "." + name
+                + ".services";
+        List<String> services = properties.getStringList(servicesProperty);
+
+        for (String serviceName : services)
+        {
+            PipelineService service = (PipelineService) loadAndConfigurePlugin(
+                    ReplicatorConf.SERVICE_ROOT, serviceName);
+            service.setName(serviceName);
+            newPipeline.addService(serviceName, service);
+        }
 
         // Add stores, if any.
         String storesProperty = ReplicatorConf.PIPELINE_ROOT + "." + name
@@ -898,6 +912,29 @@ public class ReplicatorRuntime implements PluginContext
         for (String name : pipeline.getStoreNames())
             stores.add(pipeline.getStore(name));
         return stores;
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.plugin.PluginContext#getService(java.lang.String)
+     */
+    public PipelineService getService(String name)
+    {
+        return pipeline.getService(name);
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.plugin.PluginContext#getServices()
+     */
+    public List<PipelineService> getServices()
+    {
+        ArrayList<PipelineService> services = new ArrayList<PipelineService>();
+        for (String name : pipeline.getServiceNames())
+            services.add(pipeline.getService(name));
+        return services;
     }
 
     /**

@@ -129,7 +129,7 @@ public class OpenReplicatorManagerCtrl
         println("  restore [-uri uri] [-limit s]  - Restore database");
         println("  setrole -role role [-uri uri]  - Set replicator role");
         println("  start             - Start start replication service");
-        println("  status [-name {tasks|shards}] - Print replicator status information");
+        println("  status [-name {tasks|shards|stores|channel-assignments}] - Print replicator status information");
         println("  stop [-y]         - Stop replication service");
         println("  wait -state s [-limit s] - Wait up to s seconds for replicator state s");
         println("  wait -applied n [-limit s] - Wait up to s seconds for seqno to be applied");

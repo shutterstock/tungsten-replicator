@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
+import com.continuent.tungsten.replicator.channel.ShardChannelTable;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
 import com.continuent.tungsten.replicator.consistency.ConsistencyTable;
 import com.continuent.tungsten.replicator.database.Database;
@@ -51,6 +52,7 @@ public class CatalogManager
     private String            metadataSchema   = null;
     private Database          conn             = null;
     private CommitSeqnoTable  commitSeqnoTable = null;
+    private ShardChannelTable channelTable     = null;
 
     // Dummy task ID.
     private int               taskId           = 0;
@@ -125,7 +127,7 @@ public class CatalogManager
                 else
                     conn.controlSessionLevelLogging(true);
             }
-            
+
             // Create commit seqno table.
             commitSeqnoTable = new CommitSeqnoTable(conn, metadataSchema,
                     runtime.getTungstenTableType(),
@@ -147,6 +149,9 @@ public class CatalogManager
                     runtime.getTungstenTableType());
             shardTable.initializeShardTable(conn);
 
+            // Create channel table.
+            channelTable = new ShardChannelTable(metadataSchema);
+            channelTable.initializeShardTable(conn);
         }
         catch (SQLException e)
         {
@@ -174,13 +179,18 @@ public class CatalogManager
      */
     public void close()
     {
-        // Reduce tasks in task table if possible.
+        // Reduce tasks in task table if possible. If tasks are reduced,
+        // clear the channel table.
         try
         {
             // Check if table is null (this happens if database is not
             // available)
             if (commitSeqnoTable != null)
-                commitSeqnoTable.reduceTasks();
+            {
+                boolean reduced = commitSeqnoTable.reduceTasks();
+                if (reduced && channelTable != null)
+                    channelTable.deleleAll(conn);
+            }
         }
         catch (SQLException e)
         {
@@ -213,5 +223,4 @@ public class CatalogManager
             throw new THLException(e);
         }
     }
-
 }

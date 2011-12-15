@@ -28,6 +28,7 @@ import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.commons.patterns.event.EventDispatcher;
 import com.continuent.tungsten.replicator.conf.FailurePolicy;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
+import com.continuent.tungsten.replicator.service.PipelineService;
 import com.continuent.tungsten.replicator.storage.Store;
 
 /**
@@ -108,6 +109,12 @@ public interface PluginContext
     /** Returns all stores. */
     public abstract List<Store> getStores();
 
+    /** Returns a named pipeline service component. */
+    public abstract PipelineService getService(String name);
+
+    /** Returns all pipeline service components. */
+    public abstract List<PipelineService> getServices();
+
     /** Returns the monitoring data object. */
     public ReplicatorMonitor getMonitor();
 
@@ -136,7 +143,9 @@ public interface PluginContext
      */
     public boolean logReplicatorUpdates();
 
-    /** Return true if operating in native slave takeover mode. */
+    /**
+     * Return true if operating in native slave takeover mode.
+     */
     public boolean nativeSlaveTakeover();
 
     /**

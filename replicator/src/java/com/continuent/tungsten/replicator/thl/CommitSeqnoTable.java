@@ -250,8 +250,9 @@ public class CommitSeqnoTable
      * operation allows the table to convert to a different number of apply
      * threads.
      */
-    public void reduceTasks() throws SQLException
+    public boolean reduceTasks() throws SQLException
     {
+        boolean reduced = false;
         boolean hasTask0 = false;
         boolean hasCommonSeqno = true;
         long commonSeqno = -1;
@@ -321,6 +322,7 @@ public class CommitSeqnoTable
                         logger.warn("Native slave synchronization required but DBMS implementation does not support it");
                     }
                 }
+                reduced = true;
             }
         }
         finally
@@ -329,6 +331,8 @@ public class CommitSeqnoTable
             close(allSeqnosQuery);
             close(deleteQuery);
         }
+
+        return reduced;
     }
 
     /**

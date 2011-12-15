@@ -57,7 +57,7 @@ public class ConsistencyCheckFilter implements Filter
     // Selects database from consistency update pattern: "WHERE db= 'db1' AND".
     private Pattern statementDbPattern = Pattern
                                                .compile(
-                                                       "WHERE\\s*db\\s*=\\s*\'([a-zA-Z0-9_]+)\'\\s* AND",
+                                                       "WHERE\\s*db\\s*=\\s*(?:\'|\")([a-zA-Z0-9_]+)(?:\'|\")\\s* AND",
                                                        Pattern.CASE_INSENSITIVE);
 
 
@@ -221,6 +221,13 @@ public class ConsistencyCheckFilter implements Filter
             String dbName = m.group(1);
             event.getDBMSEvent().setMetaDataOption(ReplOptionParams.SHARD_ID,
                     dbName);
+        }
+        else
+        {
+            // This is a fall-back if we cannot determine the DBMS. We must
+            // serialize or the consistency check may execute out of sequence.
+            event.getDBMSEvent().setMetaDataOption(ReplOptionParams.SHARD_ID,
+                    ReplOptionParams.SHARD_ID_UNKNOWN);
         }
 
         // Since we don't have real parser, just look for the whole word

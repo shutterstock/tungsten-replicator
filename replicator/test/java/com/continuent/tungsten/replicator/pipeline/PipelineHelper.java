@@ -84,6 +84,30 @@ public class PipelineHelper
     }
 
     /**
+     * Generate a simple runtime configuration with specific services. 
+     * 
+     * @return
+     * @throws Exception
+     */
+    public TungstenProperties createSimpleRuntimeWith2Services()
+            throws Exception
+    {
+        PipelineConfigBuilder builder = new PipelineConfigBuilder();
+        builder.setProperty(ReplicatorConf.SERVICE_NAME, "test");
+        builder.setRole("master");
+        builder.addPipeline("master", "master", null, "svc1,svc2");
+        builder.addStage("master", "dummy", "dummy", null);
+        builder.addComponent("extractor", "dummy", DummyExtractor.class);
+        builder.addComponent("applier", "dummy", DummyApplier.class);
+
+        // Service definitions.
+        builder.addComponent("service", "svc1", SampleService.class);
+        builder.addComponent("service", "svc2", SampleService.class);
+
+        return builder.getConfig();
+    }
+
+    /**
      * Generate a simple runtime with a queue on both ends of a simple task.
      * 
      * @return

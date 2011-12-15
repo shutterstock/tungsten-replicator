@@ -57,19 +57,19 @@ import com.continuent.tungsten.replicator.dbms.OneRowChange;
  */
 public abstract class AbstractDatabase implements Database
 {
-    private static Logger           logger        = Logger.getLogger(AbstractDatabase.class);
+    private static Logger                  logger        = Logger.getLogger(AbstractDatabase.class);
 
-    protected DBMS                  dbms;
-    protected String                dbDriver      = null;
-    protected String                dbUri         = null;
-    protected String                dbUser        = null;
-    protected String                dbPassword    = null;
-    protected Connection            dbConn        = null;
-    protected boolean               autoCommit    = false;
-    protected String                defaultSchema = null;
+    protected DBMS                         dbms;
+    protected String                       dbDriver      = null;
+    protected String                       dbUri         = null;
+    protected String                       dbUser        = null;
+    protected String                       dbPassword    = null;
+    protected Connection                   dbConn        = null;
+    protected boolean                      autoCommit    = false;
+    protected String                       defaultSchema = null;
 
-    protected Map<String, Class<?>> drivers       = new HashMap<String, Class<?>>();
-    protected boolean               connected     = false;
+    protected static Map<String, Class<?>> drivers       = new HashMap<String, Class<?>>();
+    protected boolean                      connected     = false;
 
     /**
      * Create a new database instance. To use the database instance you must at

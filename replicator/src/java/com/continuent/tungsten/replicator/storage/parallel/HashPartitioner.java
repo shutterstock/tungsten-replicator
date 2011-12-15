@@ -25,6 +25,7 @@ package com.continuent.tungsten.replicator.storage.parallel;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.event.ReplDBMSHeader;
 import com.continuent.tungsten.replicator.event.ReplOptionParams;
+import com.continuent.tungsten.replicator.plugin.PluginContext;
 
 /**
  * Implements a simple shard partitioner that hashes on the shard name. #UNKNOWN
@@ -45,6 +46,15 @@ public class HashPartitioner implements Partitioner
     public synchronized void setPartitions(int availablePartitions)
     {
         this.availablePartitions = availablePartitions;
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.storage.parallel.Partitioner#setContext(com.continuent.tungsten.replicator.plugin.PluginContext)
+     */
+    public void setContext(PluginContext context)
+    {
     }
 
     /**

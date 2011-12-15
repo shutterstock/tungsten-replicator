@@ -23,6 +23,7 @@
 package com.continuent.tungsten.replicator.pipeline;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -46,6 +47,7 @@ import com.continuent.tungsten.replicator.extractor.DummyExtractor;
 import com.continuent.tungsten.replicator.extractor.ExtractorWrapper;
 import com.continuent.tungsten.replicator.management.MockEventDispatcher;
 import com.continuent.tungsten.replicator.management.MockOpenReplicatorContext;
+import com.continuent.tungsten.replicator.service.PipelineService;
 import com.continuent.tungsten.replicator.storage.InMemoryQueueStore;
 
 /**
@@ -110,6 +112,51 @@ public class PipelineTest extends TestCase
         pipeline.start(new MockEventDispatcher());
         pipeline.shutdown(false);
         pipeline.release(runtime);
+    }
+
+    /**
+     * Verify that pipelines load and configure declared service classes.
+     */
+    public void testServiceConfiguration() throws Exception
+    {
+        TungstenProperties config = helper.createSimpleRuntimeWith2Services();
+        ReplicatorRuntime runtime = new ReplicatorRuntime(config,
+                new MockOpenReplicatorContext(),
+                ReplicatorMonitor.getInstance());
+        runtime.configure();
+
+        Pipeline pipeline = runtime.getPipeline();
+
+        // Confirm we have two services and that they have been
+        // configured.
+        List<PipelineService> services = runtime.getServices();
+        assertEquals("checking for service number", 2, services.size());
+
+        for (PipelineService service : services)
+        {
+            String name = service.getName();
+            SampleService sSvc = (SampleService) runtime.getService(name);
+            assertEquals("listed vs. look-up", service, sSvc);
+            assertTrue("configured", sSvc.configured);
+            assertFalse("prepared", sSvc.prepared);
+            assertFalse("released", sSvc.released);
+        }
+
+        // Prepare pipeline and ensure services are now prepared.
+        pipeline.prepare(runtime);
+        for (PipelineService service : services)
+        {
+            SampleService sSvc = (SampleService) service;
+            assertTrue("prepared", sSvc.prepared);
+        }
+
+        // Release pipeline and confirm services are released.
+        pipeline.release(runtime);
+        for (PipelineService service : services)
+        {
+            SampleService sSvc = (SampleService) service;
+            assertTrue("released", sSvc.released);
+        }
     }
 
     /**
@@ -475,7 +522,8 @@ public class PipelineTest extends TestCase
                     + " blockSize=" + blockSize);
 
             // Create config with pipeline with input and output queues.
-            TungstenProperties config = helper.createDoubleQueueRuntime(40, blockSize);
+            TungstenProperties config = helper.createDoubleQueueRuntime(40,
+                    blockSize);
             ReplicatorRuntime runtime = new ReplicatorRuntime(config,
                     new MockOpenReplicatorContext(),
                     ReplicatorMonitor.getInstance());
@@ -505,8 +553,10 @@ public class PipelineTest extends TestCase
             Stage stage = pipeline.getStages().get(0);
             TaskProgress progress = stage.getProgressTracker().getTaskProgress(
                     0);
-            assertEquals("Number of block commits", xacts / blockSize, progress.getBlockCount());
-            double blockDifference = Math.abs(progress.getAverageBlockSize() - blockSize);
+            assertEquals("Number of block commits", xacts / blockSize,
+                    progress.getBlockCount());
+            double blockDifference = Math.abs(progress.getAverageBlockSize()
+                    - blockSize);
             assertTrue("Average block size", blockDifference < 0.1);
 
             // Shut it down.
@@ -539,9 +589,9 @@ public class PipelineTest extends TestCase
         DummyApplier da = (DummyApplier) aw.getApplier();
         da.setStoreAppliedEvents(false);
 
-        // Start the pipeline. 
+        // Start the pipeline.
         pipeline.start(new MockEventDispatcher());
-        
+
         // Test for successfully applied and extracted sequence numbers.
         Future<ReplDBMSHeader> future = pipeline
                 .watchForAppliedSequenceNumber(maxEvents - 1);

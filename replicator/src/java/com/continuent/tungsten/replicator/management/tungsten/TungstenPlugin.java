@@ -51,6 +51,7 @@ import com.continuent.tungsten.commons.cluster.resource.physical.ReplicatorCapab
 import com.continuent.tungsten.commons.config.TungstenProperties;
 import com.continuent.tungsten.commons.config.WildcardPattern;
 import com.continuent.tungsten.replicator.ReplicatorException;
+import com.continuent.tungsten.replicator.channel.ChannelAssignmentService;
 import com.continuent.tungsten.replicator.conf.ReplicatorConf;
 import com.continuent.tungsten.replicator.conf.ReplicatorMonitor;
 import com.continuent.tungsten.replicator.conf.ReplicatorRuntime;
@@ -71,6 +72,7 @@ import com.continuent.tungsten.replicator.management.events.OfflineNotification;
 import com.continuent.tungsten.replicator.pipeline.Pipeline;
 import com.continuent.tungsten.replicator.pipeline.ShardProgress;
 import com.continuent.tungsten.replicator.pipeline.TaskProgress;
+import com.continuent.tungsten.replicator.service.PipelineService;
 import com.continuent.tungsten.replicator.shard.ShardManager;
 import com.continuent.tungsten.replicator.storage.Store;
 
@@ -944,6 +946,39 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                     statusList.add(storeProps.hashMap());
                 }
             }
+            else if ("services".equals(name))
+            {
+                for (String serviceName : pipeline.getServiceNames())
+                {
+                    PipelineService service = pipeline.getService(serviceName);
+                    TungstenProperties serviceProps = service.status();
+                    serviceProps.setString("name", serviceName);
+                    serviceProps.setString("storeClass", service.getClass()
+                            .getName());
+                    statusList.add(serviceProps.hashMap());
+                }
+            }
+            else if ("channel-assignments".equals(name))
+            {
+                // For this call we need to look for a service that implements
+                // shard channel assignments. We then list the current
+                // assignments.
+                for (String serviceName : pipeline.getServiceNames())
+                {
+                    PipelineService service = pipeline.getService(serviceName);
+                    if (service instanceof ChannelAssignmentService)
+                    {
+                        ChannelAssignmentService assignmentService = (ChannelAssignmentService) service;
+                        List<Map<String, String>> assignments = assignmentService
+                                .listChannelAssignments();
+                        for (Map<String, String> assignment : assignments)
+                        {
+                            statusList.add(assignment);
+                        }
+                    }
+                }
+            }
+
             else
                 throw new ReplicatorException("Unrecognized status list type: "
                         + name);
