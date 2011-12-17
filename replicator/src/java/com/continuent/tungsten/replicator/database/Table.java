@@ -22,9 +22,10 @@
 
 package com.continuent.tungsten.replicator.database;
 
+import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.sql.PreparedStatement;
+import java.util.List;
 
 /**
  * This class defines a table
@@ -267,6 +268,44 @@ public class Table
     public String toString()
     {
         return this.schema + "." + this.name;
+    }
+
+    /**
+     * Provide a more detailed table definition showing columns as well as keys
+     * than is provided by toString();
+     */
+    public String toExtendedString()
+    {
+        StringBuffer buf = new StringBuffer();
+        buf.append(this.toString());
+        buf.append(" columns=");
+        buf.append(listColumns(allColumns));
+        buf.append(" keys=(");
+        for (int i = 0; i < this.keys.size(); i++)
+        {
+            if (i > 0)
+                buf.append(",");
+            buf.append(listColumns(keys.get(i).getColumns()));
+        }
+        buf.append(")");
+
+        return buf.toString();
+    }
+
+    // Print a list of column names.
+    private String listColumns(List<Column> cols)
+    {
+        StringBuffer colNames = new StringBuffer();
+        colNames.append("(");
+        for (int i = 0; i < cols.size(); i++)
+        {
+            if (i > 0)
+                colNames.append(",");
+            colNames.append(cols.get(i).getName());
+        }
+        colNames.append(")");
+
+        return colNames.toString();
     }
 
     /**

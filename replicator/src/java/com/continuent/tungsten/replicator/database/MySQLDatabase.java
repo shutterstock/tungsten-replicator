@@ -533,6 +533,8 @@ public class MySQLDatabase extends AbstractDatabase
         CsvWriter csv = new CsvWriter(writer);
         csv.setQuoteChar('"');
         csv.setQuoted(true);
+        csv.setEscapeChar('\\');
+        csv.setEscapedChars("\\");
         csv.setNullPolicy(NullPolicy.nullValue);
         csv.setNullValue("\\N");
         csv.setWriteHeaders(false);

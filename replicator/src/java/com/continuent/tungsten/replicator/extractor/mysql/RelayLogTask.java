@@ -24,6 +24,8 @@ package com.continuent.tungsten.replicator.extractor.mysql;
 
 import org.apache.log4j.Logger;
 
+import com.continuent.tungsten.replicator.extractor.ExtractorException;
+
 /**
  * Implements a task that runs in a separate thread to manage relay logs.
  * 
@@ -31,11 +33,10 @@ import org.apache.log4j.Logger;
  */
 public class RelayLogTask implements Runnable
 {
-    private static Logger    logger         = Logger
-                                                    .getLogger(RelayLogTask.class);
+    private static Logger    logger    = Logger.getLogger(RelayLogTask.class);
     private RelayLogClient   relayClient;
-    private volatile boolean cancelled      = false;
-    private volatile boolean finished       = false;
+    private volatile boolean cancelled = false;
+    private volatile boolean finished  = false;
 
     /**
      * Creates a new relay log task.
@@ -56,7 +57,20 @@ public class RelayLogTask implements Runnable
         {
             while (!cancelled && !Thread.currentThread().isInterrupted())
             {
-                relayClient.processEvent();
+                if (!relayClient.processEvent())
+                {
+                    if (cancelled)
+                    {
+                        logger.info("Event processing was cancelled. Returning without processing event.");
+                        return;
+                    }
+                    else
+                    {
+                        throw new ExtractorException(
+                                "Network download of binlog failed; may indicated that MySQL terminated the connection.  Check your serverID setting!");
+                    }
+
+                }
             }
         }
         catch (InterruptedException e)
@@ -65,8 +79,9 @@ public class RelayLogTask implements Runnable
         }
         catch (Throwable t)
         {
-            logger.error("Relay log task failed due to exception: "
-                    + t.getMessage(), t);
+            logger.error(
+                    "Relay log task failed due to exception: " + t.getMessage(),
+                    t);
         }
         finally
         {
@@ -93,9 +108,9 @@ public class RelayLogTask implements Runnable
     {
         return finished;
     }
-    
+
     /**
-     * Returns the current relay log position.  
+     * Returns the current relay log position.
      */
     public RelayLogPosition getPosition()
     {

@@ -116,6 +116,7 @@ public class BatchApplier implements RawApplier
     protected String       charset;
     protected String       timezone        = "GMT-0:00";
     protected LoadMismatch onLoadMismatch  = LoadMismatch.fail;
+    protected LoadMismatch onDeleteMismatch = LoadMismatch.fail;
 
     // Load file directory for this task.
     private File           stageDir;
@@ -165,8 +166,11 @@ public class BatchApplier implements RawApplier
     // Latest event.
     private ReplDBMSHeader       latestHeader;
 
-    // Table metadata for base tables.
-    private TableMetadataCache   tableMetadataCache;
+    // Table metadata for base tables. We have to separate delete metadata from
+    // normal metadata, as delete metadata is generated differently using only
+    // keys supplied in a row delete operation.
+    private TableMetadataCache   fullMetadataCache;
+    private TableMetadataCache   deleteMetadataCache;
 
     // DBMS connection information.
     protected String             metadataSchema       = null;
@@ -332,7 +336,7 @@ public class BatchApplier implements RawApplier
                         List<ColumnSpec> keySpecs = orc.getKeySpec();
 
                         // Get information the table definition.
-                        Table tableMetadata = this.getTableMetadata(schema,
+                        Table tableMetadata = this.getFullTableMetadata(schema,
                                 table, colSpecs, keySpecs);
 
                         // Insert each column into the CSV file.
@@ -350,7 +354,7 @@ public class BatchApplier implements RawApplier
                                 .getColumnValues();
 
                         // Get information the table definition.
-                        Table tableMetadata = this.getTableMetadata(schema,
+                        Table tableMetadata = this.getFullTableMetadata(schema,
                                 table, colSpecs, keySpecs);
 
                         // Write keys for deletion and columns for insert.
@@ -372,8 +376,8 @@ public class BatchApplier implements RawApplier
                                 .getKeyValues();
 
                         // Get information about the table definition.
-                        Table tableMetadata = this.getTableMetadata(schema,
-                                table, keySpecs, keySpecs);
+                        Table tableMetadata = this.getDeleteTableMetadata(
+                                schema, table, keySpecs, keySpecs);
 
                         // Insert each column into the CSV file.
                         this.writeDeleteValues(tableMetadata, keySpecs,
@@ -425,6 +429,13 @@ public class BatchApplier implements RawApplier
             return;
         }
 
+        // Flush all open CSV files so that data become visible in case we 
+        // abort. 
+        for (CsvInfo info : openCsvFiles.values())
+        {
+            flush(info);
+        }
+        
         // Load and merge each open delete CSV file.
         int loadCount = 0;
         for (CsvInfo info : openCsvFiles.values())
@@ -663,8 +674,9 @@ public class BatchApplier implements RawApplier
         purgeDirIfExists(stageDir, true);
         createDirIfNotExist(stageDir);
 
-        // Initialize table metadata cache.
-        tableMetadataCache = new TableMetadataCache(5000);
+        // Initialize table metadata caches.
+        fullMetadataCache = new TableMetadataCache(5000);
+        deleteMetadataCache = new TableMetadataCache(5000);
 
         // Load JDBC driver and connect.
         try
@@ -745,11 +757,16 @@ public class BatchApplier implements RawApplier
             stageDir = null;
         }
 
-        // Release table cache.
-        if (tableMetadataCache != null)
+        // Release table caches.
+        if (fullMetadataCache != null)
         {
-            tableMetadataCache.invalidateAll();
-            tableMetadataCache = null;
+            fullMetadataCache.invalidateAll();
+            fullMetadataCache = null;
+        }
+        if (deleteMetadataCache != null)
+        {
+            deleteMetadataCache.invalidateAll();
+            deleteMetadataCache = null;
         }
 
         // Release our connection. This prevents all manner of trouble.
@@ -1026,8 +1043,30 @@ public class BatchApplier implements RawApplier
             }
             catch (CsvException e)
             {
-                throw new ReplicatorException("Invalid write to CSV file: "
-                        + info.file.getAbsolutePath(), e);
+                // Enumerate table columns.
+                StringBuffer colBuffer = new StringBuffer();
+                for (Column col : info.baseTableMetadata.getAllColumns())
+                {
+                    if (colBuffer.length() > 0)
+                        colBuffer.append(",");
+                    colBuffer.append(col.getName());
+                }
+
+                // Enumerate CSV columns.
+                StringBuffer csvBuffer = new StringBuffer();
+                for (String name : csv.getNames())
+                {
+                    if (csvBuffer.length() > 0)
+                        csvBuffer.append(",");
+                    csvBuffer.append(name);
+                }
+
+                throw new ReplicatorException(
+                        "Invalid write to CSV file: name="
+                                + info.file.getAbsolutePath() + " table="
+                                + info.baseTableMetadata + " table_columns="
+                                + colBuffer.toString() + " csv_columns="
+                                + csvBuffer.toString(), e);
             }
             catch (IOException e)
             {
@@ -1038,21 +1077,14 @@ public class BatchApplier implements RawApplier
         }
     }
 
-    // Load an open CSV file.
-    private void load(CsvInfo info) throws ReplicatorException
+    // Flush an open CSV file.
+    private void flush(CsvInfo info) throws ReplicatorException
     {
-        if (logger.isDebugEnabled())
-        {
-            logger.debug("Loading CSV file: " + info.file.getAbsolutePath());
-        }
-
         // Flush and close the file.
-        int rowsToLoad = -1;
         try
         {
             info.writer.flush();
             info.writer.getWriter().close();
-            rowsToLoad = info.writer.getRowCount();
         }
         catch (CsvException e)
         {
@@ -1064,6 +1096,16 @@ public class BatchApplier implements RawApplier
             throw new ReplicatorException("Unable to close CSV file: "
                     + info.file.getAbsolutePath());
         }
+    }
+
+    // Load an open CSV file.
+    private void load(CsvInfo info) throws ReplicatorException
+    {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Loading CSV file: " + info.file.getAbsolutePath());
+        }
+        int rowsToLoad = info.writer.getRowCount();
 
         // Decide whether to use the base table or a staging table.
         String schema;
@@ -1183,7 +1225,7 @@ public class BatchApplier implements RawApplier
     private String getPKColumn(CsvInfo info)
     {
         String pkey = stagePkeyColumn;
-        
+
         // If THL event contains PK, use it.
         if (info.baseTableMetadata.getPrimaryKey() != null
                 && info.baseTableMetadata.getPrimaryKey().getColumns() != null
@@ -1196,7 +1238,7 @@ public class BatchApplier implements RawApplier
             pkey = info.baseTableMetadata.getPrimaryKey().getColumns().get(0)
                     .getName();
         }
-        
+
         return pkey;
     }
 
@@ -1325,26 +1367,26 @@ public class BatchApplier implements RawApplier
             colNames.append(col.getName());
         }
 
-        // Insert values into SQL template.
-        String insert = stageDeleteFromTemplate;
-        insert = insert.replace("%%BASE_TABLE%%", base.fullyQualifiedName());
-        insert = insert.replace("%%BASE_COLUMNS%%", colNames.toString());
-        insert = insert.replace("%%STAGE_TABLE%%", stage.fullyQualifiedName());
-        insert = insert.replace("%%PKEY%%", pkey);
-        insert = insert.replace("%%BASE_PKEY%%", basePkey);
-        insert = insert.replace("%%STAGE_PKEY%%", stagePkey);
+        // Interpolate values into SQL template.
+        String delete = stageDeleteFromTemplate;
+        delete = delete.replace("%%BASE_TABLE%%", base.fullyQualifiedName());
+        delete = delete.replace("%%BASE_COLUMNS%%", colNames.toString());
+        delete = delete.replace("%%STAGE_TABLE%%", stage.fullyQualifiedName());
+        delete = delete.replace("%%PKEY%%", pkey);
+        delete = delete.replace("%%BASE_PKEY%%", basePkey);
+        delete = delete.replace("%%STAGE_PKEY%%", stagePkey);
 
         // Execute the merge command.
         if (logger.isDebugEnabled())
         {
-            logger.debug("Executing insert merge command: " + insert);
+            logger.debug("Executing delete merge command: " + delete);
         }
         try
         {
-            int rows = statement.executeUpdate(insert);
+            int rows = statement.executeUpdate(delete);
             if (logger.isDebugEnabled())
             {
-                logger.debug("Rows inserted: " + rows);
+                logger.debug("Rows deleted: " + rows);
             }
         }
         catch (SQLException e)
@@ -1352,7 +1394,7 @@ public class BatchApplier implements RawApplier
             ReplicatorException re = new ReplicatorException(
                     "Unable to merge data from stage table: "
                             + stage.fullyQualifiedName(), e);
-            re.setExtraData(insert);
+            re.setExtraData(delete);
             throw re;
         }
     }
@@ -1389,22 +1431,18 @@ public class BatchApplier implements RawApplier
         return loadCommand;
     }
 
-    // Get table metadata. Cache for table metadata is populated automatically.
-    private Table getTableMetadata(String schema, String name,
+    // Get full table metadata. Cache for table metadata is populated
+    // automatically.
+    private Table getFullTableMetadata(String schema, String name,
             List<ColumnSpec> colSpecs, List<ColumnSpec> keySpecs)
     {
         // In the cache first.
-        Table t = tableMetadataCache.retrieve(schema, name);
+        Table t = fullMetadataCache.retrieve(schema, name);
 
         // Create if missing and add to cache.
         if (t == null)
         {
             // Create table definition.
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Adding metadata for table: schema=" + schema
-                        + " table=" + name);
-            }
             t = new Table(schema, name);
 
             // Add column definitions.
@@ -1415,7 +1453,13 @@ public class BatchApplier implements RawApplier
             }
 
             // Store the new definition.
-            tableMetadataCache.store(t);
+            fullMetadataCache.store(t);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Added metadata for table: schema=" + schema
+                        + " table=" + name + " metadata="
+                        + t.toExtendedString());
+            }
         }
 
         // If keys are missing and we have them, add them now. This extra
@@ -1424,12 +1468,6 @@ public class BatchApplier implements RawApplier
         // we will need it now.
         if (t.getKeys().size() == 0 && keySpecs != null && keySpecs.size() > 0)
         {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Adding metadata for table: schema=" + schema
-                        + " table=" + name);
-            }
-
             // Fetch the column definition matching each element of the key
             // we receive from replication and construct a key definition.
             Key key = new Key(Key.Primary);
@@ -1448,6 +1486,65 @@ public class BatchApplier implements RawApplier
 
             // Add the key.
             t.AddKey(key);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Added keys for table: schema=" + schema
+                        + " table=" + name + " metadata="
+                        + t.toExtendedString());
+            }
+        }
+
+        // Return the table.
+        return t;
+    }
+
+    // Get delete table metadata. This assumes that we have only keys listed in
+    // the
+    // column specification.
+    private Table getDeleteTableMetadata(String schema, String name,
+            List<ColumnSpec> colSpecs, List<ColumnSpec> keySpecs)
+    {
+        // In the cache first.
+        Table t = deleteMetadataCache.retrieve(schema, name);
+
+        // Create if missing and add to cache.
+        if (t == null)
+        {
+            // Create table definition.
+            t = new Table(schema, name);
+
+            // Add column definitions.
+            for (ColumnSpec colSpec : colSpecs)
+            {
+                Column col = new Column(colSpec.getName(), colSpec.getType());
+                t.AddColumn(col);
+            }
+
+            // Find and add the primary key. This must always be present on
+            // a delete.
+            Key key = new Key(Key.Primary);
+            for (ColumnSpec keySpec : keySpecs)
+            {
+                for (Column col : t.getAllColumns())
+                {
+                    String colName = col.getName();
+                    if (colName != null && colName.equals(keySpec.getName()))
+                    {
+                        key.AddColumn(col);
+                        break;
+                    }
+                }
+            }
+            t.AddKey(key);
+
+            // Store the new definition.
+            deleteMetadataCache.store(t);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Added delete metadata for table: schema="
+                        + schema + " table=" + name + " metadata="
+                        + t.toExtendedString());
+            }
         }
 
         // Return the table.
@@ -1460,7 +1557,7 @@ public class BatchApplier implements RawApplier
             throws ReplicatorException
     {
         // Find the base table. This must exist already or something is wrong.
-        Table t = tableMetadataCache.retrieve(schema, name);
+        Table t = deleteMetadataCache.retrieve(schema, name);
         if (t == null)
         {
             throw new ReplicatorException(

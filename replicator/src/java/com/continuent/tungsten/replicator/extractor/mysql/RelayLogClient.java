@@ -365,10 +365,22 @@ public class RelayLogClient
 
     /**
      * Process next event packet from MySQL.
+     * 
+     * @return True if a packet was processed, otherwise false. Latter case may
+     *         indicate that the connection has been terminated.
      */
-    public void processEvent() throws ReplicatorException, InterruptedException
+    public boolean processEvent() throws ReplicatorException,
+            InterruptedException
     {
         MySQLPacket packet = MySQLPacket.readPacket(input);
+        if (packet == null)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("No packet returned from network");
+            }
+            return false;
+        }
         int length = packet.getDataLength();
         int number = packet.getPacketNumber();
         short type = packet.getUnsignedByte();
@@ -416,6 +428,7 @@ public class RelayLogClient
                         "Unexpected response while fetching binlog data: packet="
                                 + packet.toString());
         }
+        return true;
     }
 
     /**
