@@ -68,8 +68,7 @@ public class OracleDatabase extends AbstractDatabase
     public SqlOperationMatcher getSqlNameMatcher() throws ReplicatorException
     {
         // TODO: Develop matcher for Oracle dialect.
-        throw new DatabaseException(
-                "SQL name matching not implemented for this database type");
+        return new MySQLOperationMatcher();
     }
 
     /**
