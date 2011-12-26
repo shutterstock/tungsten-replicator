@@ -182,6 +182,7 @@ public class SingleThreadStageTask implements Runnable
      */
     public void runTask()
     {
+        ReplDBMSEvent currentEvent = null;
         ReplDBMSEvent firstFilteredEvent = null;
         ReplDBMSEvent lastFilteredEvent = null;
 
@@ -327,6 +328,7 @@ public class SingleThreadStageTask implements Runnable
                     logger.debug("Extracted event: seqno=" + event.getSeqno()
                             + " fragno=" + event.getFragno());
                 }
+                currentEvent = event;
 
                 // Run filters.
                 taskProgress.beginFilterInterval();
@@ -356,11 +358,11 @@ public class SingleThreadStageTask implements Runnable
                 {
                     if (firstFilteredEvent == null)
                     {
-                        firstFilteredEvent = event;
-                        lastFilteredEvent = event;
+                        firstFilteredEvent = currentEvent;
+                        lastFilteredEvent = currentEvent;
                     }
                     else
-                        lastFilteredEvent = event;
+                        lastFilteredEvent = currentEvent;
                     continue;
                 }
                 else

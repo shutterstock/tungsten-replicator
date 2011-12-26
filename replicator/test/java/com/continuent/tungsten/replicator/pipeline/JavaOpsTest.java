@@ -29,7 +29,9 @@ import org.junit.After;
 import org.junit.Before;
 
 /**
- * This class implements simple performance tests of Java operations.
+ * This class implements simple performance tests of Java operations.  We
+ * use the results to benchmark operations like fetching the current time
+ * from the VM. 
  * 
  * @author <a href="mailto:robert.hodges@continuent.com">Robert Hodges</a>
  */

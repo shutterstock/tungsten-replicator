@@ -84,7 +84,7 @@ public class PipelineHelper
     }
 
     /**
-     * Generate a simple runtime configuration with specific services. 
+     * Generate a simple runtime configuration with specific services.
      * 
      * @return
      * @throws Exception
@@ -113,17 +113,17 @@ public class PipelineHelper
      * @return
      * @throws Exception
      */
-    public TungstenProperties createDoubleQueueRuntime(int queueSize, int blockSize)
-            throws Exception
+    public TungstenProperties createDoubleQueueRuntime(int queueSize,
+            int blockSize) throws Exception
     {
-        // Overall pipeline including one stage with block size. 
+        // Overall pipeline including one stage with block size.
         PipelineConfigBuilder builder = new PipelineConfigBuilder();
         builder.setProperty(ReplicatorConf.SERVICE_NAME, "test");
         builder.setRole("master");
         builder.addPipeline("master", "stage", "q1,q2");
         builder.addStage("stage", "q-extract", "q-apply", null);
-        builder.addProperty("stage", "stage", "blockCommitRowCount", new Integer(
-                blockSize).toString());
+        builder.addProperty("stage", "stage", "blockCommitRowCount",
+                new Integer(blockSize).toString());
 
         // Stage components.
         builder.addComponent("extractor", "q-extract",
@@ -139,6 +139,53 @@ public class PipelineHelper
         builder.addComponent("store", "q2", InMemoryQueueStore.class);
         builder.addProperty("store", "q2", "maxSize",
                 new Integer(queueSize).toString());
+
+        return builder.getConfig();
+    }
+
+    /**
+     * Generate a simple runtime with a queue on both ends of a simple task that
+     * has a sample filter.
+     * 
+     * @return
+     * @throws Exception
+     */
+    public TungstenProperties createDoubleQueueWithFilter(int queueSize,
+            int blockSize, long skipSeqnoStart, long skipSeqnoRange,
+            boolean skipSeqnoMultiple) throws Exception
+    {
+        // Overall pipeline including one stage with block size.
+        PipelineConfigBuilder builder = new PipelineConfigBuilder();
+        builder.setProperty(ReplicatorConf.SERVICE_NAME, "test");
+        builder.setRole("master");
+        builder.addPipeline("master", "stage", "q1,q2");
+        builder.addStage("stage", "q-extract", "q-apply", "sample-filter");
+        builder.addProperty("stage", "stage", "blockCommitRowCount",
+                new Integer(blockSize).toString());
+
+        // Stage components.
+        builder.addComponent("extractor", "q-extract",
+                InMemoryQueueAdapter.class);
+        builder.addProperty("extractor", "q-extract", "storeName", "q1");
+        builder.addComponent("applier", "q-apply", InMemoryQueueAdapter.class);
+        builder.addProperty("applier", "q-apply", "storeName", "q2");
+
+        // Storage definition.
+        builder.addComponent("store", "q1", InMemoryQueueStore.class);
+        builder.addProperty("store", "q1", "maxSize",
+                new Integer(queueSize).toString());
+        builder.addComponent("store", "q2", InMemoryQueueStore.class);
+        builder.addProperty("store", "q2", "maxSize",
+                new Integer(queueSize).toString());
+
+        // Filter definition.
+        builder.addComponent("filter", "sample-filter", SampleFilter.class);
+        builder.addProperty("filter", "sample-filter", "skipSeqnoStart",
+                new Long(skipSeqnoStart).toString());
+        builder.addProperty("filter", "sample-filter", "skipSeqnoRange",
+                new Long(skipSeqnoRange).toString());
+        builder.addProperty("filter", "sample-filter", "skipSeqnoMultiple",
+                new Boolean(skipSeqnoMultiple).toString());
 
         return builder.getConfig();
     }
@@ -195,4 +242,26 @@ public class PipelineHelper
         return replDbmsEvent;
     }
 
+    /**
+     * Returns a well-formed ReplDBMSEvent fragment with a specified shard ID.
+     * 
+     * @param seqno Sequence number to use
+     * @param shardId Shard ID to use
+     * @param fragNo Fragment number
+     * @param lastFrag If true, this is the last fragment.
+     */
+    public ReplDBMSEvent createEvent(long seqno, String shardId, short fragNo,
+            boolean lastFrag)
+    {
+        ArrayList<DBMSData> t = new ArrayList<DBMSData>();
+        t.add(new StatementData("SELECT 1"));
+        DBMSEvent dbmsEvent = new DBMSEvent(new Long(seqno).toString(), null,
+                t, lastFrag, new Timestamp(System.currentTimeMillis()));
+        ReplDBMSEvent replDbmsEvent = new ReplDBMSEvent(seqno, fragNo,
+                lastFrag, "NONE", 0, new Timestamp(System.currentTimeMillis()),
+                dbmsEvent);
+        replDbmsEvent.getDBMSEvent().addMetadataOption(
+                ReplOptionParams.SHARD_ID, shardId);
+        return replDbmsEvent;
+    }
 }

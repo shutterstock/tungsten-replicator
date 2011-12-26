@@ -140,6 +140,16 @@ public class InMemoryQueueStore implements Store
     }
 
     /**
+     * Removes and returns next event from the queue, returning null if empty.
+     * This method is used for unit testing, where it prevents cases from
+     * hanging if a queue is unexpectedly empty.
+     */
+    public ReplDBMSEvent poll() throws InterruptedException
+    {
+        return queue.poll();
+    }
+
+    /**
      * Returns but does not remove next event from the queue if it exists or
      * returns null if queue is empty.
      */

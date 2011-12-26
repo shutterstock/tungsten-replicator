@@ -295,10 +295,13 @@ public class StageProgressTracker
         shardProgress.setApplyLatencyMillis(applyLatencyMillis);
         shardProgress.incrementEventCount();
 
-        // Log last processed event if greater than stored sequence number.
-        if (taskInfo[taskId].getLastProcessedEvent() == null
-                || taskInfo[taskId].getLastProcessedEvent().getSeqno() < replEvent
-                        .getSeqno())
+        // Log last processed event if greater than stored sequence number or if
+        // the seqno is the same but the fragment number is different.
+        ReplDBMSHeader storedEvent = taskInfo[taskId].getLastProcessedEvent();
+        if (storedEvent == null
+                || storedEvent.getSeqno() < replEvent.getSeqno()
+                || (storedEvent.getSeqno() == replEvent.getSeqno() && storedEvent
+                        .getFragno() < replEvent.getFragno()))
         {
             taskInfo[taskId].setLastProcessedEvent(replEvent);
         }
