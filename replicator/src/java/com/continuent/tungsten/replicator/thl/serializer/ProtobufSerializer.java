@@ -717,6 +717,7 @@ public class ProtobufSerializer implements Serializer
                 }
                 valueBuilder.setType(Type.BLOB);
                 break;
+            case Types.CHAR :
             case Types.VARCHAR :
                 if (value instanceof String)
                 {
@@ -742,7 +743,7 @@ public class ProtobufSerializer implements Serializer
                 }
                 break;
             default :
-                logger.warn("Unimplemented type");
+                logger.warn("Unimplemented type " + colSpec.getType());
                 break;
         }
     }
