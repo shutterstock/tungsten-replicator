@@ -310,6 +310,7 @@ public class ReplicateFilter implements Filter
     public void release(PluginContext context) throws ReplicatorException,
             InterruptedException
     {
-        this.filterCache.invalidateAll();
+        if (filterCache != null)
+            this.filterCache.invalidateAll();
     }
 }
