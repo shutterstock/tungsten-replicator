@@ -77,6 +77,7 @@ public class PrimaryKeyFilter implements Filter
     private List<String>                                schemas              = null;
     private String                                      processTablesSchemas = null;
     private boolean                                     addPkeyToInserts     = false;
+    private boolean                                     addColumnsToDeletes  = false;
 
     // SQL parser.
     SqlOperationMatcher                                 sqlMatcher           = new MySQLOperationMatcher();
@@ -117,15 +118,15 @@ public class PrimaryKeyFilter implements Filter
     {
         metadataCache = new Hashtable<String, Hashtable<String, Table>>();
 
-        // Load defaults for connection 
+        // Load defaults for connection
         if (url == null)
             url = context.getJdbcUrl("tungsten_" + context.getServiceName());
         if (user == null)
             user = context.getJdbcUser();
         if (password == null)
             password = context.getJdbcPassword();
-        
-        // Connect. 
+
+        // Connect.
         try
         {
             conn = DatabaseFactory.createDatabase(url, user, password);
@@ -175,6 +176,8 @@ public class PrimaryKeyFilter implements Filter
                 for (OneRowChange orc : rdata.getRowChanges())
                     try
                     {
+                        // Check for and add primary key information. This
+                        // also adds delete column information if desired.
                         checkForPK(orc);
                     }
                     catch (SQLException e)
@@ -219,7 +222,8 @@ public class PrimaryKeyFilter implements Filter
                     // metadata for the concerned table
                     String name = sqlOperation.getName();
                     String defaultDB = sdata.getDefaultSchema();
-                    removeTableMetadata(name, sqlOperation.getSchema(), defaultDB);
+                    removeTableMetadata(name, sqlOperation.getSchema(),
+                            defaultDB);
                     continue;
                 }
 
@@ -256,6 +260,7 @@ public class PrimaryKeyFilter implements Filter
         }
     }
 
+    // Add primary keys to row change data.
     private void checkForPK(OneRowChange orc) throws SQLException
     {
         if (orc.getAction() == ActionType.INSERT && !addPkeyToInserts)
@@ -404,6 +409,27 @@ public class PrimaryKeyFilter implements Filter
                 logger.debug("INSERT already contain keys: " + keySpecs.size());
             }
         }
+        else if (orc.getAction() == ActionType.DELETE
+                && this.addColumnsToDeletes)
+        {
+            // Optionally get table columns and add them to metadata for the
+            // DELETE.
+            List<ColumnSpec> colSpecs = orc.getColumnSpec();
+            if (colSpecs.size() == 0)
+            {
+                List<Column> cols = table.getAllColumns();
+                for (int i = 0; i < cols.size(); i++)
+                {
+                    Column column = cols.get(i);
+                    OneRowChange.ColumnSpec colSpec = orc.new ColumnSpec();
+                    colSpec.setIndex(column.getPosition());
+                    colSpec.setName(column.getName());
+                    colSpec.setType(column.getType());
+                    colSpec.setTypeDescription(column.getTypeDescription());
+                    colSpecs.add(colSpec);
+                }
+            }
+        }
     }
 
     public void setUser(String user)
@@ -433,5 +459,14 @@ public class PrimaryKeyFilter implements Filter
     public void setAddPkeyToInserts(boolean addPkeyToInserts)
     {
         this.addPkeyToInserts = addPkeyToInserts;
+    }
+
+    /**
+     * If set, ColumnSpec objects will be added to deletes so that downstream
+     * stages have full column information on the deleted table.
+     */
+    public synchronized void setAddColumnsToDeletes(boolean addColumnsToDeletes)
+    {
+        this.addColumnsToDeletes = addColumnsToDeletes;
     }
 }
