@@ -46,6 +46,7 @@ public class CsvWriter
     private boolean              quoted          = false;
     private NullPolicy           nullPolicy      = NullPolicy.skip;
     private String               nullValue       = null;
+    private boolean              nullAutofill    = false;
     private char                 quoteChar       = '"';
     private char                 escapeChar      = '\\';
     private String               escapedChars    = "";
@@ -137,6 +138,22 @@ public class CsvWriter
     public synchronized void setNullValue(String nullValue)
     {
         this.nullValue = nullValue;
+    }
+
+    /** Returns true to fill nulls automatically. */
+    public synchronized boolean isNullAutofill()
+    {
+        return nullAutofill;
+    }
+
+    /**
+     * Sets the null autofill policy for columns that have no value (partial
+     * rows). If true, unwritten columns are filled with the prevailing null
+     * value. If false, partial rows prompt an exception.
+     */
+    public synchronized void setNullAutofill(boolean nullAutofill)
+    {
+        this.nullAutofill = nullAutofill;
     }
 
     /** Returns the quote character. */
@@ -342,7 +359,7 @@ public class CsvWriter
             }
 
             // Check for writing too few columns.
-            if (colCount < names.size())
+            if (!nullAutofill && colCount < names.size())
             {
                 throw new CsvException("Attempt to write partial row: row="
                         + (rowCount + 1) + " columns required=" + names.size()
@@ -509,7 +526,17 @@ public class CsvWriter
             if (i > 0)
                 writer.append(separator);
             String value = row.get(i);
-            if (value != null)
+            if (value == null)
+            {
+                // Nulls are handled according to the null value policy.
+                if (this.nullPolicy == NullPolicy.emptyString)
+                    writer.append(addQuotes(""));
+                else if (nullPolicy == NullPolicy.skip)
+                    writer.append(null);
+                else
+                    writer.append(nullValue);
+            }
+            else
                 writer.append(row.get(i));
         }
         writer.newLine();

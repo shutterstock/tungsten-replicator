@@ -315,6 +315,70 @@ public class CsvTest
                 csvReader.getString(1));
     }
 
+    /**
+     * Verify that partially written rows are accepted if nullAutofill is true
+     * or rejected if not.
+     */
+    @Test
+    public void testNullAutofill() throws Exception
+    {
+        // Write with autofill disabled. This generates an exception.
+        StringWriter sw = new StringWriter();
+        CsvWriter csvWriter = new CsvWriter(sw);
+        csvWriter.setNullPolicy(NullPolicy.emptyString);
+
+        // Write values.
+        csvWriter.addColumnName("d1");
+        csvWriter.addColumnName("d2");
+        try
+        {
+            csvWriter.put("d1", "something").write();
+            throw new Exception(
+                    "Able to write partial row when nullAutofill=false");
+        }
+        catch (CsvException e)
+        {
+            // Expected.
+        }
+
+        // Write with autofill enabled. This should add "NULL" for null fields.
+        sw = new StringWriter();
+        csvWriter = new CsvWriter(sw);
+        csvWriter.setNullPolicy(NullPolicy.nullValue);
+        csvWriter.setNullValue("NULL");
+        csvWriter.setNullAutofill(true);
+
+        // Add two rows.
+        csvWriter.addColumnName("d1");
+        csvWriter.addColumnName("d2");
+
+        csvWriter.put("d1", "something").write();
+        csvWriter.put("d1", null).write();
+        csvWriter.put("d2", "else").write();
+
+        csvWriter.flush();
+        String csv = sw.toString();
+
+        // Read values back in again.
+        StringReader sr = new StringReader(csv);
+        CsvReader csvReader = new CsvReader(sr);
+
+        // First row should have d1 + null value.
+        Assert.assertTrue("First read", csvReader.next());
+        Assert.assertEquals("d1 written", "something", csvReader.getString(1));
+        Assert.assertEquals("d2 NULL", "NULL", csvReader.getString(2));
+
+        // Second row should have only null values.
+        Assert.assertTrue("Second read", csvReader.next());
+        Assert.assertEquals("d1 NULL", "NULL", csvReader.getString(1));
+        Assert.assertEquals("d2 NULL", "NULL", csvReader.getString(2));
+
+        // Third row should have null + d2 value.
+        Assert.assertTrue("Second read", csvReader.next());
+        Assert.assertEquals("d1 NULL", "NULL", csvReader.getString(1));
+        Assert.assertEquals("d2 written", "else", csvReader.getString(2));
+    }
+
     // Create a CSV file with no extra separators.
     private String createCsvFile(String[] colNames, int rows)
             throws IOException
