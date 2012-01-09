@@ -896,43 +896,11 @@ end
 
 class BatchLoadTemplate < ConfigurePrompt
   include ReplicationServicePrompt
-  include ConstantValueModule
   include BatchModule
-  
-  def initialize
-    super(BATCH_LOAD_TEMPLATE, "Value for the loadBatchTemplate property")
-  end
-  
-  def get_template_value(transform_values_method = nil)
-    get_applier_datasource().get_batch_load_template()
-  end
-end
 
-class BatchInsertTemplate < ConfigurePrompt
-  include ReplicationServicePrompt
-  include ConstantValueModule
-  include BatchModule
-  
   def initialize
-    super(BATCH_INSERT_TEMPLATE, "Value for the stageInsertFromTemplate property")
-  end
-  
-  def get_template_value(transform_values_method = nil)
-    get_applier_datasource().get_batch_insert_template()
-  end
-end
-
-class BatchDeleteTemplate < ConfigurePrompt
-  include ReplicationServicePrompt
-  include ConstantValueModule
-  include BatchModule
-  
-  def initialize
-    super(BATCH_DELETE_TEMPLATE, "Value for the stageDeleteFromTemplate property")
-  end
-  
-  def get_template_value(transform_values_method = nil)
-    get_applier_datasource().get_batch_delete_template()
+    super(BATCH_LOAD_TEMPLATE, "Value for the loadBatchTemplate property", 
+      PV_IDENTIFIER, "mysql")
   end
 end
 
