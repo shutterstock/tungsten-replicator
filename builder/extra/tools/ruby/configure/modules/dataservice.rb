@@ -253,6 +253,8 @@ class ReplicationServiceRole < ConfigurePrompt
         else
           return REPL_ROLE_S_PRE
         end
+      elsif @config.getProperty(get_member_key(RELAY_ENABLED)) == "true"
+        return REPL_ROLE_S_RELAY
       else
         return REPL_ROLE_S
       end
@@ -812,6 +814,15 @@ class THLStorageFsync < ConfigurePrompt
   end
 end
 
+class RelayEnabled < ConfigurePrompt
+  include ReplicationServicePrompt
+  
+  def initialize
+    super(RELAY_ENABLED, "Should the replicator service be setup as a relay master", 
+      PV_BOOLEAN, "false")
+  end
+end
+
 class PrefetchEnabled < ConfigurePrompt
   include ReplicationServicePrompt
   
@@ -940,6 +951,8 @@ class ReplicationServicePipelines < ConfigurePrompt
         else
           return REPL_ROLE_S_PRE
         end
+      elsif @config.getProperty(get_member_key(RELAY_ENABLED)) == "true"
+        return REPL_ROLE_S_RELAY
 	    end
 	    
 	    begin
