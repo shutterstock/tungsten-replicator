@@ -70,6 +70,7 @@ public class RelayLogClient
     private String                    binlogDir    = ".";
     private boolean                   autoClean    = true;
     private int                       serverId     = 1;
+    private long                      readTimeout  = 5;
     private LinkedBlockingQueue<File> logQueue     = null;
 
     // Relay storage and positioning information.
@@ -183,6 +184,23 @@ public class RelayLogClient
     public synchronized void setLogQueue(LinkedBlockingQueue<File> logQueue)
     {
         this.logQueue = logQueue;
+    }
+
+    /**
+     * Returns the network read delay timeout.
+     */
+    public synchronized long getReadTimeout()
+    {
+        return readTimeout;
+    }
+
+    /**
+     * Set the number of seconds delay we permit before giving up on partial
+     * reads from the network.
+     */
+    public synchronized void setReadTimeout(long readTimeout)
+    {
+        this.readTimeout = readTimeout;
     }
 
     /** Connect to MySQL and start pulling down data. */
@@ -372,7 +390,7 @@ public class RelayLogClient
     public boolean processEvent() throws ReplicatorException,
             InterruptedException
     {
-        MySQLPacket packet = MySQLPacket.readPacket(input);
+        MySQLPacket packet = MySQLPacket.readPacket(input, readTimeout * 1000);
         if (packet == null)
         {
             if (logger.isDebugEnabled())
@@ -559,7 +577,7 @@ public class RelayLogClient
             // this is a packet longer than 16m. Data will be send over several
             // packets so we need to read/write the next packets blindly until a
             // packet smaller than 16m is found
-            packet = MySQLPacket.readPacket(input);
+            packet = MySQLPacket.readPacket(input, readTimeout * 1000);
             if (logger.isDebugEnabled())
             {
                 logger.debug("Read extended packet: number="

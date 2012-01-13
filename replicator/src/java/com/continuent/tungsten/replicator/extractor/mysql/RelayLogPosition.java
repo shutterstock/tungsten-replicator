@@ -103,7 +103,7 @@ public class RelayLogPosition
     public synchronized String toString()
     {
         if (curFile == null)
-            return "";
+            return "(no position set)";
         else
             return curFile.getName() + ":" + curOffset;
     }

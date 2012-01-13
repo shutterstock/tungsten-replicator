@@ -89,6 +89,7 @@ public class MySQLExtractor implements RawExtractor
 
     private boolean                         useRelayLogs            = false;
     private long                            relayLogWaitTimeout     = 0;
+    private long                            relayLogReadTimeout     = 0;
     private int                             relayLogRetention       = 3;
     private String                          relayLogDir             = null;
     private int                             serverId                = 1;
@@ -241,6 +242,16 @@ public class MySQLExtractor implements RawExtractor
     public void setRelayLogWaitTimeout(long relayLogWaitTimeout)
     {
         this.relayLogWaitTimeout = relayLogWaitTimeout;
+    }
+
+    public synchronized long getRelayLogReadTimeout()
+    {
+        return relayLogReadTimeout;
+    }
+
+    public synchronized void setRelayLogReadTimeout(long relayLogReadTimeout)
+    {
+        this.relayLogReadTimeout = relayLogReadTimeout;
     }
 
     public int getRelayLogRetention()
@@ -1256,17 +1267,16 @@ public class MySQLExtractor implements RawExtractor
             conn.connect();
 
             String version = getDatabaseVersion(conn);
+            logger.info("MySQL version: " + version);
 
-            // For now only MySQL 5.0 and 5.1 are certified.
+            // For now only MySQL 5.0, 5.1, and 5.5 are certified.
             if (version != null && version.startsWith("5"))
             {
-                logger.info("Binlog extraction is supported for this MySQL version: "
-                        + version);
+                logger.info("Binlog extraction is supported for this MySQL version");
             }
             else
             {
-                logger.warn("Binlog extraction is not certified for this server version: "
-                        + version);
+                logger.warn("Binlog extraction is *not* certified for this MySQL version");
                 logger.warn("You may experience replication failures due to binlog incompatibilities");
             }
 
@@ -1404,6 +1414,7 @@ public class MySQLExtractor implements RawExtractor
         relayClient.setBinlogPrefix(binlogFilePattern);
         relayClient.setServerId(serverId);
         relayClient.setLogQueue(relayLogQueue);
+        relayClient.setReadTimeout(relayLogReadTimeout);
         relayClient.connect();
 
         // Start the relay log task.
