@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2012 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Csaba Simon
- * Contributor(s): Gilles Rayrat
+ * Contributor(s): Gilles Rayrat, Robert Hodges
  */
 
 package com.continuent.tungsten.commons.mysql;
@@ -53,8 +53,7 @@ public class MySQLPacket
 
     private static final long   NULL_LENGTH   = -1;
 
-    private static final Logger logger        = Logger
-                                                      .getLogger(MySQLPacket.class);
+    private static final Logger logger        = Logger.getLogger(MySQLPacket.class);
     /** Header + data buffer */
     private byte[]              byteBuffer;
 
@@ -103,9 +102,11 @@ public class MySQLPacket
      * Reads a MySQL packet from the input stream.
      * 
      * @param in the data input stream from where we read the MySQL packet
+     * @param timeoutMillis Number of milliseconds we will pause while waiting
+     *            for data from the the network during a packet.
      * @return a MySQLPacket object or null if the MySQL packet cannot be read
      */
-    public static MySQLPacket readPacket(InputStream in)
+    public static MySQLPacket readPacket(InputStream in, long timeoutMillis)
     {
         try
         {
@@ -119,8 +120,7 @@ public class MySQLPacket
             // This is ok, no more packet on the line
             if (packetLen1 == -1)
             {
-                logger
-                        .debug("Reached end of input stream while reading packet");
+                logger.debug("Reached end of input stream while reading packet");
                 return null;
             }
             // This is bad, client went away
@@ -143,17 +143,60 @@ public class MySQLPacket
             int n = 0;
             while (n < packetLen)
             {
-                int count = in.read(packetData, HEADER_LENGTH + n,
-                        packetLen - n);
+                // Issue 281. Wait until at least one byte is available to avoid
+                // a possible out of data condition.
+                if (in.available() == 0)
+                {
+                    long readStartTime = System.currentTimeMillis();
+                    logger.info("Pausing to allow binlog data to appear on network:  packetNumber="
+                            + packetNumber
+                            + " packetlen="
+                            + packetLen
+                            + " bytesRead=" + n);
+
+                    // Sleep for up to 10 seconds.
+                    while (in.available() == 0)
+                    {
+                        try
+                        {
+                            Thread.sleep(10);
+                        }
+                        catch (InterruptedException e)
+                        {
+                            return null;
+                        }
+                        long interval = System.currentTimeMillis()
+                                - readStartTime;
+                        if (interval > timeoutMillis)
+                        {
+                            logger.warn("Timed out waiting for packet data to appear on the network: timeout="
+                                    + (interval / 1000.0)
+                                    + " packetNumber="
+                                    + packetNumber
+                                    + " packetlen="
+                                    + packetLen
+                                    + " bytesRead=" + n);
+                            break;
+                        }
+                    }
+                }
+
+                // Now read data.
+                int count = in.read(packetData, HEADER_LENGTH + n, packetLen
+                        - n);
 
                 if (count < 0)
                 {
-                    throw new EOFException("Reached end of input stream.");
+                    throw new EOFException(
+                            "Reached end of input stream: packetNumber="
+                                    + packetNumber + " packetlen=" + packetLen
+                                    + " bytesRead=" + n);
                 }
 
                 n += count;
             }
-            MySQLPacket p = new MySQLPacket(packetLen, packetData, (byte) packetNumber);
+            MySQLPacket p = new MySQLPacket(packetLen, packetData,
+                    (byte) packetNumber);
             p.setInputStream(in);
             return p;
         }
@@ -167,6 +210,18 @@ public class MySQLPacket
         }
 
         return null;
+    }
+
+    /**
+     * Reads a MySQL packet from the input stream using a default partial read
+     * timeout of 5 seconds.
+     * 
+     * @param in the data input stream from where we read the MySQL packet
+     * @return a MySQLPacket object or null if the MySQL packet cannot be read
+     */
+    public static MySQLPacket readPacket(InputStream in)
+    {
+        return readPacket(in, 5000);
     }
 
     /**
@@ -703,9 +758,7 @@ public class MySQLPacket
     {
         ensureCapacity(bytes.length);
 
-        System
-                .arraycopy(bytes, 0, this.byteBuffer, this.position,
-                        bytes.length);
+        System.arraycopy(bytes, 0, this.byteBuffer, this.position, bytes.length);
         this.position += bytes.length;
     }
 
@@ -764,9 +817,7 @@ public class MySQLPacket
         ensureCapacity(9 + bytes.length);
 
         putFieldLength(bytes.length);
-        System
-                .arraycopy(bytes, 0, this.byteBuffer, this.position,
-                        bytes.length);
+        System.arraycopy(bytes, 0, this.byteBuffer, this.position, bytes.length);
         this.position += bytes.length;
     }
 
@@ -886,8 +937,8 @@ public class MySQLPacket
     {
         ensureCapacity((s.length() * 2) + 1);
 
-        System.arraycopy(s.getBytes(), 0, this.byteBuffer, this.position, s
-                .length());
+        System.arraycopy(s.getBytes(), 0, this.byteBuffer, this.position,
+                s.length());
         this.position += s.length();
         this.byteBuffer[this.position++] = 0;
     }
@@ -901,8 +952,8 @@ public class MySQLPacket
     {
         ensureCapacity(s.length() * 2);
 
-        System.arraycopy(s.getBytes(), 0, this.byteBuffer, this.position, s
-                .length());
+        System.arraycopy(s.getBytes(), 0, this.byteBuffer, this.position,
+                s.length());
         this.position += s.length();
     }
 
@@ -1012,7 +1063,8 @@ public class MySQLPacket
         // for now only we return an error message
         if (len >= 256 * 256 * 256)
         {
-            String message = "Trying to send packet of size " + len + ", packets bigger than 16 MB are not supported yet!";
+            String message = "Trying to send packet of size " + len
+                    + ", packets bigger than 16 MB are not supported yet!";
             logger.error(message);
             throw new IOException(message);
         }
