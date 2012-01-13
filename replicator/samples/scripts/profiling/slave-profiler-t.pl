@@ -44,13 +44,15 @@ use Getopt::Std;
 ########################################################
 
 sub usage() {
-  print "Usage: $0 -x {mysql|tungsten} b-t s] [-u usr] [-p pw] [-o trace.out] [-h]\n";
+  print "Usage: $0 -x {mysql|tungsten} options\n";
   print "Options:\n";
   print "  -x : Execute against 'mysql' or 'tungsten' [no default]\n";
   print "  -t : How many seconds between profiling checks [default: 10]\n";
   print "  -i : How many iterations [default: 0 = forever]\n";
   print "  -u : MySQL user [default: none]\n";
   print "  -p : MySQL password [default: none]\n";
+  print "  -H : MySQL/tungsten host default: 127.0.0.1]\n";
+  print "  -P : MySQL/tungsten port default: 3306]\n";
   print "  -o : Profile trace output file [default: trace.out]\n";
   print "  -v : Print debugging output\n";
   print "  -h : Print help\n";
@@ -58,15 +60,17 @@ sub usage() {
 
 # Process command line options. 
 my %options = ();
-my ($USER, $PASSWD, $TARGET); 
+my ($USER, $PASSWD, $HOST, $PORT, $TARGET); 
 my ($TIME, $TRACE, $VERBOSE, $USAGE) = (10, "trace.out", 0, 0);
 my $ITERATIONS = 0;
-if (getopts("x:t:i:u:p:o:vh",\%options)) {
+if (getopts("x:t:i:u:p:H:P:o:vh",\%options)) {
   $TARGET     = $options{'x'} if (defined $options{'x'});
   $TIME       = $options{'t'} if (defined $options{'t'});
   $ITERATIONS = $options{'i'} if (defined $options{'i'});
   $USER       = $options{'u'} if (defined $options{'u'});
   $PASSWD     = $options{'p'} if (defined $options{'p'});
+  $HOST       = $options{'H'} if (defined $options{'H'});
+  $PORT       = $options{'P'} if (defined $options{'P'});
   $TRACE      = $options{'o'} if (defined $options{'o'});
   $VERBOSE    = 1 if (defined $options{'v'});
   $USAGE      = 1 if (defined $options{'h'});
@@ -111,6 +115,12 @@ if ($TARGET eq "mysql") {
   if (defined $PASSWD) {
     $cmd = $cmd . " -p$PASSWD";
   }
+  if (defined $HOST) {
+    $cmd = $cmd . " -h$HOST";
+  }
+  if (defined $PORT) {
+    $cmd = $cmd . " -P$PORT";
+  }
   print "MySQL command: $cmd\n";
 }
 else {
@@ -120,7 +130,14 @@ else {
     print "Unable to find trepctl command in path!\n";
     exit 1;
   } 
-  $cmd = "$trepctl status";
+  $cmd = "$trepctl";
+  if (defined $HOST) {
+    $cmd = $cmd . " -host $HOST";
+  }
+  if (defined $PORT) {
+    $cmd = $cmd . " -port $PORT";
+  }
+  $cmd = $cmd . " status";
   print "Tungsten command: $cmd\n";
 }
 
