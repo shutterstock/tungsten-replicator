@@ -103,13 +103,13 @@ public class SimpleBatchApplier implements RawApplier
     protected String       user;
     protected String       password;
     protected String       stageDirectory;
+    protected String       startupScript;
     protected String       stageLoadScript;
     protected String       stageMergeScript;
     protected String       stageSchemaPrefix;
     protected String       stageTablePrefix;
     protected String       stageColumnPrefix = "tungsten_";
     protected String       stagePkeyColumn;
-    protected String       startUpCommand;
     protected boolean      cleanUpFiles      = true;
     protected String       charset           = "UTF-8";
     protected String       timezone          = "GMT-0:00";
@@ -193,6 +193,11 @@ public class SimpleBatchApplier implements RawApplier
         this.password = password;
     }
 
+    public synchronized void setStartupScript(String startupScript)
+    {
+        this.startupScript = startupScript;
+    }
+
     public synchronized void setStageLoadScript(String stageLoadScript)
     {
         this.stageLoadScript = stageLoadScript;
@@ -226,11 +231,6 @@ public class SimpleBatchApplier implements RawApplier
     public synchronized void setStageDirectory(String stageDirectory)
     {
         this.stageDirectory = stageDirectory;
-    }
-
-    public synchronized void setStartUpCommand(String startUpCommand)
-    {
-        this.startUpCommand = startUpCommand;
     }
 
     public synchronized void setCleanUpFiles(boolean cleanUpFiles)
@@ -643,21 +643,48 @@ public class SimpleBatchApplier implements RawApplier
             // Ensure we are not in auto-commit mode.
             conn.setAutoCommit(false);
 
-            // If a start-up command is present, execute that now.
-            if (startUpCommand != null)
-            {
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("Executing startup command: " + startUpCommand);
-                }
-                conn.execute(startUpCommand);
-            }
         }
         catch (SQLException e)
         {
             String message = String.format("Failed using url=%s, user=%s", url,
                     user);
             throw new ReplicatorException(message, e);
+        }
+
+        // If a start-up script is present, execute that now.
+        if (startupScript != null)
+        {
+            // Parse script.
+            SqlScriptGenerator generator = initializeGenerator(this.startupScript);
+            List<String> startCommands = generator
+                    .getParameterizedScript(new HashMap<String, String>());
+
+            // Execute commands.
+            for (String startCommand : startCommands)
+            {
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Executing start command: " + startCommand);
+                }
+                try
+                {
+                    long start = System.currentTimeMillis();
+                    statement.executeUpdate(startCommand);
+                    double interval = (System.currentTimeMillis() - start) / 1000.0;
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Execution completed: duration="
+                                + interval + "s");
+                    }
+                }
+                catch (SQLException e)
+                {
+                    ReplicatorException re = new ReplicatorException(
+                            "Unable to execute load command", e);
+                    re.setExtraData(startCommand);
+                    throw re;
+                }
+            }
         }
     }
 

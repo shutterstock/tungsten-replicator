@@ -50,6 +50,38 @@ public class VerticaDatabase extends PostgreSQLDatabase
     }
 
     /**
+     * Overload connect method to issue call to ensure default projections are
+     * enabled.
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#connect(boolean)
+     */
+    public synchronized void connect(boolean binlog) throws SQLException
+    {
+        // Connect first.
+        super.connect(binlog);
+
+        // Issue call to define projections.
+        if (connected)
+            execute("SELECT implement_temp_design('')");
+    }
+
+    /**
+     * Ensure projection is created for new table. (Otherwise metadata
+     * operations may fail if we try to select off a new table.)
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#createTable(com.continuent.tungsten.replicator.database.Table,
+     *      boolean)
+     */
+    public void createTable(Table t, boolean replace) throws SQLException
+    {
+        // Create table.
+        super.createTable(t, replace);
+
+        // Ensure projection is created.
+        execute("SELECT implement_temp_design('')");
+    }
+
+    /**
      * Checks whether the given table exists in the currently connected database
      * using Vertica-specific v_catalog.tables view.
      * 

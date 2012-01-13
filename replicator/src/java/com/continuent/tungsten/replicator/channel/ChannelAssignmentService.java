@@ -129,10 +129,20 @@ public class ChannelAssignmentService implements PipelineService
                     + e.getMessage(), e);
         }
 
+        String metadataSchema = context.getReplicatorSchemaName();
+
         // Create shard-channel table if it does not exist.
-        channelTable = new ShardChannelTable(context.getReplicatorSchemaName());
+        channelTable = new ShardChannelTable(metadataSchema);
         try
         {
+            // HACK: Create schema. This table should be created by
+            // the catalog manager.
+            if (conn.supportsUseDefaultSchema() && metadataSchema != null)
+            {
+                if (conn.supportsCreateDropSchema())
+                    conn.createSchema(metadataSchema);
+                conn.useDefaultSchema(metadataSchema);
+            }
             channelTable.initializeShardTable(conn);
         }
         catch (SQLException e)

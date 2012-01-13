@@ -46,25 +46,24 @@ import com.continuent.tungsten.replicator.database.Table;
  */
 public class ShardChannelTable
 {
-    private static Logger       logger       = Logger.getLogger(ShardChannelTable.class);
+    private static Logger      logger       = Logger.getLogger(ShardChannelTable.class);
 
-    public static final String  TABLE_NAME   = "trep_shard_channel";
+    public static final String TABLE_NAME   = "trep_shard_channel";
 
-    public static final String  SHARD_ID_COL = "shard_id";
-    public static final String  CHANNEL_COL  = "channel";
+    public static final String SHARD_ID_COL = "shard_id";
+    public static final String CHANNEL_COL  = "channel";
 
-    private static final String SELECT       = "SELECT " + SHARD_ID_COL + ", "
-                                                     + CHANNEL_COL + " FROM "
-                                                     + TABLE_NAME
-                                                     + " ORDER BY "
-                                                     + SHARD_ID_COL;
+    private String             select       = "SELECT " + SHARD_ID_COL + ", "
+                                                    + CHANNEL_COL + " FROM "
+                                                    + TABLE_NAME + " ORDER BY "
+                                                    + SHARD_ID_COL;
 
-    private Table               channelTable;
-    private Column              shardId;
-    private Column              channel;
+    private Table              channelTable;
+    private Column             shardId;
+    private Column             channel;
 
     /**
-     * Create and initialize a new shard channel table. 
+     * Create and initialize a new shard channel table.
      * 
      * @param schema
      */
@@ -88,6 +87,9 @@ public class ShardChannelTable
         channelTable.AddColumn(shardId);
         channelTable.AddColumn(channel);
         channelTable.AddKey(shardKey);
+
+        select = "SELECT " + SHARD_ID_COL + ", " + CHANNEL_COL + " FROM "
+                + schema + "." + TABLE_NAME + " ORDER BY " + SHARD_ID_COL;
     }
 
     /**
@@ -131,7 +133,7 @@ public class ShardChannelTable
         List<Map<String, String>> shardToChannels = new ArrayList<Map<String, String>>();
         try
         {
-            rs = statement.executeQuery(SELECT);
+            rs = statement.executeQuery(select);
 
             while (rs.next())
             {
