@@ -353,7 +353,6 @@ public class CommitSeqnoTable
         commitSeqnoUpdate.setString(6, header.getEventId());
         // Latency can go negative due to clock differences. Round up to 0.
         commitSeqnoUpdate.setLong(7, Math.abs(appliedLatency));
-        new Timestamp(System.currentTimeMillis());
         commitSeqnoUpdate.setTimestamp(8,
                 new Timestamp(System.currentTimeMillis()));
         commitSeqnoUpdate.setString(9, header.getShardId());
