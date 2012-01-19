@@ -50,8 +50,7 @@ import com.continuent.tungsten.replicator.database.Table;
  */
 public class HeartbeatTable
 {
-    private static Logger      logger        = Logger
-                                                     .getLogger(HeartbeatTable.class);
+    private static Logger      logger        = Logger.getLogger(HeartbeatTable.class);
 
     public static final String TABLE_NAME    = "heartbeat";
     private static final long  KEY           = 1;
@@ -106,7 +105,7 @@ public class HeartbeatTable
         sourceTsQuery = "SELECT source_tstamp from " + schema + "."
                 + TABLE_NAME + " where id=" + KEY;
     }
-    
+
     /**
      * Returns metadata used to create the underlying heartbeat table.
      */
@@ -124,11 +123,11 @@ public class HeartbeatTable
             logger.debug("Initializing heartbeat table");
 
         // Replace the table.
-        database.createTable(this.hbTable, false, tableType);
+        database.createTable(this.hbTable, false, this.hbTable.getSchema(), tableType);
 
         // Add an initial heartbeat value if needed
         ResultSet res = null;
-        PreparedStatement hbRowCount=null;
+        PreparedStatement hbRowCount = null;
         int rows = 0;
 
         try
@@ -206,8 +205,8 @@ public class HeartbeatTable
     /**
      * Wrapper for startHeartbeat() call.
      */
-    public void startHeartbeat(String url, String user, String password, String name)
-            throws SQLException
+    public void startHeartbeat(String url, String user, String password,
+            String name) throws SQLException
     {
         Database db = null;
         try

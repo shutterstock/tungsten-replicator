@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2012 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -37,6 +37,7 @@ import org.apache.log4j.Logger;
 import com.continuent.tungsten.commons.csv.CsvWriter;
 import com.continuent.tungsten.replicator.ReplicatorException;
 import com.continuent.tungsten.replicator.dbms.OneRowChange;
+import com.continuent.tungsten.replicator.heartbeat.HeartbeatTable;
 
 /**
  * Defines an interface to the Oracle database
@@ -48,6 +49,7 @@ public class OracleDatabase extends AbstractDatabase
 {
     private static Logger             logger = Logger.getLogger(OracleDatabase.class);
     private Hashtable<Integer, Table> tablesCache;
+    private String                    colList;
 
     public OracleDatabase()
     {
@@ -238,6 +240,7 @@ public class OracleDatabase extends AbstractDatabase
         boolean comma = false;
         boolean haveNonUnique = false;
         String SQL;
+        colList = "";
 
         if (replace)
         {
@@ -260,6 +263,8 @@ public class OracleDatabase extends AbstractDatabase
             SQL += (comma ? ", " : "") + c.getName() + " "
                     + columnToTypeString(c)
                     + (c.isNotNull() ? " NOT NULL" : "");
+            colList += (comma ? ", " : "") + c.getName() + " "
+                    + columnToTypeString(c);
             comma = true;
         }
         Iterator<Key> j = t.getKeys().iterator();
@@ -311,7 +316,6 @@ public class OracleDatabase extends AbstractDatabase
 
         if (haveNonUnique)
             createNonUnique(t);
-
     }
 
     public boolean supportsUseDefaultSchema()
@@ -630,5 +634,89 @@ public class OracleDatabase extends AbstractDatabase
         // Need to implement in order to support CSV.
         throw new UnsupportedOperationException(
                 "CSV output is not supported for this database type");
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.AbstractDatabase#createTable(com.continuent.tungsten.replicator.database.Table,
+     *      boolean, java.lang.String)
+     */
+    @Override
+    public void createTable(Table table, boolean replace,
+            String tungstenSchema, String tungstenTableType)
+            throws SQLException
+    {
+        createTable(table, replace);
+
+        String tableName = HeartbeatTable.TABLE_NAME.toUpperCase();
+
+        if (tungstenTableType.equals("CDC")
+                && table.getSchema().equals(tungstenSchema)
+                && table.getName().equalsIgnoreCase(tableName))
+        {
+            Statement statement = dbConn.createStatement();
+            ResultSet rs = null;
+            boolean changeTableAlreadyDefined = false;
+            try
+            {
+                rs = statement
+                        .executeQuery("SELECT * FROM USER_TABLES WHERE table_name='CT_"
+                                + tableName + "'");
+
+                changeTableAlreadyDefined = rs.next();
+            }
+            finally
+            {
+                if (rs != null)
+                    rs.close();
+                statement.close();
+
+            }
+
+            if (changeTableAlreadyDefined)
+            {
+                logger.info("Tungsten Heartbeat change table already defined. Skipping");
+                // We are done, just exit.
+                return;
+            }
+
+            logger.info("Creating Tungsten Heartbeat change table");
+
+            // Disable Tungsten Change Set
+            execute("BEGIN DBMS_CDC_PUBLISH.ALTER_CHANGE_SET(change_set_name=>'TUNGSTEN_CHANGE_SET',enable_capture=>'N'); END;");
+
+            // If table type is CDC, then prepare table for capture
+            execute("ALTER TABLE " + table.getSchema() + "." + table.getName()
+                    + " ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS");
+
+            execute("BEGIN DBMS_CAPTURE_ADM.PREPARE_TABLE_INSTANTIATION('"
+                    + table.getSchema() + "." + tableName + "', 'all');END;");
+
+            String cdcSQL = "BEGIN "
+                    + "DBMS_CDC_PUBLISH.CREATE_CHANGE_TABLE(owner=>'"
+                    + table.getSchema()
+                    + "', change_table_name=> '"
+                    + "CT_"
+                    + tableName
+                    + "', change_set_name=>'TUNGSTEN_CHANGE_SET', source_schema=>'"
+                    + table.getSchema()
+                    + "', source_table=>'"
+                    + tableName
+                    + "', column_type_list => '"
+                    + colList
+                    + "', capture_values => 'both', rs_id => 'y', row_id => 'n', "
+                    + "user_id => 'n', timestamp => 'n', object_id => 'n', "
+                    + "target_colmap => 'y', source_colmap => 'n', "
+                    + "options_string=>'TABLESPACE " + table.getSchema()
+                    + "'); END;";
+
+            execute(cdcSQL);
+
+            // Enable Tungsten Change Set back
+            execute("BEGIN DBMS_CDC_PUBLISH.ALTER_CHANGE_SET(change_set_name=>'TUNGSTEN_CHANGE_SET',enable_capture=>'Y'); END;");
+
+        }
+
     }
 }

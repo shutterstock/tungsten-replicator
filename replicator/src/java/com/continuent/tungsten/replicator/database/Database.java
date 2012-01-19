@@ -1,6 +1,6 @@
 /**
- * Tungsten: An Application Server for uni/cluster.
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Tungsten Scale-Out Stack
+ * Copyright (C) 2007-2012 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -460,6 +460,10 @@ public interface Database
     public void createTable(Table table, boolean replace,
             String tungstenTableType) throws SQLException;
 
+    public void createTable(Table table, boolean replace,
+            String tungstenSchema, String tungstenTableType)
+            throws SQLException;
+
     /**
      * prepareOptionSetStatement generates the sql statement that is to be used
      * to set an option (or a session variable) at the database connection
@@ -495,10 +499,10 @@ public interface Database
      * @return eventually quoted database object name
      */
     public String getDatabaseObjectName(String name);
-    
+
     /**
-     * Returns a properly configured CsvWriter to generate CSV according to the 
-     * preferred conventions of this DBMS type. 
+     * Returns a properly configured CsvWriter to generate CSV according to the
+     * preferred conventions of this DBMS type.
      * 
      * @param writer A buffered writer to receive CSV output
      * @return A property configured CsvWriter instance

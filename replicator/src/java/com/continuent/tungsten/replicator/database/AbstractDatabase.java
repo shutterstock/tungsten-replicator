@@ -1,6 +1,6 @@
 /**
- * Tungsten: An Application Server for uni/cluster.
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Tungsten Scale-Out Stack
+ * Copyright (C) 2007-2012 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1101,6 +1101,20 @@ public abstract class AbstractDatabase implements Database
             String tungstenTableType) throws SQLException
     {
         createTable(table, replace);
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @see com.continuent.tungsten.replicator.database.Database#createTable(com.continuent.tungsten.replicator.database.Table,
+     *      boolean, java.lang.String, java.lang.String)
+     */
+    @Override
+    public void createTable(Table table, boolean replace,
+            String tungstenSchema, String tungstenTableType)
+            throws SQLException
+    {
+        createTable(table, replace, tungstenTableType);
     }
 
     /**
