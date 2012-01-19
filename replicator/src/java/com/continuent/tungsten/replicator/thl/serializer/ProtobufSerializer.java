@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.sql.Clob;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
@@ -741,6 +742,23 @@ public class ProtobufSerializer implements Serializer
                             .copyFrom((byte[]) value));
                     valueBuilder.setType(Type.BINARYSTRING);
                 }
+                break;
+            case Types.CLOB :
+                // CLOB
+                if (value instanceof Clob)
+                {
+                    valueBuilder.setStringValue(((Clob) value).toString());                    
+                }
+                else
+                    valueBuilder.setStringValue((String) value);
+
+                if (logger.isDebugEnabled())
+                {
+                    trace.append(" / ");
+                    trace.append(value);
+                }
+
+                valueBuilder.setType(Type.STRING);
                 break;
             default :
                 logger.warn("Unimplemented type " + colSpec.getType());
