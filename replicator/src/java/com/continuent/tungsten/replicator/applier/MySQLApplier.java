@@ -347,6 +347,13 @@ public class MySQLApplier extends JdbcApplier
             ((com.mysql.jdbc.Statement) statement)
                     .setLocalInfileInputStream(null);
         }
+        
+        // Clean up the temp file as we may not get a delete file event.
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Deleting temp file: " + temporaryFile.getAbsolutePath());
+        }
+        temporaryFile.delete();
     }
 
     protected String hexdump(byte[] buffer)
