@@ -915,7 +915,8 @@ public class SimpleBatchApplier implements RawApplier
                     ColumnVal columnVal = row.get(i);
                     ColumnSpec columnSpec = colSpecs.get(i);
                     String value = getCsvString(columnVal, columnSpec);
-                    csv.put(csvIndex++, value);
+                    int colIdx = columnSpec.getIndex();
+                    csv.put(colIdx + 2, value);
                 }
                 csv.write();
             }
