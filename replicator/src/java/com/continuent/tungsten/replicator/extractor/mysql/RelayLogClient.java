@@ -70,7 +70,7 @@ public class RelayLogClient
     private String                    binlogDir    = ".";
     private boolean                   autoClean    = true;
     private int                       serverId     = 1;
-    private long                      readTimeout  = 5;
+    private long                      readTimeout  = 60;
     private LinkedBlockingQueue<File> logQueue     = null;
 
     // Relay storage and positioning information.
@@ -367,7 +367,8 @@ public class RelayLogClient
             }
         }
 
-        // Ask for binlog data.
+        // Ask for binlog data.  
+        logger.info("Binlog read timeout set to " + readTimeout + " seconds");
         try
         {
             logger.info("Requesting binlog data from master: " + binlog + ":"

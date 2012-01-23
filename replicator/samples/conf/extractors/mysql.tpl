@@ -37,7 +37,7 @@ replicator.extractor.dbms.relayLogWaitTimeout=0
 # The relay log read timeout is the number of seconds to wait for partial
 # reads to complete.  Increasing this value can help if you get 
 # EOFExceptions from reading relay logs. 
-replicator.extractor.dbms.relayLogReadTimeout=5
+replicator.extractor.dbms.relayLogReadTimeout=30
 
 # The relay log retention is the number of relay logs to keep before deleting
 # them automatically.
