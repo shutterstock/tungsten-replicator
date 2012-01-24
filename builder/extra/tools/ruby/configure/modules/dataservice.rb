@@ -1161,3 +1161,37 @@ class ReplicationServiceGlobalProperties < ConfigurePrompt
     false
   end
 end
+
+class ReplicationServiceSchema < ConfigurePrompt
+  include ReplicationServicePrompt
+  include ConstantValueModule
+  
+  def initialize
+    super(REPL_SVC_SCHEMA, "Replication service schema")
+  end
+  
+  def get_default_value
+    get_applier_datasource().get_replication_schema()
+  end
+  
+  def required?
+    false
+  end
+end
+
+class ReplicationServiceTableEngine < ConfigurePrompt
+  include ReplicationServicePrompt
+  include ConstantValueModule
+  
+  def initialize
+    super(REPL_SVC_TABLE_ENGINE, "Replication service table engine")
+  end
+  
+  def get_default_value
+    get_applier_datasource().get_table_engine()
+  end
+  
+  def required?
+    false
+  end
+end

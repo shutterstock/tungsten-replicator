@@ -84,12 +84,12 @@ service.name=@{SERVICE.DEPLOYMENT_SERVICE}
 local.service.name=@{SERVICE.DSNAME}
 
 # Schema to store Replicator catalog tables. 
-replicator.schema=tungsten_${service.name}
+replicator.schema=@{REPL_SVC_SCHEMA}
 
 # Engine used for Replicator catalog tables. If it is undefined or empty, 
 # tungsten will use mysql default storage engine. By default,
 # it is set to use innodb.
-replicator.table.engine=innodb
+replicator.table.engine=@{REPL_SVC_TABLE_ENGINE}
 
 # Global queue size for pipelines.  This defines the number of events
 # buffered between stages.  Values greater than 1 improve performance

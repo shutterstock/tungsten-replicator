@@ -149,6 +149,14 @@ class ConfigureDatabasePlatform
     "DELETE FROM %%BASE_TABLE%% WHERE %%BASE_PKEY%% IN (SELECT %%STAGE_PKEY%% FROM %%STAGE_TABLE%%)"
   end
   
+  def get_replication_schema
+    "tungsten_${service.name}"
+  end
+  
+  def get_table_engine
+    "innodb"
+  end
+  
   def self.build(scheme, host, port, username, password, config)
     klass = self.get_class(scheme)
     return klass.new(host, port, username, password, config)
