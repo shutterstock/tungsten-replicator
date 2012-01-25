@@ -651,10 +651,11 @@ public class OracleDatabase extends AbstractDatabase
 
         String tableName = HeartbeatTable.TABLE_NAME.toUpperCase();
 
-        if (tungstenTableType.equals("CDC")
+        if (tungstenTableType.startsWith("CDC")
                 && table.getSchema().equals(tungstenSchema)
                 && table.getName().equalsIgnoreCase(tableName))
         {
+
             Statement statement = dbConn.createStatement();
             ResultSet rs = null;
             boolean changeTableAlreadyDefined = false;
@@ -683,8 +684,9 @@ public class OracleDatabase extends AbstractDatabase
 
             logger.info("Creating Tungsten Heartbeat change table");
 
-            // Disable Tungsten Change Set
-            execute("BEGIN DBMS_CDC_PUBLISH.ALTER_CHANGE_SET(change_set_name=>'TUNGSTEN_CHANGE_SET',enable_capture=>'N'); END;");
+            if (tungstenTableType.equals("CDCSYNC"))
+                // Disable Tungsten Change Set
+                execute("BEGIN DBMS_CDC_PUBLISH.ALTER_CHANGE_SET(change_set_name=>'TUNGSTEN_CHANGE_SET',enable_capture=>'N'); END;");
 
             // If table type is CDC, then prepare table for capture
             execute("ALTER TABLE " + table.getSchema() + "." + table.getName()
@@ -693,28 +695,55 @@ public class OracleDatabase extends AbstractDatabase
             execute("BEGIN DBMS_CAPTURE_ADM.PREPARE_TABLE_INSTANTIATION('"
                     + table.getSchema() + "." + tableName + "', 'all');END;");
 
-            String cdcSQL = "BEGIN "
-                    + "DBMS_CDC_PUBLISH.CREATE_CHANGE_TABLE(owner=>'"
-                    + table.getSchema()
-                    + "', change_table_name=> '"
-                    + "CT_"
-                    + tableName
-                    + "', change_set_name=>'TUNGSTEN_CHANGE_SET', source_schema=>'"
-                    + table.getSchema()
-                    + "', source_table=>'"
-                    + tableName
-                    + "', column_type_list => '"
-                    + colList
-                    + "', capture_values => 'both', rs_id => 'y', row_id => 'n', "
-                    + "user_id => 'n', timestamp => 'n', object_id => 'n', "
-                    + "target_colmap => 'y', source_colmap => 'n', "
-                    + "options_string=>'TABLESPACE " + table.getSchema()
-                    + "'); END;";
+            String cdcSQL;
+            if (tungstenTableType.equals("CDCSYNC")
+                    && dbConn.getMetaData().getDatabaseMajorVersion() >= 11)
+            {
+                logger.info("Setting up synchronous data capture with version > "
+                        + dbConn.getMetaData().getDatabaseMajorVersion());
+                cdcSQL = "BEGIN "
+                        + "DBMS_CDC_PUBLISH.CREATE_CHANGE_TABLE(owner=>'"
+                        + table.getSchema()
+                        + "', change_table_name=> '"
+                        + "CT_"
+                        + tableName
+                        + "', change_set_name=>'TUNGSTEN_CHANGE_SET', source_schema=>'"
+                        + table.getSchema()
+                        + "', source_table=>'"
+                        + tableName
+                        + "', column_type_list => '"
+                        + colList
+                        + "', capture_values => 'both', rs_id => 'y', row_id => 'n', "
+                        + "user_id => 'n', timestamp => 'n', object_id => 'n', "
+                        + "target_colmap => 'y', source_colmap => 'n', ddl_markers=>'n', "
+                        + "options_string=>'TABLESPACE " + table.getSchema()
+                        + "'); END;";
+
+            }
+            else
+                cdcSQL = "BEGIN "
+                        + "DBMS_CDC_PUBLISH.CREATE_CHANGE_TABLE(owner=>'"
+                        + table.getSchema()
+                        + "', change_table_name=> '"
+                        + "CT_"
+                        + tableName
+                        + "', change_set_name=>'TUNGSTEN_CHANGE_SET', source_schema=>'"
+                        + table.getSchema()
+                        + "', source_table=>'"
+                        + tableName
+                        + "', column_type_list => '"
+                        + colList
+                        + "', capture_values => 'both', rs_id => 'y', row_id => 'n', "
+                        + "user_id => 'n', timestamp => 'n', object_id => 'n', "
+                        + "target_colmap => 'y', source_colmap => 'n', "
+                        + "options_string=>'TABLESPACE " + table.getSchema()
+                        + "'); END;";
 
             execute(cdcSQL);
 
-            // Enable Tungsten Change Set back
-            execute("BEGIN DBMS_CDC_PUBLISH.ALTER_CHANGE_SET(change_set_name=>'TUNGSTEN_CHANGE_SET',enable_capture=>'Y'); END;");
+            if (tungstenTableType.equals("CDCSYNC"))
+                // Enable Tungsten Change Set back
+                execute("BEGIN DBMS_CDC_PUBLISH.ALTER_CHANGE_SET(change_set_name=>'TUNGSTEN_CHANGE_SET',enable_capture=>'Y'); END;");
 
         }
 
