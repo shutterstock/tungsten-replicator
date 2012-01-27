@@ -911,6 +911,7 @@ public class MySQLExtractor implements RawExtractor
                 else if (logEvent instanceof ExecuteLoadQueryLogEvent)
                 {
                     ExecuteLoadQueryLogEvent event = (ExecuteLoadQueryLogEvent) logEvent;
+                    sessionId = event.getSessionId();
                     if (loadDataSchemas != null)
                         loadDataSchemas.remove(Integer.valueOf(event
                                 .getFileID()));
