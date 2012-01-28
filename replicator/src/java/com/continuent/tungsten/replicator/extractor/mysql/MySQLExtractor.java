@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2011 Continuent Inc.
+ * Copyright (C) 2007-2012 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Seppo Jaakola
- * Contributor(s): Alex Yurchenko, Teemu Ollakka, Stephane Giron, Robert Hodges
+ * Contributor(s): Alex Yurchenko, Teemu Ollakka, Stephane Giron, Robert Hodges, Andreas Wederbrand 
  */
 
 package com.continuent.tungsten.replicator.extractor.mysql;
@@ -535,7 +535,6 @@ public class MySQLExtractor implements RawExtractor
 
         try
         {
-            String defaultDb = null;
             RowChangeData rowChangeData = null;
             long fragSize = 0;
             int serverId = -1;
@@ -682,28 +681,27 @@ public class MySQLExtractor implements RawExtractor
                         boolean isCreateOrDropDB = sqlOperation.getObjectType() == SqlOperation.SCHEMA;
                         boolean prependUseDb = !(sqlOperation.isAutoCommit() && isCreateOrDropDB);
 
-                        if (defaultDb == null)
+                        if (sessionId == -1)
                         {
                             // first query in transaction
                             sessionId = event.getSessionId();
-                            if (prependUseDb)
-                            {
-                                defaultDb = event.getDefaultDb();
-                                statement.setDefaultSchema(defaultDb);
-                            }
                         }
                         else
                         {
                             // check that session ID is the same
                             assert (sessionId == event.getSessionId());
-                            // check if default database has changed
-                            String newDb = event.getDefaultDb();
-                            if (!defaultDb.equals(newDb) && prependUseDb)
-                            {
-                                defaultDb = newDb;
-                                statement.setDefaultSchema(newDb);
-                            }
                         }
+
+                        // For each statement in transaction, set the default
+                        // schema. It will be the applier responsibility to
+                        // change the default schema only when it is different.
+                        // This solves issue #289
+                        // (http://code.google.com/p/tungsten-replicator/issues/detail?id=289)
+                        if (prependUseDb)
+                        {
+                            statement.setDefaultSchema(event.getDefaultDb());
+                        }
+                        
                         if (isCreateOrDropDB)
                             statement.addOption(
                                     StatementData.CREATE_OR_DROP_DB, "");
