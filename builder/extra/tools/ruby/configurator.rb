@@ -1075,6 +1075,28 @@ Do you want to continue with the configuration (Y) or quit (Q)?"
     
     @constant_map[value]
   end
+  
+  def get_ssh_options
+    Configurator.instance.options.ssh_options
+  end
+  
+  def get_ssh_user(user = nil)
+    ssh_options = get_ssh_options
+    if ssh_options.has_key?(:user) && ssh_options[:user].to_s != ""
+      ssh_options[:user]
+    else
+      user
+    end
+  end
+  
+  def get_ssh_port(port = 22)
+    ssh_options = get_ssh_options
+    if ssh_options.has_key?(:port) && ssh_options[:port].to_s != ""
+      ssh_options[:port]
+    else
+      port
+    end
+  end
 end
 
 def is_port_available?(ip, port)
@@ -1110,37 +1132,61 @@ def ssh_result(command, host, user, return_object = false)
     return cmd_result(command)
   end
   
-  begin
-    require "openssl"
-  rescue LoadError
-    puts "Unable to find the Ruby openssl library"
-    puts "Try installing the openssl package for your version of Ruby.  The package name for Ruby 1.9 is 'libopenssl-ruby1.9'."
-    exit 1
+  unless defined?(Net::SSH)
+    begin
+      require "openssl"
+    rescue LoadError
+      error("Unable to find the Ruby openssl library")
+      error("Try installing the openssl package for your version of Ruby (libopenssl-ruby#{RUBY_VERSION[0,3]}).")
+      cleanup(1)
+    end
+    system_require 'net/ssh'
   end
-  system_require 'net/ssh'
-
+  
+  if return_object
+    command = "#{command} --stream"
+  end
+  
+  ssh_user = Configurator.instance.get_ssh_user(user)
+  if user != ssh_user
+    debug("SSH user changed to #{ssh_user}")
+    command = command.tr('"', '\"')
+    command = "echo \"#{command}\" | sudo -u #{user} -i"
+  end
+  
   Configurator.instance.debug("Execute `#{command}` on #{host}")
   result = ""
+  rc = nil
 
-  ssh = Net::SSH.start(host, user, Configurator.instance.options.ssh_options)
+  begin
+    Net::SSH.start(host, ssh_user, Configurator.instance.get_ssh_options){
+      |ssh|
+      if return_object
+        ssh.exec!(". /etc/profile; export LANG=en_US; #{command}") do
+          |ch, stream, data|
 
-  if return_object
-    ssh.exec!(". /etc/profile; export LANG=en_US; #{command} --stream") do
-      |ch, stream, data|
-
-      unless data =~ /RemoteResult/ || result != ""
-        puts data
+          unless data =~ /RemoteResult/ || result != ""
+            puts data
+          else
+            result += data
+          end
+        end
       else
-        result += data
+        result = ssh.exec!(". /etc/profile; export LANG=en_US; #{command}").to_s.chomp
       end
-    end
-  else
-    result = ssh.exec!(". /etc/profile; export LANG=en_US; #{command}").to_s.chomp
+
+      rc = ssh.exec!("echo $?").chomp.to_i
+    }
+  rescue Errno::ENOENT => ee
+    raise MessageError.new("Net::SSH was unable to find a private key to use for SSH authenticaton. Try creating a private keyfile or setting up ssh-agent.")
+  rescue OpenSSL::PKey::RSAError
+    raise MessageError.new("Net::SSH was unable to connect to #{host} as #{ssh_user}.  Check that #{host} is online, #{ssh_user} exists and your SSH private keyfile or ssh-agent settings. Try adding --net-ssh-option=port=<SSH port number> if you are using an SSH port other than 22.")
+  rescue Net::SSH::AuthenticationFailed
+    raise MessageError.new("Net::SSH was unable to connect to #{host} as #{ssh_user}.  Check that #{host} is online, #{ssh_user} exists and your SSH private keyfile or ssh-agent settings. Try adding --net-ssh-option=port=<SSH port number> if you are using an SSH port other than 22.")
+  rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
+    raise MessageError.new("Net::SSH was unable to connect to #{host} as #{ssh_user}.  Check that #{host} is online, #{ssh_user} exists and your SSH private keyfile or ssh-agent settings. Try adding --net-ssh-option=port=<SSH port number> if you are using an SSH port other than 22.")
   end
-
-  rc = ssh.exec!("echo $?").chomp.to_i
-  ssh.close()
-
+  
   if rc != 0
     raise RemoteCommandError.new(user, host, command, rc, result)
   else
@@ -1162,6 +1208,60 @@ def cmd_result(command, ignore_fail = false)
   end
   
   return result
+end
+
+def scp_result(local_file, remote_file, host, user)
+  if Configurator.instance.display_help? && !Configurator.instance.display_preview?
+    raise RemoteCommandNotAllowed.new("Copying '#{local_file}' not allowed because help mode is enabled")
+  end
+  
+  if host == DEFAULTS
+    debug("Unable to copy '#{local_file}' because '#{host}' is not valid")
+    raise RemoteCommandError.new(user, host, "scp #{local_file} #{user}@#{host}:#{remote_file}", nil, '')
+  end
+  
+  if Configurator.instance.is_localhost?(host) && 
+      user == Configurator.instance.whoami()
+    Configurator.instance.debug("Copy #{local_file} to #{remote_file}")
+    return FileUtils.cp(local_file, remote_file)
+  end
+  
+  unless defined?(Net::SCP)
+    begin
+      require "openssl"
+    rescue LoadError
+      error("Unable to find the Ruby openssl library")
+      error("Try installing the openssl package for your version of Ruby (libopenssl-ruby#{RUBY_VERSION[0,3]}).")
+      cleanup(1)
+    end
+    system_require 'net/scp'
+  end
+  
+  Configurator.instance.debug("Copy #{local_file} to #{host}:#{remote_file}")
+  begin
+    ssh_user = Configurator.instance.get_ssh_user(user)
+    debug("SCP user set to #{ssh_user}")
+    
+    Net::SCP.start(host, ssh_user, Configurator.instance.get_ssh_options) do |scp|
+      scp.upload!(local_file, remote_file, Configurator.instance.get_ssh_options)
+    end
+    
+    if user != ssh_user
+      ssh_result("chown -R #{user} #{remote_file}", host, ssh_user)
+    end
+    
+    return true
+  rescue Errno::ENOENT => ee
+    raise MessageError.new("Net::SCP was unable to find a private key to use for SSH authenticaton. Try creating a private keyfile or setting up ssh-agent.")
+  rescue OpenSSL::PKey::RSAError
+    raise MessageError.new("Net::SCP was unable to connect to #{host} as #{ssh_user}.  Check that #{host} is online, #{ssh_user} exists and your SSH private keyfile or ssh-agent settings. Try adding --net-ssh-option=port=<SSH port number> if you are using an SSH port other than 22.")
+  rescue Net::SSH::AuthenticationFailed
+    raise MessageError.new("Net::SCP was unable to connect to #{host} as #{ssh_user}.  Check that #{host} is online, #{ssh_user} exists and your SSH private keyfile or ssh-agent settings. Try adding --net-ssh-option=port=<SSH port number> if you are using an SSH port other than 22.")
+  rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
+    raise MessageError.new("Net::SCP was unable to connect to #{host} as #{ssh_user}.  Check that #{host} is online, #{ssh_user} exists and your SSH private keyfile or ssh-agent settings. Try adding --net-ssh-option=port=<SSH port number> if you are using an SSH port other than 22.")
+  else
+    raise RemoteCommandError.new(user, host, "scp #{local_file} #{ssh_user}@#{host}:#{remote_file}", nil, '')
+  end
 end
 
 def output_usage_line(argument, msg = "", default = nil, max_line = nil, additional_help = "")

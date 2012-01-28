@@ -26,13 +26,18 @@ class ConfigureDeploymentHandler
       
       # Transfer validation code
       debug("Transfer configuration code to #{@config.getProperty(HOST)}")
-      cmd_result("rsync -Caze ssh --delete #{Configurator.instance.get_base_path()}/ #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
+      user = @config.getProperty(USERID)
+      ssh_user = Configurator.instance.get_ssh_user(user)
+      cmd_result("rsync -Caze 'ssh -p#{Configurator.instance.get_ssh_port()}' --delete #{Configurator.instance.get_base_path()}/ #{ssh_user}@#{@config.getProperty(HOST)}:#{validation_temp_directory}")
+      if user != ssh_user
+        ssh_result("chown -R #{user} #{validation_temp_directory}/#{Configurator.instance.get_basename}", @config.getProperty(HOST), ssh_user)
+      end
 
       debug("Transfer host configuration file to #{@config.getProperty(HOST)}")
       config_tempfile = Tempfile.new("tcfg")
       config_tempfile.close()
       config.store(config_tempfile.path())
-      cmd_result("scp #{config_tempfile.path()} #{@config.getProperty(USERID)}@#{@config.getProperty(HOST)}:#{validation_temp_directory}/#{Configurator::TEMP_DEPLOY_HOST_CONFIG}")
+      scp_result(config_tempfile.path(), "#{validation_temp_directory}/#{Configurator::TEMP_DEPLOY_HOST_CONFIG}", @config.getProperty(HOST), @config.getProperty(USERID))
       File.unlink(config_tempfile.path())
     end
   end
