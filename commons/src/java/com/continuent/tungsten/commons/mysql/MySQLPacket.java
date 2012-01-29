@@ -144,17 +144,14 @@ public class MySQLPacket
             while (n < packetLen)
             {
                 // Issue 281. Wait until at least one byte is available to avoid
-                // a possible out of data condition.
+                // a possible out of data condition when reading from the
+                // network.
                 if (in.available() == 0)
                 {
                     long readStartTime = System.currentTimeMillis();
-                    logger.info("Pausing to allow binlog data to appear on network:  packetNumber="
-                            + packetNumber
-                            + " packetlen="
-                            + packetLen
-                            + " bytesRead=" + n);
+                    long delay = -1;
 
-                    // Sleep for up to 10 seconds.
+                    // Sleep for up to timeout.
                     while (in.available() == 0)
                     {
                         try
@@ -165,19 +162,26 @@ public class MySQLPacket
                         {
                             return null;
                         }
-                        long interval = System.currentTimeMillis()
-                                - readStartTime;
-                        if (interval > timeoutMillis)
+                        delay = System.currentTimeMillis() - readStartTime;
+                        if (delay > timeoutMillis)
                         {
-                            logger.warn("Timed out waiting for packet data to appear on the network: timeout="
-                                    + (interval / 1000.0)
-                                    + " packetNumber="
-                                    + packetNumber
-                                    + " packetlen="
-                                    + packetLen
-                                    + " bytesRead=" + n);
                             break;
                         }
+                    }
+
+                    // Note the delay if longer than 10% of the timeout. This
+                    // is helpful for diagnosing failures.
+                    if (delay > (timeoutMillis / 10))
+                    {
+                        logger.info("Paused to allow packet data to appear on the network: delay="
+                                + (delay / 1000.0)
+                                + " timeout="
+                                + (timeoutMillis / 1000.0)
+                                + " packetNumber="
+                                + packetNumber
+                                + " packetlen="
+                                + packetLen
+                                + " bytesRead=" + n);
                     }
                 }
 
@@ -221,7 +225,7 @@ public class MySQLPacket
      */
     public static MySQLPacket readPacket(InputStream in)
     {
-        return readPacket(in, 5000);
+        return readPacket(in, 10000);
     }
 
     /**
