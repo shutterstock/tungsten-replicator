@@ -60,10 +60,12 @@ function filter(event)
         if(d instanceof com.continuent.tungsten.replicator.dbms.StatementData)
         {
             from = d.getDefaultSchema();
-            to   = from.toUpperCase();
-
-            // It's a SQL statement event.
-            d.setDefaultSchema(to);
+            if (from != null)
+            {
+            	to   = from.toUpperCase();
+            	// It's a SQL statement event.
+            	d.setDefaultSchema(to);
+            }
         }
         else if(d instanceof com.continuent.tungsten.replicator.dbms.RowChangeData)
         {
