@@ -117,7 +117,7 @@ class ConfigureValidationHandler
 
           validation_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}/"
 
-          command = "cd #{validation_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/validate.rb -b -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options.join(' ')}"
+          command = "cd #{validation_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/validate.rb -b -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} --net-ssh-option=port=#{Configurator.instance.get_ssh_port()} #{extra_options.join(' ')}"
           result_dump = ssh_result(command, @config.getProperty(HOST), @config.getProperty(USERID), true)
           
           begin

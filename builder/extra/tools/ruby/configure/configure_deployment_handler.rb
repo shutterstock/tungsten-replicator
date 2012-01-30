@@ -75,7 +75,7 @@ class ConfigureDeploymentHandler
       Configurator.instance.write_header "Remote deploy #{@config.getProperty(HOST)}:#{@config.getProperty(HOME_DIRECTORY)}"
       
       deployment_temp_directory = "#{@config.getProperty(TEMP_DIRECTORY)}/#{Configurator.instance.get_unique_basename()}"
-      command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -b -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} #{extra_options.join(' ')}"
+      command = "cd #{deployment_temp_directory}; ruby -I#{Configurator.instance.get_ruby_prefix()} -I#{Configurator.instance.get_ruby_prefix()}/lib #{Configurator.instance.get_ruby_prefix()}/deploy.rb -b -c #{Configurator::TEMP_DEPLOY_HOST_CONFIG} --net-ssh-option=port=#{Configurator.instance.get_ssh_port()} #{extra_options.join(' ')}"
       result_dump = ssh_result(command, @config.getProperty(HOST), @config.getProperty(USERID), true)
       
       begin
