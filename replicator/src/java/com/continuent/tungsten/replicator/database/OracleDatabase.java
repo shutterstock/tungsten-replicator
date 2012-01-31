@@ -685,15 +685,23 @@ public class OracleDatabase extends AbstractDatabase
             logger.info("Creating Tungsten Heartbeat change table");
 
             if (tungstenTableType.equals("CDCSYNC"))
-                // Disable Tungsten Change Set
+            {
+                // Disable Tungsten Change Set for synchronous capture
                 execute("BEGIN DBMS_CDC_PUBLISH.ALTER_CHANGE_SET(change_set_name=>'TUNGSTEN_CHANGE_SET',enable_capture=>'N'); END;");
+            }
+            else
+            {
+                // Or prepare table for asynchronous capture.
+                // This should not be done for synchronous capture as this would
+                // not work on standard edition.
+                execute("ALTER TABLE " + table.getSchema() + "."
+                        + table.getName()
+                        + " ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS");
 
-            // If table type is CDC, then prepare table for capture
-            execute("ALTER TABLE " + table.getSchema() + "." + table.getName()
-                    + " ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS");
-
-            execute("BEGIN DBMS_CAPTURE_ADM.PREPARE_TABLE_INSTANTIATION('"
-                    + table.getSchema() + "." + tableName + "', 'all');END;");
+                execute("BEGIN DBMS_CAPTURE_ADM.PREPARE_TABLE_INSTANTIATION('"
+                        + table.getSchema() + "." + tableName
+                        + "', 'all');END;");
+            }
 
             String cdcSQL;
             if (tungstenTableType.equals("CDCSYNC")
