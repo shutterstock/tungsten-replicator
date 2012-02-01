@@ -153,8 +153,12 @@ class ConfigureDatabasePlatform
     "tungsten_${service.name}"
   end
   
-  def get_table_engine
+  def get_default_table_engine
     "innodb"
+  end
+  
+  def get_allowed_table_engines
+    ["innodb"]
   end
   
   def self.build(scheme, host, port, username, password, config)

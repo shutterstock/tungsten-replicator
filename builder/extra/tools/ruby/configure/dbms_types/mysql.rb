@@ -36,6 +36,9 @@ class MySQLDatabasePlatform < ConfigureDatabasePlatform
   
   def get_value(command, column = nil)
     response = run(command + "\\\\G")
+    unless response
+      return response
+    end
     
     response.split("\n").each{ | response_line |
       parts = response_line.chomp.split(":")

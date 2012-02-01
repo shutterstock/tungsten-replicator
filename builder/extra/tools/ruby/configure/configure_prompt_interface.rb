@@ -113,11 +113,16 @@ module ConfigurePromptInterface
   
   # Validate the response against the prompt validation rules
   def accept?(raw_value)
-    if @validator
-      @validator.validate raw_value
+    validator = get_validator()
+    if validator
+      validator.validate raw_value
     else
       raw_value
     end
+  end
+  
+  def get_validator
+    @validator
   end
   
   # Build the help filename based on the config key
@@ -190,7 +195,11 @@ module ConfigurePromptInterface
   
   # Output how to set this value from the command line
   def output_usage
-    output_usage_line("--#{get_command_line_argument()}", get_prompt(), get_value(true, true), nil, get_prompt_description())
+    output_usage_line("--#{get_command_line_argument()}", get_usage_prompt(), get_value(true, true), nil, get_prompt_description())
+  end
+  
+  def get_usage_prompt
+    get_prompt()
   end
   
   # Output how to specify this value in a config file

@@ -38,7 +38,7 @@ class OracleDatabasePlatform < ConfigureDatabasePlatform
   end
   
   def getJdbcUrl()
-    "jdbc:oracle:thin:@${replicator.global.db.host}:${replicator.global.db.port}:${DBNAME}"
+    "jdbc:oracle:thin:@${replicator.global.db.host}:${replicator.global.db.port}:${replicator.applier.oracle.service}"
   end
   
   def getJdbcDriver()
@@ -48,11 +48,11 @@ class OracleDatabasePlatform < ConfigureDatabasePlatform
   def getVendor()
     "oracle"
   end
-  
+
   def get_extractor_template
     raise "Unable to use OracleDatabasePlatform as an extractor"
-	end
-	
+  end
+  
 	def get_applier_filters()
 	  ["nocreatedbifnotexists","dbupper"] + super()
 	end
@@ -63,6 +63,10 @@ class OracleDatabasePlatform < ConfigureDatabasePlatform
   
   def get_default_master_log_pattern
     nil
+  end
+  
+  def get_replication_schema
+    "${replicator.global.db.user}"
   end
 end
 

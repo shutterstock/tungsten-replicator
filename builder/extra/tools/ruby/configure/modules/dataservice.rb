@@ -1181,17 +1181,27 @@ end
 
 class ReplicationServiceTableEngine < ConfigurePrompt
   include ReplicationServicePrompt
-  include ConstantValueModule
+  include AdvancedPromptModule
   
   def initialize
     super(REPL_SVC_TABLE_ENGINE, "Replication service table engine")
   end
   
   def get_default_value
-    get_applier_datasource().get_table_engine()
+    get_applier_datasource().get_default_table_engine()
   end
   
-  def required?
-    false
+  def get_validator
+    PropertyValidator.new(get_applier_datasource().get_allowed_table_engines().join("|"), 
+      "Value must be #{get_applier_datasource().get_allowed_table_engines().join(',')}")
+  end
+  
+  def get_usage_prompt
+    engines = get_applier_datasource().get_allowed_table_engines()
+    if engines.size > 1
+      get_prompt() + " (#{engines.join('|')})"
+    else
+      super()
+    end
   end
 end
