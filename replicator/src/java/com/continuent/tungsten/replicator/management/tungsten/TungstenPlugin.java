@@ -898,8 +898,8 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                     props.put("otherTime",
                             Double.toString(progress.getTotalOtherSeconds()));
                     props.put("state", progress.getState().toString());
-                    ReplDBMSHeader lastEvent = progress.getLastCommittedEvent();
-                    if (lastEvent == null)
+                    ReplDBMSHeader lastCommittedEvent = progress.getLastCommittedEvent();
+                    if (lastCommittedEvent == null)
                     {
                         props.put("appliedLastSeqno", "-1");
                         props.put("appliedLastEventId", "");
@@ -907,8 +907,22 @@ public class TungstenPlugin extends NotificationBroadcasterSupport
                     else
                     {
                         props.put("appliedLastSeqno",
-                                Long.toString(lastEvent.getSeqno()));
-                        props.put("appliedLastEventId", lastEvent.getEventId());
+                                Long.toString(lastCommittedEvent.getSeqno()));
+                        props.put("appliedLastEventId", lastCommittedEvent.getEventId());
+                    }
+                    ReplDBMSHeader lastDirtyEvent = progress.getLastProcessedEvent();
+                    if (lastDirtyEvent == null)
+                    {
+                        props.put("currentLastSeqno", "-1");
+                        props.put("currentLastEventId", "");
+                        props.put("currentLastFragno", "-1");
+                    }
+                    else
+                    {
+                        props.put("currentLastSeqno",
+                                Long.toString(lastDirtyEvent.getSeqno()));
+                        props.put("currentLastEventId", lastDirtyEvent.getEventId());
+                        props.put("currentLastFragno", Short.toString(lastDirtyEvent.getFragno()));
                     }
                     statusList.add(props);
                 }
