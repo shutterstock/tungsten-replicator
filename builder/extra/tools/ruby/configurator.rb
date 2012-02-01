@@ -1345,6 +1345,9 @@ end
 class ConfigurePreviousPrompt < StandardError
 end
 
+class MessageError < StandardError
+end
+
 class CommandError < StandardError
   attr_reader :command, :rc, :result
   

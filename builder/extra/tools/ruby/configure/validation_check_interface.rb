@@ -35,6 +35,8 @@ module ValidationCheckInterface
     begin
       info("Start: #{@title}")
       validate()
+    rescue MessageError => me
+      error(me.to_s())
     rescue Exception => e
       error(e.to_s() + "\n" + e.backtrace.join("\n"))
     ensure
