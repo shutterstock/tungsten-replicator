@@ -29,6 +29,8 @@ import java.nio.channels.SocketChannel;
 import org.apache.log4j.Logger;
 
 import com.continuent.tungsten.replicator.ReplicatorException;
+import com.continuent.tungsten.replicator.database.EventId;
+import com.continuent.tungsten.replicator.database.EventIdFactory;
 import com.continuent.tungsten.replicator.event.DBMSEmptyEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSEvent;
 import com.continuent.tungsten.replicator.event.ReplDBMSFilteredEvent;
@@ -53,6 +55,7 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
     private THL              thl       = null;
     private int              resetPeriod;
     private int              heartbeatMillis;
+    private long             altSeqno  = -1;
     private volatile boolean cancelled = false;
     private volatile boolean finished  = false;
 
@@ -135,6 +138,87 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                                 + clientLastEpochNumber);
                     }
 
+                    // If we have an event ID, we need to search forward to find
+                    // it.
+                    String eventIdString = handshakeResponse
+                            .getOption(ProtocolParams.INIT_EVENT_ID);
+                    if (eventIdString != null)
+                    {
+                        // Parse the event ID.
+                        EventIdFactory factory = EventIdFactory.getInstance();
+                        EventId eventId = factory.createEventId(eventIdString);
+                        if (eventId == null || !eventId.isValid())
+                        {
+                            throw new THLException(
+                                    "Unable to parse eventId requested by client: client source ID="
+                                            + handshakeResponse.getSourceId()
+                                            + " requested event ID=" + eventId);
+                        }
+
+                        // Seek the event.
+                        boolean found = false;
+                        while (!found)
+                        {
+                            // Get the current seqno and event ID.
+                            EventId currentEventId = factory
+                                    .createEventId(event.getEventId());
+                            long currentSeqno = event.getSeqno();
+
+                            int comp = eventId.compareTo(currentEventId);
+                            if (comp > 0)
+                            {
+                                // We have not found the sequence number.
+                                if (logger.isDebugEnabled())
+                                {
+                                    logger.debug("Skipping event: seqno="
+                                            + currentSeqno + " eventId="
+                                            + currentEventId);
+                                }
+                            }
+                            else if (comp == 0)
+                            {
+                                // We found a match, so the next sequence number
+                                // should be where we want to seek before
+                                // starting.
+                                altSeqno = currentSeqno + 1;
+                                logger.info("Found alterative seqno requested by client using eventId: seqno="
+                                        + altSeqno + " eventId=" + eventId);
+                                break;
+                            }
+                            else
+                            {
+                                throw new THLException(
+                                        "Client seeking event ID that does not exist or may be too old: client source ID="
+                                                + handshakeResponse
+                                                        .getSourceId()
+                                                + " requested event ID="
+                                                + eventId
+                                                + " closest server seqno="
+                                                + currentSeqno
+                                                + " closest server event ID="
+                                                + currentEventId);
+                            }
+
+                            // Look for the next event. Generate an error if
+                            // we don't find one.
+                            event = conn.next(false);
+                            if (event == null)
+                            {
+                                throw new THLException(
+                                        "Client seeking non-existent event ID: client source ID="
+                                                + handshakeResponse
+                                                        .getSourceId()
+                                                + " requested event ID="
+                                                + eventId
+                                                + " last client seqno="
+                                                + clientLastSeqno
+                                                + " closest server seqno="
+                                                + currentSeqno
+                                                + " closest server event ID="
+                                                + currentEventId);
+                            }
+                        }
+                    }
                 }
                 finally
                 {
@@ -211,6 +295,15 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                 // If we don't have a connection to the log, make it now.
                 if (connection == null)
                 {
+                    // If we have an alternate sequence number from an event ID,
+                    // seek it instead of the requested sequence number.
+                    if (this.altSeqno > -1)
+                    {
+                        logger.info("Seeking alternate sequence number: seqno="
+                                + altSeqno);
+                        seqno = altSeqno;
+                    }
+
                     // Establish the connection.
                     connection = thl.connect(true);
                     if (!connection.seek(seqno))
@@ -305,7 +398,6 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
                     }
                 }
             }
-
         }
         catch (InterruptedException e)
         {
@@ -488,5 +580,4 @@ public class ConnectorHandler implements ReplicatorPlugin, Runnable
     {
         this.thl = thl;
     }
-
 }

@@ -59,7 +59,10 @@ public class RemoteTHLExtractor implements Extractor
     // Connection control variables.
     private PluginContext  pluginContext;
     private ReplDBMSHeader lastEvent;
+    private String         lastEventId;
     private Connector      conn;
+
+    private ReplEvent      pendingEvent;
 
     /**
      * Create Connector instance.
@@ -135,16 +138,26 @@ public class RemoteTHLExtractor implements Extractor
     public ReplDBMSEvent extract() throws ReplicatorException,
             InterruptedException
     {
-        // Open the connector if it is not yet open.
         try
         {
+            // Open the connector if it is not yet open.
             if (conn == null)
+            {
                 openConnector();
+            }
 
             // Fetch the event.
             ReplEvent replEvent = null;
             while (replEvent == null)
             {
+                // If we have a pending event from an earlier read, return that.
+                if (pendingEvent != null)
+                {
+                    replEvent = pendingEvent;
+                    pendingEvent = null;
+                    break;
+                }
+
                 long seqno = 0;
                 try
                 {
@@ -162,6 +175,33 @@ public class RemoteTHLExtractor implements Extractor
                         else
                             seqno = lastEvent.getSeqno();
                     replEvent = conn.requestEvent(seqno);
+                    if (replEvent == null)
+                        continue;
+
+                    // If the lastEventId was set, we have some housekeeping
+                    // ahead of us.
+                    if (lastEventId != null)
+                    {
+                        // Searching for lastEventId can cause skips in the
+                        // log. If so, we need to insert a filter event to
+                        // avoid breaks and return that first. Otherwise
+                        // downstream stages will break due to sequence number
+                        // gaps.
+                        if (lastEvent != null && replEvent.getSeqno() > seqno)
+                        {
+                            pendingEvent = replEvent;
+                            replEvent = new ReplDBMSFilteredEvent(lastEventId,
+                                    seqno, replEvent.getSeqno() - 1, (short) 0);
+                        }
+
+                        // Next, clear the last event ID.
+                        if (logger.isDebugEnabled())
+                        {
+                            logger.debug("Clearing last event ID: "
+                                    + lastEventId);
+                        }
+                        lastEventId = null;
+                    }
                 }
                 catch (IOException e)
                 {
@@ -210,14 +250,18 @@ public class RemoteTHLExtractor implements Extractor
     }
 
     /**
-     * Ignored for now as this extractor is not for a data source. {@inheritDoc}
+     * Sets the last event ID for extraction. If this is set, we will request
+     * (and receive) the first event from the master log that matches this
+     * event.
      * 
      * @see com.continuent.tungsten.replicator.extractor.Extractor#setLastEventId(java.lang.String)
      */
     public void setLastEventId(String eventId) throws ReplicatorException
     {
-        logger.warn("Attempt to set last event ID on remote THL extractor: "
-                + eventId);
+        if (logger.isDebugEnabled())
+            logger.debug("Set last event ID on remote THL extractor: "
+                    + eventId);
+        lastEventId = eventId;
     }
 
     /**
@@ -313,6 +357,7 @@ public class RemoteTHLExtractor implements Extractor
                     conn.setURI(connectUri);
                     conn.setResetPeriod(resetPeriod);
                     conn.setHeartbeatMillis(heartbeatMillis);
+                    conn.setLastEventId(this.lastEventId);
                     if (this.lastEvent == null
                             || this.checkSerialization == false)
                     {

@@ -22,20 +22,25 @@
 
 package com.continuent.tungsten.replicator.thl;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * This class defines a ProtocolHandshakeResponse, which clients return to the
- * THL server.
+ * THL server. Clients can specify options, which affect the network connection
+ * from the server.
  * 
  * @author <a href="mailto:teemu.ollakka@continuent.com">Teemu Ollakka</a>
  * @version 1.0
  */
 public class ProtocolHandshakeResponse extends ProtocolMessage
 {
-    static final long    serialVersionUID = 123452346L;
-    private final String sourceId;
-    private final long   lastEpochNumber;
-    private final long   lastSeqno;
-    private final int    heartbeatMillis;
+    static final long           serialVersionUID = 123452346L;
+    private final String        sourceId;
+    private final long          lastEpochNumber;
+    private final long          lastSeqno;
+    private final int           heartbeatMillis;
+    private Map<String, String> options          = new HashMap<String, String>();
 
     /**
      * Create a new instance.
@@ -74,5 +79,29 @@ public class ProtocolHandshakeResponse extends ProtocolMessage
     public int getHeartbeatMillis()
     {
         return this.heartbeatMillis;
+    }
+
+    /**
+     * Returns the current option settings or null if no options exist. Older
+     * replicators do not return options.
+     */
+    public Map<String, String> getOptions()
+    {
+        // Required for compatibility with older classes.
+        if (options == null)
+            options = new HashMap<String, String>();
+        return options;
+    }
+
+    /** Gets an option value. */
+    public String getOption(String name)
+    {
+        return getOptions().get(name);
+    }
+
+    /** Sets option value. */
+    public void setOption(String name, String value)
+    {
+        getOptions().put(name, value);
     }
 }

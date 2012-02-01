@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2011 Continuent Inc.
+ * Copyright (C) 2007-2012 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -60,6 +60,7 @@ public class Connector implements ReplicatorPlugin
     protected long          lastSeqno;
     protected long          lastEpochNumber;
     protected int           heartbeatMillis = 3000;
+    protected String        lastEventId;
 
     private String          remoteURI       = null;
 
@@ -136,7 +137,7 @@ public class Connector implements ReplicatorPlugin
 
         protocol = new Protocol(pluginContext, channel, resetPeriod);
         SeqNoRange seqNoRange = protocol.clientHandshake(lastEpochNumber,
-                lastSeqno, heartbeatMillis);
+                lastSeqno, heartbeatMillis, lastEventId);
         minSeqNo = seqNoRange.getMinSeqNo();
         maxSeqNo = seqNoRange.getMaxSeqNo();
     }
@@ -274,5 +275,10 @@ public class Connector implements ReplicatorPlugin
     public void setHeartbeatMillis(int heartbeatMillis)
     {
         this.heartbeatMillis = heartbeatMillis;
+    }
+
+    public void setLastEventId(String lastEventId)
+    {
+        this.lastEventId = lastEventId;
     }
 }

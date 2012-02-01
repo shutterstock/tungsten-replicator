@@ -227,19 +227,6 @@ public class Protocol
     }
 
     /**
-     * Define a client handshake event including default heartbeat interval.
-     * 
-     * @param lastEpochNumber Epoch number client has from last sequence number
-     * @param lastSeqno Last sequence number client received
-     * @return A sequence number range
-     */
-    public SeqNoRange clientHandshake(long lastEpochNumber, long lastSeqno)
-            throws ReplicatorException, IOException
-    {
-        return clientHandshake(lastEpochNumber, lastSeqno, 3000);
-    }
-
-    /**
      * Define a client handshake event including attendant information. TODO:
      * clientHandshake definition.
      * 
@@ -249,13 +236,18 @@ public class Protocol
      * @return A sequence number range
      */
     public SeqNoRange clientHandshake(long lastEpochNumber, long lastSeqno,
-            int heartbeatMillis) throws ReplicatorException, IOException
+            int heartbeatMillis, String lastEventId)
+            throws ReplicatorException, IOException
     {
         ProtocolMessage handshake = readMessage();
         if (handshake instanceof ProtocolHandshake == false)
             throw new THLException("Invalid handshake");
-        writeMessage(new ProtocolHandshakeResponse(pluginContext.getSourceId(),
-                lastEpochNumber, lastSeqno, heartbeatMillis));
+        ProtocolHandshakeResponse response = new ProtocolHandshakeResponse(
+                pluginContext.getSourceId(), lastEpochNumber, lastSeqno,
+                heartbeatMillis);
+        if (lastEventId != null)
+            response.setOption(ProtocolParams.INIT_EVENT_ID, lastEventId);
+        writeMessage(response);
 
         ProtocolMessage okOrNok = readMessage();
         if (okOrNok instanceof ProtocolOK)
