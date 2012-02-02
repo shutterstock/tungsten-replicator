@@ -684,13 +684,10 @@ public class OracleDatabase extends AbstractDatabase
 
             logger.info("Creating Tungsten Heartbeat change table");
 
-            if (tungstenTableType.equals("CDCSYNC"))
+            if (!tungstenTableType.equals("CDCSYNC"))
             {
-                // Disable Tungsten Change Set for synchronous capture
+                // Disable Tungsten Change Set 
                 execute("BEGIN DBMS_CDC_PUBLISH.ALTER_CHANGE_SET(change_set_name=>'TUNGSTEN_CHANGE_SET',enable_capture=>'N'); END;");
-            }
-            else
-            {
                 // Or prepare table for asynchronous capture.
                 // This should not be done for synchronous capture as this would
                 // not work on standard edition.
@@ -749,7 +746,7 @@ public class OracleDatabase extends AbstractDatabase
 
             execute(cdcSQL);
 
-            if (tungstenTableType.equals("CDCSYNC"))
+            if (!tungstenTableType.equals("CDCSYNC"))
                 // Enable Tungsten Change Set back
                 execute("BEGIN DBMS_CDC_PUBLISH.ALTER_CHANGE_SET(change_set_name=>'TUNGSTEN_CHANGE_SET',enable_capture=>'Y'); END;");
 
