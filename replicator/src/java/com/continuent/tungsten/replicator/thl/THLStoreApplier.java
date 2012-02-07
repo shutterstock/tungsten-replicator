@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2010 Continuent Inc.
+ * Copyright (C) 2010-2012 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  *
  * Initial developer(s): Robert Hodges
- * Contributor(s):
+ * Contributor(s): Stephane Giron
  */
 
 package com.continuent.tungsten.replicator.thl;
@@ -43,11 +43,12 @@ import com.continuent.tungsten.replicator.thl.log.LogConnection;
  */
 public class THLStoreApplier implements Applier
 {
-    private static Logger logger = Logger.getLogger(THLStoreApplier.class);
+    private static Logger logger   = Logger.getLogger(THLStoreApplier.class);
     private String        storeName;
     private THL           thl;
     private PluginContext context;
     private LogConnection client;
+    private int           nbErrors = 0;
 
     /**
      * Instantiate the adapter.
@@ -87,6 +88,7 @@ public class THLStoreApplier implements Applier
         {
             thl = (THL) context.getStore(storeName);
             client = thl.connect(false);
+            nbErrors = 0;
         }
         catch (ClassCastException e)
         {
@@ -113,6 +115,11 @@ public class THLStoreApplier implements Applier
             thl.disconnect(client);
             thl = null;
         }
+        if (nbErrors > 0)
+        {
+            logger.warn(nbErrors
+                    + " events were retrieved after database access error.");
+        }
     }
 
     /**
@@ -132,7 +139,32 @@ public class THLStoreApplier implements Applier
             if (doCommit)
             {
                 if (syncTHL)
-                    thl.updateCommitSeqno(thlEvent);
+                    try
+                    {
+                        thl.updateCommitSeqno(thlEvent);
+                    }
+                    catch (THLException e)
+                    {
+                        if (thl.getStopOnDBError())
+                        {
+                            throw e;
+                        }
+                        else
+                        {
+                            nbErrors++;
+                            // In case of error while updating the CommitSeqno,
+                            // don't fail! Just keep extracting whatever can be
+                            // extracted and make data available for slaves.
+                            if (nbErrors == 1)
+                                logger.warn(
+                                        "Error while storing last committed seqno. Extracting last available events",
+                                        e);
+                            else if (nbErrors % 1000 == 0)
+                                logger.info("Extracted "
+                                        + nbErrors
+                                        + " events since database access error.");
+                        }
+                    }
                 commit();
             }
             if (logger.isDebugEnabled())

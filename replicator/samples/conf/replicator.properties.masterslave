@@ -253,6 +253,11 @@ replicator.store.thl.resetPeriod=1
 # Do not allow this replication service to make any changes to the THL files
 replicator.store.thl.readOnly=@{REPL_SVC_THL_READ_ONLY}
 
+# Allow this replication service to keep on storing THL events even if it failed
+# to store its position into database. This is not activated by default and 
+# does require that THL syncTHLWithExtractor property is set to true (master case).
+replicator.store.thl.stopOnDBError=true
+
 #################################
 # IN-MEMORY QUEUE STORE         #
 #################################

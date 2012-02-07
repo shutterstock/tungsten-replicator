@@ -1,6 +1,6 @@
 /**
  * Tungsten Scale-Out Stack
- * Copyright (C) 2007-2010 Continuent Inc.
+ * Copyright (C) 2007-2012 Continuent Inc.
  * Contact: tungsten@continuent.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -117,6 +117,11 @@ public class THL implements Store
     private Server             server               = null;
 
     private boolean            readOnly             = false;
+
+    // This indicates whether replicator will stop or keep on trying to extract
+    // data despite errors while storing its position into database
+    // (CommitSeqno)
+    private boolean            stopOnDBError        = true;
 
     /** Creates a store instance. */
     public THL()
@@ -271,6 +276,16 @@ public class THL implements Store
     public void setReadOnly(String ro)
     {
         readOnly = (ro.equals("true"));
+    }
+
+    public void setStopOnDBError(boolean stopOnDBErr)
+    {
+        this.stopOnDBError = stopOnDBErr;
+    }
+
+    public boolean getStopOnDBError()
+    {
+        return stopOnDBError;
     }
 
     // STORE API STARTS HERE.
