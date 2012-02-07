@@ -1447,8 +1447,17 @@ public class JdbcApplier implements RawApplier
             fileQuery.setLocalFile(temporaryFile);
             applyStatementData(fileQuery);
         }
+        // Make sure we really delete the temp file. 
+        boolean deleted = temporaryFile.delete();
         if (logger.isDebugEnabled())
-            logger.debug("File deleted : " + temporaryFile.delete());
+        {
+            if (deleted)
+                logger.debug("Deleted temp file: "
+                        + temporaryFile.getAbsolutePath());
+            else
+                logger.debug("Unable to delete temp file: "
+                        + temporaryFile.getAbsolutePath());
+        }
     }
 
     /**
