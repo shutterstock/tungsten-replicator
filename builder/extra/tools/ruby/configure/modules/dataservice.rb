@@ -529,7 +529,7 @@ class ReplicationServiceParallelizationType < ConfigurePrompt
   def initialize
     super(REPL_SVC_PARALLELIZATION_TYPE, "Method for implementing parallel queues (disk|memory)",
       PropertyValidator.new("disk|memory", 
-        "Value must be disk or memory"), "memory")
+        "Value must be disk or memory"), "disk")
   end
 end
 

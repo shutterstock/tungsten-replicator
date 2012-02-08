@@ -135,7 +135,7 @@ class ConfigureServicePackage < ConfigurePackage
             # The master datasource is properly configured
           end
         else
-          if datasource_options.getPropertyOr([DATASOURCES, "master"], {}).size > 0
+          if service_config.getProperty(REPL_ROLE) == REPL_ROLE_DI && datasource_options.getPropertyOr([DATASOURCES, "master"], {}).size > 0
             unless master_alias
               master_alias = datasource_options.getProperty([DATASOURCES, "master", REPL_DBHOST]).gsub(".", "_") + "_" + datasource_options.getProperty([DATASOURCES, "master", REPL_DBPORT])
             end
@@ -247,6 +247,8 @@ class ConfigureServicePackage < ConfigurePackage
       if Configurator.instance.advanced_mode?()
         case prompt.class().name()
         when "ReplicationServiceDatasource"
+          output_usage_line("--disable-relay-logs", "Disable the use of relay-logs?")
+          
           each_datasource_prompt{
             |prompt|
             if Configurator.instance.display_preview?
@@ -298,5 +300,15 @@ class ConfigureServicePackage < ConfigurePackage
   
   def allow_batch?
     false
+  end
+end
+
+module ConfigureServicePrompt
+  def enabled_for_command_line?
+    if Configurator.instance.package.is_a?(ConfigureServicePackage)
+      super() && true
+    else
+      false
+    end
   end
 end
