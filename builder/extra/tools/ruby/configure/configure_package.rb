@@ -52,6 +52,7 @@ class ConfigurePackage
     output_usage_line("-h, --help", "Displays help message")
     output_usage_line("-p, --preview", "Displays the help message and preview the effect of the command line options")
     output_usage_line("-q, --quiet", "Only display error messages")
+    output_usage_line("-n, --info", "Display info and error messages")
     output_usage_line("-v, --verbose", "Display all messages")
     output_usage_line("--net-ssh-option=key=value", "Set the Net::SSH option for remote system calls", nil, nil, "Valid options can be found at http://net-ssh.github.com/ssh/v2/api/classes/Net/SSH.html#M000002")
     
