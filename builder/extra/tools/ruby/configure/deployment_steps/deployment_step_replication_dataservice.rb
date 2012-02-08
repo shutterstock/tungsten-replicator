@@ -30,24 +30,30 @@ module ConfigureDeploymentStepReplicationDataservice
 		    begin
 		      info("Check if the replication service is running")
 		      cmd_result("#{get_trepctl_cmd()} -service #{@config.getProperty(get_service_key(DEPLOYMENT_SERVICE))} status")
-		      warn("The replication service is already running.  You must stop and start it for the changes to take effect.")
+		      warning("The replication service is already running.  You must stop and start it for the changes to take effect.")
         rescue CommandError => ce
           # The status command fails if the service is not running
           info("Start the replication service")
           cmd_result("#{get_trepctl_cmd()} -service #{@config.getProperty(get_service_key(DEPLOYMENT_SERVICE))} start")
+          
+          if @config.getProperty(REPL_SVC_REPORT) == "true"
+            output("Getting services list")
+            services = cmd_result("#{get_deployment_basedir()}/tungsten-replicator/bin/trepctl -port #{@config.getProperty(REPL_RMI_PORT)} services")
+            output(services)
+          end
         end
       else
         info("Start the replicator")
         self.trigger_event(:before_service_start, 'replicator')
         cmd_result(get_svc_command("#{get_deployment_basedir()}/tungsten-replicator/bin/replicator start"))
         self.trigger_event(:after_service_start, 'replicator')
+        
+        if @config.getProperty(REPL_SVC_REPORT) == "true"
+          output("Getting services list")
+          services = cmd_result("#{get_deployment_basedir()}/tungsten-replicator/bin/trepctl -port #{@config.getProperty(REPL_RMI_PORT)} services")
+          output(services)
+        end
       end
-    end
-    
-    if @config.getProperty(REPL_SVC_REPORT) == "true"
-      output("Getting services list")
-      services = cmd_result("#{get_deployment_basedir()}/tungsten-replicator/bin/trepctl -port #{@config.getProperty(REPL_RMI_PORT)} services")
-      output(services)
     end
   end
 	
