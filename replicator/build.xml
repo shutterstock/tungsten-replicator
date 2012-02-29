@@ -95,7 +95,7 @@
 	<ant antfile="${project.commons}/build.xml" inheritall="false" target="all"/>
     </target>
 
-    <target name="compile">
+    <target name="compile" depends="build-dependencies">
         <mkdir dir="${classes.dir}"/>
         <javac srcdir="${java.src.dir}"
                destdir="${classes.dir}"

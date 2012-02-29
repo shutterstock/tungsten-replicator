@@ -245,6 +245,7 @@
         <copy todir="${dist.src.dir}/conf">
             <fileset dir="conf"/>
         </copy>
+        <mkdir dir="doc"/>
         <copy todir="${dist.src.dir}/doc">
             <fileset dir="doc"/>
         </copy>
